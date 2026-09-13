@@ -1214,20 +1214,139 @@
             }
         }
 
-        function renderNoClub(container) {
-            container.innerHTML = `
-                <div class="profile-hero">
-                    <div class="profile-hero-inner">
-                        <div style="font-size:64px;margin-bottom:14px;">🛡️</div>
-                        <h3 style="margin-bottom:10px;">Вы не в клубе</h3>
-                        <p style="color:var(--hint);font-size:13px;margin-bottom:20px;">Создайте свой клуб или подайте заявку</p>
-                        <button class="profile-action-btn edit" onclick="openCreateClubSheet()">➕ Создать клуб</button>
-                        <button class="profile-action-btn cancel" onclick="openClubSearch()">🔍 Найти клуб</button>
+function renderNoClub(container) {
+    container.innerHTML = `
+        <div class="profile-hero">
+            <div class="profile-hero-inner">
+                <div style="font-size:64px;margin-bottom:14px;">🛡️</div>
+                <h3 style="margin-bottom:10px;">Вы не в клубе</h3>
+                <p style="color:var(--hint);font-size:13px;margin-bottom:20px;">Создайте свой клуб или подайте заявку</p>
+                <button class="profile-action-btn edit" onclick="openCreateClubSheet()">➕ Создать клуб</button>
+            </div>
+        </div>
+
+        <div class="section-title">Найти клуб</div>
+        <div class="profile-hero" style="padding: 16px;">
+            <input
+                type="text"
+                class="field-input"
+                id="clubSearchInput"
+                placeholder="🔍 Название или тег клуба"
+                autocomplete="off"
+                oninput="debouncedClubSearch()"
+            >
+        </div>
+        <div id="clubSearchResults"></div>
+    `;
+
+    // Показываем все клубы сразу
+    loadAllClubs();
+
+    // Фокус не ставим — иначе клавиатура выскочит сразу при входе
+}
+
+let clubSearchTimer = null;
+function debouncedClubSearch() {
+    clearTimeout(clubSearchTimer);
+    clubSearchTimer = setTimeout(() => {
+        const q = document.getElementById('clubSearchInput')?.value.trim() || '';
+        if (q.length === 0) loadAllClubs();
+        else if (q.length >= 2) searchClubs(q);
+        else loadAllClubs();
+    }, 300);
+}
+
+async function loadAllClubs() {
+    const container = document.getElementById('clubSearchResults');
+    if (!container) return;
+    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+        const { data, error } = await sb.from('clubs')
+            .select('id, name, tag, description, logo_url, max_members, created_at')
+            .order('created_at', { ascending: false })
+            .limit(50);
+        if (error) throw error;
+        await renderClubSearchResults(data || []);
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
+    }
+}
+
+async function searchClubs(query) {
+    const container = document.getElementById('clubSearchResults');
+    if (!container) return;
+    container.innerHTML = '<div class="empty">Поиск...</div>';
+    try {
+        const safe = query.replace(/[%_]/g, '');
+        const { data, error } = await sb.from('clubs')
+            .select('id, name, tag, description, logo_url, max_members, created_at')
+            .or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        if (error) throw error;
+        await renderClubSearchResults(data || []);
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка поиска</div>';
+    }
+}
+
+async function renderClubSearchResults(clubs) {
+    const container = document.getElementById('clubSearchResults');
+    if (!container) return;
+
+    if (!clubs.length) {
+        container.innerHTML = '<div class="empty">Клубов не найдено</div>';
+        return;
+    }
+
+    // Сколько людей в каждом клубе
+    const clubIds = clubs.map(c => c.id);
+    const { data: members } = await sb.from('club_members')
+        .select('club_id')
+        .in('club_id', clubIds);
+    const countMap = {};
+    (members || []).forEach(m => {
+        countMap[m.club_id] = (countMap[m.club_id] || 0) + 1;
+    });
+
+    // Куда уже подан запрос
+    const { data: myReqs } = await sb.from('club_requests')
+        .select('club_id, status')
+        .eq('telegram_id', currentUser.telegram_id)
+        .in('club_id', clubIds);
+    const reqMap = {};
+    (myReqs || []).forEach(r => reqMap[r.club_id] = r.status);
+
+    container.innerHTML = clubs.map(c => {
+        const logoSrc = c.logo_url;
+        const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : c.tag.slice(0, 2).toUpperCase();
+        const status = reqMap[c.id];
+        const count = countMap[c.id] || 0;
+        const isFull = count >= c.max_members;
+
+        let btn;
+        if (status === 'pending') btn = `<button class="friend-action pending" disabled>⏳ Заявка</button>`;
+        else if (status === 'accepted') btn = `<button class="friend-action pending" disabled>✓ В клубе</button>`;
+        else if (isFull) btn = `<button class="friend-action pending" disabled>Заполнен</button>`;
+        else btn = `<button class="friend-action add" onclick="event.stopPropagation();sendClubRequest(${c.id}, this)">+ Заявка</button>`;
+
+        return `
+            <div class="leaderboard-item">
+                <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
+                <div style="flex:1;min-width:0;">
+                    <div class="leaderboard-name">${escapeHtml(c.name)}</div>
+                    <div style="font-size:11px;color:var(--hint);">
+                        [${escapeHtml(c.tag)}] · ${count}/${c.max_members}
                     </div>
+                    ${c.description ? `<div style="font-size:11px;color:var(--hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.description)}</div>` : ''}
                 </div>
-                <div id="clubSearchResults"></div>
-            `;
-        }
+                ${btn}
+            </div>
+        `;
+    }).join('');
+}
 
         function renderMyClub(container) {
             const { club, members } = myClub;
@@ -1431,25 +1550,28 @@
             } catch (e) { showToast('Ошибка поиска'); }
         }
 
-        async function sendClubRequest(clubId, btnEl) {
-            if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
-            try {
-                await sb.from('club_requests').upsert({
-                    club_id: clubId, telegram_id: currentUser.telegram_id, status: 'pending'
-                }, { onConflict: 'club_id,telegram_id' });
+async function sendClubRequest(clubId, btnEl) {
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+    try {
+        await sb.from('club_requests').upsert({
+            club_id: clubId, telegram_id: currentUser.telegram_id, status: 'pending'
+        }, { onConflict: 'club_id,telegram_id' });
 
-                const { data: club } = await sb.from('clubs').select('name, owner_id').eq('id', clubId).single();
-                if (club && club.owner_id) {
-                    notify(club.owner_id,
-                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.\n` +
-                        `Открой De1mos Faceit → Клуб → Заявки.`
-                    );
-                }
-
-                showToast('✅ Заявка отправлена');
-                if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
-            } catch (e) { showToast('Ошибка: ' + e.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; } }
+        const { data: club } = await sb.from('clubs').select('name, owner_id').eq('id', clubId).single();
+        if (club && club.owner_id) {
+            notify(club.owner_id,
+                `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.\n` +
+                `Открой De1mos Faceit → Клуб → Заявки.`
+            );
         }
+
+        showToast('✅ Заявка отправлена');
+        if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; }
+    }
+}
 
         function subscribeClubRealtime() {
             if (!currentUser) return;
