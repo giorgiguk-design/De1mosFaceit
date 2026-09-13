@@ -534,6 +534,7 @@
         // STATE
         // ============================================================
         let myClub = null;
+        let wasKickedFromClub = null;
         let currentChat = null;
         let chatChannel = null;
         let clubChannel = null;
@@ -1185,37 +1186,83 @@
             subscribeClubRealtime();
         }
 
-        async function loadClub() {
-            const container = document.getElementById('clubContent');
-            container.innerHTML = '<div class="empty">Загрузка...</div>';
-            try {
-                const me = currentUser.telegram_id;
-                const { data: membership } = await sb.from('club_members')
-                    .select('club_id, role').eq('telegram_id', me).maybeSingle();
+async function loadClub() {
+    const container = document.getElementById('clubContent');
+    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+        const me = currentUser.telegram_id;
+        const { data: membership } = await sb.from('club_members')
+            .select('club_id, role').eq('telegram_id', me).maybeSingle();
 
-                if (!membership) { myClub = null; renderNoClub(container); return; }
+        if (!membership) {
+            // Игрока нет в клубе. Проверяем — был ли он в клубе раньше (значит его кикнули)
+            const hadClubBefore = myClub !== null;
+            const prevClub = myClub?.club;
 
-                const { data: club, error: cErr } = await sb.from('clubs').select('*').eq('id', membership.club_id).single();
-                if (cErr) throw cErr;
+            myClub = null;
 
-                const { data: members } = await sb.from('club_members').select('*').eq('club_id', club.id);
-                const memberIds = (members || []).map(m => m.telegram_id);
-                const { data: users } = await sb.from('users')
-                    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo')
-                    .in('telegram_id', memberIds.length ? memberIds : [0]);
-                const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
-
-                myClub = { club, members: (members || []).map(m => ({ ...m, user: userMap[m.telegram_id] })) };
-                myClub.club.role = membership.role;
-                renderMyClub(container);
-            } catch (e) {
-                console.error(e);
-                container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
+            if (hadClubBefore && prevClub) {
+                wasKickedFromClub = { name: prevClub.name, tag: prevClub.tag };
+                showToast(`🚪 Тебя исключили из клуба ${prevClub.name}`);
+                haptic('medium');
             }
+
+            renderNoClub(container);
+            return;
         }
 
+        // Есть членство — грузим клуб
+        wasKickedFromClub = null;
+
+        const { data: club, error: cErr } = await sb.from('clubs')
+            .select('*').eq('id', membership.club_id).single();
+        if (cErr) throw cErr;
+
+        const { data: members } = await sb.from('club_members')
+            .select('*').eq('club_id', club.id);
+
+        const memberIds = (members || []).map(m => m.telegram_id);
+        const { data: users } = await sb.from('users')
+            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo')
+            .in('telegram_id', memberIds.length ? memberIds : [0]);
+
+        const userMap = {};
+        (users || []).forEach(u => { userMap[u.telegram_id] = u; });
+
+        myClub = {
+            club,
+            members: (members || []).map(m => ({ ...m, user: userMap[m.telegram_id] }))
+        };
+        myClub.club.role = membership.role;
+
+        renderMyClub(container);
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
+    }
+}
+
 function renderNoClub(container) {
+    let kickedBanner = '';
+    if (wasKickedFromClub) {
+        kickedBanner = `
+            <div class="profile-hero" style="border-color: rgba(255,84,112,0.4); background: linear-gradient(140deg, rgba(255,84,112,0.1), rgba(255,84,112,0.02));">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="font-size:32px;">🚪</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:14px; font-weight:700; margin-bottom:4px;">Тебя исключили из клуба</div>
+                        <div style="font-size:12px; color:var(--hint);">
+                            ${escapeHtml(wasKickedFromClub.name)} [${escapeHtml(wasKickedFromClub.tag)}]
+                        </div>
+                    </div>
+                    <button class="friend-action decline" onclick="wasKickedFromClub = null; loadClub();">ОК</button>
+                </div>
+            </div>
+        `;
+    }
+
     container.innerHTML = `
+        ${kickedBanner}
         <div class="profile-hero">
             <div class="profile-hero-inner">
                 <div style="font-size:64px;margin-bottom:14px;">🛡️</div>
@@ -1239,10 +1286,7 @@ function renderNoClub(container) {
         <div id="clubSearchResults"></div>
     `;
 
-    // Показываем все клубы сразу
     loadAllClubs();
-
-    // Фокус не ставим — иначе клавиатура выскочит сразу при входе
 }
 
 let clubSearchTimer = null;
@@ -1301,7 +1345,6 @@ async function renderClubSearchResults(clubs) {
         return;
     }
 
-    // Сколько людей в каждом клубе
     const clubIds = clubs.map(c => c.id);
     const { data: members } = await sb.from('club_members')
         .select('club_id')
@@ -1311,13 +1354,12 @@ async function renderClubSearchResults(clubs) {
         countMap[m.club_id] = (countMap[m.club_id] || 0) + 1;
     });
 
-    // Куда уже подан запрос
     const { data: myReqs } = await sb.from('club_requests')
         .select('club_id, status')
         .eq('telegram_id', currentUser.telegram_id)
         .in('club_id', clubIds);
     const reqMap = {};
-    (myReqs || []).forEach(r => reqMap[r.club_id] = r.status);
+    (myReqs || []).forEach(r => { reqMap[r.club_id] = r.status; });
 
     container.innerHTML = clubs.map(c => {
         const logoSrc = c.logo_url;
