@@ -20,6 +20,7 @@
             --hint: #6d8a80;
             --red: #ff5470;
             --gold: #d9ab5a;
+            --purple: #a78bfa;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -34,7 +35,7 @@
                 radial-gradient(circle at 80% 60%, rgba(0,184,116,0.06), transparent 50%),
                 radial-gradient(circle at 50% 100%, rgba(34,232,164,0.05), transparent 55%);
             animation: bgFloat 24s ease-in-out infinite alternate;
-            z-index: -2; filter: blur(30px); will-change: transform;
+            z-index: -2; filter: blur(30px);
         }
         body::after {
             content: ''; position: fixed; inset: 0;
@@ -534,16 +535,16 @@
         // STATE
         // ============================================================
         let myClub = null;
-        let wasKickedFromClub = null;
         let currentChat = null;
         let chatChannel = null;
         let clubChannel = null;
         let profileEditMode = false;
         let replyTo = null;
         let currentMsgMenuId = null;
+        let wasKickedFromClub = null;
 
         // ============================================================
-        // NOTIFY через Edge Function
+        // NOTIFY
         // ============================================================
         async function notify(telegramId, text) {
             if (!telegramId || !text) return;
@@ -558,9 +559,7 @@
                     },
                     body: JSON.stringify({ telegram_id: telegramId, text })
                 });
-            } catch (e) {
-                console.warn('notify failed (не критично):', e);
-            }
+            } catch (e) { console.warn('notify failed:', e); }
         }
 
         // ============================================================
@@ -607,17 +606,13 @@
                 if (error) throw error;
 
                 currentUser = data;
-
-                // ✅ ВАЖНО: показываем кастомную аватарку, если она есть
                 applyHeaderAvatar(currentUser);
-
                 renderDashboard(currentUser);
                 loadProfile(currentUser);
                 loadLeaderboard();
             } catch (e) {
                 console.error('Init error:', e);
                 showToast('Ошибка: ' + (e?.message || e));
-                // fallback на аватар из Telegram
                 setHeaderAvatar(user.photo_url, user.first_name);
             }
         }
@@ -659,7 +654,7 @@
         }
 
         // ============================================================
-        // PROFILE (VIEW/EDIT)
+        // PROFILE
         // ============================================================
         function loadProfile(user) {
             profileEditMode = false;
@@ -693,18 +688,9 @@
                     <div class="profile-stat"><div class="profile-stat-value">${hours}ч</div><div class="profile-stat-label">На Faceit</div></div>
                 </div>
 
-                <div class="profile-view-row">
-                    <span class="profile-view-label">Standoff 2 ID</span>
-                    <span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span>
-                </div>
-                <div class="profile-view-row">
-                    <span class="profile-view-label">Матчей</span>
-                    <span class="profile-view-value">${user.matches_played ?? 0}</span>
-                </div>
-                <div class="profile-view-row">
-                    <span class="profile-view-label">Побед</span>
-                    <span class="profile-view-value">${user.wins ?? 0}</span>
-                </div>
+                <div class="profile-view-row"><span class="profile-view-label">Standoff 2 ID</span><span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span></div>
+                <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
+                <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
 
                 <button class="profile-action-btn edit" onclick="enterProfileEditMode()">✏️ РЕДАКТИРОВАТЬ</button>
 
@@ -733,7 +719,6 @@
                         </div>
                         <div class="profile-name">Редактирование профиля</div>
                     </div>
-
                     <div class="profile-fields" style="margin-top: 20px;">
                         <div>
                             <label class="field-label">Никнейм</label>
@@ -744,17 +729,13 @@
                             <input type="text" class="field-input" id="editStandoff" value="${escapeHtml(user.standoff_id || '')}" maxlength="64" autocomplete="off">
                         </div>
                     </div>
-
                     <button class="profile-action-btn save" id="saveProfileBtn" onclick="saveProfile()">💾 СОХРАНИТЬ</button>
                     <button class="profile-action-btn cancel" onclick="cancelProfileEdit()">ОТМЕНА</button>
                 </div>
             `;
         }
 
-        function cancelProfileEdit() {
-            profileEditMode = false;
-            renderProfileView(currentUser);
-        }
+        function cancelProfileEdit() { profileEditMode = false; renderProfileView(currentUser); }
 
         async function saveProfile() {
             if (!currentUser) return;
@@ -762,8 +743,6 @@
             const nickname = document.getElementById('editNickname').value.trim();
             const standoffId = document.getElementById('editStandoff').value.trim();
             if (!nickname) { showToast('Никнейм не может быть пустым'); return; }
-            if (nickname.length > 32) { showToast('Никнейм слишком длинный'); return; }
-
             btn.disabled = true; btn.textContent = 'СОХРАНЕНИЕ...';
             try {
                 const { data, error } = await sb.from('users')
@@ -779,14 +758,13 @@
                 showToast('✅ Профиль сохранён');
                 haptic('medium');
             } catch (e) {
-                console.error(e);
                 showToast('Ошибка: ' + (e?.message || e));
                 btn.disabled = false; btn.textContent = '💾 СОХРАНИТЬ';
             }
         }
 
         // ============================================================
-        // PUBLIC PROFILE (MODAL)
+        // PUBLIC PROFILE
         // ============================================================
         async function openPlayerProfile(userId) {
             if (String(userId) === String(currentUser?.telegram_id)) { switchPage('profile'); return; }
@@ -825,19 +803,13 @@
                     <button class="profile-action-btn edit" style="margin-top: 20px;" onclick="closePlayerModal(); openChatWithUser(${user.telegram_id})">
                         💬 НАПИСАТЬ СООБЩЕНИЕ
                     </button>
-
-                    <div class="section-title" style="margin-top: 20px;">История матчей</div>
-                    <div><div class="empty">Матчей пока нет</div></div>
                 `;
             } catch (e) {
-                console.error(e);
                 content.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить</div>';
             }
         }
 
-        function closePlayerModal() {
-            document.getElementById('playerModal').classList.remove('active');
-        }
+        function closePlayerModal() { document.getElementById('playerModal').classList.remove('active'); }
 
         // ============================================================
         // AVATAR
@@ -847,6 +819,8 @@
             document.getElementById('avatarSheet').classList.add('active');
         }
         function openClubLogoSheet() {
+            const myRole = myClub?.members?.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+            if (myRole !== 'owner' && myRole !== 'elder') { showToast('Только OWNER или ELDER'); return; }
             document.getElementById('sheetOverlay').classList.add('active');
             document.getElementById('clubLogoSheet').classList.add('active');
         }
@@ -861,14 +835,8 @@
             if (user?.photo_url) uploadAvatarFromUrl(user.photo_url);
             else showToast('У вас нет фото в Telegram');
         }
-        function pickFromGallery() {
-            closeAllSheets();
-            document.getElementById('avatarFileInput').click();
-        }
-        function pickClubLogoFromGallery() {
-            closeAllSheets();
-            document.getElementById('clubLogoFileInput').click();
-        }
+        function pickFromGallery() { closeAllSheets(); document.getElementById('avatarFileInput').click(); }
+        function pickClubLogoFromGallery() { closeAllSheets(); document.getElementById('clubLogoFileInput').click(); }
 
         document.getElementById('avatarFileInput').addEventListener('change', async (e) => {
             const file = e.target.files?.[0]; e.target.value = '';
@@ -898,14 +866,11 @@
                     .select().single();
                 if (error) throw error;
                 currentUser = data;
-
                 applyHeaderAvatar(currentUser);
                 if (profileEditMode) renderProfileEdit(currentUser);
                 else renderProfileView(currentUser);
                 showToast('✅ Аватар обновлён');
-            } catch (e) {
-                console.error(e); showToast('Ошибка: ' + e.message);
-            }
+            } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
         async function uploadClubLogo(file) {
@@ -920,7 +885,7 @@
                 await sb.from('clubs').update({ logo_url: urlData.publicUrl }).eq('id', myClub.club.id);
                 showToast('✅ Эмблема обновлена');
                 openClubPage();
-            } catch (e) { console.error(e); showToast('Ошибка: ' + e.message); }
+            } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
         async function uploadAvatarFromUrl(url) {
@@ -931,7 +896,7 @@
                 const blob = await imgRes.blob();
                 const file = new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' });
                 await uploadAvatarFile(file);
-            } catch (e) { console.error(e); showToast('Ошибка загрузки'); }
+            } catch (e) { showToast('Не удалось загрузить фото из Telegram. Попробуйте из галереи.'); }
         }
 
         function compressImage(file, maxSize, quality) {
@@ -984,7 +949,7 @@
         // FIND MATCH (заглушка)
         // ============================================================
         async function findMatch() {
-            if (!currentUser) { showToast('Сначала авторизуйтесь'); return; }
+            if (!currentUser) return;
             const btn = document.getElementById('playBtn');
             const loading = document.getElementById('loading');
             btn.disabled = true; btn.textContent = 'ПОИСК...';
@@ -995,7 +960,7 @@
                     joined_at: new Date().toISOString()
                 }, { onConflict: 'telegram_id' });
                 setTimeout(() => {
-                    showToast('Поиск запущен! Ожидайте соперника.');
+                    showToast('Поиск запущен!');
                     btn.disabled = false; btn.textContent = '🎮 ИГРАТЬ';
                     loading.classList.remove('active');
                 }, 2500);
@@ -1030,7 +995,7 @@
                         </div>`;
                 }).join('');
             } catch (e) {
-                document.getElementById('leaderboard').innerHTML = '<div class="empty">Ошибка загрузки</div>';
+                document.getElementById('leaderboard').innerHTML = '<div class="empty">Ошибка</div>';
             }
         }
 
@@ -1041,7 +1006,7 @@
 
         async function searchFriends() {
             const query = document.getElementById('friendSearchInput').value.trim();
-            if (query.length < 2) { showToast('Введите минимум 2 символа'); return; }
+            if (query.length < 2) { showToast('Минимум 2 символа'); return; }
             const container = document.getElementById('friendSearchResults');
             container.innerHTML = '<div class="empty">Поиск...</div>';
             try {
@@ -1051,7 +1016,7 @@
                     .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%`)
                     .neq('telegram_id', currentUser.telegram_id).limit(20);
                 if (error) throw error;
-                if (!data?.length) { container.innerHTML = '<div class="empty">Ничего не найдено</div>'; return; }
+                if (!data?.length) { container.innerHTML = '<div class="empty">Не найдено</div>'; return; }
 
                 const { data: rels } = await sb.from('friendships')
                     .select('requester_id, addressee_id, status')
@@ -1082,7 +1047,7 @@
                         </div>`;
                 }).join('');
             } catch (e) {
-                container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка поиска</div>';
+                container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>';
             }
         }
 
@@ -1094,12 +1059,7 @@
                     addressee_id: addresseeId, status: 'pending'
                 });
                 if (error) throw error;
-
-                notify(addresseeId,
-                    `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.\n` +
-                    `Открой De1mos Faceit → Друзья, чтобы принять.`
-                );
-
+                notify(addresseeId, `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`);
                 showToast('✅ Запрос отправлен');
                 if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Запрос'; }
             } catch (e) {
@@ -1186,233 +1146,122 @@
             subscribeClubRealtime();
         }
 
-async function loadClub() {
-    const container = document.getElementById('clubContent');
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
-    try {
-        const me = currentUser.telegram_id;
-        const { data: membership } = await sb.from('club_members')
-            .select('club_id, role').eq('telegram_id', me).maybeSingle();
+        async function loadClub() {
+            const container = document.getElementById('clubContent');
+            container.innerHTML = '<div class="empty">Загрузка...</div>';
+            try {
+                const me = currentUser.telegram_id;
+                const { data: membership } = await sb.from('club_members')
+                    .select('club_id, role').eq('telegram_id', me).maybeSingle();
 
-        if (!membership) {
-            // Игрока нет в клубе. Проверяем — был ли он в клубе раньше (значит его кикнули)
-            const hadClubBefore = myClub !== null;
-            const prevClub = myClub?.club;
+                if (!membership) {
+                    const hadClubBefore = myClub !== null;
+                    const prevClub = myClub?.club;
+                    myClub = null;
+                    if (hadClubBefore && prevClub) {
+                        wasKickedFromClub = { name: prevClub.name, tag: prevClub.tag };
+                        showToast(`🚪 Тебя исключили из клуба ${prevClub.name}`);
+                        haptic('medium');
+                    }
+                    renderNoClub(container);
+                    return;
+                }
 
-            myClub = null;
+                wasKickedFromClub = null;
+                const { data: club, error: cErr } = await sb.from('clubs').select('*').eq('id', membership.club_id).single();
+                if (cErr) throw cErr;
 
-            if (hadClubBefore && prevClub) {
-                wasKickedFromClub = { name: prevClub.name, tag: prevClub.tag };
-                showToast(`🚪 Тебя исключили из клуба ${prevClub.name}`);
-                haptic('medium');
+                const { data: members } = await sb.from('club_members').select('*').eq('club_id', club.id);
+                const memberIds = (members || []).map(m => m.telegram_id);
+                const { data: users } = await sb.from('users')
+                    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo')
+                    .in('telegram_id', memberIds.length ? memberIds : [0]);
+                const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+                myClub = { club, members: (members || []).map(m => ({ ...m, user: userMap[m.telegram_id] })) };
+                myClub.club.role = membership.role;
+                renderMyClub(container);
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
             }
-
-            renderNoClub(container);
-            return;
         }
 
-        // Есть членство — грузим клуб
-        wasKickedFromClub = null;
-
-        const { data: club, error: cErr } = await sb.from('clubs')
-            .select('*').eq('id', membership.club_id).single();
-        if (cErr) throw cErr;
-
-        const { data: members } = await sb.from('club_members')
-            .select('*').eq('club_id', club.id);
-
-        const memberIds = (members || []).map(m => m.telegram_id);
-        const { data: users } = await sb.from('users')
-            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo')
-            .in('telegram_id', memberIds.length ? memberIds : [0]);
-
-        const userMap = {};
-        (users || []).forEach(u => { userMap[u.telegram_id] = u; });
-
-        myClub = {
-            club,
-            members: (members || []).map(m => ({ ...m, user: userMap[m.telegram_id] }))
-        };
-        myClub.club.role = membership.role;
-
-        renderMyClub(container);
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
-    }
-}
-
-function renderNoClub(container) {
-    let kickedBanner = '';
-    if (wasKickedFromClub) {
-        kickedBanner = `
-            <div class="profile-hero" style="border-color: rgba(255,84,112,0.4); background: linear-gradient(140deg, rgba(255,84,112,0.1), rgba(255,84,112,0.02));">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="font-size:32px;">🚪</div>
-                    <div style="flex:1; min-width:0;">
-                        <div style="font-size:14px; font-weight:700; margin-bottom:4px;">Тебя исключили из клуба</div>
-                        <div style="font-size:12px; color:var(--hint);">
-                            ${escapeHtml(wasKickedFromClub.name)} [${escapeHtml(wasKickedFromClub.tag)}]
+        function renderNoClub(container) {
+            let kickedBanner = '';
+            if (wasKickedFromClub) {
+                kickedBanner = `
+                    <div class="profile-hero" style="border-color: rgba(255,84,112,0.4); background: linear-gradient(140deg, rgba(255,84,112,0.1), rgba(255,84,112,0.02));">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="font-size:32px;">🚪</div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:14px; font-weight:700; margin-bottom:4px;">Тебя исключили из клуба</div>
+                                <div style="font-size:12px; color:var(--hint);">
+                                    ${escapeHtml(wasKickedFromClub.name)} [${escapeHtml(wasKickedFromClub.tag)}]
+                                </div>
+                            </div>
+                            <button class="friend-action decline" onclick="wasKickedFromClub = null; loadClub();">ОК</button>
                         </div>
                     </div>
-                    <button class="friend-action decline" onclick="wasKickedFromClub = null; loadClub();">ОК</button>
-                </div>
-            </div>
-        `;
-    }
+                `;
+            }
 
-    container.innerHTML = `
-        ${kickedBanner}
-        <div class="profile-hero">
-            <div class="profile-hero-inner">
-                <div style="font-size:64px;margin-bottom:14px;">🛡️</div>
-                <h3 style="margin-bottom:10px;">Вы не в клубе</h3>
-                <p style="color:var(--hint);font-size:13px;margin-bottom:20px;">Создайте свой клуб или подайте заявку</p>
-                <button class="profile-action-btn edit" onclick="openCreateClubSheet()">➕ Создать клуб</button>
-            </div>
-        </div>
-
-        <div class="section-title">Найти клуб</div>
-        <div class="profile-hero" style="padding: 16px;">
-            <input
-                type="text"
-                class="field-input"
-                id="clubSearchInput"
-                placeholder="🔍 Название или тег клуба"
-                autocomplete="off"
-                oninput="debouncedClubSearch()"
-            >
-        </div>
-        <div id="clubSearchResults"></div>
-    `;
-
-    loadAllClubs();
-}
-
-let clubSearchTimer = null;
-function debouncedClubSearch() {
-    clearTimeout(clubSearchTimer);
-    clubSearchTimer = setTimeout(() => {
-        const q = document.getElementById('clubSearchInput')?.value.trim() || '';
-        if (q.length === 0) loadAllClubs();
-        else if (q.length >= 2) searchClubs(q);
-        else loadAllClubs();
-    }, 300);
-}
-
-async function loadAllClubs() {
-    const container = document.getElementById('clubSearchResults');
-    if (!container) return;
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
-    try {
-        const { data, error } = await sb.from('clubs')
-            .select('id, name, tag, description, logo_url, max_members, created_at')
-            .order('created_at', { ascending: false })
-            .limit(50);
-        if (error) throw error;
-        await renderClubSearchResults(data || []);
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
-    }
-}
-
-async function searchClubs(query) {
-    const container = document.getElementById('clubSearchResults');
-    if (!container) return;
-    container.innerHTML = '<div class="empty">Поиск...</div>';
-    try {
-        const safe = query.replace(/[%_]/g, '');
-        const { data, error } = await sb.from('clubs')
-            .select('id, name, tag, description, logo_url, max_members, created_at')
-            .or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`)
-            .order('created_at', { ascending: false })
-            .limit(50);
-        if (error) throw error;
-        await renderClubSearchResults(data || []);
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка поиска</div>';
-    }
-}
-
-async function renderClubSearchResults(clubs) {
-    const container = document.getElementById('clubSearchResults');
-    if (!container) return;
-
-    if (!clubs.length) {
-        container.innerHTML = '<div class="empty">Клубов не найдено</div>';
-        return;
-    }
-
-    const clubIds = clubs.map(c => c.id);
-
-    const { data: members } = await sb.from('club_members')
-        .select('club_id')
-        .in('club_id', clubIds);
-    const countMap = {};
-    (members || []).forEach(m => {
-        countMap[m.club_id] = (countMap[m.club_id] || 0) + 1;
-    });
-
-    const { data: myReqs } = await sb.from('club_requests')
-        .select('club_id, status')
-        .eq('telegram_id', currentUser.telegram_id)
-        .in('club_id', clubIds);
-    const reqMap = {};
-    (myReqs || []).forEach(r => { reqMap[r.club_id] = r.status; });
-
-    const { data: myBans } = await sb.from('club_bans')
-        .select('club_id')
-        .eq('telegram_id', currentUser.telegram_id)
-        .in('club_id', clubIds);
-    const banSet = new Set((myBans || []).map(b => b.club_id));
-
-    container.innerHTML = clubs.map(c => {
-        const logoSrc = c.logo_url;
-        const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : c.tag.slice(0, 2).toUpperCase();
-        const status = reqMap[c.id];
-        const count = countMap[c.id] || 0;
-        const isFull = count >= c.max_members;
-        const isBanned = banSet.has(c.id);
-
-        let btn;
-        if (isBanned) btn = `<button class="friend-action decline" disabled>🚫 Забанен</button>`;
-        else if (status === 'pending') btn = `<button class="friend-action pending" disabled>⏳ Заявка</button>`;
-        else if (status === 'accepted') btn = `<button class="friend-action pending" disabled>✓ В клубе</button>`;
-        else if (isFull) btn = `<button class="friend-action pending" disabled>Заполнен</button>`;
-        else btn = `<button class="friend-action add" onclick="event.stopPropagation();sendClubRequest(${c.id}, this)">+ Заявка</button>`;
-
-        return `
-            <div class="leaderboard-item">
-                <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
-                <div style="flex:1;min-width:0;">
-                    <div class="leaderboard-name">${escapeHtml(c.name)}</div>
-                    <div style="font-size:11px;color:var(--hint);">
-                        [${escapeHtml(c.tag)}] · ${count}/${c.max_members}
+            container.innerHTML = `
+                ${kickedBanner}
+                <div class="profile-hero">
+                    <div class="profile-hero-inner">
+                        <div style="font-size:64px;margin-bottom:14px;">🛡️</div>
+                        <h3 style="margin-bottom:10px;">Вы не в клубе</h3>
+                        <p style="color:var(--hint);font-size:13px;margin-bottom:20px;">Создайте свой клуб или подайте заявку</p>
+                        <button class="profile-action-btn edit" onclick="openCreateClubSheet()">➕ Создать клуб</button>
                     </div>
-                    ${c.description ? `<div style="font-size:11px;color:var(--hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.description)}</div>` : ''}
                 </div>
-                ${btn}
-            </div>
-        `;
-    }).join('');
-}
+                <div class="section-title">Найти клуб</div>
+                <div class="profile-hero" style="padding: 16px;">
+                    <input type="text" class="field-input" id="clubSearchInput" placeholder="🔍 Название или тег клуба" autocomplete="off" oninput="debouncedClubSearch()">
+                </div>
+                <div id="clubSearchResults"></div>
+            `;
+            loadAllClubs();
+        }
+
         function renderMyClub(container) {
             const { club, members } = myClub;
-            const isOwner = club.role === 'owner' || club.owner_id === currentUser.telegram_id;
+            const myRole = members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+            const isOwner = myRole === 'owner' || club.owner_id === currentUser.telegram_id;
+            const isElder = myRole === 'elder';
+            const canEdit = isOwner || isElder;
+
             const logoSrc = club.logo_url;
             const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : club.tag.slice(0, 2).toUpperCase();
 
-            let membersHTML = members.map(m => {
+            const sorted = [...members].sort((a, b) => {
+                const rank = { owner: 0, elder: 1, member: 2 };
+                return (rank[a.role] ?? 3) - (rank[b.role] ?? 3);
+            });
+
+            let membersHTML = sorted.map(m => {
                 const u = m.user || {};
                 const src = u.custom_avatar || u.photo_url;
                 const initial = (u.display_name || 'U')[0].toUpperCase();
                 const av = src ? `<img src="${src}" alt="">` : initial;
-                const roleTag = m.role === 'owner' ? ' <span style="color:var(--gold);font-size:10px;">OWNER</span>' : '';
-                const kickBtn = (isOwner && m.role !== 'owner')
-                    ? `<button class="friend-action decline" onclick="event.stopPropagation();kickMember(${m.telegram_id})">Кик</button>`
-                    : '';
+
+                let roleTag = '';
+                if (m.role === 'owner') roleTag = ' <span style="color:var(--gold);font-size:10px;">👑 OWNER</span>';
+                else if (m.role === 'elder') roleTag = ' <span style="color:var(--purple);font-size:10px;">⭐ ELDER</span>';
+
+                let actionBtns = '';
+                if (isOwner && m.telegram_id !== currentUser.telegram_id) {
+                    const promoteBtn = m.role !== 'elder'
+                        ? `<button class="friend-action" style="background:rgba(167,139,250,0.15);color:var(--purple);" onclick="event.stopPropagation();promoteToElder(${m.telegram_id})">⭐</button>`
+                        : `<button class="friend-action" style="background:rgba(167,139,250,0.15);color:var(--purple);" onclick="event.stopPropagation();demoteElder(${m.telegram_id})">↓</button>`;
+                    actionBtns = `
+                        ${promoteBtn}
+                        <button class="friend-action" style="background:rgba(217,171,90,0.15);color:var(--gold);" onclick="event.stopPropagation();transferOwner(${m.telegram_id})">👑</button>
+                        <button class="friend-action decline" onclick="event.stopPropagation();kickMember(${m.telegram_id})">Кик</button>
+                    `;
+                }
+
                 return `
                     <div class="leaderboard-item" onclick="openPlayerProfile(${m.telegram_id})">
                         <div class="lb-avatar">${av}</div>
@@ -1420,7 +1269,7 @@ async function renderClubSearchResults(clubs) {
                             <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
                             <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
                         </div>
-                        ${kickBtn}
+                        <div style="display:flex;gap:6px;">${actionBtns}</div>
                     </div>`;
             }).join('');
 
@@ -1429,15 +1278,15 @@ async function renderClubSearchResults(clubs) {
             container.innerHTML = `
                 <div class="profile-hero">
                     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-                        <div class="lb-avatar" style="width:72px;height:72px;border-radius:20px;font-size:26px;cursor:${isOwner ? 'pointer' : 'default'};" onclick="${isOwner ? 'openClubLogoSheet()' : ''}">${logoHTML}</div>
+                        <div class="lb-avatar" style="width:72px;height:72px;border-radius:20px;font-size:26px;cursor:${canEdit ? 'pointer' : 'default'};" onclick="${canEdit ? 'openClubLogoSheet()' : ''}">${logoHTML}</div>
                         <div style="flex:1;min-width:0;">
                             <div style="font-size:20px;font-weight:800;">${escapeHtml(club.name)}</div>
                             <div style="font-size:12px;color:var(--emerald);font-weight:700;margin-top:3px;letter-spacing:1px;">[${escapeHtml(club.tag)}] · ${members.length}/${club.max_members}</div>
                         </div>
                     </div>
                     ${club.description ? `<div style="color:var(--hint);font-size:13px;line-height:1.5;margin-bottom:14px;">${escapeHtml(club.description)}</div>` : ''}
-                    ${isOwner ? `<button class="profile-action-btn cancel" onclick="openEditClubSheet()">✏️ Редактировать</button>` : ''}
-                    <button class="profile-action-btn save" onclick="leaveClub()" style="background:rgba(255,84,112,0.1);color:var(--red);border:1px solid rgba(255,84,112,0.3);">🚪 Покинуть клуб</button>
+                    ${canEdit ? `<button class="profile-action-btn cancel" onclick="openEditClubSheet()">✏️ Редактировать</button>` : ''}
+                    <button class="profile-action-btn save" onclick="leaveClub()" style="background:rgba(255,84,112,0.1);color:var(--red);border:1px solid rgba(255,84,112,0.3);">🚪 ${isOwner ? 'Удалить клуб' : 'Покинуть клуб'}</button>
                 </div>
                 ${requestsHTML}
                 <div class="section-title">Состав (${members.length}/${club.max_members})</div>
@@ -1488,11 +1337,7 @@ async function renderClubSearchResults(clubs) {
                 if (myClub.members.length >= myClub.club.max_members) { showToast('Клуб заполнен'); return; }
                 await sb.from('club_members').insert({ club_id: myClub.club.id, telegram_id: userId, role: 'member' });
                 await sb.from('club_requests').update({ status: 'accepted' }).eq('id', requestId);
-
-                notify(userId,
-                    `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b> [${escapeHtml(myClub.club.tag)}]!`
-                );
-
+                notify(userId, `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b>!`);
                 showToast('✅ Принят');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -1506,72 +1351,91 @@ async function renderClubSearchResults(clubs) {
             } catch (e) { showToast('Ошибка'); }
         }
 
-async function kickMember(userId) {
-    const withBan = confirm(
-        'Кикнуть игрока?\n\n' +
-        'OK — кикнуть и заблокировать повторный вход\n' +
-        'Отмена — просто кикнуть'
-    );
-    if (!confirm('Точно кикнуть?')) return;
-
-    try {
-        await sb.from('club_members')
-            .delete()
-            .eq('club_id', myClub.club.id)
-            .eq('telegram_id', userId);
-
-        // Удаляем старую заявку, чтобы можно было подать снова (если без бана)
-        await sb.from('club_requests')
-            .delete()
-            .eq('club_id', myClub.club.id)
-            .eq('telegram_id', userId);
-
-        if (withBan) {
-            await sb.from('club_bans').upsert({
-                club_id: myClub.club.id,
-                telegram_id: userId
-            }, { onConflict: 'club_id,telegram_id' });
+        async function kickMember(userId) {
+            const member = myClub.members.find(m => m.telegram_id === userId);
+            if (!member) return;
+            if (member.role === 'owner') { showToast('Нельзя кикнуть владельца'); return; }
+            const withBan = confirm('Кикнуть игрока?\n\nOK — с блокировкой\nОтмена — просто кикнуть');
+            if (!confirm('Точно кикнуть?')) return;
+            try {
+                await sb.from('club_members').delete().eq('club_id', myClub.club.id).eq('telegram_id', userId);
+                await sb.from('club_requests').delete().eq('club_id', myClub.club.id).eq('telegram_id', userId);
+                if (withBan) {
+                    await sb.from('club_bans').upsert({ club_id: myClub.club.id, telegram_id: userId }, { onConflict: 'club_id,telegram_id' });
+                }
+                notify(userId,
+                    withBan
+                        ? `🚫 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b> и заблокировали вход.`
+                        : `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>. Можешь подать заявку снова.`
+                );
+                showToast(withBan ? 'Кикнут + забанен' : 'Кикнут');
+                openClubPage();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
-        const name = myClub.members.find(m => m.telegram_id === userId)?.user?.display_name || 'Игрок';
-
-        notify(userId,
-            withBan
-                ? `🚫 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b> и заблокировали повторный вход.`
-                : `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>. Можешь подать заявку снова.`
-        );
-
-        showToast(withBan ? 'Кикнут + забанен' : 'Кикнут');
-        openClubPage();
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка: ' + e.message);
-    }
-}
-
-async function leaveClub() {
-    if (!confirm('Покинуть клуб?')) return;
-    try {
-        await sb.from('club_members')
-            .delete()
-            .eq('club_id', myClub.club.id)
-            .eq('telegram_id', currentUser.telegram_id);
-
-        // Удаляем старую заявку, чтобы можно было подать снова
-        await sb.from('club_requests')
-            .delete()
-            .eq('club_id', myClub.club.id)
-            .eq('telegram_id', currentUser.telegram_id);
-
-        if (myClub.club.owner_id === currentUser.telegram_id) {
-            await sb.from('clubs').delete().eq('id', myClub.club.id);
+        async function promoteToElder(userId) {
+            const member = myClub.members.find(m => m.telegram_id === userId);
+            if (!member) return;
+            if (member.role === 'owner') { showToast('Владелец уже главный'); return; }
+            if (member.role === 'elder') { showToast('Уже Elder'); return; }
+            if (!confirm(`Назначить ${member.user?.display_name || 'игрока'} Elder?\n\nElder может редактировать клуб и менять эмблему.`)) return;
+            try {
+                await sb.from('club_members').update({ role: 'elder' })
+                    .eq('club_id', myClub.club.id).eq('telegram_id', userId);
+                notify(userId, `⭐ Тебя назначили <b>Elder</b> в клубе <b>${escapeHtml(myClub.club.name)}</b>.`);
+                showToast('✅ Назначен Elder');
+                openClubPage();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
-        showToast('Вы покинули клуб');
-        myClub = null;
-        openClubPage();
-    } catch (e) { showToast('Ошибка'); }
-}
+        async function demoteElder(userId) {
+            const member = myClub.members.find(m => m.telegram_id === userId);
+            if (!member || member.role !== 'elder') return;
+            if (!confirm(`Снять Elder с ${member.user?.display_name || 'игрока'}?`)) return;
+            try {
+                await sb.from('club_members').update({ role: 'member' })
+                    .eq('club_id', myClub.club.id).eq('telegram_id', userId);
+                showToast('Elder снят');
+                openClubPage();
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        async function transferOwner(userId) {
+            const member = myClub.members.find(m => m.telegram_id === userId);
+            if (!member) return;
+            if (member.role === 'owner') { showToast('Уже владелец'); return; }
+            if (myClub.club.owner_id !== currentUser.telegram_id) { showToast('Только владелец'); return; }
+            const targetName = member.user?.display_name || 'игрок';
+            if (!confirm(`Передать владение клубом игроку ${targetName}?`)) return;
+            const phrase = prompt(`Для подтверждения введи название клуба "${myClub.club.name}":`);
+            if (phrase !== myClub.club.name) { showToast('Отменено'); return; }
+            try {
+                await sb.from('clubs').update({ owner_id: userId }).eq('id', myClub.club.id);
+                await sb.from('club_members').update({ role: 'owner' })
+                    .eq('club_id', myClub.club.id).eq('telegram_id', userId);
+                await sb.from('club_members').update({ role: 'member' })
+                    .eq('club_id', myClub.club.id).eq('telegram_id', currentUser.telegram_id);
+                notify(userId, `👑 Ты стал новым <b>OWNER</b> клуба <b>${escapeHtml(myClub.club.name)}</b>!`);
+                showToast('✅ Клуб передан');
+                openClubPage();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
+
+        async function leaveClub() {
+            if (!confirm('Покинуть клуб?')) return;
+            try {
+                const clubId = myClub.club.id;
+                const isOwner = myClub.club.owner_id === currentUser.telegram_id;
+                if (isOwner) {
+                    const others = myClub.members.filter(m => m.telegram_id !== currentUser.telegram_id);
+                    if (others.length > 0) { showToast('Сначала передай владение'); return; }
+                    await sb.from('clubs').delete().eq('id', clubId);
+                }
+                await sb.from('club_members').delete().eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id);
+                await sb.from('club_requests').delete().eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id);
+                showToast('Вы покинули клуб'); myClub = null; openClubPage();
+            } catch (e) { showToast('Ошибка'); }
+        }
 
         function openCreateClubSheet() {
             const name = prompt('Название клуба (2-30):');
@@ -1597,6 +1461,8 @@ async function leaveClub() {
         }
 
         function openEditClubSheet() {
+            const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+            if (myRole !== 'owner' && myRole !== 'elder') { showToast('Только OWNER или ELDER'); return; }
             const name = prompt('Название:', myClub.club.name); if (name === null) return;
             const tag = prompt('Тег:', myClub.club.tag); if (tag === null) return;
             const desc = prompt('Описание:', myClub.club.description || ''); if (desc === null) return;
@@ -1604,94 +1470,118 @@ async function leaveClub() {
                 .then(() => { showToast('✅'); openClubPage(); });
         }
 
-        async function openClubSearch() {
-            const query = prompt('Поиск клуба (название/тег):');
-            if (!query || query.length < 2) return;
+        let clubSearchTimer = null;
+        function debouncedClubSearch() {
+            clearTimeout(clubSearchTimer);
+            clubSearchTimer = setTimeout(() => {
+                const q = document.getElementById('clubSearchInput')?.value.trim() || '';
+                if (q.length === 0) loadAllClubs();
+                else if (q.length >= 2) searchClubs(q);
+                else loadAllClubs();
+            }, 300);
+        }
+
+        async function loadAllClubs() {
+            const container = document.getElementById('clubSearchResults');
+            if (!container) return;
+            container.innerHTML = '<div class="empty">Загрузка...</div>';
+            try {
+                const { data, error } = await sb.from('clubs')
+                    .select('id, name, tag, description, logo_url, max_members, created_at')
+                    .order('created_at', { ascending: false }).limit(50);
+                if (error) throw error;
+                await renderClubSearchResults(data || []);
+            } catch (e) { container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>'; }
+        }
+
+        async function searchClubs(query) {
+            const container = document.getElementById('clubSearchResults');
+            if (!container) return;
+            container.innerHTML = '<div class="empty">Поиск...</div>';
             try {
                 const safe = query.replace(/[%_]/g, '');
                 const { data, error } = await sb.from('clubs')
-                    .select('id, name, tag, description, logo_url, max_members')
-                    .or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`).limit(20);
+                    .select('id, name, tag, description, logo_url, max_members, created_at')
+                    .or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`)
+                    .order('created_at', { ascending: false }).limit(50);
                 if (error) throw error;
-
-                const container = document.getElementById('clubSearchResults');
-                if (!data?.length) { container.innerHTML = '<div class="empty">Ничего не найдено</div>'; return; }
-
-                const clubIds = data.map(c => c.id);
-                const { data: myReqs } = await sb.from('club_requests')
-                    .select('club_id, status').eq('telegram_id', currentUser.telegram_id).in('club_id', clubIds);
-                const reqMap = {}; (myReqs || []).forEach(r => reqMap[r.club_id] = r.status);
-
-                container.innerHTML = '<div class="section-title">Найденные клубы</div>' + data.map(c => {
-                    const logoSrc = c.logo_url;
-                    const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : c.tag.slice(0, 2).toUpperCase();
-                    const status = reqMap[c.id];
-                    let btn;
-                    if (status === 'pending') btn = `<button class="friend-action pending" disabled>⏳ Заявка</button>`;
-                    else if (status === 'accepted') btn = `<button class="friend-action pending" disabled>✓ Принят</button>`;
-                    else btn = `<button class="friend-action add" onclick="sendClubRequest(${c.id}, this)">+ Заявка</button>`;
-                    return `
-                        <div class="leaderboard-item">
-                            <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
-                            <div style="flex:1;min-width:0;">
-                                <div class="leaderboard-name">${escapeHtml(c.name)}</div>
-                                <div style="font-size:11px;color:var(--hint);">[${escapeHtml(c.tag)}] · до ${c.max_members}</div>
-                            </div>
-                            ${btn}
-                        </div>`;
-                }).join('');
-            } catch (e) { showToast('Ошибка поиска'); }
+                await renderClubSearchResults(data || []);
+            } catch (e) { container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>'; }
         }
 
-async function sendClubRequest(clubId, btnEl) {
-    if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+        async function renderClubSearchResults(clubs) {
+            const container = document.getElementById('clubSearchResults');
+            if (!container) return;
+            if (!clubs.length) { container.innerHTML = '<div class="empty">Клубов не найдено</div>'; return; }
 
-    try {
-        // Проверка бана
-        const { data: ban } = await sb.from('club_bans')
-            .select('id')
-            .eq('club_id', clubId)
-            .eq('telegram_id', currentUser.telegram_id)
-            .maybeSingle();
+            const clubIds = clubs.map(c => c.id);
+            const { data: members } = await sb.from('club_members').select('club_id').in('club_id', clubIds);
+            const countMap = {};
+            (members || []).forEach(m => { countMap[m.club_id] = (countMap[m.club_id] || 0) + 1; });
 
-        if (ban) {
-            showToast('🚫 Ты забанен в этом клубе');
-            if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Забанен'; }
-            return;
+            const { data: myReqs } = await sb.from('club_requests')
+                .select('club_id, status').eq('telegram_id', currentUser.telegram_id).in('club_id', clubIds);
+            const reqMap = {};
+            (myReqs || []).forEach(r => { reqMap[r.club_id] = r.status; });
+
+            const { data: myBans } = await sb.from('club_bans')
+                .select('club_id').eq('telegram_id', currentUser.telegram_id).in('club_id', clubIds);
+            const banSet = new Set((myBans || []).map(b => b.club_id));
+
+            container.innerHTML = clubs.map(c => {
+                const logoSrc = c.logo_url;
+                const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : c.tag.slice(0, 2).toUpperCase();
+                const status = reqMap[c.id];
+                const count = countMap[c.id] || 0;
+                const isFull = count >= c.max_members;
+                const isBanned = banSet.has(c.id);
+
+                let btn;
+                if (isBanned) btn = `<button class="friend-action decline" disabled>🚫 Бан</button>`;
+                else if (status === 'pending') btn = `<button class="friend-action pending" disabled>⏳ Заявка</button>`;
+                else if (status === 'accepted') btn = `<button class="friend-action pending" disabled>✓ В клубе</button>`;
+                else if (isFull) btn = `<button class="friend-action pending" disabled>Заполнен</button>`;
+                else btn = `<button class="friend-action add" onclick="event.stopPropagation();sendClubRequest(${c.id}, this)">+ Заявка</button>`;
+
+                return `
+                    <div class="leaderboard-item">
+                        <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="leaderboard-name">${escapeHtml(c.name)}</div>
+                            <div style="font-size:11px;color:var(--hint);">[${escapeHtml(c.tag)}] · ${count}/${c.max_members}</div>
+                            ${c.description ? `<div style="font-size:11px;color:var(--hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.description)}</div>` : ''}
+                        </div>
+                        ${btn}
+                    </div>`;
+            }).join('');
         }
 
-        // Проверка — есть ли уже место
-        const { data: members } = await sb.from('club_members')
-            .select('telegram_id').eq('club_id', clubId);
-        const { data: club } = await sb.from('clubs')
-            .select('name, owner_id, max_members').eq('id', clubId).single();
+        async function sendClubRequest(clubId, btnEl) {
+            if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+            try {
+                const { data: ban } = await sb.from('club_bans')
+                    .select('id').eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
+                if (ban) { showToast('🚫 Ты забанен'); if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Бан'; } return; }
 
-        if (club && (members || []).length >= club.max_members) {
-            showToast('Клуб заполнен');
-            if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = 'Заполнен'; }
-            return;
+                const { data: club } = await sb.from('clubs').select('name, owner_id, max_members').eq('id', clubId).single();
+                const { data: members } = await sb.from('club_members').select('telegram_id').eq('club_id', clubId);
+                if (club && (members || []).length >= club.max_members) {
+                    showToast('Клуб заполнен');
+                    if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = 'Заполнен'; }
+                    return;
+                }
+
+                await sb.from('club_requests').upsert({
+                    club_id: clubId, telegram_id: currentUser.telegram_id, status: 'pending'
+                }, { onConflict: 'club_id,telegram_id' });
+
+                if (club?.owner_id) {
+                    notify(club.owner_id, `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.`);
+                }
+                showToast('✅ Заявка отправлена');
+                if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
+            } catch (e) { showToast('Ошибка: ' + e.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; } }
         }
-
-        await sb.from('club_requests').upsert({
-            club_id: clubId,
-            telegram_id: currentUser.telegram_id,
-            status: 'pending'
-        }, { onConflict: 'club_id,telegram_id' });
-
-        if (club && club.owner_id) {
-            notify(club.owner_id,
-                `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.\n` +
-                `Открой De1mos Faceit → Клуб → Заявки.`
-            );
-        }
-
-        showToast('✅ Заявка отправлена');
-        if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
-    } catch (e) {
-        showToast('Ошибка: ' + e.message);
-        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; }
-    }
-}
 
         function subscribeClubRealtime() {
             if (!currentUser) return;
@@ -1724,7 +1614,9 @@ async function sendClubRequest(clubId, btnEl) {
             try {
                 const me = currentUser.telegram_id;
                 const items = [];
+                const seenDMs = new Set();
 
+                // 1. Клуб
                 const { data: membership } = await sb.from('club_members').select('club_id').eq('telegram_id', me).maybeSingle();
                 if (membership) {
                     const { data: club } = await sb.from('clubs').select('id, name, tag, logo_url').eq('id', membership.club_id).single();
@@ -1735,38 +1627,84 @@ async function sendClubRequest(clubId, btnEl) {
                         items.push({
                             type: 'club', id: club.id, name: club.name + ' [' + club.tag + ']',
                             avatar: club.logo_url, square: true,
-                            preview: lastMsg?.text || 'Чат клуба'
+                            preview: lastMsg?.text || 'Чат клуба',
+                            lastAt: lastMsg?.created_at || '1970-01-01'
                         });
                     }
                 }
 
+                // 2. Все личные переписки — берём из messages
+                const { data: allDMs } = await sb.from('messages')
+                    .select('id, sender_id, recipient_id, text, image_url, created_at')
+                    .or(`sender_id.eq.${me},recipient_id.eq.${me}`)
+                    .not('recipient_id', 'is', null)
+                    .order('created_at', { ascending: false })
+                    .limit(500);
+
+                const lastByPartner = {};
+                (allDMs || []).forEach(m => {
+                    const partner = m.sender_id === me ? m.recipient_id : m.sender_id;
+                    if (!partner) return;
+                    if (!lastByPartner[partner]) {
+                        lastByPartner[partner] = m;
+                    }
+                });
+
+                const partnerIds = Object.keys(lastByPartner).map(Number);
+                let userMap = {};
+                if (partnerIds.length) {
+                    const { data: users } = await sb.from('users')
+                        .select('telegram_id, display_name, custom_avatar, photo_url')
+                        .in('telegram_id', partnerIds);
+                    (users || []).forEach(u => { userMap[u.telegram_id] = u; });
+                }
+
+                partnerIds.forEach(pid => {
+                    const m = lastByPartner[pid];
+                    const u = userMap[pid] || { telegram_id: pid, display_name: 'Игрок' };
+                    const preview = m.image_url ? '📷 Фото' : (m.text || '');
+                    items.push({
+                        type: 'dm', id: pid,
+                        name: u.display_name || 'Игрок',
+                        avatar: u.custom_avatar || u.photo_url, square: false,
+                        preview: preview || 'Начать чат',
+                        lastAt: m.created_at
+                    });
+                });
+
+                // 3. Друзья, с которыми ещё нет переписки — чтобы можно было начать
                 const { data: friends } = await sb.from('friendships')
                     .select('requester_id, addressee_id, status')
                     .or(`requester_id.eq.${me},addressee_id.eq.${me}`).eq('status', 'accepted');
                 const friendIds = (friends || []).map(f => f.requester_id === me ? f.addressee_id : f.requester_id);
+                const emptyFriendIds = friendIds.filter(fid => !lastByPartner[fid]);
 
-                if (friendIds.length) {
+                if (emptyFriendIds.length) {
                     const { data: users } = await sb.from('users')
                         .select('telegram_id, display_name, custom_avatar, photo_url')
-                        .in('telegram_id', friendIds);
-                    const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+                        .in('telegram_id', emptyFriendIds);
+                    const map = {};
+                    (users || []).forEach(u => { map[u.telegram_id] = u; });
 
-                    for (const fid of friendIds) {
-                        const u = userMap[fid] || { telegram_id: fid, display_name: 'Игрок' };
-                        const { data: msgs } = await sb.from('messages')
-                            .select('text, created_at')
-                            .or(`and(sender_id.eq.${me},recipient_id.eq.${fid}),and(sender_id.eq.${fid},recipient_id.eq.${me})`)
-                            .order('created_at', { ascending: false }).limit(1);
-                        const last = msgs?.[0];
+                    emptyFriendIds.forEach(fid => {
+                        const u = map[fid] || { telegram_id: fid, display_name: 'Игрок' };
                         items.push({
-                            type: 'dm', id: fid, name: u.display_name || 'Игрок',
+                            type: 'dm', id: fid,
+                            name: u.display_name || 'Игрок',
                             avatar: u.custom_avatar || u.photo_url, square: false,
-                            preview: last?.text || 'Начать чат'
+                            preview: 'Начать чат',
+                            lastAt: '1970-01-01'
                         });
-                    }
+                    });
                 }
 
-                if (!items.length) { container.innerHTML = '<div class="empty">Нет чатов. Добавьте друзей или вступите в клуб.</div>'; return; }
+                // Сортируем по времени последнего
+                items.sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
+
+                if (!items.length) {
+                    container.innerHTML = '<div class="empty">Нет чатов. Добавьте друзей или вступите в клуб.</div>';
+                    return;
+                }
 
                 container.innerHTML = items.map(it => {
                     const av = it.avatar ? `<img src="${it.avatar}" alt="">` : (it.name[0] || '?').toUpperCase();
@@ -1841,7 +1779,6 @@ async function sendClubRequest(clubId, btnEl) {
 
             container.innerHTML = (data || []).map(m => renderBubble(m, userMap[m.sender_id], me)).join('');
             container.scrollTop = container.scrollHeight;
-
             attachBubbleHandlers();
         }
 
@@ -1871,32 +1808,23 @@ async function sendClubRequest(clubId, btnEl) {
             const edited = msg.edited_at ? ' <span style="font-size:10px;opacity:0.7;">(ред.)</span>' : '';
 
             return `<div class="chat-bubble ${cls}" data-msg-id="${msg.id}" data-sender-id="${msg.sender_id}">
-                ${quote}
-                ${author}
-                ${body}
+                ${quote}${author}${body}
                 <div class="chat-bubble-time">${time}${edited}${isMe ? ' <span class="chat-bubble-status">✓</span>' : ''}</div>
             </div>`;
         }
 
         function attachBubbleHandlers() {
-            const bubbles = document.querySelectorAll('.chat-bubble');
-            bubbles.forEach(bubble => {
+            document.querySelectorAll('.chat-bubble').forEach(bubble => {
                 if (bubble.dataset.handlersAttached === '1') return;
                 bubble.dataset.handlersAttached = '1';
 
-                let touchStartX = 0;
-                let touchStartY = 0;
-                let isSwiping = false;
-                let longPressTimer = null;
-                let longPressTriggered = false;
+                let touchStartX = 0, touchStartY = 0, isSwiping = false;
+                let longPressTimer = null, longPressTriggered = false;
 
                 bubble.addEventListener('touchstart', (e) => {
                     const t = e.touches[0];
-                    touchStartX = t.clientX;
-                    touchStartY = t.clientY;
-                    isSwiping = false;
-                    longPressTriggered = false;
-
+                    touchStartX = t.clientX; touchStartY = t.clientY;
+                    isSwiping = false; longPressTriggered = false;
                     longPressTimer = setTimeout(() => {
                         longPressTriggered = true;
                         haptic('medium');
@@ -1906,13 +1834,8 @@ async function sendClubRequest(clubId, btnEl) {
 
                 bubble.addEventListener('touchmove', (e) => {
                     const t = e.touches[0];
-                    const dx = t.clientX - touchStartX;
-                    const dy = t.clientY - touchStartY;
-
-                    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-                        clearTimeout(longPressTimer);
-                    }
-
+                    const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
+                    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clearTimeout(longPressTimer);
                     if (dx < -8 && Math.abs(dy) < 40 && !longPressTriggered) {
                         isSwiping = true;
                         bubble.classList.add('swiping');
@@ -1929,15 +1852,10 @@ async function sendClubRequest(clubId, btnEl) {
                     bubble.style.transform = '';
                     const wasHighlighted = bubble.classList.contains('reply-highlight');
                     bubble.classList.remove('reply-highlight');
-
-                    if (isSwiping && wasHighlighted) {
-                        haptic('light');
-                        startReply(bubble.dataset.msgId);
-                    }
+                    if (isSwiping && wasHighlighted) { haptic('light'); startReply(bubble.dataset.msgId); }
                     isSwiping = false;
                 });
 
-                // ПК и Desktop: правый клик
                 bubble.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     openMsgMenu(bubble.dataset.msgId, parseInt(bubble.dataset.senderId));
@@ -1950,21 +1868,14 @@ async function sendClubRequest(clubId, btnEl) {
             if (!bubble) return;
             const senderId = parseInt(bubble.dataset.senderId);
             const isMe = senderId === currentUser.telegram_id;
-
             let text = '';
             const textDiv = Array.from(bubble.querySelectorAll('div')).find(d =>
-                !d.classList.contains('chat-bubble-author') &&
-                !d.classList.contains('chat-bubble-time') &&
-                !d.classList.contains('chat-quote')
-            );
+                !d.classList.contains('chat-bubble-author') && !d.classList.contains('chat-bubble-time') && !d.classList.contains('chat-quote'));
             const img = bubble.querySelector('.chat-img');
             if (textDiv && textDiv.textContent) text = textDiv.textContent;
             else if (img) text = '📷 Фото';
-
             const authorName = isMe ? 'Вы' : (bubble.querySelector('.chat-bubble-author')?.textContent || 'Игрок');
-
             replyTo = { id: msgId, sender_name: authorName, text };
-
             document.getElementById('chatReplyAuthor').textContent = authorName;
             document.getElementById('chatReplyText').textContent = text.slice(0, 60);
             document.getElementById('chatReplyBar').classList.add('active');
@@ -1983,30 +1894,22 @@ async function sendClubRequest(clubId, btnEl) {
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
-
             try {
                 const payload = {
-                    sender_id: currentUser.telegram_id,
-                    text,
+                    sender_id: currentUser.telegram_id, text,
                     club_id: currentChat.type === 'club' ? currentChat.id : null,
                     recipient_id: currentChat.type === 'dm' ? currentChat.id : null
                 };
-
                 if (replyTo) {
                     payload.reply_to_id = parseInt(replyTo.id);
                     payload.reply_to_name = replyTo.sender_name;
                     payload.reply_to_text = replyTo.text;
                 }
-
                 const { error } = await sb.from('messages').insert(payload);
                 if (error) throw error;
-
                 if (currentChat.type === 'dm') {
-                    notify(currentChat.id,
-                        `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`
-                    );
+                    notify(currentChat.id, `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`);
                 }
-
                 cancelReply();
             } catch (e) { console.error(e); showToast('Ошибка отправки'); }
         }
@@ -2016,11 +1919,9 @@ async function sendClubRequest(clubId, btnEl) {
         });
 
         document.getElementById('chatImageInput')?.addEventListener('change', async (e) => {
-            const file = e.target.files?.[0];
-            e.target.value = '';
+            const file = e.target.files?.[0]; e.target.value = '';
             if (!file || !currentChat || !currentUser) return;
-            if (file.size > 10_000_000) { showToast('Файл слишком большой (макс 10MB)'); return; }
-
+            if (file.size > 10_000_000) { showToast('Макс 10MB'); return; }
             showToast('Загрузка...');
             try {
                 const blob = await compressImage(file, 1024, 0.85);
@@ -2028,32 +1929,22 @@ async function sendClubRequest(clubId, btnEl) {
                     ? `club_${currentChat.id}`
                     : `dm_${[currentUser.telegram_id, currentChat.id].sort().join('_')}`;
                 const path = `${folder}/${Date.now()}_${currentUser.telegram_id}.jpg`;
-
                 const { error: upErr } = await sb.storage.from(BUCKETS.chat)
                     .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
                 if (upErr) throw upErr;
-
                 const { data: urlData } = sb.storage.from(BUCKETS.chat).getPublicUrl(path);
-
                 const payload = {
-                    sender_id: currentUser.telegram_id,
-                    text: null,
+                    sender_id: currentUser.telegram_id, text: null,
                     image_url: urlData.publicUrl,
                     club_id: currentChat.type === 'club' ? currentChat.id : null,
                     recipient_id: currentChat.type === 'dm' ? currentChat.id : null
                 };
                 const { error } = await sb.from('messages').insert(payload);
                 if (error) throw error;
-
                 if (currentChat.type === 'dm') {
-                    notify(currentChat.id,
-                        `📷 <b>${escapeHtml(currentUser.display_name)}</b> отправил фото`
-                    );
+                    notify(currentChat.id, `📷 <b>${escapeHtml(currentUser.display_name)}</b> отправил фото`);
                 }
-            } catch (e) {
-                console.error(e);
-                showToast('Ошибка загрузки: ' + e.message);
-            }
+            } catch (e) { showToast('Ошибка загрузки: ' + e.message); }
         });
 
         function openImageView(url) {
@@ -2097,59 +1988,38 @@ async function sendClubRequest(clubId, btnEl) {
         }
 
         // ============================================================
-        // MESSAGE MENU (edit/delete/reply)
+        // MESSAGE MENU
         // ============================================================
         function openMsgMenu(msgId, senderId) {
             currentMsgMenuId = msgId;
             const isMe = senderId === currentUser.telegram_id;
             const overlay = document.getElementById('msgMenuOverlay');
             const content = document.getElementById('msgMenuContent');
-
             const bubble = document.querySelector(`.chat-bubble[data-msg-id="${msgId}"]`);
             let textContent = '';
             if (bubble) {
                 const textDiv = Array.from(bubble.querySelectorAll('div')).find(d =>
-                    !d.classList.contains('chat-bubble-author') &&
-                    !d.classList.contains('chat-bubble-time') &&
-                    !d.classList.contains('chat-quote')
-                );
+                    !d.classList.contains('chat-bubble-author') && !d.classList.contains('chat-bubble-time') && !d.classList.contains('chat-quote'));
                 if (textDiv && textDiv.textContent) textContent = textDiv.textContent;
             }
-
             let html = `<div class="msg-menu-title">Сообщение</div>`;
             html += `<button class="msg-menu-btn" onclick="menuReply(${msgId})">↩️ Ответить</button>`;
-            if (isMe && textContent) {
-                html += `<button class="msg-menu-btn" onclick="menuEdit(${msgId})">✏️ Редактировать</button>`;
-            }
-            if (isMe) {
-                html += `<button class="msg-menu-btn danger" onclick="menuDelete(${msgId})">🗑️ Удалить</button>`;
-            }
+            if (isMe && textContent) html += `<button class="msg-menu-btn" onclick="menuEdit(${msgId})">✏️ Редактировать</button>`;
+            if (isMe) html += `<button class="msg-menu-btn danger" onclick="menuDelete(${msgId})">🗑️ Удалить</button>`;
             html += `<button class="msg-menu-cancel" onclick="closeMsgMenu()">ОТМЕНА</button>`;
-
             content.innerHTML = html;
             overlay.classList.add('active');
         }
 
-        function closeMsgMenu() {
-            document.getElementById('msgMenuOverlay').classList.remove('active');
-            currentMsgMenuId = null;
-        }
-
-        function menuReply(msgId) {
-            closeMsgMenu();
-            startReply(msgId);
-        }
+        function closeMsgMenu() { document.getElementById('msgMenuOverlay').classList.remove('active'); currentMsgMenuId = null; }
+        function menuReply(msgId) { closeMsgMenu(); startReply(msgId); }
 
         async function menuEdit(msgId) {
             const bubble = document.querySelector(`.chat-bubble[data-msg-id="${msgId}"]`);
             if (!bubble) { closeMsgMenu(); return; }
             const textDiv = Array.from(bubble.querySelectorAll('div')).find(d =>
-                !d.classList.contains('chat-bubble-author') &&
-                !d.classList.contains('chat-bubble-time') &&
-                !d.classList.contains('chat-quote')
-            );
+                !d.classList.contains('chat-bubble-author') && !d.classList.contains('chat-bubble-time') && !d.classList.contains('chat-quote'));
             const oldText = textDiv?.textContent || '';
-
             const content = document.getElementById('msgMenuContent');
             content.innerHTML = `
                 <div class="msg-menu-title">Редактирование</div>
@@ -2162,7 +2032,7 @@ async function sendClubRequest(clubId, btnEl) {
 
         async function saveEditMsg(msgId) {
             const newText = document.getElementById('editMsgText').value.trim();
-            if (!newText) { showToast('Пустое сообщение'); return; }
+            if (!newText) { showToast('Пусто'); return; }
             try {
                 const { error } = await sb.from('messages')
                     .update({ text: newText, edited_at: new Date().toISOString() })
@@ -2171,10 +2041,7 @@ async function sendClubRequest(clubId, btnEl) {
                 closeMsgMenu();
                 await loadMessages();
                 showToast('✅ Отредактировано');
-            } catch (e) {
-                console.error(e);
-                showToast('Ошибка: ' + e.message);
-            }
+            } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
         async function menuDelete(msgId) {
@@ -2185,10 +2052,7 @@ async function sendClubRequest(clubId, btnEl) {
                 closeMsgMenu();
                 await loadMessages();
                 showToast('Удалено');
-            } catch (e) {
-                console.error(e);
-                showToast('Ошибка: ' + e.message);
-            }
+            } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
         // ============================================================
@@ -2196,8 +2060,7 @@ async function sendClubRequest(clubId, btnEl) {
         // ============================================================
         function haptic(style = 'light') { try { tg?.HapticFeedback?.impactOccurred(style); } catch (e) {} }
         function escapeHtml(str) {
-            return String(str ?? '')
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
         let toastTimer;
         function showToast(msg) {
