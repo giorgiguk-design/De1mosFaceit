@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
     <title>De1mos Faceit</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -368,7 +366,6 @@
         <button class="notif-btn" onclick="showToast('Уведомлений пока нет')">🔔</button>
     </header>
 
-    <!-- DASHBOARD -->
     <div class="container page active" id="page-dashboard">
         <div class="elo-card">
             <div class="elo-label">Ваш рейтинг</div>
@@ -394,12 +391,10 @@
         <div id="leaderboard"><div class="empty">Загрузка...</div></div>
     </div>
 
-    <!-- PROFILE -->
     <div class="container page" id="page-profile">
         <div id="profileContent"></div>
     </div>
 
-    <!-- FRIENDS -->
     <div class="container page" id="page-friends">
         <div class="profile-hero">
             <h3 style="margin-bottom: 14px;">🔍 Поиск друзей</h3>
@@ -415,18 +410,15 @@
         </div>
     </div>
 
-    <!-- CLUB -->
     <div class="container page" id="page-club">
         <div id="clubContent"><div class="empty">Загрузка...</div></div>
     </div>
 
-    <!-- CHAT -->
     <div class="container page" id="page-chat">
         <div class="section-title" style="margin-top: 0;">Чаты</div>
         <div id="chatList"><div class="empty">Загрузка...</div></div>
     </div>
 
-    <!-- NAV -->
     <nav class="bottom-nav">
         <button class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')"><span class="nav-icon">🏠</span><span>Главная</span></button>
         <button class="nav-item" data-page="profile" onclick="switchPage('profile')"><span class="nav-icon">👤</span><span>Профиль</span></button>
@@ -434,7 +426,6 @@
         <button class="nav-item" data-page="chat" onclick="openChatPage()"><span class="nav-icon">💬</span><span>Чаты</span></button>
     </nav>
 
-    <!-- CHAT VIEW -->
     <div class="chat-view" id="chatView">
         <div class="chat-view-header">
             <button class="chat-back-btn" onclick="closeChatView()">←</button>
@@ -448,7 +439,6 @@
         </div>
     </div>
 
-    <!-- PLAYER MODAL -->
     <div class="player-modal" id="playerModal" onclick="if(event.target===this)closePlayerModal()">
         <div class="player-modal-inner">
             <button class="player-modal-close" onclick="closePlayerModal()">×</button>
@@ -456,7 +446,6 @@
         </div>
     </div>
 
-    <!-- SHEETS -->
     <div class="sheet-overlay" id="sheetOverlay" onclick="closeAllSheets()"></div>
     <div class="sheet" id="avatarSheet">
         <div class="sheet-title">Сменить аватар</div>
@@ -482,7 +471,18 @@
         // ============================================================
         const SUPABASE_URL = 'https://ksmuopoasgzyromdjtnt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzbXVvcG9hc2d6eXJvbWRqdG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMzA0MzMsImV4cCI6MjEwNDkwNjQzM30.qEUIVTAQMuP37z4JSa75dlWSelqhNolUuobp7hcAKjc';
-        const STORAGE_BUCKET = 'avatars';
+        const NOTIFY_URL = SUPABASE_URL + '/functions/v1/notify';
+
+        // ============================================================
+        // БАКЕТЫ
+        // ============================================================
+        const BUCKETS = {
+            avatars: 'avatars',
+            clubs:   'clubs',
+            chat:    'chat',
+            matches: 'matches'
+        };
+
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ============================================================
@@ -500,6 +500,27 @@
         let chatChannel = null;
         let clubChannel = null;
         let profileEditMode = false;
+
+        // ============================================================
+        // NOTIFY через Edge Function
+        // ============================================================
+        async function notify(telegramId, text) {
+            if (!telegramId || !text) return;
+            if (String(telegramId) === String(currentUser?.telegram_id)) return;
+            try {
+                await fetch(NOTIFY_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: JSON.stringify({ telegram_id: telegramId, text })
+                });
+            } catch (e) {
+                console.warn('notify failed (не критично):', e);
+            }
+        }
 
         // ============================================================
         // INIT
@@ -520,14 +541,12 @@
             setHeaderAvatar(user.photo_url, user.first_name);
 
             try {
-                // Сначала ищем существующего пользователя — не перетираем кастомные поля
                 const { data: existing } = await sb.from('users')
                     .select('*').eq('telegram_id', user.id).maybeSingle();
 
                 let data, error;
 
                 if (existing) {
-                    // Обновляем только данные из Telegram
                     const upd = {
                         username: user.username || existing.username,
                         photo_url: user.photo_url || existing.photo_url
@@ -537,7 +556,6 @@
                         .eq('telegram_id', user.id)
                         .select().single());
                 } else {
-                    // Создаём нового
                     ({ data, error } = await sb.from('users')
                         .insert({
                             telegram_id: user.id,
@@ -810,10 +828,10 @@
             try {
                 const blob = await compressImage(file, 512, 0.85);
                 const path = `${currentUser.telegram_id}/${Date.now()}.jpg`;
-                const { error: upErr } = await sb.storage.from(STORAGE_BUCKET)
+                const { error: upErr } = await sb.storage.from(BUCKETS.avatars)
                     .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
                 if (upErr) throw upErr;
-                const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+                const { data: urlData } = sb.storage.from(BUCKETS.avatars).getPublicUrl(path);
 
                 const { data, error } = await sb.from('users')
                     .update({ custom_avatar: urlData.publicUrl })
@@ -835,11 +853,11 @@
             showToast('Обработка...');
             try {
                 const blob = await compressImage(file, 512, 0.85);
-                const path = `clubs/${myClub.club.id}/${Date.now()}.jpg`;
-                const { error: upErr } = await sb.storage.from(STORAGE_BUCKET)
+                const path = `${myClub.club.id}/${Date.now()}.jpg`;
+                const { error: upErr } = await sb.storage.from(BUCKETS.clubs)
                     .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
                 if (upErr) throw upErr;
-                const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+                const { data: urlData } = sb.storage.from(BUCKETS.clubs).getPublicUrl(path);
                 await sb.from('clubs').update({ logo_url: urlData.publicUrl }).eq('id', myClub.club.id);
                 showToast('✅ Эмблема обновлена');
                 openClubPage();
@@ -1017,6 +1035,12 @@
                     addressee_id: addresseeId, status: 'pending'
                 });
                 if (error) throw error;
+
+                notify(addresseeId,
+                    `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.\n` +
+                    `Открой De1mos Faceit → Друзья, чтобы принять.`
+                );
+
                 showToast('✅ Запрос отправлен');
                 if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Запрос'; }
             } catch (e) {
@@ -1237,6 +1261,11 @@
                 if (myClub.members.length >= myClub.club.max_members) { showToast('Клуб заполнен'); return; }
                 await sb.from('club_members').insert({ club_id: myClub.club.id, telegram_id: userId, role: 'member' });
                 await sb.from('club_requests').update({ status: 'accepted' }).eq('id', requestId);
+
+                notify(userId,
+                    `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b> [${escapeHtml(myClub.club.tag)}]!`
+                );
+
                 showToast('✅ Принят');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -1254,6 +1283,11 @@
             if (!confirm('Кикнуть игрока?')) return;
             try {
                 await sb.from('club_members').delete().eq('club_id', myClub.club.id).eq('telegram_id', userId);
+
+                notify(userId,
+                    `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>.`
+                );
+
                 showToast('Кикнут'); openClubPage();
             } catch (e) { showToast('Ошибка'); }
         }
@@ -1345,6 +1379,15 @@
                 await sb.from('club_requests').upsert({
                     club_id: clubId, telegram_id: currentUser.telegram_id, status: 'pending'
                 }, { onConflict: 'club_id,telegram_id' });
+
+                const { data: club } = await sb.from('clubs').select('name, owner_id').eq('id', clubId).single();
+                if (club && club.owner_id) {
+                    notify(club.owner_id,
+                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.\n` +
+                        `Открой De1mos Faceit → Клуб → Заявки.`
+                    );
+                }
+
                 showToast('✅ Заявка отправлена');
                 if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
             } catch (e) { showToast('Ошибка: ' + e.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; } }
@@ -1515,6 +1558,12 @@
                 };
                 const { error } = await sb.from('messages').insert(payload);
                 if (error) throw error;
+
+                if (currentChat.type === 'dm') {
+                    notify(currentChat.id,
+                        `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`
+                    );
+                }
             } catch (e) { console.error(e); showToast('Ошибка отправки'); }
         }
 
