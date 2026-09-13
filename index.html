@@ -266,7 +266,7 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.55); z-index: 999; max-width: 80vw; text-align: center;
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        #avatarFileInput, #clubLogoFileInput { display: none; }
+        #avatarFileInput, #clubLogoFileInput, #chatImageInput { display: none; }
         .sheet-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6);
             backdrop-filter: blur(4px); z-index: 300;
@@ -326,16 +326,32 @@
         .chat-back-btn { background: none; border: none; color: var(--emerald); font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: inherit; }
         .chat-view-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; }
-        .chat-bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-wrap: break-word; position: relative; }
+        .chat-bubble { max-width: 78%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-wrap: break-word; position: relative; transition: transform 0.15s ease; user-select: none; -webkit-user-select: none; }
         .chat-bubble.me { align-self: flex-end; background: linear-gradient(135deg, #00e08a, #00b874); color: #04140e; border-bottom-right-radius: 4px; }
         .chat-bubble.them { align-self: flex-start; background: rgba(0,224,138,0.08); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 4px; }
         .chat-bubble-author { font-size: 11px; font-weight: 700; color: var(--emerald); margin-bottom: 3px; }
         .chat-bubble-time { font-size: 10px; opacity: 0.6; margin-top: 4px; text-align: right; }
-        .chat-input-bar { display: flex; gap: 8px; padding: 10px 12px; background: rgba(5,8,7,0.9); border-top: 1px solid var(--border); flex-shrink: 0; }
-        .chat-input-bar input { flex: 1; background: rgba(0,224,138,0.05); border: 1px solid var(--border); border-radius: 22px; padding: 12px 16px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; }
-        .chat-input-bar input:focus { border-color: var(--border-strong); }
+        .chat-bubble.swiping { transition: none; }
+        .chat-bubble.reply-highlight { background: rgba(0,224,138,0.3) !important; }
+        .chat-bubble-status { font-size: 11px; opacity: 0.8; margin-left: 4px; }
+        .chat-quote { background: rgba(0,0,0,0.2); border-left: 3px solid var(--emerald); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 12px; opacity: 0.85; }
+        .chat-quote-author { font-weight: 700; color: var(--emerald); margin-bottom: 2px; }
+        .chat-quote-text { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-bubble img.chat-img { max-width: 100%; border-radius: 10px; margin-top: 6px; cursor: pointer; display: block; }
+        .chat-input-bar { display: flex; gap: 8px; padding: 10px 12px; background: rgba(5,8,7,0.9); border-top: 1px solid var(--border); flex-shrink: 0; align-items: center; }
+        .chat-input-bar input[type="text"] { flex: 1; background: rgba(0,224,138,0.05); border: 1px solid var(--border); border-radius: 22px; padding: 12px 16px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; }
+        .chat-input-bar input[type="text"]:focus { border-color: var(--border-strong); }
         .chat-send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--emerald); color: #04140e; border: none; font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
         .chat-send-btn:active { transform: scale(0.9); }
+        .chat-attach-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(0,224,138,0.08); border: 1px solid var(--border-strong); color: var(--emerald); font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .chat-attach-btn:active { transform: scale(0.9); }
+
+        .chat-reply-bar { display: none; align-items: center; gap: 10px; padding: 8px 14px; background: rgba(0,224,138,0.06); border-top: 1px solid var(--border); font-size: 13px; }
+        .chat-reply-bar.active { display: flex; }
+        .chat-reply-bar-content { flex: 1; min-width: 0; padding-left: 10px; border-left: 3px solid var(--emerald); }
+        .chat-reply-bar-author { font-weight: 700; color: var(--emerald); font-size: 12px; }
+        .chat-reply-bar-text { color: var(--hint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-reply-bar-close { background: none; border: none; color: var(--hint); font-size: 20px; cursor: pointer; padding: 0 6px; font-family: inherit; }
 
         .player-modal {
             position: fixed; inset: 0; z-index: 500;
@@ -357,6 +373,18 @@
             width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
             font-size: 18px; font-family: inherit;
         }
+
+        .msg-menu-overlay { position: fixed; inset: 0; z-index: 600; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: none; align-items: flex-end; justify-content: center; }
+        .msg-menu-overlay.active { display: flex; }
+        .msg-menu { width: 100%; max-width: 500px; background: #0e1a16; border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid var(--border-strong); padding: 20px 20px 28px; animation: slideUpMenu 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        @keyframes slideUpMenu { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .msg-menu-title { font-size: 12px; text-transform: uppercase; color: var(--hint); letter-spacing: 1.5px; text-align: center; margin-bottom: 14px; font-weight: 700; }
+        .msg-menu-btn { width: 100%; padding: 15px; background: rgba(0,224,138,0.05); border: 1px solid var(--border); border-radius: 14px; color: var(--text); font-size: 14px; font-weight: 600; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-family: inherit; }
+        .msg-menu-btn.danger { color: var(--red); background: rgba(255,84,112,0.05); border-color: rgba(255,84,112,0.2); }
+        .msg-menu-btn:active { transform: scale(0.98); }
+        .msg-menu-cancel { width: 100%; padding: 14px; background: transparent; border: 1px solid var(--border); border-radius: 14px; color: var(--hint); font-size: 13px; font-weight: 700; margin-top: 6px; cursor: pointer; font-family: inherit; }
+        .msg-menu-edit { width: 100%; background: rgba(0,224,138,0.04); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 15px; color: var(--text); font-family: inherit; font-weight: 600; outline: none; resize: none; min-height: 80px; margin-bottom: 10px; }
+        .msg-menu-edit:focus { border-color: var(--border-strong); }
     </style>
 </head>
 <body>
@@ -433,7 +461,16 @@
             <div class="chat-view-title" id="chatViewTitle">—</div>
         </div>
         <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-reply-bar" id="chatReplyBar">
+            <div class="chat-reply-bar-content">
+                <div class="chat-reply-bar-author" id="chatReplyAuthor">—</div>
+                <div class="chat-reply-bar-text" id="chatReplyText">—</div>
+            </div>
+            <button class="chat-reply-bar-close" onclick="cancelReply()">×</button>
+        </div>
         <div class="chat-input-bar">
+            <input type="file" id="chatImageInput" accept="image/*">
+            <button class="chat-attach-btn" onclick="document.getElementById('chatImageInput').click()">📎</button>
             <input type="text" id="chatInput" placeholder="Сообщение..." autocomplete="off">
             <button class="chat-send-btn" onclick="sendMessage()">➤</button>
         </div>
@@ -444,6 +481,10 @@
             <button class="player-modal-close" onclick="closePlayerModal()">×</button>
             <div id="playerModalContent"><div class="empty">Загрузка...</div></div>
         </div>
+    </div>
+
+    <div class="msg-menu-overlay" id="msgMenuOverlay" onclick="if(event.target===this)closeMsgMenu()">
+        <div class="msg-menu" id="msgMenuContent"></div>
     </div>
 
     <div class="sheet-overlay" id="sheetOverlay" onclick="closeAllSheets()"></div>
@@ -473,9 +514,6 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzbXVvcG9hc2d6eXJvbWRqdG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMzA0MzMsImV4cCI6MjEwNDkwNjQzM30.qEUIVTAQMuP37z4JSa75dlWSelqhNolUuobp7hcAKjc';
         const NOTIFY_URL = SUPABASE_URL + '/functions/v1/notify';
 
-        // ============================================================
-        // БАКЕТЫ
-        // ============================================================
         const BUCKETS = {
             avatars: 'avatars',
             clubs:   'clubs',
@@ -490,7 +528,7 @@
         // ============================================================
         const tg = window.Telegram?.WebApp;
         let currentUser = null;
-        if (tg) { tg.ready(); tg.expand(); }
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) { console.warn(e); } }
 
         // ============================================================
         // STATE
@@ -500,6 +538,8 @@
         let chatChannel = null;
         let clubChannel = null;
         let profileEditMode = false;
+        let replyTo = null;
+        let currentMsgMenuId = null;
 
         // ============================================================
         // NOTIFY через Edge Function
@@ -538,8 +578,6 @@
             }
             if (!user) { showToast('Не удалось получить данные Telegram'); return; }
 
-            setHeaderAvatar(user.photo_url, user.first_name);
-
             try {
                 const { data: existing } = await sb.from('users')
                     .select('*').eq('telegram_id', user.id).maybeSingle();
@@ -568,13 +606,27 @@
                 if (error) throw error;
 
                 currentUser = data;
+
+                // ✅ ВАЖНО: показываем кастомную аватарку, если она есть
+                applyHeaderAvatar(currentUser);
+
                 renderDashboard(currentUser);
                 loadProfile(currentUser);
                 loadLeaderboard();
             } catch (e) {
                 console.error('Init error:', e);
                 showToast('Ошибка: ' + (e?.message || e));
+                // fallback на аватар из Telegram
+                setHeaderAvatar(user.photo_url, user.first_name);
             }
+        }
+
+        function applyHeaderAvatar(user) {
+            const src = user.custom_avatar || user.photo_url;
+            const initial = (user.display_name || 'U')[0].toUpperCase();
+            const el = document.getElementById('headerAvatar');
+            if (src) el.innerHTML = `<img src="${src}" alt="">`;
+            else el.textContent = initial;
         }
 
         // ============================================================
@@ -719,6 +771,7 @@
                     .select().single();
                 if (error) throw error;
                 currentUser = data;
+                applyHeaderAvatar(currentUser);
                 renderDashboard(currentUser);
                 profileEditMode = false;
                 renderProfileView(currentUser);
@@ -767,6 +820,11 @@
                     <div class="profile-view-row"><span class="profile-view-label">Standoff 2 ID</span><span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span></div>
                     <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
                     <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
+
+                    <button class="profile-action-btn edit" style="margin-top: 20px;" onclick="closePlayerModal(); openChatWithUser(${user.telegram_id})">
+                        💬 НАПИСАТЬ СООБЩЕНИЕ
+                    </button>
+
                     <div class="section-title" style="margin-top: 20px;">История матчей</div>
                     <div><div class="empty">Матчей пока нет</div></div>
                 `;
@@ -840,7 +898,7 @@
                 if (error) throw error;
                 currentUser = data;
 
-                setHeaderAvatar(currentUser.custom_avatar || currentUser.photo_url, currentUser.display_name);
+                applyHeaderAvatar(currentUser);
                 if (profileEditMode) renderProfileEdit(currentUser);
                 else renderProfileView(currentUser);
                 showToast('✅ Аватар обновлён');
@@ -905,7 +963,7 @@
                     .select().single();
                 if (error) throw error;
                 currentUser = data;
-                setHeaderAvatar(currentUser.photo_url, currentUser.display_name);
+                applyHeaderAvatar(currentUser);
                 if (profileEditMode) renderProfileEdit(currentUser);
                 else renderProfileView(currentUser);
                 showToast('Аватар удалён');
@@ -1411,6 +1469,12 @@
         // ============================================================
         function openChatPage() { switchPage('chat'); loadChatList(); }
 
+        async function openChatWithUser(userId) {
+            if (String(userId) === String(currentUser?.telegram_id)) return;
+            switchPage('chat');
+            await openChat('dm', userId);
+        }
+
         async function loadChatList() {
             if (!currentUser) return;
             const container = document.getElementById('chatList');
@@ -1493,6 +1557,7 @@
                 avEl.className = 'chat-list-avatar' + (currentChat.type === 'club' ? ' square' : '');
                 avEl.innerHTML = currentChat.avatar ? `<img src="${currentChat.avatar}" alt="">` : (currentChat.name[0] || '?').toUpperCase();
 
+                cancelReply();
                 document.getElementById('chatView').classList.add('active');
                 document.getElementById('chatMessages').innerHTML = '';
                 await loadMessages();
@@ -1504,6 +1569,7 @@
             document.getElementById('chatView').classList.remove('active');
             if (chatChannel) { sb.removeChannel(chatChannel); chatChannel = null; }
             currentChat = null;
+            cancelReply();
             openChatPage();
         }
 
@@ -1514,10 +1580,10 @@
 
             let query;
             if (currentChat.type === 'club') {
-                query = sb.from('messages').select('id, sender_id, text, image_url, created_at')
+                query = sb.from('messages').select('*')
                     .eq('club_id', currentChat.id).order('created_at', { ascending: true }).limit(200);
             } else {
-                query = sb.from('messages').select('id, sender_id, text, image_url, created_at')
+                query = sb.from('messages').select('*')
                     .or(`and(sender_id.eq.${me},recipient_id.eq.${currentChat.id}),and(sender_id.eq.${currentChat.id},recipient_id.eq.${me})`)
                     .order('created_at', { ascending: true }).limit(200);
             }
@@ -1533,6 +1599,8 @@
 
             container.innerHTML = (data || []).map(m => renderBubble(m, userMap[m.sender_id], me)).join('');
             container.scrollTop = container.scrollHeight;
+
+            attachBubbleHandlers();
         }
 
         function renderBubble(msg, user, me) {
@@ -1541,7 +1609,130 @@
             const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             const author = (!isMe && currentChat.type === 'club')
                 ? `<div class="chat-bubble-author">${escapeHtml(user?.display_name || 'Игрок')}</div>` : '';
-            return `<div class="chat-bubble ${cls}">${author}<div>${escapeHtml(msg.text || '')}</div><div class="chat-bubble-time">${time}</div></div>`;
+
+            let quote = '';
+            if (msg.reply_to_id && msg.reply_to_text) {
+                quote = `<div class="chat-quote">
+                            <div class="chat-quote-author">${escapeHtml(msg.reply_to_name || 'Игрок')}</div>
+                            <div class="chat-quote-text">${escapeHtml(msg.reply_to_text.slice(0, 80))}</div>
+                         </div>`;
+            }
+
+            let body = '';
+            if (msg.image_url) {
+                body += `<img class="chat-img" src="${msg.image_url}" onclick="event.stopPropagation();openImageView('${msg.image_url}')" alt="">`;
+            }
+            if (msg.text) {
+                body += `<div>${escapeHtml(msg.text)}</div>`;
+            }
+
+            const edited = msg.edited_at ? ' <span style="font-size:10px;opacity:0.7;">(ред.)</span>' : '';
+
+            return `<div class="chat-bubble ${cls}" data-msg-id="${msg.id}" data-sender-id="${msg.sender_id}">
+                ${quote}
+                ${author}
+                ${body}
+                <div class="chat-bubble-time">${time}${edited}${isMe ? ' <span class="chat-bubble-status">✓</span>' : ''}</div>
+            </div>`;
+        }
+
+        function attachBubbleHandlers() {
+            const bubbles = document.querySelectorAll('.chat-bubble');
+            bubbles.forEach(bubble => {
+                if (bubble.dataset.handlersAttached === '1') return;
+                bubble.dataset.handlersAttached = '1';
+
+                let touchStartX = 0;
+                let touchStartY = 0;
+                let isSwiping = false;
+                let longPressTimer = null;
+                let longPressTriggered = false;
+
+                bubble.addEventListener('touchstart', (e) => {
+                    const t = e.touches[0];
+                    touchStartX = t.clientX;
+                    touchStartY = t.clientY;
+                    isSwiping = false;
+                    longPressTriggered = false;
+
+                    longPressTimer = setTimeout(() => {
+                        longPressTriggered = true;
+                        haptic('medium');
+                        openMsgMenu(bubble.dataset.msgId, parseInt(bubble.dataset.senderId));
+                    }, 550);
+                }, { passive: true });
+
+                bubble.addEventListener('touchmove', (e) => {
+                    const t = e.touches[0];
+                    const dx = t.clientX - touchStartX;
+                    const dy = t.clientY - touchStartY;
+
+                    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+                        clearTimeout(longPressTimer);
+                    }
+
+                    if (dx < -8 && Math.abs(dy) < 40 && !longPressTriggered) {
+                        isSwiping = true;
+                        bubble.classList.add('swiping');
+                        const shift = Math.min(0, Math.max(dx, -70));
+                        bubble.style.transform = `translateX(${shift}px)`;
+                        if (shift < -50) bubble.classList.add('reply-highlight');
+                        else bubble.classList.remove('reply-highlight');
+                    }
+                }, { passive: true });
+
+                bubble.addEventListener('touchend', () => {
+                    clearTimeout(longPressTimer);
+                    bubble.classList.remove('swiping');
+                    bubble.style.transform = '';
+                    const wasHighlighted = bubble.classList.contains('reply-highlight');
+                    bubble.classList.remove('reply-highlight');
+
+                    if (isSwiping && wasHighlighted) {
+                        haptic('light');
+                        startReply(bubble.dataset.msgId);
+                    }
+                    isSwiping = false;
+                });
+
+                // ПК и Desktop: правый клик
+                bubble.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    openMsgMenu(bubble.dataset.msgId, parseInt(bubble.dataset.senderId));
+                });
+            });
+        }
+
+        function startReply(msgId) {
+            const bubble = document.querySelector(`.chat-bubble[data-msg-id="${msgId}"]`);
+            if (!bubble) return;
+            const senderId = parseInt(bubble.dataset.senderId);
+            const isMe = senderId === currentUser.telegram_id;
+
+            let text = '';
+            const textDiv = Array.from(bubble.querySelectorAll('div')).find(d =>
+                !d.classList.contains('chat-bubble-author') &&
+                !d.classList.contains('chat-bubble-time') &&
+                !d.classList.contains('chat-quote')
+            );
+            const img = bubble.querySelector('.chat-img');
+            if (textDiv && textDiv.textContent) text = textDiv.textContent;
+            else if (img) text = '📷 Фото';
+
+            const authorName = isMe ? 'Вы' : (bubble.querySelector('.chat-bubble-author')?.textContent || 'Игрок');
+
+            replyTo = { id: msgId, sender_name: authorName, text };
+
+            document.getElementById('chatReplyAuthor').textContent = authorName;
+            document.getElementById('chatReplyText').textContent = text.slice(0, 60);
+            document.getElementById('chatReplyBar').classList.add('active');
+            document.getElementById('chatInput').focus();
+        }
+
+        function cancelReply() {
+            replyTo = null;
+            const bar = document.getElementById('chatReplyBar');
+            if (bar) bar.classList.remove('active');
         }
 
         async function sendMessage() {
@@ -1550,12 +1741,21 @@
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
+
             try {
                 const payload = {
-                    sender_id: currentUser.telegram_id, text,
+                    sender_id: currentUser.telegram_id,
+                    text,
                     club_id: currentChat.type === 'club' ? currentChat.id : null,
                     recipient_id: currentChat.type === 'dm' ? currentChat.id : null
                 };
+
+                if (replyTo) {
+                    payload.reply_to_id = parseInt(replyTo.id);
+                    payload.reply_to_name = replyTo.sender_name;
+                    payload.reply_to_text = replyTo.text;
+                }
+
                 const { error } = await sb.from('messages').insert(payload);
                 if (error) throw error;
 
@@ -1564,12 +1764,63 @@
                         `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`
                     );
                 }
+
+                cancelReply();
             } catch (e) { console.error(e); showToast('Ошибка отправки'); }
         }
 
         document.getElementById('chatInput')?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
         });
+
+        document.getElementById('chatImageInput')?.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file || !currentChat || !currentUser) return;
+            if (file.size > 10_000_000) { showToast('Файл слишком большой (макс 10MB)'); return; }
+
+            showToast('Загрузка...');
+            try {
+                const blob = await compressImage(file, 1024, 0.85);
+                const folder = currentChat.type === 'club'
+                    ? `club_${currentChat.id}`
+                    : `dm_${[currentUser.telegram_id, currentChat.id].sort().join('_')}`;
+                const path = `${folder}/${Date.now()}_${currentUser.telegram_id}.jpg`;
+
+                const { error: upErr } = await sb.storage.from(BUCKETS.chat)
+                    .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+                if (upErr) throw upErr;
+
+                const { data: urlData } = sb.storage.from(BUCKETS.chat).getPublicUrl(path);
+
+                const payload = {
+                    sender_id: currentUser.telegram_id,
+                    text: null,
+                    image_url: urlData.publicUrl,
+                    club_id: currentChat.type === 'club' ? currentChat.id : null,
+                    recipient_id: currentChat.type === 'dm' ? currentChat.id : null
+                };
+                const { error } = await sb.from('messages').insert(payload);
+                if (error) throw error;
+
+                if (currentChat.type === 'dm') {
+                    notify(currentChat.id,
+                        `📷 <b>${escapeHtml(currentUser.display_name)}</b> отправил фото`
+                    );
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Ошибка загрузки: ' + e.message);
+            }
+        });
+
+        function openImageView(url) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;padding:20px;cursor:pointer;';
+            overlay.innerHTML = `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;">`;
+            overlay.onclick = () => overlay.remove();
+            document.body.appendChild(overlay);
+        }
 
         function subscribeChatRealtime() {
             if (!currentChat) return;
@@ -1600,6 +1851,102 @@
             }
             container.insertAdjacentHTML('beforeend', renderBubble(m, user, currentUser.telegram_id));
             container.scrollTop = container.scrollHeight;
+            attachBubbleHandlers();
+        }
+
+        // ============================================================
+        // MESSAGE MENU (edit/delete/reply)
+        // ============================================================
+        function openMsgMenu(msgId, senderId) {
+            currentMsgMenuId = msgId;
+            const isMe = senderId === currentUser.telegram_id;
+            const overlay = document.getElementById('msgMenuOverlay');
+            const content = document.getElementById('msgMenuContent');
+
+            const bubble = document.querySelector(`.chat-bubble[data-msg-id="${msgId}"]`);
+            let textContent = '';
+            if (bubble) {
+                const textDiv = Array.from(bubble.querySelectorAll('div')).find(d =>
+                    !d.classList.contains('chat-bubble-author') &&
+                    !d.classList.contains('chat-bubble-time') &&
+                    !d.classList.contains('chat-quote')
+                );
+                if (textDiv && textDiv.textContent) textContent = textDiv.textContent;
+            }
+
+            let html = `<div class="msg-menu-title">Сообщение</div>`;
+            html += `<button class="msg-menu-btn" onclick="menuReply(${msgId})">↩️ Ответить</button>`;
+            if (isMe && textContent) {
+                html += `<button class="msg-menu-btn" onclick="menuEdit(${msgId})">✏️ Редактировать</button>`;
+            }
+            if (isMe) {
+                html += `<button class="msg-menu-btn danger" onclick="menuDelete(${msgId})">🗑️ Удалить</button>`;
+            }
+            html += `<button class="msg-menu-cancel" onclick="closeMsgMenu()">ОТМЕНА</button>`;
+
+            content.innerHTML = html;
+            overlay.classList.add('active');
+        }
+
+        function closeMsgMenu() {
+            document.getElementById('msgMenuOverlay').classList.remove('active');
+            currentMsgMenuId = null;
+        }
+
+        function menuReply(msgId) {
+            closeMsgMenu();
+            startReply(msgId);
+        }
+
+        async function menuEdit(msgId) {
+            const bubble = document.querySelector(`.chat-bubble[data-msg-id="${msgId}"]`);
+            if (!bubble) { closeMsgMenu(); return; }
+            const textDiv = Array.from(bubble.querySelectorAll('div')).find(d =>
+                !d.classList.contains('chat-bubble-author') &&
+                !d.classList.contains('chat-bubble-time') &&
+                !d.classList.contains('chat-quote')
+            );
+            const oldText = textDiv?.textContent || '';
+
+            const content = document.getElementById('msgMenuContent');
+            content.innerHTML = `
+                <div class="msg-menu-title">Редактирование</div>
+                <textarea class="msg-menu-edit" id="editMsgText">${escapeHtml(oldText)}</textarea>
+                <button class="msg-menu-btn" onclick="saveEditMsg(${msgId})">💾 Сохранить</button>
+                <button class="msg-menu-cancel" onclick="closeMsgMenu()">ОТМЕНА</button>
+            `;
+            setTimeout(() => document.getElementById('editMsgText')?.focus(), 100);
+        }
+
+        async function saveEditMsg(msgId) {
+            const newText = document.getElementById('editMsgText').value.trim();
+            if (!newText) { showToast('Пустое сообщение'); return; }
+            try {
+                const { error } = await sb.from('messages')
+                    .update({ text: newText, edited_at: new Date().toISOString() })
+                    .eq('id', msgId);
+                if (error) throw error;
+                closeMsgMenu();
+                await loadMessages();
+                showToast('✅ Отредактировано');
+            } catch (e) {
+                console.error(e);
+                showToast('Ошибка: ' + e.message);
+            }
+        }
+
+        async function menuDelete(msgId) {
+            if (!confirm('Удалить сообщение?')) { closeMsgMenu(); return; }
+            try {
+                const { error } = await sb.from('messages').delete().eq('id', msgId);
+                if (error) throw error;
+                closeMsgMenu();
+                await loadMessages();
+                showToast('Удалено');
+            } catch (e) {
+                console.error(e);
+                showToast('Ошибка: ' + e.message);
+            }
         }
 
         // ============================================================
