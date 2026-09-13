@@ -1346,6 +1346,7 @@ async function renderClubSearchResults(clubs) {
     }
 
     const clubIds = clubs.map(c => c.id);
+
     const { data: members } = await sb.from('club_members')
         .select('club_id')
         .in('club_id', clubIds);
@@ -1361,15 +1362,23 @@ async function renderClubSearchResults(clubs) {
     const reqMap = {};
     (myReqs || []).forEach(r => { reqMap[r.club_id] = r.status; });
 
+    const { data: myBans } = await sb.from('club_bans')
+        .select('club_id')
+        .eq('telegram_id', currentUser.telegram_id)
+        .in('club_id', clubIds);
+    const banSet = new Set((myBans || []).map(b => b.club_id));
+
     container.innerHTML = clubs.map(c => {
         const logoSrc = c.logo_url;
         const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : c.tag.slice(0, 2).toUpperCase();
         const status = reqMap[c.id];
         const count = countMap[c.id] || 0;
         const isFull = count >= c.max_members;
+        const isBanned = banSet.has(c.id);
 
         let btn;
-        if (status === 'pending') btn = `<button class="friend-action pending" disabled>⏳ Заявка</button>`;
+        if (isBanned) btn = `<button class="friend-action decline" disabled>🚫 Забанен</button>`;
+        else if (status === 'pending') btn = `<button class="friend-action pending" disabled>⏳ Заявка</button>`;
         else if (status === 'accepted') btn = `<button class="friend-action pending" disabled>✓ В клубе</button>`;
         else if (isFull) btn = `<button class="friend-action pending" disabled>Заполнен</button>`;
         else btn = `<button class="friend-action add" onclick="event.stopPropagation();sendClubRequest(${c.id}, this)">+ Заявка</button>`;
@@ -1389,7 +1398,6 @@ async function renderClubSearchResults(clubs) {
         `;
     }).join('');
 }
-
         function renderMyClub(container) {
             const { club, members } = myClub;
             const isOwner = club.role === 'owner' || club.owner_id === currentUser.telegram_id;
@@ -1498,29 +1506,72 @@ async function renderClubSearchResults(clubs) {
             } catch (e) { showToast('Ошибка'); }
         }
 
-        async function kickMember(userId) {
-            if (!confirm('Кикнуть игрока?')) return;
-            try {
-                await sb.from('club_members').delete().eq('club_id', myClub.club.id).eq('telegram_id', userId);
+async function kickMember(userId) {
+    const withBan = confirm(
+        'Кикнуть игрока?\n\n' +
+        'OK — кикнуть и заблокировать повторный вход\n' +
+        'Отмена — просто кикнуть'
+    );
+    if (!confirm('Точно кикнуть?')) return;
 
-                notify(userId,
-                    `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>.`
-                );
+    try {
+        await sb.from('club_members')
+            .delete()
+            .eq('club_id', myClub.club.id)
+            .eq('telegram_id', userId);
 
-                showToast('Кикнут'); openClubPage();
-            } catch (e) { showToast('Ошибка'); }
+        // Удаляем старую заявку, чтобы можно было подать снова (если без бана)
+        await sb.from('club_requests')
+            .delete()
+            .eq('club_id', myClub.club.id)
+            .eq('telegram_id', userId);
+
+        if (withBan) {
+            await sb.from('club_bans').upsert({
+                club_id: myClub.club.id,
+                telegram_id: userId
+            }, { onConflict: 'club_id,telegram_id' });
         }
 
-        async function leaveClub() {
-            if (!confirm('Покинуть клуб?')) return;
-            try {
-                await sb.from('club_members').delete().eq('club_id', myClub.club.id).eq('telegram_id', currentUser.telegram_id);
-                if (myClub.club.owner_id === currentUser.telegram_id) {
-                    await sb.from('clubs').delete().eq('id', myClub.club.id);
-                }
-                showToast('Вы покинули клуб'); myClub = null; openClubPage();
-            } catch (e) { showToast('Ошибка'); }
+        const name = myClub.members.find(m => m.telegram_id === userId)?.user?.display_name || 'Игрок';
+
+        notify(userId,
+            withBan
+                ? `🚫 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b> и заблокировали повторный вход.`
+                : `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>. Можешь подать заявку снова.`
+        );
+
+        showToast(withBan ? 'Кикнут + забанен' : 'Кикнут');
+        openClubPage();
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка: ' + e.message);
+    }
+}
+
+async function leaveClub() {
+    if (!confirm('Покинуть клуб?')) return;
+    try {
+        await sb.from('club_members')
+            .delete()
+            .eq('club_id', myClub.club.id)
+            .eq('telegram_id', currentUser.telegram_id);
+
+        // Удаляем старую заявку, чтобы можно было подать снова
+        await sb.from('club_requests')
+            .delete()
+            .eq('club_id', myClub.club.id)
+            .eq('telegram_id', currentUser.telegram_id);
+
+        if (myClub.club.owner_id === currentUser.telegram_id) {
+            await sb.from('clubs').delete().eq('id', myClub.club.id);
         }
+
+        showToast('Вы покинули клуб');
+        myClub = null;
+        openClubPage();
+    } catch (e) { showToast('Ошибка'); }
+}
 
         function openCreateClubSheet() {
             const name = prompt('Название клуба (2-30):');
@@ -1594,12 +1645,39 @@ async function renderClubSearchResults(clubs) {
 
 async function sendClubRequest(clubId, btnEl) {
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+
     try {
+        // Проверка бана
+        const { data: ban } = await sb.from('club_bans')
+            .select('id')
+            .eq('club_id', clubId)
+            .eq('telegram_id', currentUser.telegram_id)
+            .maybeSingle();
+
+        if (ban) {
+            showToast('🚫 Ты забанен в этом клубе');
+            if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Забанен'; }
+            return;
+        }
+
+        // Проверка — есть ли уже место
+        const { data: members } = await sb.from('club_members')
+            .select('telegram_id').eq('club_id', clubId);
+        const { data: club } = await sb.from('clubs')
+            .select('name, owner_id, max_members').eq('id', clubId).single();
+
+        if (club && (members || []).length >= club.max_members) {
+            showToast('Клуб заполнен');
+            if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = 'Заполнен'; }
+            return;
+        }
+
         await sb.from('club_requests').upsert({
-            club_id: clubId, telegram_id: currentUser.telegram_id, status: 'pending'
+            club_id: clubId,
+            telegram_id: currentUser.telegram_id,
+            status: 'pending'
         }, { onConflict: 'club_id,telegram_id' });
 
-        const { data: club } = await sb.from('clubs').select('name, owner_id').eq('id', clubId).single();
         if (club && club.owner_id) {
             notify(club.owner_id,
                 `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.\n` +
