@@ -64,13 +64,9 @@
             font-weight: 800; font-size: 15px; color: #04140e;
             overflow: hidden;
             box-shadow: 0 0 0 1.5px rgba(0,224,138,0.18), 0 0 12px rgba(0,224,138,0.18);
-            animation: pulseGlow 5s ease-in-out infinite; cursor: pointer;
+            cursor: pointer;
         }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 0 1.5px rgba(0,224,138,0.18), 0 0 12px rgba(0,224,138,0.18); }
-            50% { box-shadow: 0 0 0 1.5px rgba(0,224,138,0.28), 0 0 18px rgba(0,224,138,0.28); }
-        }
         .header-title {
             font-size: 17px; font-weight: 800; letter-spacing: 0.6px;
             background: linear-gradient(90deg, #e6f5ee 0%, var(--emerald) 50%, #e6f5ee 100%);
@@ -267,7 +263,7 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.55); z-index: 999; max-width: 80vw; text-align: center;
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        #avatarFileInput, #clubLogoFileInput, #chatImageInput { display: none; }
+        #avatarFileInput, #clubLogoFileInput, #chatImageInput, #screenshotInput { display: none; }
         .sheet-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6);
             backdrop-filter: blur(4px); z-index: 300;
@@ -315,113 +311,59 @@
         .empty { text-align: center; padding: 24px 12px; color: var(--hint); font-size: 13px; }
 
         .role-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 9px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            margin-left: 6px;
-            vertical-align: middle;
+            display: inline-block; padding: 2px 8px; border-radius: 6px;
+            font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
+            margin-left: 6px; vertical-align: middle;
         }
         .role-tag.owner { background: rgba(217,171,90,0.18); color: var(--gold); border: 1px solid rgba(217,171,90,0.3); }
         .role-tag.elder { background: rgba(167,139,250,0.18); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
 
-        .club-header-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-        .club-actions-row {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 12px;
-        }
+        .club-actions-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
         .club-icon-btn {
             width: 38px; height: 38px; border-radius: 50%;
             background: rgba(0,224,138,0.08);
             border: 1px solid var(--border-strong);
             color: var(--emerald);
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: inherit;
-            padding: 0;
+            font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-family: inherit; padding: 0;
         }
         .club-icon-btn:active { transform: scale(0.9); }
         .club-icon-btn.danger { color: var(--red); background: rgba(255,84,112,0.08); border-color: rgba(255,84,112,0.3); }
-        .club-icon-btn.gold { color: var(--gold); background: rgba(217,171,90,0.08); border-color: rgba(217,171,90,0.3); }
         .club-icon-btn.with-badge { position: relative; }
         .club-icon-btn .badge {
-            position: absolute;
-            top: -4px; right: -4px;
-            background: var(--red);
-            color: #fff;
-            font-size: 10px;
-            font-weight: 800;
-            min-width: 18px;
-            height: 18px;
-            padding: 0 5px;
+            position: absolute; top: -4px; right: -4px;
+            background: var(--red); color: #fff;
+            font-size: 10px; font-weight: 800;
+            min-width: 18px; height: 18px; padding: 0 5px;
             border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
         }
 
         .owner-dots-btn {
-            width: 30px; height: 30px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            color: var(--hint);
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: inherit;
-            font-weight: 900;
-            line-height: 1;
-            padding-bottom: 6px;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            color: var(--hint); font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-family: inherit; font-weight: 900; line-height: 1; padding-bottom: 6px;
         }
         .owner-dots-btn:active { transform: scale(0.9); background: rgba(0,224,138,0.1); }
 
         .events-list { display: flex; flex-direction: column; gap: 6px; }
         .event-item {
-            padding: 10px 12px;
-            background: rgba(0,224,138,0.03);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 12px;
-            color: var(--text);
-            line-height: 1.4;
+            padding: 10px 12px; background: rgba(0,224,138,0.03);
+            border: 1px solid var(--border); border-radius: 12px;
+            font-size: 12px; color: var(--text); line-height: 1.4;
         }
-        .event-item .event-time {
-            font-size: 10px;
-            color: var(--hint);
-            margin-top: 2px;
-        }
-        .event-item .event-author {
-            font-weight: 700;
-            color: var(--emerald);
-        }
+        .event-item .event-time { font-size: 10px; color: var(--hint); margin-top: 2px; }
 
         .filter-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            background: rgba(0,224,138,0.04);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 13px;
-            cursor: pointer;
-            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 14px; background: rgba(0,224,138,0.04);
+            border: 1px solid var(--border); border-radius: 12px;
+            font-size: 13px; cursor: pointer; margin-bottom: 10px;
         }
-        .filter-toggle input {
-            width: 18px; height: 18px;
-            accent-color: var(--emerald);
-            cursor: pointer;
-        }
+        .filter-toggle input { width: 18px; height: 18px; accent-color: var(--emerald); cursor: pointer; }
 
         .chat-list-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; cursor: pointer; }
         .chat-list-item:active { border-color: var(--border-strong); }
@@ -454,7 +396,6 @@
         .chat-input-bar input[type="text"] { flex: 1; background: rgba(0,224,138,0.05); border: 1px solid var(--border); border-radius: 22px; padding: 12px 16px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; }
         .chat-input-bar input[type="text"]:focus { border-color: var(--border-strong); }
         .chat-send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--emerald); color: #04140e; border: none; font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-        .chat-send-btn:active { transform: scale(0.9); }
         .chat-attach-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(0,224,138,0.08); border: 1px solid var(--border-strong); color: var(--emerald); font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 
         .chat-reply-bar { display: none; align-items: center; gap: 10px; padding: 8px 14px; background: rgba(0,224,138,0.06); border-top: 1px solid var(--border); font-size: 13px; }
@@ -492,19 +433,169 @@
         .msg-menu-title { font-size: 12px; text-transform: uppercase; color: var(--hint); letter-spacing: 1.5px; text-align: center; margin-bottom: 14px; font-weight: 700; }
         .msg-menu-btn { width: 100%; padding: 15px; background: rgba(0,224,138,0.05); border: 1px solid var(--border); border-radius: 14px; color: var(--text); font-size: 14px; font-weight: 600; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-family: inherit; }
         .msg-menu-btn.danger { color: var(--red); background: rgba(255,84,112,0.05); border-color: rgba(255,84,112,0.2); }
-        .msg-menu-btn:active { transform: scale(0.98); }
         .msg-menu-cancel { width: 100%; padding: 14px; background: transparent; border: 1px solid var(--border); border-radius: 14px; color: var(--hint); font-size: 13px; font-weight: 700; margin-top: 6px; cursor: pointer; font-family: inherit; }
         .msg-menu-edit { width: 100%; background: rgba(0,224,138,0.04); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 15px; color: var(--text); font-family: inherit; font-weight: 600; outline: none; resize: none; min-height: 80px; margin-bottom: 10px; }
-        .msg-menu-edit:focus { border-color: var(--border-strong); }
+
+        /* MATCHMAKING */
+        .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .mode-card {
+            padding: 24px 16px;
+            background: var(--card); border: 2px solid var(--border);
+            border-radius: 18px; text-align: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .mode-card.active { border-color: var(--emerald); background: rgba(0,224,138,0.08); }
+        .mode-card:active { transform: scale(0.97); }
+        .mode-icon { font-size: 38px; margin-bottom: 8px; }
+        .mode-title { font-size: 16px; font-weight: 800; }
+        .mode-desc { font-size: 11px; color: var(--hint); margin-top: 4px; }
+
+        .party-box {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 16px; margin-bottom: 16px;
+        }
+        .party-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .party-count { font-size: 12px; color: var(--hint); font-weight: 700; }
+        .party-member {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; background: rgba(0,224,138,0.04);
+            border: 1px solid var(--border); border-radius: 12px;
+            margin-bottom: 6px; font-size: 13px;
+        }
+        .party-member .remove-btn {
+            margin-left: auto; background: rgba(255,84,112,0.15); color: var(--red);
+            border: none; border-radius: 8px; width: 26px; height: 26px;
+            cursor: pointer; font-family: inherit; font-size: 14px;
+        }
+        .party-add-btn {
+            width: 100%; padding: 12px;
+            background: rgba(0,224,138,0.06); border: 1px dashed var(--border-strong);
+            border-radius: 12px; color: var(--emerald);
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            font-family: inherit; margin-top: 6px;
+        }
+
+        .mm-screen { text-align: center; padding: 40px 20px; }
+        .mm-timer { font-size: 44px; font-weight: 900; color: var(--emerald); margin-bottom: 6px; }
+        .mm-timer-label { font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px; }
+        .mm-elo-range { font-size: 13px; color: var(--hint); margin-bottom: 8px; }
+        .mm-queue-count { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 30px; }
+
+        .confirm-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+        .confirm-team {
+            background: rgba(0,224,138,0.05); border: 1px solid var(--border);
+            border-radius: 14px; padding: 12px;
+        }
+        .confirm-team-title { font-size: 11px; text-transform: uppercase; color: var(--emerald); font-weight: 800; letter-spacing: 1px; margin-bottom: 10px; text-align: center; }
+        .confirm-team-players { display: flex; flex-direction: column; gap: 6px; }
+        .confirm-player {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 12px; padding: 4px 6px; border-radius: 8px;
+        }
+        .confirm-player.captain { background: rgba(217,171,90,0.12); }
+        .confirm-player .cp-avatar {
+            width: 24px; height: 24px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 10px; color: #04140e; overflow: hidden;
+        }
+        .confirm-player .cp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .confirm-player .cp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .confirm-player .cp-tag { font-size: 9px; font-weight: 800; color: var(--gold); }
+
+        .veto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .veto-card {
+            padding: 20px 12px;
+            background: var(--card); border: 2px solid var(--border);
+            border-radius: 16px; text-align: center;
+            cursor: pointer; transition: all 0.2s;
+            position: relative; overflow: hidden;
+            background-size: cover; background-position: center;
+        }
+        .veto-card:active { transform: scale(0.97); }
+        .veto-card:disabled { opacity: 0.4; cursor: not-allowed; }
+        .veto-card.banned { opacity: 0.3; cursor: default; }
+        .veto-card.banned::after {
+            content: '✕'; position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 48px; color: var(--red); background: rgba(0,0,0,0.5);
+        }
+        .veto-card-map { font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+        .veto-card-auto { font-size: 10px; color: var(--gold); margin-top: 4px; }
+
+        .match-host-box {
+            background: linear-gradient(140deg, rgba(0,224,138,0.08), rgba(0,184,116,0.02));
+            border: 1px solid var(--border-strong); border-radius: 20px;
+            padding: 24px; text-align: center; margin-bottom: 16px;
+        }
+        .match-host-id {
+            font-size: 28px; font-weight: 900; letter-spacing: 3px;
+            color: var(--emerald); margin: 12px 0;
+            user-select: text; -webkit-user-select: text;
+            font-family: 'Courier New', monospace;
+        }
+
+        .score-input-row { display: flex; gap: 12px; margin-bottom: 16px; }
+        .score-input-col { flex: 1; }
+        .score-input-col label { display: block; font-size: 11px; color: var(--hint); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; text-align: center; }
+        .score-input-col input {
+            width: 100%; padding: 14px; text-align: center;
+            background: rgba(0,224,138,0.04); border: 1px solid var(--border);
+            border-radius: 12px; color: var(--text);
+            font-size: 20px; font-weight: 900; font-family: inherit; outline: none;
+        }
+        .score-input-col input:focus { border-color: var(--border-strong); }
+
+        .winner-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .winner-btn {
+            padding: 18px 12px;
+            background: var(--card); border: 2px solid var(--border);
+            border-radius: 14px; font-size: 14px; font-weight: 800;
+            color: var(--text); cursor: pointer; font-family: inherit;
+        }
+        .winner-btn.active { border-color: var(--emerald); background: rgba(0,224,138,0.12); color: var(--emerald); }
+        .winner-btn:active { transform: scale(0.97); }
+
+        .status-badge {
+            display: inline-block; padding: 6px 14px; border-radius: 20px;
+            font-size: 12px; font-weight: 800; letter-spacing: 1px;
+        }
+        .status-badge.pending { background: rgba(255,193,7,0.15); color: #ffc107; }
+        .status-badge.confirmed { background: rgba(16,185,129,0.15); color: var(--emerald); }
+        .status-badge.disputed { background: rgba(255,84,112,0.15); color: var(--red); }
+        .status-badge.finished { background: rgba(16,185,129,0.15); color: var(--emerald); }
+        .status-badge.cancelled { background: rgba(128,128,128,0.15); color: #999; }
+
+        .privacy-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px; background: rgba(0,224,138,0.03);
+            border: 1px solid var(--border); border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        .privacy-row-label { font-size: 13px; font-weight: 600; }
+        .privacy-row-desc { font-size: 11px; color: var(--hint); margin-top: 2px; }
+        .toggle-switch {
+            width: 48px; height: 28px; border-radius: 14px;
+            background: rgba(255,255,255,0.1); border: none; cursor: pointer;
+            position: relative; transition: background 0.25s; flex-shrink: 0;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: #fff; transition: transform 0.25s;
+        }
+        .toggle-switch.on { background: var(--emerald); }
+        .toggle-switch.on::after { transform: translateX(20px); }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="avatar" id="headerAvatar" onclick="switchPage('profile')">?</div>
         <div class="header-title">De1mos <span>Faceit</span></div>
-        <button class="notif-btn" onclick="showToast('Уведомлений пока нет')">🔔</button>
+        <button class="notif-btn" onclick="openNotifications()">🔔</button>
     </header>
 
+    <!-- ============ DASHBOARD ============ -->
     <div class="container page active" id="page-dashboard">
         <div class="elo-card">
             <div class="elo-label">Ваш рейтинг</div>
@@ -517,30 +608,28 @@
             <div class="stat-card"><div class="stat-value" id="statWins">—</div><div class="stat-label">Побед</div></div>
             <div class="stat-card"><div class="stat-value" id="statWinrate">—</div><div class="stat-label">Winrate</div></div>
         </div>
-        <button class="play-btn" id="playBtn" onclick="findMatch()">🎮 ИГРАТЬ</button>
-        <div class="loading" id="loading"><div class="spinner"></div><div>ПОИСК МАТЧА...</div></div>
+        <button class="play-btn" id="playBtn" onclick="openPlayPage()">🎮 ИГРАТЬ</button>
         <div class="section-title">Быстрые действия</div>
         <div class="menu-grid">
             <button class="menu-item" onclick="openFriendsPage()"><span class="menu-icon">👥</span> Друзья</button>
             <button class="menu-item" onclick="openClubPage()"><span class="menu-icon">🛡️</span> Клуб</button>
-            <button class="menu-item" onclick="showToast('Раздел в разработке')"><span class="menu-icon">📊</span> Статистика</button>
+            <button class="menu-item" onclick="openAdminPanel()"><span class="menu-icon">👑</span> Админ-панель</button>
             <button class="menu-item" onclick="openChatPage()"><span class="menu-icon">💬</span> Чаты</button>
         </div>
         <div class="section-title">Лидерборд</div>
         <div id="leaderboard"><div class="empty">Загрузка...</div></div>
     </div>
 
+    <!-- ============ PROFILE ============ -->
     <div class="container page" id="page-profile">
         <div id="profileContent"></div>
     </div>
 
+    <!-- ============ FRIENDS ============ -->
     <div class="container page" id="page-friends">
         <div class="profile-hero">
-            <h3 style="margin-bottom: 14px;">🔍 Поиск друзей</h3>
-            <div style="display: flex; gap: 8px;">
-                <input type="text" class="field-input" id="friendSearchInput" placeholder="Никнейм или @username" autocomplete="off">
-                <button class="profile-action-btn edit" style="width: auto; padding: 14px 18px; margin: 0;" onclick="searchFriends()">Найти</button>
-            </div>
+            <h3 style="margin-bottom: 14px;">🔍 Поиск игроков</h3>
+            <input type="text" class="field-input" id="friendSearchInput" placeholder="Введите ник или ID для фильтра" autocomplete="off" oninput="debouncedFriendsFilter()">
             <div id="friendSearchResults" style="margin-top: 14px;"></div>
         </div>
         <div class="profile-hero">
@@ -549,15 +638,113 @@
         </div>
     </div>
 
+    <!-- ============ CLUB ============ -->
     <div class="container page" id="page-club">
         <div id="clubContent"><div class="empty">Загрузка...</div></div>
     </div>
 
+    <!-- ============ CHAT ============ -->
     <div class="container page" id="page-chat">
         <div class="section-title" style="margin-top: 0;">Чаты</div>
         <div id="chatList"><div class="empty">Загрузка...</div></div>
     </div>
 
+    <!-- ============ PLAY (выбор режима и пати) ============ -->
+    <div class="container page" id="page-play">
+        <div class="section-title" style="margin-top: 0;">Выбор режима</div>
+        <div class="mode-grid">
+            <div class="mode-card" id="mode5x5" onclick="selectMode('5x5')">
+                <div class="mode-icon">🎯</div>
+                <div class="mode-title">5×5</div>
+                <div class="mode-desc">до 5 игроков</div>
+            </div>
+            <div class="mode-card" id="mode2x2" onclick="selectMode('2x2')">
+                <div class="mode-icon">⚔️</div>
+                <div class="mode-title">2×2</div>
+                <div class="mode-desc">до 2 игроков</div>
+            </div>
+        </div>
+
+        <div class="section-title">Ваша пати</div>
+        <div class="party-box">
+            <div class="party-header">
+                <span class="party-count" id="partyCount">1 / 5</span>
+                <span style="font-size:11px;color:var(--hint);">Средний ELO: <span id="partyElo">—</span></span>
+            </div>
+            <div id="partyMembers"></div>
+            <button class="party-add-btn" id="partyAddBtn" onclick="openInviteSheet()">➕ Пригласить игрока</button>
+        </div>
+
+        <button class="play-btn" id="startSearchBtn" onclick="startSearch()">🎯 НАЙТИ МАТЧ</button>
+        <button class="profile-action-btn cancel" onclick="leavePartyAndGoBack()">◀ Назад</button>
+    </div>
+
+    <!-- ============ SEARCH ============ -->
+    <div class="container page" id="page-search">
+        <div class="mm-screen">
+            <div class="mm-timer" id="searchTimer">00:00</div>
+            <div class="mm-timer-label">Время поиска</div>
+            <div class="mm-elo-range" id="searchEloRange">Диапазон: ±200</div>
+            <div class="mm-queue-count" id="searchQueueCount">Ищем игроков...</div>
+            <button class="profile-action-btn cancel" onclick="cancelSearch()">◀ Отменить поиск</button>
+        </div>
+    </div>
+
+    <!-- ============ CONFIRM ============ -->
+    <div class="container page" id="page-confirm">
+        <div class="mm-screen">
+            <div class="mm-timer" id="confirmTimer">00:30</div>
+            <div class="mm-timer-label">Подтверди участие</div>
+        </div>
+        <div id="confirmTeams" class="confirm-teams"></div>
+        <button class="profile-action-btn save" id="confirmBtn" onclick="confirmMatch(true)">✅ ПОДТВЕРДИТЬ</button>
+        <button class="profile-action-btn cancel" onclick="confirmMatch(false)">❌ ОТКАЗАТЬСЯ</button>
+    </div>
+
+    <!-- ============ VETO ============ -->
+    <div class="container page" id="page-veto">
+        <div class="mm-screen" style="padding: 20px;">
+            <div class="mm-timer" id="vetoTimer">00:30</div>
+            <div class="mm-timer-label" id="vetoTurnLabel">Ход команды A</div>
+        </div>
+        <div id="vetoGrid" class="veto-grid"></div>
+        <div id="vetoLog" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- ============ MATCH (играем) ============ -->
+    <div class="container page" id="page-match">
+        <div class="match-host-box">
+            <div style="font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: 2px;">Карта</div>
+            <div style="font-size: 26px; font-weight: 900; margin: 8px 0; color: var(--emerald);" id="matchMap">—</div>
+            <div style="font-size: 12px; color: var(--hint); margin-top: 20px;">Хост лобби</div>
+            <div style="font-size: 16px; font-weight: 800; margin: 6px 0;" id="matchHostName">—</div>
+            <div style="font-size: 11px; color: var(--hint);">Standoff 2 ID хоста:</div>
+            <div class="match-host-id" id="matchHostId">—</div>
+            <button class="profile-action-btn save" id="copyHostBtn" onclick="copyHostId()">📋 Скопировать ID</button>
+            <button class="profile-action-btn cancel" onclick="openStandoff()" style="margin-top: 8px;">🎮 Открыть Standoff 2</button>
+        </div>
+
+        <div id="matchTeamsPreview" class="confirm-teams"></div>
+
+        <button class="profile-action-btn save" onclick="goToResult()" style="margin-top: 20px;">📸 Загрузить результат</button>
+    </div>
+
+    <!-- ============ RESULT (загрузка) ============ -->
+    <div class="container page" id="page-result">
+        <div id="resultContent"></div>
+    </div>
+
+    <!-- ============ FINISHED ============ -->
+    <div class="container page" id="page-finished">
+        <div id="finishedContent"></div>
+    </div>
+
+    <!-- ============ ADMIN ============ -->
+    <div class="container page" id="page-admin">
+        <div id="adminContent"></div>
+    </div>
+
+    <!-- ============ NAV ============ -->
     <nav class="bottom-nav">
         <button class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')"><span class="nav-icon">🏠</span><span>Главная</span></button>
         <button class="nav-item" data-page="profile" onclick="switchPage('profile')"><span class="nav-icon">👤</span><span>Профиль</span></button>
@@ -565,6 +752,7 @@
         <button class="nav-item" data-page="chat" onclick="openChatPage()"><span class="nav-icon">💬</span><span>Чаты</span></button>
     </nav>
 
+    <!-- ============ CHAT VIEW ============ -->
     <div class="chat-view" id="chatView">
         <div class="chat-view-header">
             <button class="chat-back-btn" onclick="closeChatView()">←</button>
@@ -587,6 +775,7 @@
         </div>
     </div>
 
+    <!-- ============ PLAYER MODAL ============ -->
     <div class="player-modal" id="playerModal" onclick="if(event.target===this)closePlayerModal()">
         <div class="player-modal-inner">
             <button class="player-modal-close" onclick="closePlayerModal()">×</button>
@@ -594,10 +783,12 @@
         </div>
     </div>
 
+    <!-- ============ MSG MENU ============ -->
     <div class="msg-menu-overlay" id="msgMenuOverlay" onclick="if(event.target===this)closeMsgMenu()">
         <div class="msg-menu" id="msgMenuContent"></div>
     </div>
 
+    <!-- ============ SHEETS ============ -->
     <div class="sheet-overlay" id="sheetOverlay" onclick="closeAllSheets()"></div>
 
     <div class="sheet" id="avatarSheet">
@@ -633,17 +824,34 @@
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
 
+    <div class="sheet" id="inviteSheet">
+        <div class="sheet-title">Пригласить игрока</div>
+        <input type="text" class="field-input" id="inviteSearchInput" placeholder="Поиск по нику или ID" autocomplete="off" oninput="debouncedInviteSearch()" style="margin-bottom: 12px;">
+        <div id="inviteList"></div>
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    </div>
+
+    <div class="sheet" id="privacySheet">
+        <div class="sheet-title">Приватность</div>
+        <div id="privacyOptions"></div>
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    </div>
+
+    <!-- ============ FILE INPUTS ============ -->
     <input type="file" id="avatarFileInput" accept="image/*">
     <input type="file" id="clubLogoFileInput" accept="image/*">
+    <input type="file" id="screenshotInput" accept="image/*">
+
     <div class="toast" id="toast"></div>
 
-    <script>
+        <script>
         // ============================================================
         // SUPABASE
         // ============================================================
         const SUPABASE_URL = 'https://ksmuopoasgzyromdjtnt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzbXVvcG9hc2d6eXJvbWRqdG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMzA0MzMsImV4cCI6MjEwNDkwNjQzM30.qEUIVTAQMuP37z4JSa75dlWSelqhNolUuobp7hcAKjc';
         const NOTIFY_URL = SUPABASE_URL + '/functions/v1/notify';
+        const MM_URL = SUPABASE_URL + '/functions/v1/mm-tick';
 
         const BUCKETS = {
             avatars: 'avatars',
@@ -651,6 +859,8 @@
             chat:    'chat',
             matches: 'matches'
         };
+
+        const MAP_POOL = ["Sandstone", "Province", "Breeze", "Dune", "Rust", "Hanami", "Prison"];
 
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -669,23 +879,45 @@
         let replyTo = null;
         let currentMsgMenuId = null;
         let wasKickedFromClub = null;
-        let viewingClubOnly = false;   // для просмотра чужого клуба
+
+        let myParty = null;         // {party, members[]}
+        let selectedMode = '5x5';
+        let searchTimer = null;
+        let searchTickInterval = null;
+        let searchStartTime = null;
+        let mmChannel = null;
+        let currentMatch = null;    // объект game_matches
+        let currentMatchChannel = null;
+        let matchPollTimer = null;
 
         // ============================================================
         // HELPERS
         // ============================================================
         function eloToLevel(elo) {
             elo = elo ?? 1000;
-            if (elo <= 500)  return 1;
-            if (elo <= 750)  return 2;
-            if (elo <= 900)  return 3;
-            if (elo <= 1050) return 4;
-            if (elo <= 1200) return 5;
-            if (elo <= 1350) return 6;
-            if (elo <= 1530) return 7;
-            if (elo <= 1750) return 8;
-            if (elo <= 2000) return 9;
+            if (elo <= 1100) return 1;
+            if (elo <= 1200) return 2;
+            if (elo <= 1350) return 3;
+            if (elo <= 1500) return 4;
+            if (elo <= 1650) return 5;
+            if (elo <= 1800) return 6;
+            if (elo <= 1950) return 7;
+            if (elo <= 2100) return 8;
+            if (elo <= 2300) return 9;
             return 10;
+        }
+
+        function haptic(style = 'light') { try { tg?.HapticFeedback?.impactOccurred(style); } catch (e) {} }
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        let toastTimer;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
         async function notify(telegramId, text) {
@@ -701,20 +933,28 @@
                     },
                     body: JSON.stringify({ telegram_id: telegramId, text })
                 });
-            } catch (e) { console.warn('notify failed:', e); }
+            } catch (e) {}
         }
 
-        function haptic(style = 'light') { try { tg?.HapticFeedback?.impactOccurred(style); } catch (e) {} }
-        function escapeHtml(str) {
-            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-        let toastTimer;
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.classList.add('show');
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+        async function mmCall(action, body = {}) {
+            try {
+                const url = action === 'tick'
+                    ? `${MM_URL}?action=tick`
+                    : `${MM_URL}?action=${action}`;
+                const res = await fetch(url, {
+                    method: action === 'tick' ? 'GET' : 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: action === 'tick' ? undefined : JSON.stringify(body)
+                });
+                return await res.json();
+            } catch (e) {
+                console.warn('mm call fail:', e);
+                return null;
+            }
         }
 
         // ============================================================
@@ -738,16 +978,13 @@
                     .select('*').eq('telegram_id', user.id).maybeSingle();
 
                 let data, error;
-
                 if (existing) {
                     const upd = {
                         username: user.username || existing.username,
                         photo_url: user.photo_url || existing.photo_url
                     };
                     ({ data, error } = await sb.from('users')
-                        .update(upd)
-                        .eq('telegram_id', user.id)
-                        .select().single());
+                        .update(upd).eq('telegram_id', user.id).select().single());
                 } else {
                     ({ data, error } = await sb.from('users')
                         .insert({
@@ -755,8 +992,7 @@
                             username: user.username || null,
                             display_name: user.first_name || user.username || 'Игрок',
                             photo_url: user.photo_url || null
-                        })
-                        .select().single());
+                        }).select().single());
                 }
                 if (error) throw error;
 
@@ -765,10 +1001,10 @@
                 renderDashboard(currentUser);
                 loadProfile(currentUser);
                 loadLeaderboard();
+                checkActiveMatch();
             } catch (e) {
                 console.error('Init error:', e);
                 showToast('Ошибка: ' + (e?.message || e));
-                setHeaderAvatar(user.photo_url, user.first_name);
             }
         }
 
@@ -780,10 +1016,12 @@
             else el.textContent = initial;
         }
 
-        function setHeaderAvatar(photoUrl, firstName) {
-            const el = document.getElementById('headerAvatar');
-            if (photoUrl) el.innerHTML = `<img src="${photoUrl}" alt="">`;
-            else el.textContent = (firstName || 'U')[0].toUpperCase();
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById('page-' + page);
+            if (target) target.classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+            haptic();
         }
 
         // ============================================================
@@ -798,14 +1036,6 @@
             document.getElementById('statWinrate').textContent = winrate + '%';
             const progress = ((user.elo ?? 1000) % 250) / 250 * 100;
             setTimeout(() => { document.getElementById('eloProgress').style.width = progress + '%'; }, 200);
-        }
-
-        function switchPage(page) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            const target = document.getElementById('page-' + page);
-            if (target) target.classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
-            haptic();
         }
 
         // ============================================================
@@ -849,6 +1079,7 @@
                 <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
 
                 <button class="profile-action-btn edit" onclick="enterProfileEditMode()">✏️ РЕДАКТИРОВАТЬ</button>
+                <button class="profile-action-btn cancel" onclick="openPrivacySheet()">🔒 ПРИВАТНОСТЬ</button>
 
                 <div class="section-title" style="margin-top: 24px;">История матчей</div>
                 <div id="profileMatchHistory"><div class="empty">Матчей пока нет</div></div>
@@ -873,7 +1104,7 @@
                             <div class="profile-avatar">${avatarHTML}</div>
                             <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
                         </div>
-                        <div class="profile-name">Редактирование профиля</div>
+                        <div class="profile-name">Редактирование</div>
                     </div>
                     <div class="profile-fields" style="margin-top: 20px;">
                         <div>
@@ -901,16 +1132,14 @@
 
             if (!nickname) { showToast('Ник не может быть пустым'); return; }
             if (standoffId && (standoffId.length < 7 || standoffId.length > 9)) {
-                showToast('ID должен быть от 7 до 9 символов');
-                return;
+                showToast('ID должен быть 7-9 символов'); return;
             }
 
             btn.disabled = true; btn.textContent = 'СОХРАНЕНИЕ...';
             try {
                 const { data, error } = await sb.from('users')
                     .update({ display_name: nickname, standoff_id: standoffId || null })
-                    .eq('telegram_id', currentUser.telegram_id)
-                    .select().single();
+                    .eq('telegram_id', currentUser.telegram_id).select().single();
                 if (error) throw error;
                 currentUser = data;
                 applyHeaderAvatar(currentUser);
@@ -918,11 +1147,56 @@
                 profileEditMode = false;
                 renderProfileView(currentUser);
                 showToast('✅ Профиль сохранён');
-                haptic('medium');
             } catch (e) {
                 showToast('Ошибка: ' + (e?.message || e));
                 btn.disabled = false; btn.textContent = '💾 СОХРАНИТЬ';
             }
+        }
+
+        // ============================================================
+        // PRIVACY
+        // ============================================================
+        function openPrivacySheet() {
+            document.getElementById('sheetOverlay').classList.add('active');
+            document.getElementById('privacySheet').classList.add('active');
+            const el = document.getElementById('privacyOptions');
+            el.innerHTML = `
+                <div class="privacy-row">
+                    <div>
+                        <div class="privacy-row-label">⏱ Скрывать часы на Faceit</div>
+                        <div class="privacy-row-desc">Другие не увидят ваше время в приложении</div>
+                    </div>
+                    <button class="toggle-switch ${currentUser.hide_hours ? 'on' : ''}" onclick="togglePrivacy('hide_hours', this)"></button>
+                </div>
+                <div class="privacy-row">
+                    <div>
+                        <div class="privacy-row-label">📊 Скрывать матчи</div>
+                        <div class="privacy-row-desc">Не показывать количество матчей и побед</div>
+                    </div>
+                    <button class="toggle-switch ${currentUser.hide_matches ? 'on' : ''}" onclick="togglePrivacy('hide_matches', this)"></button>
+                </div>
+                <div class="privacy-row">
+                    <div>
+                        <div class="privacy-row-label">🔕 Не присылать уведомления</div>
+                        <div class="privacy-row-desc">Отключить уведомления от бота</div>
+                    </div>
+                    <button class="toggle-switch ${currentUser.notify_off ? 'on' : ''}" onclick="togglePrivacy('notify_off', this)"></button>
+                </div>
+            `;
+        }
+
+        async function togglePrivacy(field, btnEl) {
+            const newVal = !currentUser[field];
+            try {
+                const upd = {};
+                upd[field] = newVal;
+                const { data, error } = await sb.from('users')
+                    .update(upd).eq('telegram_id', currentUser.telegram_id).select().single();
+                if (error) throw error;
+                currentUser = data;
+                btnEl.classList.toggle('on', newVal);
+                haptic();
+            } catch (e) { showToast('Ошибка'); }
         }
 
         // ============================================================
@@ -936,8 +1210,7 @@
             modal.classList.add('active');
             try {
                 const { data: user, error } = await sb.from('users')
-                    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, level, matches_played, wins, standoff_id')
-                    .eq('telegram_id', userId).single();
+                    .select('*').eq('telegram_id', userId).single();
                 if (error) throw error;
 
                 const avatarSrc = user.custom_avatar || user.photo_url;
@@ -957,12 +1230,13 @@
                     <div class="profile-stats-grid">
                         <div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">ELO</div></div>
                         <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
-                        <div class="profile-stat"><div class="profile-stat-value">${hours}ч</div><div class="profile-stat-label">На Faceit</div></div>
+                        <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
                     </div>
                     <div class="profile-view-row"><span class="profile-view-label">Standoff 2 ID</span><span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span></div>
-                    <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
-                    <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
-
+                    ${user.hide_matches ? '' : `
+                        <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
+                        <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
+                    `}
                     <button class="profile-action-btn edit" style="margin-top: 20px;" onclick="closePlayerModal(); openChatWithUser(${user.telegram_id})">
                         💬 НАПИСАТЬ СООБЩЕНИЕ
                     </button>
@@ -1025,8 +1299,7 @@
 
                 const { data, error } = await sb.from('users')
                     .update({ custom_avatar: urlData.publicUrl })
-                    .eq('telegram_id', currentUser.telegram_id)
-                    .select().single();
+                    .eq('telegram_id', currentUser.telegram_id).select().single();
                 if (error) throw error;
                 currentUser = data;
                 applyHeaderAvatar(currentUser);
@@ -1046,7 +1319,7 @@
                 if (upErr) throw upErr;
                 const { data: urlData } = sb.storage.from(BUCKETS.clubs).getPublicUrl(path);
                 await sb.from('clubs').update({ logo_url: urlData.publicUrl }).eq('id', myClub.club.id);
-                await logClubEvent('logo_changed', currentUser.telegram_id, null, { url: urlData.publicUrl });
+                await logClubEvent('logo_changed', currentUser.telegram_id, null, {});
                 showToast('✅ Эмблема обновлена');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -1060,7 +1333,7 @@
                 const blob = await imgRes.blob();
                 const file = new File([blob], 'avatar.jpg', { type: blob.type || 'image/jpeg' });
                 await uploadAvatarFile(file);
-            } catch (e) { showToast('Не удалось загрузить фото из Telegram. Попробуйте из галереи.'); }
+            } catch (e) { showToast('Не удалось загрузить фото из Telegram. Используйте галерею.'); }
         }
 
         function compressImage(file, maxSize, quality) {
@@ -1089,8 +1362,7 @@
             try {
                 const { data, error } = await sb.from('users')
                     .update({ custom_avatar: null })
-                    .eq('telegram_id', currentUser.telegram_id)
-                    .select().single();
+                    .eq('telegram_id', currentUser.telegram_id).select().single();
                 if (error) throw error;
                 currentUser = data;
                 applyHeaderAvatar(currentUser);
@@ -1108,32 +1380,6 @@
                 await logClubEvent('logo_changed', currentUser.telegram_id, null, {});
                 openClubPage();
             } catch (e) { showToast('Ошибка'); }
-        }
-
-        // ============================================================
-        // FIND MATCH (заглушка)
-        // ============================================================
-        async function findMatch() {
-            if (!currentUser) return;
-            const btn = document.getElementById('playBtn');
-            const loading = document.getElementById('loading');
-            btn.disabled = true; btn.textContent = 'ПОИСК...';
-            loading.classList.add('active');
-            try {
-                await sb.from('queue').upsert({
-                    telegram_id: currentUser.telegram_id,
-                    joined_at: new Date().toISOString()
-                }, { onConflict: 'telegram_id' });
-                setTimeout(() => {
-                    showToast('Поиск запущен! (В разработке)');
-                    btn.disabled = false; btn.textContent = '🎮 ИГРАТЬ';
-                    loading.classList.remove('active');
-                }, 2500);
-            } catch (e) {
-                showToast('Ошибка поиска');
-                btn.disabled = false; btn.textContent = '🎮 ИГРАТЬ';
-                loading.classList.remove('active');
-            }
         }
 
         // ============================================================
@@ -1166,23 +1412,41 @@
         }
 
         // ============================================================
-        // FRIENDS
+        // FRIENDS (список всех игроков)
         // ============================================================
-        function openFriendsPage() { switchPage('friends'); loadFriends(); }
+        function openFriendsPage() {
+            switchPage('friends');
+            loadAllPlayers();
+            loadFriends();
+        }
 
-        async function searchFriends() {
-            const query = document.getElementById('friendSearchInput').value.trim();
-            if (query.length < 2) { showToast('Минимум 2 символа'); return; }
+        let friendsFilterTimer = null;
+        function debouncedFriendsFilter() {
+            clearTimeout(friendsFilterTimer);
+            friendsFilterTimer = setTimeout(loadAllPlayers, 300);
+        }
+
+        async function loadAllPlayers() {
             const container = document.getElementById('friendSearchResults');
-            container.innerHTML = '<div class="empty">Поиск...</div>';
+            if (!container) return;
+            const q = document.getElementById('friendSearchInput')?.value.trim() || '';
+            container.innerHTML = '<div class="empty">Загрузка...</div>';
+
             try {
-                const safe = query.replace(/[%_]/g, '');
-                const { data, error } = await sb.from('users')
+                let query = sb.from('users')
                     .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, standoff_id')
-                    .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%,standoff_id.ilike.%${safe}%`)
-                    .neq('telegram_id', currentUser.telegram_id).limit(20);
+                    .neq('telegram_id', currentUser.telegram_id)
+                    .order('elo', { ascending: false })
+                    .limit(50);
+
+                if (q.length >= 2) {
+                    const safe = q.replace(/[%_]/g, '');
+                    query = query.or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%,standoff_id.ilike.%${safe}%`);
+                }
+
+                const { data, error } = await query;
                 if (error) throw error;
-                if (!data?.length) { container.innerHTML = '<div class="empty">Не найдено</div>'; return; }
+                if (!data?.length) { container.innerHTML = '<div class="empty">Никого не найдено</div>'; return; }
 
                 const { data: rels } = await sb.from('friendships')
                     .select('requester_id, addressee_id, status')
@@ -1308,7 +1572,6 @@
         // ============================================================
         async function openClubPage() {
             switchPage('club');
-            viewingClubOnly = false;
             await loadClub();
             subscribeClubRealtime();
         }
@@ -1328,7 +1591,6 @@
                     if (hadClubBefore && prevClub) {
                         wasKickedFromClub = { name: prevClub.name, tag: prevClub.tag };
                         showToast(`🚪 Тебя исключили из клуба ${prevClub.name}`);
-                        haptic('medium');
                     }
                     renderNoClub(container);
                     return;
@@ -1362,10 +1624,8 @@
                         <div style="display:flex; align-items:center; gap:12px;">
                             <div style="font-size:32px;">🚪</div>
                             <div style="flex:1; min-width:0;">
-                                <div style="font-size:14px; font-weight:700; margin-bottom:4px;">Тебя исключили из клуба</div>
-                                <div style="font-size:12px; color:var(--hint);">
-                                    ${escapeHtml(wasKickedFromClub.name)} [${escapeHtml(wasKickedFromClub.tag)}]
-                                </div>
+                                <div style="font-size:14px; font-weight:700;">Тебя исключили из клуба</div>
+                                <div style="font-size:12px; color:var(--hint);">${escapeHtml(wasKickedFromClub.name)} [${escapeHtml(wasKickedFromClub.tag)}]</div>
                             </div>
                             <button class="friend-action decline" onclick="wasKickedFromClub = null; loadClub();">ОК</button>
                         </div>
@@ -1383,13 +1643,12 @@
                         <button class="profile-action-btn edit" onclick="openCreateClubSheet()">➕ Создать клуб</button>
                     </div>
                 </div>
-
                 <div class="section-title">Найти клуб</div>
                 <div class="profile-hero" style="padding: 16px;">
-                    <input type="text" class="field-input" id="clubSearchInput" placeholder="🔍 Название или тег клуба" autocomplete="off" oninput="debouncedClubSearch()">
+                    <input type="text" class="field-input" id="clubSearchInput" placeholder="🔍 Название или тег" autocomplete="off" oninput="debouncedClubSearch()">
                     <label class="filter-toggle" style="margin-top: 12px;">
                         <input type="checkbox" id="onlyNotFullClubs" onchange="loadAllClubs()">
-                        <span>Показать только незаполненные клубы</span>
+                        <span>Только незаполненные</span>
                     </label>
                 </div>
                 <div id="clubSearchResults"></div>
@@ -1403,7 +1662,6 @@
             const isOwner = myRole === 'owner' || club.owner_id === currentUser.telegram_id;
             const isElder = myRole === 'elder';
             const canEdit = isOwner || isElder;
-            const isFull = members.length >= club.max_members;
 
             const logoSrc = club.logo_url;
             const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : club.tag.slice(0, 2).toUpperCase();
@@ -1424,8 +1682,7 @@
                 else if (m.role === 'elder') roleTag = '<span class="role-tag elder">⭐ ELDER</span>';
 
                 const dotsBtn = (isOwner && m.telegram_id !== currentUser.telegram_id)
-                    ? `<button class="owner-dots-btn" onclick="event.stopPropagation();openOwnerMenu(${m.telegram_id})">···</button>`
-                    : '';
+                    ? `<button class="owner-dots-btn" onclick="event.stopPropagation();openOwnerMenu(${m.telegram_id})">···</button>` : '';
 
                 return `
                     <div class="leaderboard-item" onclick="openPlayerProfile(${m.telegram_id})">
@@ -1438,23 +1695,21 @@
                     </div>`;
             }).join('');
 
-            // Кнопки справа под описанием
             let actionBtns = '';
             if (canEdit) {
-                const requestsCount = 0; // Подгрузится отдельно
                 actionBtns = `
                     <div class="club-actions-row">
-                        ${isOwner ? `<button class="club-icon-btn with-badge" id="requestsBtn" onclick="openRequestsSheet()" title="Заявки">📥</button>` : ''}
-                        ${isOwner ? `<button class="club-icon-btn" id="bansBtn" onclick="openBansSheet()" title="Забаненные">🚫</button>` : ''}
-                        <button class="club-icon-btn" onclick="openEditClubSheet()" title="Редактировать">✏️</button>
-                        ${isOwner ? `<button class="club-icon-btn danger" onclick="deleteClubConfirm()" title="Удалить клуб">✕</button>` : ''}
+                        ${isOwner ? `<button class="club-icon-btn with-badge" id="requestsBtn" onclick="openRequestsSheet()">📥</button>` : ''}
+                        ${isOwner ? `<button class="club-icon-btn" onclick="openBansSheet()">🚫</button>` : ''}
+                        <button class="club-icon-btn" onclick="openEditClubSheet()">✏️</button>
+                        ${isOwner ? `<button class="club-icon-btn danger" onclick="deleteClubConfirm()">✕</button>` : ''}
                     </div>
                 `;
             }
 
             container.innerHTML = `
                 <div class="profile-hero">
-                    <div class="club-header-row">
+                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
                         <div class="lb-avatar" style="width:72px;height:72px;border-radius:20px;font-size:26px;cursor:${canEdit ? 'pointer' : 'default'};" onclick="${canEdit ? 'openClubLogoSheet()' : ''}">${logoHTML}</div>
                         <div style="flex:1;min-width:0;">
                             <div style="font-size:20px;font-weight:800;">${escapeHtml(club.name)}</div>
@@ -1464,44 +1719,29 @@
                     ${club.description ? `<div style="color:var(--hint);font-size:13px;line-height:1.5;">${escapeHtml(club.description)}</div>` : ''}
                     ${actionBtns}
                 </div>
-
-                ${isOwner ? '<div id="clubRequestsIndicator"></div>' : ''}
-
-                <div class="section-title">Состав (${members.length}/${club.max_members})</div>
-                ${membersHTML}
-
                 ${canEdit ? `
                     <div class="section-title" style="margin-top: 22px;">Недавние события</div>
                     <div id="clubEventsList" class="events-list"><div class="empty">Загрузка...</div></div>
                 ` : ''}
-
+                <div class="section-title" style="margin-top: 22px;">Состав (${members.length}/${club.max_members})</div>
+                ${membersHTML}
                 <div class="section-title" style="margin-top: 22px;">Результаты матчей</div>
                 <div id="clubMatchResults"><div class="empty">Матчей пока нет</div></div>
-
                 <button class="profile-action-btn save" onclick="leaveClub()" style="background:rgba(255,84,112,0.1);color:var(--red);border:1px solid rgba(255,84,112,0.3);margin-top:20px;">🚪 Покинуть клуб</button>
             `;
 
-            if (isOwner) {
-                updateRequestsBadge();
-            }
-            if (canEdit) {
-                loadClubEvents();
-            }
+            if (isOwner) updateRequestsBadge();
+            if (canEdit) loadClubEvents();
         }
 
         // ============================================================
-        // OWNER MENU (bottom-sheet)
+        // OWNER MENU
         // ============================================================
-        let ownerMenuUserId = null;
-
         function openOwnerMenu(userId) {
             const member = myClub?.members?.find(m => m.telegram_id === userId);
             if (!member) return;
-            if (myClub.club.owner_id !== currentUser.telegram_id) {
-                showToast('Только OWNER');
-                return;
-            }
-            ownerMenuUserId = userId;
+            if (myClub.club.owner_id !== currentUser.telegram_id) { showToast('Только OWNER'); return; }
+
             const u = member.user || {};
             document.getElementById('ownerMenuTitle').textContent = u.display_name || 'Игрок';
             const content = document.getElementById('ownerMenuOptions');
@@ -1512,7 +1752,7 @@
 
             content.innerHTML = `
                 ${elderBtn}
-                <button class="sheet-option" onclick="closeAllSheets(); transferOwner(${userId})"><span style="font-size:18px;">👑</span> Передать права владельца</button>
+                <button class="sheet-option" onclick="closeAllSheets(); transferOwner(${userId})"><span style="font-size:18px;">👑</span> Передать права</button>
                 <button class="sheet-option danger" onclick="closeAllSheets(); kickMember(${userId}, false)"><span style="font-size:18px;">🚪</span> Кикнуть</button>
                 <button class="sheet-option danger" onclick="closeAllSheets(); kickMember(${userId}, true)"><span style="font-size:18px;">🚫</span> Забанить</button>
             `;
@@ -1522,7 +1762,7 @@
         }
 
         // ============================================================
-        // EVENTS
+        // CLUB EVENTS
         // ============================================================
         async function logClubEvent(eventType, actorId, targetId, meta = {}) {
             if (!myClub?.club) return;
@@ -1545,10 +1785,7 @@
                     .select('*').eq('club_id', myClub.club.id)
                     .order('created_at', { ascending: false }).limit(20);
 
-                if (!events?.length) {
-                    el.innerHTML = '<div class="empty">Событий пока нет</div>';
-                    return;
-                }
+                if (!events?.length) { el.innerHTML = '<div class="empty">Событий пока нет</div>'; return; }
 
                 const allIds = new Set();
                 events.forEach(e => { if (e.actor_id) allIds.add(e.actor_id); if (e.target_id) allIds.add(e.target_id); });
@@ -1556,8 +1793,7 @@
                 let userMap = {};
                 if (allIds.size) {
                     const { data: users } = await sb.from('users')
-                        .select('telegram_id, display_name')
-                        .in('telegram_id', [...allIds]);
+                        .select('telegram_id, display_name').in('telegram_id', [...allIds]);
                     (users || []).forEach(u => { userMap[u.telegram_id] = u; });
                 }
 
@@ -1565,18 +1801,18 @@
                     const actor = userMap[e.actor_id]?.display_name || 'Кто-то';
                     const target = userMap[e.target_id]?.display_name || 'игрок';
                     switch (e.event_type) {
-                        case 'club_created':      return `<b>${actor}</b> создал клуб`;
-                        case 'member_joined':     return `<b>${target}</b> вступил в клуб`;
-                        case 'member_left':       return `<b>${target}</b> покинул клуб`;
-                        case 'member_kicked':     return `<b>${actor}</b> исключил <b>${target}</b>`;
-                        case 'member_banned':     return `<b>${actor}</b> забанил <b>${target}</b>`;
-                        case 'member_unbanned':   return `<b>${actor}</b> разбанил <b>${target}</b>`;
-                        case 'elder_promoted':    return `<b>${actor}</b> назначил <b>${target}</b> Elder`;
-                        case 'elder_demoted':     return `<b>${actor}</b> снял Elder с <b>${target}</b>`;
+                        case 'club_created': return `<b>${actor}</b> создал клуб`;
+                        case 'member_joined': return `<b>${target}</b> вступил в клуб`;
+                        case 'member_left': return `<b>${target}</b> покинул клуб`;
+                        case 'member_kicked': return `<b>${actor}</b> исключил <b>${target}</b>`;
+                        case 'member_banned': return `<b>${actor}</b> забанил <b>${target}</b>`;
+                        case 'member_unbanned': return `<b>${actor}</b> разбанил <b>${target}</b>`;
+                        case 'elder_promoted': return `<b>${actor}</b> назначил <b>${target}</b> Elder`;
+                        case 'elder_demoted': return `<b>${actor}</b> снял Elder с <b>${target}</b>`;
                         case 'owner_transferred': return `<b>${actor}</b> передал владение <b>${target}</b>`;
-                        case 'club_edited':       return `<b>${actor}</b> изменил информацию клуба`;
-                        case 'logo_changed':      return `<b>${actor}</b> изменил эмблему клуба`;
-                        default:                  return `<b>${actor}</b> ${e.event_type}`;
+                        case 'club_edited': return `<b>${actor}</b> изменил клуб`;
+                        case 'logo_changed': return `<b>${actor}</b> изменил эмблему`;
+                        default: return `<b>${actor}</b> ${e.event_type}`;
                     }
                 };
 
@@ -1586,14 +1822,11 @@
                         <div class="event-time">${new Date(e.created_at).toLocaleString('ru-RU')}</div>
                     </div>
                 `).join('');
-            } catch (e) {
-                console.error(e);
-                el.innerHTML = '<div class="empty">Ошибка загрузки</div>';
-            }
+            } catch (e) { el.innerHTML = '<div class="empty">Ошибка</div>'; }
         }
 
         // ============================================================
-        // REQUESTS SHEET
+        // REQUESTS & BANS
         // ============================================================
         async function openRequestsSheet() {
             document.getElementById('sheetOverlay').classList.add('active');
@@ -1603,7 +1836,6 @@
 
         async function renderRequestsSheet() {
             const el = document.getElementById('requestsSheetContent');
-            if (!el) return;
             el.innerHTML = '<div class="empty">Загрузка...</div>';
             try {
                 const { data: reqs } = await sb.from('club_requests')
@@ -1627,7 +1859,7 @@
                             <div class="lb-avatar">${av}</div>
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                                <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}ELO ${u.elo || 1000}</div>
+                                <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
                             </div>
                             <button class="friend-action accept" onclick="acceptClubRequest(${r.id}, ${r.telegram_id})">✓</button>
                             <button class="friend-action decline" onclick="declineClubRequest(${r.id})">✕</button>
@@ -1646,8 +1878,7 @@
                 if (count && count > 0) {
                     if (!btn.querySelector('.badge')) {
                         const b = document.createElement('span');
-                        b.className = 'badge';
-                        b.textContent = count;
+                        b.className = 'badge'; b.textContent = count;
                         btn.appendChild(b);
                     } else {
                         btn.querySelector('.badge').textContent = count;
@@ -1659,9 +1890,6 @@
             } catch (e) {}
         }
 
-        // ============================================================
-        // BANS SHEET
-        // ============================================================
         async function openBansSheet() {
             document.getElementById('sheetOverlay').classList.add('active');
             document.getElementById('bansSheet').classList.add('active');
@@ -1670,18 +1898,15 @@
 
         async function renderBansSheet() {
             const el = document.getElementById('bansSheetContent');
-            if (!el) return;
             el.innerHTML = '<div class="empty">Загрузка...</div>';
             try {
                 const { data: bans } = await sb.from('club_bans')
-                    .select('id, telegram_id, created_at')
-                    .eq('club_id', myClub.club.id);
+                    .select('id, telegram_id, created_at').eq('club_id', myClub.club.id);
                 if (!bans?.length) { el.innerHTML = '<div class="empty">Забаненных нет</div>'; return; }
 
                 const ids = bans.map(b => b.telegram_id);
                 const { data: users } = await sb.from('users')
-                    .select('telegram_id, display_name, custom_avatar, photo_url, elo')
-                    .in('telegram_id', ids);
+                    .select('telegram_id, display_name, custom_avatar, photo_url').in('telegram_id', ids);
                 const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
 
                 el.innerHTML = bans.map(b => {
@@ -1694,7 +1919,7 @@
                             <div class="lb-avatar">${av}</div>
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                                <div style="font-size:11px;color:var(--hint);">Забанен ${new Date(b.created_at).toLocaleDateString('ru-RU')}</div>
+                                <div style="font-size:11px;color:var(--hint);">${new Date(b.created_at).toLocaleDateString('ru-RU')}</div>
                             </div>
                             <button class="friend-action accept" onclick="unbanUser(${b.telegram_id})">Разбан</button>
                         </div>`;
@@ -1741,8 +1966,7 @@
             const member = myClub.members.find(m => m.telegram_id === userId);
             if (!member) return;
             if (member.role === 'owner') { showToast('Нельзя кикнуть владельца'); return; }
-            const msg = withBan ? 'Забанить игрока?' : 'Кикнуть игрока?';
-            if (!confirm(msg)) return;
+            if (!confirm(withBan ? 'Забанить игрока?' : 'Кикнуть игрока?')) return;
             try {
                 await sb.from('club_members').delete().eq('club_id', myClub.club.id).eq('telegram_id', userId);
                 await sb.from('club_requests').delete().eq('club_id', myClub.club.id).eq('telegram_id', userId);
@@ -1752,11 +1976,9 @@
                 } else {
                     await logClubEvent('member_kicked', currentUser.telegram_id, userId, {});
                 }
-                notify(userId,
-                    withBan
-                        ? `🚫 Тебя забанили в клубе <b>${escapeHtml(myClub.club.name)}</b>.`
-                        : `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>.`
-                );
+                notify(userId, withBan
+                    ? `🚫 Тебя забанили в клубе <b>${escapeHtml(myClub.club.name)}</b>.`
+                    : `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>.`);
                 showToast(withBan ? 'Забанен' : 'Кикнут');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -1773,7 +1995,7 @@
                 notify(userId, `⭐ Тебя назначили <b>Elder</b> в клубе <b>${escapeHtml(myClub.club.name)}</b>.`);
                 showToast('✅ Назначен Elder');
                 openClubPage();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
+            } catch (e) { showToast('Ошибка'); }
         }
 
         async function demoteElder(userId) {
@@ -1792,11 +2014,10 @@
         async function transferOwner(userId) {
             const member = myClub.members.find(m => m.telegram_id === userId);
             if (!member) return;
-            if (member.role === 'owner') { showToast('Уже владелец'); return; }
-            if (myClub.club.owner_id !== currentUser.telegram_id) { showToast('Только владелец'); return; }
+            if (myClub.club.owner_id !== currentUser.telegram_id) return;
             const targetName = member.user?.display_name || 'игрок';
-            if (!confirm(`Передать владение клубом игроку ${targetName}?`)) return;
-            const phrase = prompt(`Для подтверждения введи название клуба "${myClub.club.name}":`);
+            if (!confirm(`Передать владение игроку ${targetName}?`)) return;
+            const phrase = prompt(`Введи название клуба "${myClub.club.name}" для подтверждения:`);
             if (phrase !== myClub.club.name) { showToast('Отменено'); return; }
             try {
                 await sb.from('clubs').update({ owner_id: userId }).eq('id', myClub.club.id);
@@ -1823,35 +2044,32 @@
                 await logClubEvent('member_left', currentUser.telegram_id, currentUser.telegram_id, {});
                 await sb.from('club_members').delete().eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id);
                 await sb.from('club_requests').delete().eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id);
-                if (isOwner) {
-                    await sb.from('clubs').delete().eq('id', clubId);
-                }
+                if (isOwner) await sb.from('clubs').delete().eq('id', clubId);
                 showToast('Вы покинули клуб'); myClub = null; openClubPage();
             } catch (e) { showToast('Ошибка'); }
         }
 
         async function deleteClubConfirm() {
-            if (myClub.club.owner_id !== currentUser.telegram_id) { showToast('Только OWNER'); return; }
-            const phrase = prompt(`Для удаления клуба введи его название "${myClub.club.name}":`);
+            if (myClub.club.owner_id !== currentUser.telegram_id) return;
+            const phrase = prompt(`Введи название клуба "${myClub.club.name}" для удаления:`);
             if (phrase !== myClub.club.name) { showToast('Отменено'); return; }
             try {
                 await sb.from('clubs').delete().eq('id', myClub.club.id);
                 showToast('Клуб удалён'); myClub = null; openClubPage();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
+            } catch (e) { showToast('Ошибка'); }
         }
 
         function openCreateClubSheet() {
             const name = prompt('Название клуба (2-30):');
-            if (!name || name.length < 2 || name.length > 30) { if (name !== null) showToast('Неверная длина'); return; }
+            if (!name || name.length < 2 || name.length > 30) return;
             const tag = prompt('Тег (2-5):');
-            if (!tag || tag.length < 2 || tag.length > 5) { if (tag !== null) showToast('Неверный тег'); return; }
+            if (!tag || tag.length < 2 || tag.length > 5) return;
             const desc = prompt('Описание (необязательно):') || '';
             createClub(name, tag, desc);
         }
 
         async function createClub(name, tag, description) {
             try {
-                showToast('Создание...');
                 const { data: club, error } = await sb.from('clubs').insert({
                     name, tag, description, owner_id: currentUser.telegram_id, max_members: 10
                 }).select().single();
@@ -1860,10 +2078,8 @@
                     club_id: club.id, telegram_id: currentUser.telegram_id, role: 'owner'
                 });
                 await sb.from('club_events').insert({
-                    club_id: club.id,
-                    actor_id: currentUser.telegram_id,
-                    event_type: 'club_created',
-                    meta: {}
+                    club_id: club.id, actor_id: currentUser.telegram_id,
+                    event_type: 'club_created', meta: {}
                 });
                 showToast('✅ Клуб создан!'); openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -1871,7 +2087,7 @@
 
         function openEditClubSheet() {
             const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
-            if (myRole !== 'owner' && myRole !== 'elder') { showToast('Только OWNER или ELDER'); return; }
+            if (myRole !== 'owner' && myRole !== 'elder') { showToast('Только OWNER/ELDER'); return; }
             const name = prompt('Название:', myClub.club.name); if (name === null) return;
             const tag = prompt('Тег:', myClub.club.tag); if (tag === null) return;
             const desc = prompt('Описание:', myClub.club.description || ''); if (desc === null) return;
@@ -1926,7 +2142,6 @@
             if (!container) return;
 
             const onlyNotFull = document.getElementById('onlyNotFullClubs')?.checked || false;
-
             if (!clubs.length) { container.innerHTML = '<div class="empty">Клубов не найдено</div>'; return; }
 
             const clubIds = clubs.map(c => c.id);
@@ -1945,14 +2160,10 @@
 
             const filtered = clubs.filter(c => {
                 if (!onlyNotFull) return true;
-                const count = countMap[c.id] || 0;
-                return count < c.max_members;
+                return (countMap[c.id] || 0) < c.max_members;
             });
 
-            if (!filtered.length) {
-                container.innerHTML = '<div class="empty">Незаполненных клубов не найдено</div>';
-                return;
-            }
+            if (!filtered.length) { container.innerHTML = '<div class="empty">Незаполненных нет</div>'; return; }
 
             container.innerHTML = filtered.map(c => {
                 const logoSrc = c.logo_url;
@@ -1975,16 +2186,12 @@
                         <div style="flex:1;min-width:0;">
                             <div class="leaderboard-name">${escapeHtml(c.name)}</div>
                             <div style="font-size:11px;color:var(--hint);">[${escapeHtml(c.tag)}] · ${count}/${c.max_members}</div>
-                            ${c.description ? `<div style="font-size:11px;color:var(--hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.description)}</div>` : ''}
                         </div>
                         ${btn}
                     </div>`;
             }).join('');
         }
 
-        // ============================================================
-        // VIEW OTHER CLUB (read-only)
-        // ============================================================
         async function viewClub(clubId) {
             const modal = document.getElementById('playerModal');
             const content = document.getElementById('playerModalContent');
@@ -1992,17 +2199,15 @@
             modal.classList.add('active');
             try {
                 const { data: club } = await sb.from('clubs').select('*').eq('id', clubId).single();
-                if (!club) throw new Error('Клуб не найден');
                 const { data: members } = await sb.from('club_members').select('*').eq('club_id', club.id);
                 const ids = (members || []).map(m => m.telegram_id);
                 const { data: users } = await sb.from('users')
                     .select('telegram_id, display_name, custom_avatar, photo_url, elo, standoff_id')
                     .in('telegram_id', ids.length ? ids : [0]);
-                const userMap = {}; (users || []).forEach(u => { userMap[u.telegram_id] = u; });
+                const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
 
                 const logoSrc = club.logo_url;
                 const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : club.tag.slice(0, 2).toUpperCase();
-
                 const sorted = [...(members || [])].sort((a, b) => {
                     const rank = { owner: 0, elder: 1, member: 2 };
                     return (rank[a.role] ?? 3) - (rank[b.role] ?? 3);
@@ -2013,10 +2218,10 @@
                         <div class="lb-avatar" style="width:72px;height:72px;border-radius:20px;font-size:26px;">${logoHTML}</div>
                         <div style="flex:1;min-width:0;">
                             <div style="font-size:20px;font-weight:800;">${escapeHtml(club.name)}</div>
-                            <div style="font-size:12px;color:var(--emerald);font-weight:700;margin-top:3px;letter-spacing:1px;">[${escapeHtml(club.tag)}] · ${(members || []).length}/${club.max_members}</div>
+                            <div style="font-size:12px;color:var(--emerald);font-weight:700;margin-top:3px;">[${escapeHtml(club.tag)}] · ${(members || []).length}/${club.max_members}</div>
                         </div>
                     </div>
-                    ${club.description ? `<div style="color:var(--hint);font-size:13px;line-height:1.5;margin-bottom:14px;">${escapeHtml(club.description)}</div>` : ''}
+                    ${club.description ? `<div style="color:var(--hint);font-size:13px;margin-bottom:14px;">${escapeHtml(club.description)}</div>` : ''}
                     <div class="section-title">Состав</div>
                     ${sorted.map(m => {
                         const u = userMap[m.telegram_id] || {};
@@ -2031,7 +2236,7 @@
                                 <div class="lb-avatar">${av}</div>
                                 <div style="flex:1;min-width:0;">
                                     <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
-                                    <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}ELO ${u.elo || 1000}</div>
+                                    <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
                                 </div>
                             </div>`;
                     }).join('')}
@@ -2120,8 +2325,7 @@
                     .select('id, sender_id, recipient_id, text, image_url, created_at')
                     .or(`sender_id.eq.${me},recipient_id.eq.${me}`)
                     .not('recipient_id', 'is', null)
-                    .order('created_at', { ascending: false })
-                    .limit(500);
+                    .order('created_at', { ascending: false }).limit(500);
 
                 const lastByPartner = {};
                 (allDMs || []).forEach(m => {
@@ -2134,53 +2338,26 @@
                 let userMap = {};
                 if (partnerIds.length) {
                     const { data: users } = await sb.from('users')
-                        .select('telegram_id, display_name, custom_avatar, photo_url')
-                        .in('telegram_id', partnerIds);
+                        .select('telegram_id, display_name, custom_avatar, photo_url').in('telegram_id', partnerIds);
                     (users || []).forEach(u => { userMap[u.telegram_id] = u; });
                 }
 
                 partnerIds.forEach(pid => {
                     const m = lastByPartner[pid];
                     const u = userMap[pid] || { telegram_id: pid, display_name: 'Игрок' };
-                    const preview = m.image_url ? '📷 Фото' : (m.text || '');
                     items.push({
                         type: 'dm', id: pid,
                         name: u.display_name || 'Игрок',
                         avatar: u.custom_avatar || u.photo_url, square: false,
-                        preview: preview || 'Начать чат',
+                        preview: (m.image_url ? '📷 Фото' : m.text) || 'Начать чат',
                         lastAt: m.created_at
                     });
                 });
 
-                const { data: friends } = await sb.from('friendships')
-                    .select('requester_id, addressee_id, status')
-                    .or(`requester_id.eq.${me},addressee_id.eq.${me}`).eq('status', 'accepted');
-                const friendIds = (friends || []).map(f => f.requester_id === me ? f.addressee_id : f.requester_id);
-                const emptyFriendIds = friendIds.filter(fid => !lastByPartner[fid]);
-
-                if (emptyFriendIds.length) {
-                    const { data: users } = await sb.from('users')
-                        .select('telegram_id, display_name, custom_avatar, photo_url')
-                        .in('telegram_id', emptyFriendIds);
-                    const map = {};
-                    (users || []).forEach(u => { map[u.telegram_id] = u; });
-
-                    emptyFriendIds.forEach(fid => {
-                        const u = map[fid] || { telegram_id: fid, display_name: 'Игрок' };
-                        items.push({
-                            type: 'dm', id: fid,
-                            name: u.display_name || 'Игрок',
-                            avatar: u.custom_avatar || u.photo_url, square: false,
-                            preview: 'Начать чат',
-                            lastAt: '1970-01-01'
-                        });
-                    });
-                }
-
                 items.sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
 
                 if (!items.length) {
-                    container.innerHTML = '<div class="empty">Нет чатов. Добавьте друзей или вступите в клуб.</div>';
+                    container.innerHTML = '<div class="empty">Нет чатов.</div>';
                     return;
                 }
 
@@ -2276,9 +2453,7 @@
             }
 
             let body = '';
-            if (msg.image_url) {
-                body += `<img class="chat-img" src="${msg.image_url}" onclick="event.stopPropagation();openImageView('${msg.image_url}')" alt="">`;
-            }
+            if (msg.image_url) body += `<img class="chat-img" src="${msg.image_url}" onclick="event.stopPropagation();openImageView('${msg.image_url}')" alt="">`;
             if (msg.text) body += `<div>${escapeHtml(msg.text)}</div>`;
 
             const edited = msg.edited_at ? ' <span style="font-size:10px;opacity:0.7;">(ред.)</span>' : '';
@@ -2417,10 +2592,7 @@
                 };
                 const { error } = await sb.from('messages').insert(payload);
                 if (error) throw error;
-                if (currentChat.type === 'dm') {
-                    notify(currentChat.id, `📷 <b>${escapeHtml(currentUser.display_name)}</b> отправил фото`);
-                }
-            } catch (e) { showToast('Ошибка загрузки: ' + e.message); }
+            } catch (e) { showToast('Ошибка: ' + e.message); }
         });
 
         function openImageView(url) {
@@ -2463,13 +2635,9 @@
             attachBubbleHandlers();
         }
 
-        // ============================================================
-        // MESSAGE MENU
-        // ============================================================
         function openMsgMenu(msgId, senderId) {
             currentMsgMenuId = msgId;
             const isMe = senderId === currentUser.telegram_id;
-            const overlay = document.getElementById('msgMenuOverlay');
             const content = document.getElementById('msgMenuContent');
             const bubble = document.querySelector(`.chat-bubble[data-msg-id="${msgId}"]`);
             let textContent = '';
@@ -2484,7 +2652,7 @@
             if (isMe) html += `<button class="msg-menu-btn danger" onclick="menuDelete(${msgId})">🗑️ Удалить</button>`;
             html += `<button class="msg-menu-cancel" onclick="closeMsgMenu()">ОТМЕНА</button>`;
             content.innerHTML = html;
-            overlay.classList.add('active');
+            document.getElementById('msgMenuOverlay').classList.add('active');
         }
 
         function closeMsgMenu() { document.getElementById('msgMenuOverlay').classList.remove('active'); currentMsgMenuId = null; }
@@ -2514,21 +2682,990 @@
                     .update({ text: newText, edited_at: new Date().toISOString() })
                     .eq('id', msgId);
                 if (error) throw error;
-                closeMsgMenu();
-                await loadMessages();
-                showToast('✅ Отредактировано');
-            } catch (e) { showToast('Ошибка: ' + e.message); }
+                closeMsgMenu(); await loadMessages(); showToast('✅');
+            } catch (e) { showToast('Ошибка'); }
         }
 
         async function menuDelete(msgId) {
-            if (!confirm('Удалить сообщение?')) { closeMsgMenu(); return; }
+            if (!confirm('Удалить?')) { closeMsgMenu(); return; }
             try {
-                const { error } = await sb.from('messages').delete().eq('id', msgId);
-                if (error) throw error;
-                closeMsgMenu();
-                await loadMessages();
-                showToast('Удалено');
+                await sb.from('messages').delete().eq('id', msgId);
+                closeMsgMenu(); await loadMessages(); showToast('Удалено');
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        // ============================================================
+        // MATCHMAKING — PARTY
+        // ============================================================
+        async function openPlayPage() {
+            switchPage('play');
+            await loadOrCreateParty();
+        }
+
+        async function loadOrCreateParty() {
+            try {
+                const me = currentUser.telegram_id;
+                const { data: member } = await sb.from('party_members')
+                    .select('party_id').eq('telegram_id', me).maybeSingle();
+
+                if (member) {
+                    const { data: party } = await sb.from('parties').select('*').eq('id', member.party_id).single();
+                    if (party) {
+                        await loadPartyMembers(party);
+                        selectMode(party.mode);
+                        return;
+                    }
+                }
+                // Нет пати — создаём при выборе режима
+                selectMode('5x5');
+                renderEmptyParty();
+            } catch (e) { console.error(e); }
+        }
+
+        async function ensureParty(mode) {
+            const me = currentUser.telegram_id;
+            const { data: member } = await sb.from('party_members')
+                .select('party_id').eq('telegram_id', me).maybeSingle();
+            if (member) {
+                const { data: party } = await sb.from('parties').select('*').eq('id', member.party_id).single();
+                if (party) {
+                    if (party.mode !== mode) {
+                        await sb.from('parties').update({ mode }).eq('id', party.id);
+                        party.mode = mode;
+                    }
+                    return party;
+                }
+            }
+            // Проверим, нет ли у меня клуба — если да, привяжем
+            const { data: clubMember } = await sb.from('club_members').select('club_id, role')
+                .eq('telegram_id', me).maybeSingle();
+
+            const insert: any = { leader_id: me, mode };
+            if (clubMember) insert.club_id = clubMember.club_id;
+
+            const { data: party, error } = await sb.from('parties').insert(insert).select().single();
+            if (error) throw error;
+
+            await sb.from('party_members').insert({ party_id: party.id, telegram_id: me });
+            return party;
+        }
+
+        async function loadPartyMembers(party) {
+            const { data: members } = await sb.from('party_members').select('*').eq('party_id', party.id);
+            const ids = (members || []).map(m => m.telegram_id);
+            const { data: users } = await sb.from('users')
+                .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+                .in('telegram_id', ids.length ? ids : [0]);
+
+            myParty = { party, members: (users || []) };
+            renderParty();
+        }
+
+        function renderEmptyParty() {
+            myParty = null;
+            document.getElementById('partyCount').textContent = `1 / ${selectedMode === '5x5' ? 5 : 2}`;
+            document.getElementById('partyElo').textContent = currentUser.elo ?? 1000;
+            document.getElementById('partyMembers').innerHTML = `
+                <div class="party-member">
+                    <span>${escapeHtml(currentUser.display_name)}</span>
+                </div>
+            `;
+        }
+
+        function renderParty() {
+            if (!myParty) return renderEmptyParty();
+            const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
+            const avgElo = myParty.members.length ? Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length) : 1000;
+
+            document.getElementById('partyCount').textContent = `${myParty.members.length} / ${maxSize}`;
+            document.getElementById('partyElo').textContent = avgElo;
+
+            document.getElementById('partyMembers').innerHTML = myParty.members.map(m => {
+                const isLeader = m.telegram_id === myParty.party.leader_id;
+                const removeBtn = (!isLeader && myParty.party.leader_id === currentUser.telegram_id)
+                    ? `<button class="remove-btn" onclick="kickFromParty(${m.telegram_id})">×</button>` : '';
+                return `
+                    <div class="party-member">
+                        <span>${escapeHtml(m.display_name || 'Игрок')}${isLeader ? ' 👑' : ''}</span>
+                        <span style="color:var(--hint);font-size:11px;">${m.elo || 1000}</span>
+                        ${removeBtn}
+                    </div>`;
+            }).join('');
+
+            const addBtn = document.getElementById('partyAddBtn');
+            if (myParty.members.length >= maxSize) {
+                addBtn.style.display = 'none';
+            } else {
+                addBtn.style.display = 'block';
+            }
+        }
+
+        function selectMode(mode) {
+            selectedMode = mode;
+            document.getElementById('mode5x5').classList.toggle('active', mode === '5x5');
+            document.getElementById('mode2x2').classList.toggle('active', mode === '2x2');
+            ensureParty(mode).then(p => loadPartyMembers(p));
+        }
+
+        async function kickFromParty(userId) {
+            if (!myParty) return;
+            if (myParty.party.leader_id !== currentUser.telegram_id) { showToast('Только лидер'); return; }
+            if (userId === currentUser.telegram_id) return;
+            try {
+                await sb.from('party_members').delete().eq('party_id', myParty.party.id).eq('telegram_id', userId);
+                await loadPartyMembers(myParty.party);
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        async function leavePartyAndGoBack() {
+            try {
+                if (myParty && myParty.party.leader_id === currentUser.telegram_id) {
+                    // Если лидер — удаляем пати
+                    await sb.from('party_members').delete().eq('party_id', myParty.party.id);
+                    await sb.from('parties').delete().eq('id', myParty.party.id);
+                } else if (myParty) {
+                    await sb.from('party_members').delete().eq('party_id', myParty.party.id).eq('telegram_id', currentUser.telegram_id);
+                }
+                myParty = null;
+                switchPage('dashboard');
+            } catch (e) { switchPage('dashboard'); }
+        }
+
+        // ============================================================
+        // INVITE
+        // ============================================================
+        async function openInviteSheet() {
+            if (!myParty) {
+                await ensureParty(selectedMode);
+                await loadOrCreateParty();
+            }
+            document.getElementById('sheetOverlay').classList.add('active');
+            document.getElementById('inviteSheet').classList.add('active');
+            document.getElementById('inviteSearchInput').value = '';
+            await loadInviteList();
+        }
+
+        let inviteSearchTimer = null;
+        function debouncedInviteSearch() {
+            clearTimeout(inviteSearchTimer);
+            inviteSearchTimer = setTimeout(loadInviteList, 300);
+        }
+
+        async function loadInviteList() {
+            const container = document.getElementById('inviteList');
+            if (!container || !myParty) return;
+
+            const q = document.getElementById('inviteSearchInput')?.value.trim() || '';
+            const currentIds = myParty.members.map(m => m.telegram_id);
+            const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
+
+            if (myParty.members.length >= maxSize) {
+                container.innerHTML = '<div class="empty">Пати заполнено</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="empty">Загрузка...</div>';
+
+            try {
+                // Друзья
+                const me = currentUser.telegram_id;
+                const { data: rels } = await sb.from('friendships')
+                    .select('requester_id, addressee_id, status')
+                    .or(`requester_id.eq.${me},addressee_id.eq.${me}`).eq('status', 'accepted');
+                const friendIds = (rels || []).map(r => r.requester_id === me ? r.addressee_id : r.requester_id);
+
+                let users = [];
+                if (q.length >= 2) {
+                    const safe = q.replace(/[%_]/g, '');
+                    const { data } = await sb.from('users')
+                        .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+                        .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%`)
+                        .neq('telegram_id', me).limit(30);
+                    users = data || [];
+                } else if (friendIds.length) {
+                    const { data } = await sb.from('users')
+                        .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+                        .in('telegram_id', friendIds);
+                    users = data || [];
+                }
+
+                const filtered = users.filter(u => !currentIds.includes(u.telegram_id));
+
+                if (!filtered.length) {
+                    container.innerHTML = '<div class="empty">Нет доступных игроков</div>';
+                    return;
+                }
+
+                container.innerHTML = filtered.map(u => {
+                    const src = u.custom_avatar || u.photo_url;
+                    const initial = (u.display_name || 'U')[0].toUpperCase();
+                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    return `
+                        <div class="leaderboard-item">
+                            <div class="lb-avatar">${av}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
+                                <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                            </div>
+                            <button class="friend-action add" onclick="inviteToParty(${u.telegram_id})">Пригласить</button>
+                        </div>`;
+                }).join('');
+            } catch (e) { container.innerHTML = '<div class="empty">Ошибка</div>'; }
+        }
+
+        async function inviteToParty(userId) {
+            if (!myParty) return;
+            try {
+                await sb.from('party_invites').upsert({
+                    party_id: myParty.party.id, from_id: currentUser.telegram_id,
+                    to_id: userId, status: 'pending'
+                }, { onConflict: 'party_id,to_id' });
+
+                notify(userId,
+                    `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в пати ${myParty.party.mode}. Открой приложение!`
+                );
+                showToast('✅ Приглашение отправлено');
             } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
+
+        // ============================================================
+        // MATCHMAKING — SEARCH
+        // ============================================================
+        async function startSearch() {
+            if (!myParty) { await ensureParty(selectedMode); await loadOrCreateParty(); }
+            if (!myParty) return;
+
+            const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
+            if (myParty.members.length > maxSize) { showToast('Слишком много игроков'); return; }
+
+            const avgElo = Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length);
+
+            try {
+                await sb.from('mm_queue').upsert({
+                    party_id: myParty.party.id,
+                    mode: myParty.party.mode,
+                    elo_avg: avgElo,
+                    joined_at: new Date().toISOString()
+                }, { onConflict: 'party_id' });
+            } catch (e) { showToast('Ошибка: ' + e.message); return; }
+
+            switchPage('search');
+            searchStartTime = Date.now();
+            updateSearchTimer();
+            searchTickInterval = setInterval(async () => {
+                updateSearchTimer();
+                await mmCall('tick');
+                await checkIfMatchCreated();
+            }, 5000);
+
+            // Сразу дёрнем tick
+            await mmCall('tick');
+        }
+
+        function updateSearchTimer() {
+            const elapsed = Math.floor((Date.now() - searchStartTime) / 1000);
+            const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const ss = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('searchTimer').textContent = `${mm}:${ss}`;
+
+            let rangeText = '±200';
+            if (elapsed >= 10 && elapsed < 20) rangeText = '±500';
+            else if (elapsed >= 20) rangeText = 'без ограничений';
+            document.getElementById('searchEloRange').textContent = `Диапазон: ${rangeText}`;
+        }
+
+        async function checkIfMatchCreated() {
+            if (!myParty) return;
+            try {
+                const me = currentUser.telegram_id;
+                // Проверяем, есть ли активный матч, где я участвую
+                const { data: matches } = await sb.from('game_matches')
+                    .select('*')
+                    .in('status', ['confirm', 'veto', 'ready', 'result'])
+                    .order('created_at', { ascending: false }).limit(10);
+
+                if (!matches?.length) return;
+
+                for (const m of matches) {
+                    const allIds = [...(m.team_a_players || []), ...(m.team_b_players || [])].map(p => p.telegram_id);
+                    if (allIds.includes(me)) {
+                        currentMatch = m;
+                        onMatchFound(m);
+                        return;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        async function cancelSearch() {
+            clearInterval(searchTickInterval);
+            searchTickInterval = null;
+            if (myParty) {
+                try { await sb.from('mm_queue').delete().eq('party_id', myParty.party.id); } catch (e) {}
+            }
+            switchPage('play');
+        }
+
+        // ============================================================
+        // MATCH FOUND → CONFIRM
+        // ============================================================
+        function onMatchFound(match) {
+            clearInterval(searchTickInterval);
+            searchTickInterval = null;
+            currentMatch = match;
+
+            if (match.status === 'confirm') showConfirmScreen();
+            else if (match.status === 'veto') showVetoScreen();
+            else if (match.status === 'ready') showMatchScreen();
+            else if (match.status === 'result') showResultScreen();
+            else if (match.status === 'finished') showFinishedScreen();
+
+            subscribeMatchRealtime();
+        }
+
+        async function subscribeMatchRealtime() {
+            if (currentMatchChannel) sb.removeChannel(currentMatchChannel);
+            if (!currentMatch) return;
+            const matchId = currentMatch.id;
+
+            currentMatchChannel = sb.channel('match_' + matchId)
+                .on('postgres_changes', {
+                    event: 'UPDATE', schema: 'public', table: 'game_matches',
+                    filter: `id=eq.${matchId}`
+                }, async (payload) => {
+                    currentMatch = payload.new;
+                    if (currentMatch.status === 'veto') showVetoScreen();
+                    else if (currentMatch.status === 'ready') showMatchScreen();
+                    else if (currentMatch.status === 'result') showResultScreen();
+                    else if (currentMatch.status === 'finished') showFinishedScreen();
+                    else if (currentMatch.status === 'cancelled') {
+                        showToast('Матч отменён');
+                        clearInterval(matchPollTimer);
+                        switchPage('play');
+                    }
+                })
+                .subscribe();
+        }
+
+        function showConfirmScreen() {
+            switchPage('confirm');
+            renderConfirmScreen();
+            startConfirmCountdown();
+
+            matchPollTimer = setInterval(async () => {
+                await mmCall('tick');
+                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+                if (data) {
+                    currentMatch = data;
+                    if (data.status === 'veto') { clearInterval(matchPollTimer); showVetoScreen(); }
+                    else if (data.status === 'cancelled') { clearInterval(matchPollTimer); showToast('Отменено'); switchPage('play'); }
+                }
+            }, 3000);
+        }
+
+        function renderConfirmScreen() {
+            const teamA = currentMatch.team_a_players || [];
+            const teamB = currentMatch.team_b_players || [];
+            const me = currentUser.telegram_id;
+
+            renderConfirmTeam('A', teamA, me);
+            renderConfirmTeam('B', teamB, me);
+        }
+
+        async function renderConfirmTeam(team, players, me) {
+            const elId = team === 'A' ? 'confirmTeams' : null;
+            const ids = players.map(p => p.telegram_id);
+            const { data: users } = await sb.from('users')
+                .select('telegram_id, display_name, custom_avatar, photo_url')
+                .in('telegram_id', ids);
+            const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+            const html = `
+                <div class="confirm-team" data-team="${team}">
+                    <div class="confirm-team-title">Команда ${team}</div>
+                    <div class="confirm-team-players">
+                        ${players.map(p => {
+                            const u = userMap[p.telegram_id] || {};
+                            const src = u.custom_avatar || u.photo_url;
+                            const initial = (u.display_name || 'U')[0].toUpperCase();
+                            const av = src ? `<img src="${src}" alt="">` : initial;
+                            return `
+                                <div class="confirm-player ${p.captain ? 'captain' : ''}">
+                                    <div class="cp-avatar">${av}</div>
+                                    <span class="cp-name">${escapeHtml(u.display_name || 'Игрок')}</span>
+                                    ${p.captain ? '<span class="cp-tag">👑</span>' : ''}
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            // Определяем A/B порядок
+            if (team === 'A') {
+                document.getElementById('confirmTeams').innerHTML = html;
+            } else {
+                document.getElementById('confirmTeams').insertAdjacentHTML('beforeend', html);
+            }
+        }
+
+        function startConfirmCountdown() {
+            let left = 30;
+            const update = () => {
+                document.getElementById('confirmTimer').textContent = `00:${String(left).padStart(2, '0')}`;
+                if (left <= 0) return;
+                left--;
+                setTimeout(update, 1000);
+            };
+            update();
+        }
+
+        async function confirmMatch(agree) {
+            if (!currentMatch) return;
+            const action = agree ? 'confirm' : 'decline';
+            await mmCall(action, {
+                match_id: currentMatch.id,
+                telegram_id: currentUser.telegram_id
+            });
+            if (!agree) {
+                showToast('Отказались');
+                clearInterval(matchPollTimer);
+                switchPage('play');
+            } else {
+                showToast('✅ Подтверждено');
+            }
+        }
+
+        // ============================================================
+        // VETO
+        // ============================================================
+        function showVetoScreen() {
+            switchPage('veto');
+            renderVeto();
+            startVetoCountdown();
+        }
+
+        function renderVeto() {
+            const me = currentUser.telegram_id;
+            const isCapA = currentMatch.captain_a_id === me;
+            const isCapB = currentMatch.captain_b_id === me;
+            const isMyTurn = (currentMatch.current_turn === 'A' && isCapA) || (currentMatch.current_turn === 'B' && isCapB);
+
+            document.getElementById('vetoTurnLabel').textContent = isMyTurn
+                ? `Твой ход (Команда ${currentMatch.current_turn})`
+                : `Ход команды ${currentMatch.current_turn}`;
+
+            const vetoLog = currentMatch.veto_log || [];
+            const banned = vetoLog.map(v => v.map);
+            const mapPool = currentMatch.map_pool || MAP_POOL;
+
+            document.getElementById('vetoGrid').innerHTML = mapPool.map(map => {
+                const isBanned = banned.includes(map);
+                return `
+                    <button class="veto-card ${isBanned ? 'banned' : ''}"
+                            onclick="pickMap('${map}')"
+                            ${isBanned || !isMyTurn ? 'disabled' : ''}>
+                        <div class="veto-card-map">${escapeHtml(map)}</div>
+                    </button>
+                `;
+            }).join('');
+
+            document.getElementById('vetoLog').innerHTML = vetoLog.length ? `
+                <div class="section-title">История банов</div>
+                ${vetoLog.map(v => `
+                    <div style="font-size:12px;color:var(--hint);margin-bottom:4px;">
+                        #${v.turn} · Команда ${v.team}: <b style="color:var(--red);">${escapeHtml(v.map)}</b>${v.auto ? ' (авто)' : ''}
+                    </div>
+                `).join('')}
+            ` : '';
+        }
+
+        async function pickMap(map) {
+            if (!currentMatch) return;
+            try {
+                const res = await mmCall('ban', {
+                    match_id: currentMatch.id,
+                    telegram_id: currentUser.telegram_id,
+                    map
+                });
+                if (res?.ban?.error) { showToast(res.ban.error); return; }
+                haptic('medium');
+                // Обновим матч
+                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+                if (data) {
+                    currentMatch = data;
+                    if (data.status === 'ready') showMatchScreen();
+                    else renderVeto();
+                }
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        function startVetoCountdown() {
+            const tick = () => {
+                if (!currentMatch || currentMatch.status !== 'veto') return;
+                const last = new Date(currentMatch.last_action_at || currentMatch.veto_started_at).getTime();
+                const elapsed = Math.floor((Date.now() - last) / 1000);
+                const left = Math.max(0, 30 - elapsed);
+                document.getElementById('vetoTimer').textContent = `00:${String(left).padStart(2, '0')}`;
+                setTimeout(tick, 1000);
+            };
+            tick();
+        }
+
+        // ============================================================
+        // MATCH (ИГРАЕМ)
+        // ============================================================
+        function showMatchScreen() {
+            switchPage('match');
+
+            document.getElementById('matchMap').textContent = currentMatch.final_map || '—';
+
+            const hostId = currentMatch.host_id;
+            (async () => {
+                const { data: host } = await sb.from('users')
+                    .select('telegram_id, display_name, standoff_id')
+                    .eq('telegram_id', hostId).single();
+                document.getElementById('matchHostName').textContent = host?.display_name || '—';
+                document.getElementById('matchHostId').textContent = host?.standoff_id || '—';
+            })();
+
+            // Превью команд
+            const teamA = currentMatch.team_a_players || [];
+            const teamB = currentMatch.team_b_players || [];
+            const me = currentUser.telegram_id;
+            renderConfirmTeam('A', teamA, me);
+            renderConfirmTeam('B', teamB, me);
+
+            // Poll статуса
+            if (matchPollTimer) clearInterval(matchPollTimer);
+            matchPollTimer = setInterval(async () => {
+                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+                if (data) {
+                    currentMatch = data;
+                    if (data.status === 'result') { clearInterval(matchPollTimer); showResultScreen(); }
+                }
+            }, 5000);
+        }
+
+        function copyHostId() {
+            const id = document.getElementById('matchHostId').textContent;
+            if (!id || id === '—') return;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(id).then(() => showToast('✅ Скопировано'));
+            } else {
+                showToast('ID: ' + id);
+            }
+        }
+
+        function openStandoff() {
+            try {
+                if (tg?.openLink) {
+                    tg.openLink('standoff2://');
+                } else {
+                    showToast('Откройте Standoff 2 вручную');
+                }
+            } catch (e) { showToast('Откройте Standoff 2 вручную'); }
+        }
+
+        function goToResult() {
+            showResultScreen();
+        }
+
+        // ============================================================
+        // RESULT
+        // ============================================================
+        function showResultScreen() {
+            switchPage('result');
+            renderResultScreen();
+        }
+
+        async function renderResultScreen() {
+            const container = document.getElementById('resultContent');
+            const me = currentUser.telegram_id;
+            const isCapA = currentMatch.captain_a_id === me;
+            const isCapB = currentMatch.captain_b_id === me;
+            const isCaptain = isCapA || isCapB;
+
+            // Проверяем, загружал ли я скрин
+            const { data: screenshots } = await sb.from('match_screenshots')
+                .select('*').eq('match_id', currentMatch.id);
+
+            const myShot = (screenshots || []).find(s => s.uploader_id === me);
+
+            // Проверяем, голосовал ли я
+            const { data: votes } = await sb.from('match_votes')
+                .select('*').eq('match_id', currentMatch.id);
+
+            const myVote = (votes || []).find(v => v.telegram_id === me);
+
+            let html = `
+                <div class="section-title" style="margin-top:0;">Результат матча</div>
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:14px;color:var(--hint);">Карта: <b style="color:var(--emerald);">${escapeHtml(currentMatch.final_map || '—')}</b></div>
+                </div>
+            `;
+
+            // Скрин
+            if (!myShot) {
+                html += `
+                    <div class="profile-hero">
+                        <div style="font-size:48px;text-align:center;margin-bottom:12px;">📸</div>
+                        <div style="text-align:center;font-size:14px;margin-bottom:16px;">Загрузите скриншот матча</div>
+                        <button class="profile-action-btn save" onclick="document.getElementById('screenshotInput').click()">📤 Выбрать скриншот</button>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="profile-hero">
+                        <div style="text-align:center;font-size:14px;color:var(--emerald);margin-bottom:8px;">✅ Скриншот загружен</div>
+                        <img src="${myShot.url}" style="width:100%;border-radius:12px;" onclick="openImageView('${myShot.url}')">
+                    </div>
+                `;
+            }
+
+            // Голосование — только для капитанов
+            if (isCaptain) {
+                if (!myVote) {
+                    html += `
+                        <div class="section-title">Кто победил?</div>
+                        <div class="score-input-row">
+                            <div class="score-input-col">
+                                <label>Счёт A</label>
+                                <input type="number" id="scoreA" min="0" max="30" value="${currentMatch.score_a ?? 0}" oninput="syncScores()">
+                            </div>
+                            <div class="score-input-col">
+                                <label>Счёт B</label>
+                                <input type="number" id="scoreB" min="0" max="30" value="${currentMatch.score_b ?? 0}" oninput="syncScores()">
+                            </div>
+                        </div>
+                        <div class="winner-choice">
+                            <button class="winner-btn" id="winBtnA" onclick="selectWinner('A')">🏆 Команда A</button>
+                            <button class="winner-btn" id="winBtnB" onclick="selectWinner('B')">🏆 Команда B</button>
+                        </div>
+                        <button class="profile-action-btn save" onclick="submitWinner()">📤 Отправить результат</button>
+                    `;
+                } else {
+                    html += `
+                        <div class="profile-hero" style="text-align:center;">
+                            <div style="font-size:14px;">Ваш голос: <b style="color:var(--emerald);">${myVote.vote === 'A' ? 'Команда A' : 'Команда B'}</b></div>
+                            <div style="font-size:12px;color:var(--hint);margin-top:8px;">Ожидание голоса второго капитана...</div>
+                        </div>
+                    `;
+                }
+            } else {
+                html += `
+                    <div class="profile-hero" style="text-align:center;">
+                        <div style="font-size:12px;color:var(--hint);">Ожидание результата от капитанов</div>
+                    </div>
+                `;
+            }
+
+            // Список скринов
+            if (screenshots?.length) {
+                html += `
+                    <div class="section-title" style="margin-top:20px;">Скриншоты матча</div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                        ${screenshots.map(s => `
+                            <img src="${s.url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:pointer;" onclick="openImageView('${s.url}')">
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            html += `
+                <button class="profile-action-btn cancel" style="margin-top:20px;" onclick="openAppealDialog()">⚖️ Подать апелляцию</button>
+            `;
+
+            container.innerHTML = html;
+
+            // Poll статуса
+            if (matchPollTimer) clearInterval(matchPollTimer);
+            matchPollTimer = setInterval(async () => {
+                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+                if (data) {
+                    currentMatch = data;
+                    if (data.status === 'finished') { clearInterval(matchPollTimer); showFinishedScreen(); }
+                    else if (data.result_status === 'disputed') {
+                        clearInterval(matchPollTimer);
+                        showToast('⏳ Спорный результат — ожидание модератора');
+                    }
+                }
+            }, 5000);
+        }
+
+        let selectedWinner = null;
+        function selectWinner(team) {
+            selectedWinner = team;
+            document.getElementById('winBtnA').classList.toggle('active', team === 'A');
+            document.getElementById('winBtnB').classList.toggle('active', team === 'B');
+        }
+
+        function syncScores() {}
+
+        async function submitWinner() {
+            if (!selectedWinner) { showToast('Выберите победителя'); return; }
+            const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
+            const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
+
+            if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
+
+            try {
+                const res = await mmCall('report_winner', {
+                    match_id: currentMatch.id,
+                    telegram_id: currentUser.telegram_id,
+                    winner: selectedWinner,
+                    score_a: scoreA,
+                    score_b: scoreB
+                });
+                showToast('✅ Отправлено');
+                renderResultScreen();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
+
+        // Скриншоты
+        document.getElementById('screenshotInput').addEventListener('change', async (e) => {
+            const file = e.target.files?.[0]; e.target.value = '';
+            if (!file || !currentMatch) return;
+            showToast('Загрузка...');
+            try {
+                const blob = await compressImage(file, 1200, 0.85);
+                const path = `${currentMatch.id}/${currentUser.telegram_id}_${Date.now()}.jpg`;
+                const { error: upErr } = await sb.storage.from(BUCKETS.matches)
+                    .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+                if (upErr) throw upErr;
+                const { data: urlData } = sb.storage.from(BUCKETS.matches).getPublicUrl(path);
+
+                await mmCall('upload_screenshot', {
+                    match_id: currentMatch.id,
+                    telegram_id: currentUser.telegram_id,
+                    url: urlData.publicUrl,
+                    team: (currentMatch.team_a_players || []).some(p => p.telegram_id === currentUser.telegram_id) ? 'A' : 'B'
+                });
+
+                showToast('✅ Скриншот загружен');
+                renderResultScreen();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        });
+
+        // ============================================================
+        // FINISHED
+        // ============================================================
+        function showFinishedScreen() {
+            switchPage('finished');
+            renderFinishedScreen();
+        }
+
+        async function renderFinishedScreen() {
+            const container = document.getElementById('finishedContent');
+            const me = currentUser.telegram_id;
+            const isWinner = (currentMatch.winner_team === 'A' && (currentMatch.team_a_players || []).some(p => p.telegram_id === me))
+                          || (currentMatch.winner_team === 'B' && (currentMatch.team_b_players || []).some(p => p.telegram_id === me));
+
+            const myTeam = (currentMatch.team_a_players || []).some(p => p.telegram_id === me) ? 'A' : 'B';
+            const myBefore = ((myTeam === 'A' ? currentMatch.team_a_players : currentMatch.team_b_players) || [])
+                .find(p => p.telegram_id === me)?.elo_before || 1000;
+
+            const { data: meData } = await sb.from('users').select('elo').eq('telegram_id', me).single();
+            const myAfter = meData?.elo || 1000;
+            const delta = myAfter - myBefore;
+
+            container.innerHTML = `
+                <div class="profile-hero" style="text-align:center;">
+                    <div style="font-size:64px;margin-bottom:14px;">${isWinner ? '🏆' : '😔'}</div>
+                    <div style="font-size:22px;font-weight:800;color:${isWinner ? 'var(--emerald)' : 'var(--red)'};margin-bottom:8px;">
+                        ${isWinner ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}
+                    </div>
+                    <div style="font-size:14px;color:var(--hint);margin-bottom:16px;">
+                        Карта: <b>${escapeHtml(currentMatch.final_map || '—')}</b>
+                    </div>
+                    <div style="font-size:13px;color:var(--hint);margin-bottom:8px;">Счёт</div>
+                    <div style="font-size:36px;font-weight:900;margin-bottom:20px;">
+                        <span style="color:${currentMatch.winner_team === 'A' ? 'var(--emerald)' : 'var(--hint)'};">${currentMatch.score_a ?? '?'}</span>
+                        <span style="color:var(--hint);font-size:20px;margin:0 12px;">:</span>
+                        <span style="color:${currentMatch.winner_team === 'B' ? 'var(--emerald)' : 'var(--hint)'};">${currentMatch.score_b ?? '?'}</span>
+                    </div>
+                    <div style="font-size:24px;font-weight:900;color:${delta >= 0 ? 'var(--emerald)' : 'var(--red)'};">
+                        ${delta >= 0 ? '+' : ''}${delta} ELO
+                    </div>
+                    <div style="font-size:13px;color:var(--hint);margin-top:4px;">
+                        ${myBefore} → ${myAfter} · Уровень ${eloToLevel(myAfter)}
+                    </div>
+                </div>
+                <button class="profile-action-btn edit" onclick="returnToDashboard()">🏠 На главную</button>
+                <button class="profile-action-btn cancel" onclick="openAppealDialog()">⚖️ Подать апелляцию</button>
+            `;
+        }
+
+        function returnToDashboard() {
+            currentMatch = null;
+            if (matchPollTimer) clearInterval(matchPollTimer);
+            if (currentMatchChannel) sb.removeChannel(currentMatchChannel);
+            switchPage('dashboard');
+            loadLeaderboard();
+        }
+
+        async function openAppealDialog() {
+            if (!currentMatch) return;
+            const text = prompt('Опишите проблему (жалоба/апелляция):');
+            if (!text) return;
+            try {
+                await sb.from('match_reports').insert({
+                    match_id: currentMatch.id,
+                    reporter_id: currentUser.telegram_id,
+                    type: 'appeal',
+                    text
+                });
+                showToast('✅ Апелляция отправлена');
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        // ============================================================
+        // CHECK ACTIVE MATCH (при входе)
+        // ============================================================
+        async function checkActiveMatch() {
+            if (!currentUser) return;
+            try {
+                const me = currentUser.telegram_id;
+                const { data: matches } = await sb.from('game_matches')
+                    .select('*')
+                    .in('status', ['confirm', 'veto', 'ready', 'result'])
+                    .order('created_at', { ascending: false }).limit(10);
+
+                for (const m of matches || []) {
+                    const allIds = [...(m.team_a_players || []), ...(m.team_b_players || [])].map(p => p.telegram_id);
+                    if (allIds.includes(me)) {
+                        currentMatch = m;
+                        onMatchFound(m);
+                        return;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // ============================================================
+        // ADMIN PANEL
+        // ============================================================
+        async function openAdminPanel() {
+            if (!currentUser?.is_admin && !currentUser?.is_mod) {
+                showToast('Только для админов');
+                return;
+            }
+            switchPage('admin');
+            await renderAdminPanel();
+        }
+
+        async function renderAdminPanel() {
+            const container = document.getElementById('adminContent');
+            if (!container) return;
+
+            const isAdmin = currentUser.is_admin;
+
+            // Спорные матчи
+            const { data: disputed } = await sb.from('game_matches')
+                .select('*').eq('result_status', 'disputed').eq('status', 'result');
+
+            // Жалобы
+            const { data: reports } = await sb.from('match_reports')
+                .select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(20);
+
+            let html = `
+                <div class="section-title" style="margin-top:0;">Спорные матчи (${disputed?.length || 0})</div>
+            `;
+
+            if (!disputed?.length) {
+                html += '<div class="empty">Спорных матчей нет</div>';
+            } else {
+                html += disputed.map(m => `
+                    <div class="leaderboard-item" onclick="openModMatch(${m.id})">
+                        <div style="flex:1;">
+                            <div style="font-weight:700;">Матч #${m.id} · ${escapeHtml(m.final_map || '—')}</div>
+                            <div style="font-size:11px;color:var(--hint);">${new Date(m.created_at).toLocaleString('ru-RU')}</div>
+                        </div>
+                        <button class="friend-action add">Решить</button>
+                    </div>
+                `).join('');
+            }
+
+            html += `<div class="section-title" style="margin-top:20px;">Жалобы (${reports?.length || 0})</div>`;
+            if (!reports?.length) {
+                html += '<div class="empty">Жалоб нет</div>';
+            } else {
+                html += reports.map(r => `
+                    <div class="leaderboard-item">
+                        <div style="flex:1;">
+                            <div style="font-weight:700;">Матч #${r.match_id}</div>
+                            <div style="font-size:12px;color:var(--hint);margin-top:4px;">${escapeHtml(r.text)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            if (isAdmin) {
+                html += `
+                    <div class="section-title" style="margin-top:20px;">Модераторы</div>
+                    <input type="text" class="field-input" id="modInput" placeholder="@username или ID" autocomplete="off" style="margin-bottom:10px;">
+                    <button class="profile-action-btn save" onclick="makeModerator()">Назначить модератором</button>
+                    <button class="profile-action-btn cancel" onclick="removeModerator()">Снять модератора</button>
+                `;
+            }
+
+            html += `<button class="profile-action-btn cancel" style="margin-top:20px;" onclick="switchPage('dashboard')">◀ Назад</button>`;
+            container.innerHTML = html;
+        }
+
+        async function makeModerator() {
+            const val = document.getElementById('modInput').value.trim();
+            if (!val) return;
+            const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
+            const query = field === 'username' ? val.replace('@', '') : Number(val);
+
+            try {
+                const { data, error } = await sb.from('users').update({ is_mod: true }).eq(field, query).select();
+                if (error) throw error;
+                if (!data?.length) { showToast('Не найден'); return; }
+                showToast('✅ Модератор назначен');
+                notify(data[0].telegram_id, `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`);
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
+
+        async function removeModerator() {
+            const val = document.getElementById('modInput').value.trim();
+            if (!val) return;
+            const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
+            const query = field === 'username' ? val.replace('@', '') : Number(val);
+
+            try {
+                await sb.from('users').update({ is_mod: false }).eq(field, query);
+                showToast('✅ Снят');
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        async function openModMatch(matchId) {
+            const { data: m } = await sb.from('game_matches').select('*').eq('id', matchId).single();
+            if (!m) return;
+
+            const teamA = m.team_a_players || [];
+            const teamB = m.team_b_players || [];
+            const winner = prompt(`Спорный матч #${m.id}\n\nСчёт: ${m.score_a ?? '?'} : ${m.score_b ?? '?'}\n\nВведите победителя (A или B):`);
+            if (winner !== 'A' && winner !== 'B') return;
+
+            try {
+                await mmCall('mod_decide', {
+                    match_id: matchId,
+                    moderator_id: currentUser.telegram_id,
+                    winner,
+                    score_a: m.score_a,
+                    score_b: m.score_b
+                });
+                showToast('✅ Решено');
+                renderAdminPanel();
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        // ============================================================
+        // NOTIFICATIONS (заглушка)
+        // ============================================================
+        function openNotifications() {
+            showToast('Уведомлений пока нет');
         }
 
         // ============================================================
