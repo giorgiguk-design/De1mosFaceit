@@ -647,6 +647,424 @@
         }
         .toggle-switch.on { background: var(--emerald); }
         .toggle-switch.on::after { transform: translateX(20px); }
+
+                /* ============================================================ */
+        /* ============ АНИМАЦИИ И ЭФФЕКТЫ ============ */
+        /* ============================================================ */
+
+        /* Плавное появление карточек */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.92); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes glowPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0,224,138,0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(0,224,138,0); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        @keyframes floatY {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        @keyframes spinSlow {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(10px) scale(0.85); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        /* Страницы */
+        .page.active {
+            animation: pageFade 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @keyframes pageFade {
+            from { opacity: 0; transform: translateY(16px) scale(0.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Карточки — появляются каскадом */
+        .elo-card,
+        .stat-card,
+        .profile-hero,
+        .party-box,
+        .leaderboard-item,
+        .menu-item,
+        .chat-list-item,
+        .event-item,
+        .confirm-team,
+        .mode-card,
+        .veto-card,
+        .match-host-box {
+            animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+
+        .leaderboard-item:nth-child(1) { animation-delay: 0.03s; }
+        .leaderboard-item:nth-child(2) { animation-delay: 0.06s; }
+        .leaderboard-item:nth-child(3) { animation-delay: 0.09s; }
+        .leaderboard-item:nth-child(4) { animation-delay: 0.12s; }
+        .leaderboard-item:nth-child(5) { animation-delay: 0.15s; }
+        .leaderboard-item:nth-child(6) { animation-delay: 0.18s; }
+        .leaderboard-item:nth-child(7) { animation-delay: 0.21s; }
+        .leaderboard-item:nth-child(8) { animation-delay: 0.24s; }
+        .leaderboard-item:nth-child(n+9) { animation-delay: 0.27s; }
+
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.10s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+
+        /* Заголовки секций */
+        .section-title {
+            animation: slideDown 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+
+        /* ELO значение */
+        .elo-value {
+            animation: countUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Иконки и эмодзи — плавное покачивание */
+        .menu-icon,
+        .mode-icon {
+            display: inline-block;
+            animation: floatY 3s ease-in-out infinite;
+        }
+        .menu-item:nth-child(2) .menu-icon { animation-delay: 0.4s; }
+        .menu-item:nth-child(3) .menu-icon { animation-delay: 0.8s; }
+        .menu-item:nth-child(4) .menu-icon { animation-delay: 1.2s; }
+
+        /* Hover/active эффекты для карточек и кнопок */
+        .leaderboard-item,
+        .menu-item,
+        .chat-list-item,
+        .mode-card,
+        .veto-card,
+        .winner-btn {
+            transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        box-shadow 0.22s ease,
+                        border-color 0.22s ease,
+                        background 0.22s ease;
+        }
+
+        .leaderboard-item:hover,
+        .menu-item:hover,
+        .chat-list-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,224,138,0.12);
+            border-color: var(--border-strong);
+        }
+
+        .leaderboard-item:active,
+        .menu-item:active,
+        .chat-list-item:active {
+            transform: scale(0.98);
+        }
+
+        /* Кнопки — свечение при нажатии */
+        .play-btn {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        box-shadow 0.3s ease;
+        }
+        .play-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg,
+                transparent 0%,
+                rgba(255,255,255,0.35) 50%,
+                transparent 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+            pointer-events: none;
+        }
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,224,138,0.45);
+        }
+        .play-btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 4px 15px rgba(0,224,138,0.5);
+        }
+
+        /* Кнопки профиля */
+        .profile-action-btn {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        box-shadow 0.25s ease,
+                        background 0.25s ease;
+        }
+        .profile-action-btn.edit:hover,
+        .profile-action-btn.save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,224,138,0.35);
+        }
+        .profile-action-btn.cancel:hover {
+            background: rgba(0,224,138,0.14);
+            transform: translateY(-2px);
+        }
+        .profile-action-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Аватар в шапке — пульсация */
+        .avatar {
+            animation: pulseGlow 4s ease-in-out infinite;
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .avatar:hover {
+            transform: scale(1.08);
+        }
+
+        /* Профиль hero */
+        .profile-avatar {
+            animation: bounceIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: transform 0.3s ease;
+        }
+        .profile-avatar:hover {
+            transform: scale(1.05) rotate(-2deg);
+        }
+        .profile-level-badge {
+            animation: slideUp 0.5s 0.15s both;
+        }
+
+        /* Плашки */
+        .role-tag {
+            animation: fadeInScale 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+
+        /* Тост — пружина */
+        .toast {
+            transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Sheet — пружина */
+        .sheet {
+            transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Модалка игрока — fade+scale */
+        .player-modal {
+            transition: opacity 0.28s ease;
+        }
+        .player-modal-inner {
+            transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .player-modal.active .player-modal-inner {
+            animation: bounceIn 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Меню сообщений */
+        .msg-menu {
+            animation: slideUpMenu 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Чат-бабл — появление */
+        .chat-bubble {
+            animation: bubbleIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @keyframes bubbleIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.92); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .chat-bubble.me { transform-origin: right bottom; }
+        .chat-bubble.them { transform-origin: left bottom; }
+
+        /* Навигация */
+        .nav-item {
+            transition: color 0.25s ease, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .nav-item:active {
+            transform: scale(0.9);
+        }
+        .nav-item.active .nav-icon {
+            animation: bounceIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Поля ввода */
+        .field-input {
+            transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+        }
+        .field-input:focus {
+            box-shadow: 0 0 0 4px rgba(0,224,138,0.10);
+        }
+
+        /* Toggle-switch — плавное переключение */
+        .toggle-switch {
+            transition: background 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .toggle-switch::after {
+            transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Режим-карточки */
+        .mode-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--border-strong);
+            box-shadow: 0 10px 30px rgba(0,224,138,0.15);
+        }
+        .mode-card.active {
+            box-shadow: 0 0 0 2px rgba(0,224,138,0.25), 0 10px 30px rgba(0,224,138,0.2);
+            animation: glowPulse 2.4s ease-in-out infinite;
+        }
+
+        /* Veto карточки */
+        .veto-card:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.02);
+            border-color: var(--red);
+            box-shadow: 0 10px 30px rgba(255,84,112,0.25);
+        }
+        .veto-card.banned {
+            animation: fadeInScale 0.3s ease;
+        }
+
+        /* Спорные элементы в админке */
+        .leaderboard-item[onclick*="openModMatch"]:hover {
+            border-color: var(--red);
+            box-shadow: 0 8px 24px rgba(255,84,112,0.18);
+        }
+
+        /* Скриншоты матча */
+        #resultContent img {
+            transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        box-shadow 0.28s ease;
+            cursor: pointer;
+        }
+        #resultContent img:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 24px rgba(0,224,138,0.25);
+        }
+
+        /* Скелетон-шиммер для пустых состояний */
+        .loading-shimmer {
+            background: linear-gradient(90deg,
+                rgba(0,224,138,0.04) 0%,
+                rgba(0,224,138,0.12) 50%,
+                rgba(0,224,138,0.04) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+            border-radius: 12px;
+            height: 56px;
+            margin-bottom: 8px;
+        }
+
+        /* Кнопки клуба */
+        .club-full-btn {
+            transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+                        box-shadow 0.25s ease,
+                        background 0.25s ease;
+        }
+        .club-full-btn:hover {
+            transform: translateX(2px);
+            box-shadow: 0 6px 20px rgba(0,224,138,0.15);
+        }
+        .club-full-btn.club-btn-play:hover {
+            box-shadow: 0 10px 30px rgba(0,224,138,0.45);
+            transform: translateY(-2px);
+        }
+        .club-full-btn.club-btn-danger:hover,
+        .club-full-btn.club-btn-bans:hover {
+            box-shadow: 0 6px 20px rgba(255,84,112,0.25);
+        }
+
+        /* Иконки клуба */
+        .club-icon-btn {
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        background 0.25s ease;
+        }
+        .club-icon-btn:hover {
+            transform: scale(1.1);
+        }
+        .club-icon-btn.danger:hover {
+            background: rgba(255,84,112,0.2);
+        }
+
+        /* Бейдж заявок — пульсация */
+        .club-full-btn .badge {
+            animation: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Модалка приглашения */
+        #partyInviteSheet .lb-avatar {
+            animation: bounceIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Плавная прокрутка контейнера */
+        .chat-messages,
+        .container,
+        .sheet {
+            scroll-behavior: smooth;
+        }
+
+        /* Тонкая полоска загрузки сверху — при переходах между экранами */
+        .page-loading-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 2px;
+            width: 100%;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                var(--emerald) 50%,
+                transparent 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.2s linear infinite;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .page-loading-bar.active {
+            opacity: 1;
+        }
+
+        /* Счёт в матче — плавное появление */
+        .match-host-id {
+            animation: countUp 0.6s 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        }
+
+        /* Таймеры — пульсация */
+        .mm-timer {
+            animation: pulseText 2s ease-in-out infinite;
+        }
+        @keyframes pulseText {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.04); opacity: 0.92; }
+        }
+
+        /* Финальный экран — торжественное появление */
+        #page-finished .profile-hero {
+            animation: fadeInScale 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        #page-finished .profile-hero div:first-child {
+            animation: bounceIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Плавная смена страниц, если у пользователя включено "уменьшить анимацию" */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -919,6 +1337,7 @@
     <input type="file" id="screenshotInput" accept="image/*">
 
     <div class="toast" id="toast"></div>
+    <div class="page-loading-bar" id="pageLoadingBar"></div>
         <script>
         // ============================================================
         // SUPABASE CONFIG
@@ -993,9 +1412,16 @@
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.textContent = msg;
+            toast.style.transform = 'translateX(-50%) translateY(24px) scale(0.9)';
             toast.classList.add('show');
+            requestAnimationFrame(() => {
+                toast.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+            });
             clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
+            toastTimer = setTimeout(() => {
+                toast.style.transform = 'translateX(-50%) translateY(24px) scale(0.9)';
+                toast.classList.remove('show');
+            }, 2500);
         }
 
         async function notify(telegramId, text) {
@@ -1094,12 +1520,38 @@
             else el.textContent = initial;
         }
 
-        function switchPage(page) {
+                function switchPage(page) {
+            // Показываем тонкую полоску сверху на время перехода
+            const bar = document.getElementById('pageLoadingBar');
+            if (bar) {
+                bar.classList.add('active');
+                setTimeout(() => bar.classList.remove('active'), 600);
+            }
+
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             const target = document.getElementById('page-' + page);
-            if (target) target.classList.add('active');
+            if (target) {
+                // Небольшая задержка, чтобы анимация pageFade успела сработать
+                requestAnimationFrame(() => {
+                    target.classList.add('active');
+                });
+            }
             document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
             haptic();
+        }
+
+        function animateNumber(el, to, duration = 800) {
+            const from = parseInt(el.textContent) || 0;
+            if (from === to) { el.textContent = to; return; }
+            const start = performance.now();
+            const step = (now) => {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - t, 3);
+                el.textContent = Math.round(from + (to - from) * eased);
+                if (t < 1) requestAnimationFrame(step);
+                else el.textContent = to;
+            };
+            requestAnimationFrame(step);
         }
 
         // ============================================================
@@ -1107,7 +1559,7 @@
         // ============================================================
         function renderDashboard(user) {
             const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
-            document.getElementById('eloValue').textContent = user.elo ?? 1000;
+            animateNumber(document.getElementById('eloValue'), user.elo ?? 1000, 1000);
             document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
             document.getElementById('statMatches').textContent = user.matches_played ?? 0;
             document.getElementById('statWins').textContent = user.wins ?? 0;
