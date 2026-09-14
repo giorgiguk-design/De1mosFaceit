@@ -340,6 +340,67 @@
             display: flex; align-items: center; justify-content: center;
         }
 
+        /* ====== ПОЛНОРАЗМЕРНЫЕ КНОПКИ КЛУБА ====== */
+        .club-full-btn {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-strong);
+            background: rgba(0,224,138,0.06);
+            color: var(--emerald);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            text-align: left;
+            position: relative;
+            transition: background 0.2s;
+            margin-bottom: 8px;
+        }
+        .club-full-btn:active { transform: scale(0.99); background: rgba(0,224,138,0.12); }
+        .club-full-btn.club-btn-requests {
+            background: linear-gradient(135deg, rgba(0,224,138,0.15), rgba(0,184,116,0.08));
+            font-weight: 800;
+        }
+        .club-full-btn.club-btn-bans {
+            background: rgba(255,84,112,0.06);
+            border-color: rgba(255,84,112,0.25);
+            color: var(--red);
+        }
+        .club-full-btn.club-btn-edit { background: rgba(0,224,138,0.06); }
+        .club-full-btn.club-btn-danger {
+            background: rgba(255,84,112,0.06);
+            border-color: rgba(255,84,112,0.25);
+            color: var(--red);
+        }
+        .club-full-btn.club-btn-play {
+            background: linear-gradient(135deg, #00e08a, #00b874 55%, #22e8a4);
+            color: #04140e;
+            font-weight: 900;
+            font-size: 15px;
+            letter-spacing: 1px;
+            text-align: center;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .club-full-btn .badge {
+            position: absolute;
+            top: 50%;
+            right: 14px;
+            transform: translateY(-50%);
+            background: var(--red);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 11px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .owner-dots-btn {
             width: 30px; height: 30px; border-radius: 50%;
             background: rgba(255,255,255,0.05); border: 1px solid var(--border);
@@ -653,7 +714,7 @@
     <div class="container page" id="page-play">
         <div class="section-title" style="margin-top: 0;">Выбор режима</div>
         <div class="mode-grid">
-            <div class="mode-card" id="mode5x5" onclick="selectMode('5x5')">
+            <div class="mode-card active" id="mode5x5" onclick="selectMode('5x5')">
                 <div class="mode-icon">🎯</div>
                 <div class="mode-title">5×5</div>
                 <div class="mode-desc">до 5 игроков</div>
@@ -663,6 +724,11 @@
                 <div class="mode-title">2×2</div>
                 <div class="mode-desc">до 2 игроков</div>
             </div>
+        </div>
+
+        <div class="section-title">Открытые комнаты</div>
+        <div id="openRoomsList" style="margin-bottom: 20px;">
+            <div class="empty">Загрузка...</div>
         </div>
 
         <div class="section-title">Ваша пати</div>
@@ -724,6 +790,7 @@
             <button class="profile-action-btn cancel" onclick="openStandoff()" style="margin-top: 8px;">🎮 Открыть Standoff 2</button>
         </div>
 
+        <div class="section-title">Команды</div>
         <div id="matchTeamsPreview" class="confirm-teams"></div>
 
         <button class="profile-action-btn save" onclick="goToResult()" style="margin-top: 20px;">📸 Загрузить результат</button>
@@ -837,16 +904,24 @@
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
 
+    <!-- ============ PARTY INVITE ============ -->
+    <div class="sheet-overlay" id="partyInviteOverlay" onclick="declinePartyInvite()"></div>
+    <div class="sheet" id="partyInviteSheet" style="z-index: 700;">
+        <div class="sheet-title">🎮 Приглашение в игру</div>
+        <div id="partyInviteContent"></div>
+        <button class="profile-action-btn save" id="partyAcceptBtn" onclick="acceptPartyInvite()">✅ ВСТУПИТЬ</button>
+        <button class="profile-action-btn cancel" onclick="declinePartyInvite()">❌ ОТКЛОНИТЬ</button>
+    </div>
+
     <!-- ============ FILE INPUTS ============ -->
     <input type="file" id="avatarFileInput" accept="image/*">
     <input type="file" id="clubLogoFileInput" accept="image/*">
     <input type="file" id="screenshotInput" accept="image/*">
 
     <div class="toast" id="toast"></div>
-
         <script>
         // ============================================================
-        // SUPABASE
+        // SUPABASE CONFIG
         // ============================================================
         const SUPABASE_URL = 'https://ksmuopoasgzyromdjtnt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzbXVvcG9hc2d6eXJvbWRqdG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMzA0MzMsImV4cCI6MjEwNDkwNjQzM30.qEUIVTAQMuP37z4JSa75dlWSelqhNolUuobp7hcAKjc';
@@ -880,15 +955,18 @@
         let currentMsgMenuId = null;
         let wasKickedFromClub = null;
 
-        let myParty = null;         // {party, members[]}
+        let myParty = null;
         let selectedMode = '5x5';
         let searchTimer = null;
         let searchTickInterval = null;
         let searchStartTime = null;
         let mmChannel = null;
-        let currentMatch = null;    // объект game_matches
+        let currentMatch = null;
         let currentMatchChannel = null;
         let matchPollTimer = null;
+        let selectedWinner = null;
+
+        let activePartyInvite = null;
 
         // ============================================================
         // HELPERS
@@ -1410,9 +1488,8 @@
                 document.getElementById('leaderboard').innerHTML = '<div class="empty">Ошибка</div>';
             }
         }
-
-        // ============================================================
-        // FRIENDS (список всех игроков)
+                    // ============================================================
+        // FRIENDS
         // ============================================================
         function openFriendsPage() {
             switchPage('friends');
@@ -1695,17 +1772,24 @@
                     </div>`;
             }).join('');
 
+            // КНОПКИ-ДЕЙСТВИЯ (полноразмерные, слева)
             let actionBtns = '';
             if (canEdit) {
                 actionBtns = `
-                    <div class="club-actions-row">
-                        ${isOwner ? `<button class="club-icon-btn with-badge" id="requestsBtn" onclick="openRequestsSheet()">📥</button>` : ''}
-                        ${isOwner ? `<button class="club-icon-btn" onclick="openBansSheet()">🚫</button>` : ''}
-                        <button class="club-icon-btn" onclick="openEditClubSheet()">✏️</button>
-                        ${isOwner ? `<button class="club-icon-btn danger" onclick="deleteClubConfirm()">✕</button>` : ''}
+                    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
+                        ${isOwner ? `<button class="club-full-btn club-btn-requests" id="requestsBtn" onclick="openRequestsSheet()">📥 Заявки</button>` : ''}
+                        ${isOwner ? `<button class="club-full-btn club-btn-bans" onclick="openBansSheet()">🚫 Заблокированные</button>` : ''}
+                        <button class="club-full-btn club-btn-edit" onclick="openEditClubSheet()">✏️ Редактировать клуб</button>
+                        ${isOwner ? `<button class="club-full-btn club-btn-danger" onclick="deleteClubConfirm()">✕ Удалить клуб</button>` : ''}
                     </div>
                 `;
             }
+
+            // КНОПКА "НАЧАТЬ ИГРУ" только для OWNER/ELDER
+            const playBtn = (isOwner || isElder) ? `
+                <div class="section-title" style="margin-top: 22px;">Клановая битва</div>
+                <button class="club-full-btn club-btn-play" onclick="startClubParty()">🎮 НАЧАТЬ ИГРУ</button>
+            ` : '';
 
             container.innerHTML = `
                 <div class="profile-hero">
@@ -1719,14 +1803,20 @@
                     ${club.description ? `<div style="color:var(--hint);font-size:13px;line-height:1.5;">${escapeHtml(club.description)}</div>` : ''}
                     ${actionBtns}
                 </div>
+
+                ${playBtn}
+
                 ${canEdit ? `
                     <div class="section-title" style="margin-top: 22px;">Недавние события</div>
                     <div id="clubEventsList" class="events-list"><div class="empty">Загрузка...</div></div>
                 ` : ''}
+
                 <div class="section-title" style="margin-top: 22px;">Состав (${members.length}/${club.max_members})</div>
                 ${membersHTML}
+
                 <div class="section-title" style="margin-top: 22px;">Результаты матчей</div>
                 <div id="clubMatchResults"><div class="empty">Матчей пока нет</div></div>
+
                 <button class="profile-action-btn save" onclick="leaveClub()" style="background:rgba(255,84,112,0.1);color:var(--red);border:1px solid rgba(255,84,112,0.3);margin-top:20px;">🚪 Покинуть клуб</button>
             `;
 
@@ -1875,17 +1965,19 @@
                     .eq('club_id', myClub.club.id).eq('status', 'pending');
                 const btn = document.getElementById('requestsBtn');
                 if (!btn) return;
+
+                // Убираем старый бейдж
+                const oldBadge = btn.querySelector('.badge');
+                if (oldBadge) oldBadge.remove();
+
+                // Обновляем текст кнопки
+                btn.textContent = '📥 Заявки';
+
                 if (count && count > 0) {
-                    if (!btn.querySelector('.badge')) {
-                        const b = document.createElement('span');
-                        b.className = 'badge'; b.textContent = count;
-                        btn.appendChild(b);
-                    } else {
-                        btn.querySelector('.badge').textContent = count;
-                    }
-                } else {
-                    const b = btn.querySelector('.badge');
-                    if (b) b.remove();
+                    const b = document.createElement('span');
+                    b.className = 'badge';
+                    b.textContent = count;
+                    btn.appendChild(b);
                 }
             } catch (e) {}
         }
@@ -2284,6 +2376,85 @@
                     if (document.getElementById('page-club').classList.contains('active')) loadClub();
                 })
                 .subscribe();
+        }
+
+        // ============================================================
+        // START CLUB PARTY (клановая битва)
+        // ============================================================
+        async function startClubParty() {
+            if (!myClub?.club) return;
+            const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+            const isOwner = myRole === 'owner' || myClub.club.owner_id === currentUser.telegram_id;
+            const isElder = myRole === 'elder';
+
+            if (!isOwner && !isElder) {
+                showToast('Только OWNER или ELDER может начать игру');
+                return;
+            }
+
+            if (myClub.members.length < 2) {
+                showToast('В клубе нужно минимум 2 игрока');
+                return;
+            }
+
+            if (myClub.members.length > 5) {
+                showToast('Для 5×5 в клубе максимум 5 игроков');
+                return;
+            }
+
+            try {
+                showToast('Создаём клановую игру...');
+
+                // Удаляем старую пати, если есть
+                const { data: existing } = await sb.from('party_members')
+                    .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+                if (existing) {
+                    await sb.from('party_members').delete().eq('party_id', existing.party_id);
+                    await sb.from('parties').delete().eq('id', existing.party_id);
+                }
+
+                // Создаём пати с club_id
+                const { data: party, error } = await sb.from('parties').insert({
+                    leader_id: currentUser.telegram_id,
+                    mode: '5x5',
+                    club_id: myClub.club.id,
+                    is_club_party: true,
+                    open_since: new Date().toISOString()
+                }).select().single();
+                if (error) throw error;
+
+                // Лидер сразу в пати
+                await sb.from('party_members').insert({
+                    party_id: party.id,
+                    telegram_id: currentUser.telegram_id
+                });
+
+                // Уведомляем всех членов клуба
+                const others = myClub.members.filter(m => m.telegram_id !== currentUser.telegram_id);
+                for (const m of others) {
+                    await sb.from('party_invites').upsert({
+                        party_id: party.id,
+                        from_id: currentUser.telegram_id,
+                        to_id: m.telegram_id,
+                        status: 'pending'
+                    }, { onConflict: 'party_id,to_id' });
+
+                    notify(m.telegram_id,
+                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> создал клановую битву в клубе <b>${escapeHtml(myClub.club.name)}</b>.\n` +
+                        `Вступи в игру! Открой De1mos Faceit → Клуб.`
+                    );
+                }
+
+                showToast(`✅ Приглашения отправлены (${others.length})`);
+                switchPage('play');
+                await loadOrCreateParty();
+                await loadOpenRooms();
+                subscribePartyInvitesRealtime();
+                subscribeQueueRealtime();
+            } catch (e) {
+                console.error(e);
+                showToast('Ошибка: ' + e.message);
+            }
         }
 
         // ============================================================
@@ -2693,13 +2864,15 @@
                 closeMsgMenu(); await loadMessages(); showToast('Удалено');
             } catch (e) { showToast('Ошибка'); }
         }
-
-        // ============================================================
+                    // ============================================================
         // MATCHMAKING — PARTY
         // ============================================================
         async function openPlayPage() {
             switchPage('play');
             await loadOrCreateParty();
+            await loadOpenRooms();
+            subscribePartyInvitesRealtime();
+            subscribeQueueRealtime();
         }
 
         async function loadOrCreateParty() {
@@ -2716,39 +2889,38 @@
                         return;
                     }
                 }
-                // Нет пати — создаём при выборе режима
                 selectMode('5x5');
                 renderEmptyParty();
             } catch (e) { console.error(e); }
         }
 
-async function ensureParty(mode) {
-    const me = currentUser.telegram_id;
-    const { data: member } = await sb.from('party_members')
-        .select('party_id').eq('telegram_id', me).maybeSingle();
-    if (member) {
-        const { data: party } = await sb.from('parties').select('*').eq('id', member.party_id).single();
-        if (party) {
-            if (party.mode !== mode) {
-                await sb.from('parties').update({ mode }).eq('id', party.id);
-                party.mode = mode;
+        async function ensureParty(mode) {
+            const me = currentUser.telegram_id;
+            const { data: member } = await sb.from('party_members')
+                .select('party_id').eq('telegram_id', me).maybeSingle();
+            if (member) {
+                const { data: party } = await sb.from('parties').select('*').eq('id', member.party_id).single();
+                if (party) {
+                    if (party.mode !== mode) {
+                        await sb.from('parties').update({ mode }).eq('id', party.id);
+                        party.mode = mode;
+                    }
+                    return party;
+                }
             }
+            const { data: clubMember } = await sb.from('club_members').select('club_id, role')
+                .eq('telegram_id', me).maybeSingle();
+
+            const insert = { leader_id: me, mode, open_since: new Date().toISOString() };
+            if (clubMember) insert.club_id = clubMember.club_id;
+
+            const { data: party, error } = await sb.from('parties').insert(insert).select().single();
+            if (error) throw error;
+
+            await sb.from('party_members').insert({ party_id: party.id, telegram_id: me });
             return party;
         }
-    }
-    // Проверим, нет ли у меня клуба — если да, привяжем
-    const { data: clubMember } = await sb.from('club_members').select('club_id, role')
-        .eq('telegram_id', me).maybeSingle();
 
-    const insert = { leader_id: me, mode };
-    if (clubMember) insert.club_id = clubMember.club_id;
-
-    const { data: party, error } = await sb.from('parties').insert(insert).select().single();
-    if (error) throw error;
-
-    await sb.from('party_members').insert({ party_id: party.id, telegram_id: me });
-    return party;
-}
         async function loadPartyMembers(party) {
             const { data: members } = await sb.from('party_members').select('*').eq('party_id', party.id);
             const ids = (members || []).map(m => m.telegram_id);
@@ -2803,7 +2975,7 @@ async function ensureParty(mode) {
             selectedMode = mode;
             document.getElementById('mode5x5').classList.toggle('active', mode === '5x5');
             document.getElementById('mode2x2').classList.toggle('active', mode === '2x2');
-            ensureParty(mode).then(p => loadPartyMembers(p));
+            ensureParty(mode).then(p => loadPartyMembers(p)).catch(e => console.warn(e));
         }
 
         async function kickFromParty(userId) {
@@ -2819,7 +2991,6 @@ async function ensureParty(mode) {
         async function leavePartyAndGoBack() {
             try {
                 if (myParty && myParty.party.leader_id === currentUser.telegram_id) {
-                    // Если лидер — удаляем пати
                     await sb.from('party_members').delete().eq('party_id', myParty.party.id);
                     await sb.from('parties').delete().eq('id', myParty.party.id);
                 } else if (myParty) {
@@ -2831,7 +3002,322 @@ async function ensureParty(mode) {
         }
 
         // ============================================================
-        // INVITE
+        // OPEN ROOMS
+        // ============================================================
+        async function loadOpenRooms() {
+            const container = document.getElementById('openRoomsList');
+            if (!container) return;
+            container.innerHTML = '<div class="empty">Загрузка...</div>';
+
+            try {
+                const { data: queue } = await sb.from('mm_queue')
+                    .select('party_id, mode, elo_avg, joined_at')
+                    .order('joined_at', { ascending: true })
+                    .limit(20);
+
+                if (!queue?.length) {
+                    container.innerHTML = '<div class="empty">Нет открытых комнат</div>';
+                    return;
+                }
+
+                const partyIds = queue.map(q => q.party_id);
+                const { data: parties } = await sb.from('parties')
+                    .select('id, leader_id, mode, club_id, is_club_party')
+                    .in('id', partyIds);
+                const partyMap = {};
+                (parties || []).forEach(p => partyMap[p.id] = p);
+
+                const { data: members } = await sb.from('party_members')
+                    .select('party_id, telegram_id')
+                    .in('party_id', partyIds);
+                const memberMap = {};
+                (members || []).forEach(m => {
+                    (memberMap[m.party_id] ||= []).push(m.telegram_id);
+                });
+
+                const allUserIds = new Set();
+                (parties || []).forEach(p => allUserIds.add(p.leader_id));
+                Object.values(memberMap).flat().forEach(id => allUserIds.add(id));
+
+                const { data: users } = await sb.from('users')
+                    .select('telegram_id, display_name, custom_avatar, photo_url, elo, standoff_id')
+                    .in('telegram_id', [...allUserIds]);
+                const userMap = {};
+                (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+                const myPartyId = myParty?.party?.id;
+                const rooms = queue.filter(q => q.party_id !== myPartyId);
+
+                if (!rooms.length) {
+                    container.innerHTML = '<div class="empty">Нет открытых комнат</div>';
+                    return;
+                }
+
+                container.innerHTML = rooms.map(q => {
+                    const party = partyMap[q.party_id];
+                    if (!party) return '';
+                    const leader = userMap[party.leader_id] || {};
+                    const src = leader.custom_avatar || leader.photo_url;
+                    const initial = (leader.display_name || 'U')[0].toUpperCase();
+                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    const count = (memberMap[q.party_id] || []).length;
+                    const maxSize = q.mode === '5x5' ? 5 : 2;
+                    const clubBadge = party.is_club_party ? ' 🛡️' : '';
+
+                    return `
+                        <div class="leaderboard-item" onclick="openRoomInfo(${q.party_id})">
+                            <div class="lb-avatar">${av}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="leaderboard-name">${escapeHtml(leader.display_name || 'Игрок')}${clubBadge}</div>
+                                <div style="font-size:11px;color:var(--hint);">
+                                    ${q.mode} · ${count}/${maxSize} · ELO ${q.elo_avg}
+                                </div>
+                            </div>
+                            <button class="friend-action add" onclick="event.stopPropagation();askJoinRoom(${q.party_id})">Войти</button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<div class="empty">Ошибка загрузки</div>';
+            }
+        }
+
+        async function openRoomInfo(partyId) {
+            const modal = document.getElementById('playerModal');
+            const content = document.getElementById('playerModalContent');
+            content.innerHTML = '<div class="empty">Загрузка...</div>';
+            modal.classList.add('active');
+
+            try {
+                const { data: party } = await sb.from('parties').select('*').eq('id', partyId).single();
+                const { data: members } = await sb.from('party_members').select('telegram_id').eq('party_id', partyId);
+                const ids = (members || []).map(m => m.telegram_id);
+                const { data: users } = await sb.from('users')
+                    .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+                    .in('telegram_id', ids.length ? ids : [0]);
+                const userMap = {};
+                (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+                const maxSize = party.mode === '5x5' ? 5 : 2;
+                const leaderName = userMap[party.leader_id]?.display_name || 'Игрок';
+
+                content.innerHTML = `
+                    <div style="text-align:center;margin-bottom:16px;">
+                        <div style="font-size:18px;font-weight:800;">Комната ${escapeHtml(leaderName)}</div>
+                        <div style="font-size:13px;color:var(--hint);margin-top:4px;">${party.mode} · ${ids.length}/${maxSize}</div>
+                    </div>
+                    <div class="section-title">Состав</div>
+                    ${ids.map(id => {
+                        const u = userMap[id] || {};
+                        const src = u.custom_avatar || u.photo_url;
+                        const initial = (u.display_name || 'U')[0].toUpperCase();
+                        const av = src ? `<img src="${src}" alt="">` : initial;
+                        const isLeader = id === party.leader_id;
+                        return `
+                            <div class="leaderboard-item">
+                                <div class="lb-avatar">${av}</div>
+                                <div style="flex:1;">
+                                    <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${isLeader ? ' 👑' : ''}</div>
+                                    <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                    <button class="profile-action-btn save" onclick="closePlayerModal();askJoinRoom(${partyId})">Войти в комнату</button>
+                `;
+            } catch (e) {
+                content.innerHTML = '<div class="empty">Ошибка</div>';
+            }
+        }
+
+        async function askJoinRoom(partyId) {
+            try {
+                const { data: party } = await sb.from('parties').select('*').eq('id', partyId).single();
+                const { data: members } = await sb.from('party_members').select('telegram_id').eq('party_id', partyId);
+                const maxSize = party.mode === '5x5' ? 5 : 2;
+
+                if ((members || []).length >= maxSize) {
+                    showToast('Комната заполнена');
+                    return;
+                }
+
+                const { data: myMember } = await sb.from('party_members')
+                    .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+                if (myMember) {
+                    const { data: myPartyObj } = await sb.from('parties').select('leader_id').eq('id', myMember.party_id).single();
+                    if (myPartyObj?.leader_id === currentUser.telegram_id) {
+                        showToast('Ты лидер своей пати. Сначала покинь её.');
+                        return;
+                    }
+                    await sb.from('party_members').delete().eq('party_id', myMember.party_id).eq('telegram_id', currentUser.telegram_id);
+                }
+
+                await sb.from('party_invites').upsert({
+                    party_id: partyId,
+                    from_id: currentUser.telegram_id,
+                    to_id: party.leader_id,
+                    status: 'pending'
+                }, { onConflict: 'party_id,to_id' });
+
+                notify(party.leader_id,
+                    `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет вступить в твою комнату ${party.mode}.`
+                );
+
+                showToast('✅ Запрос отправлен лидеру');
+                closePlayerModal();
+            } catch (e) {
+                showToast('Ошибка: ' + e.message);
+            }
+        }
+
+        // ============================================================
+        // PARTY INVITES (приглашения)
+        // ============================================================
+        function showPartyInvite(invite, party, leader) {
+            activePartyInvite = { invite, party, leader };
+            const iAmLeader = party.leader_id === currentUser.telegram_id;
+
+            const src = leader?.custom_avatar || leader?.photo_url;
+            const initial = (leader?.display_name || 'U')[0].toUpperCase();
+            const av = src ? `<img src="${src}" alt="">` : initial;
+
+            const title = iAmLeader
+                ? `Хочет вступить в твою комнату`
+                : `Приглашает в пати`;
+
+            document.getElementById('partyInviteContent').innerHTML = `
+                <div style="display:flex;align-items:center;gap:14px;padding:14px;background:rgba(0,224,138,0.06);border:1px solid var(--border);border-radius:14px;margin-bottom:14px;">
+                    <div class="lb-avatar" style="width:52px;height:52px;font-size:20px;">${av}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:800;font-size:15px;">${escapeHtml(leader?.display_name || 'Игрок')}</div>
+                        <div style="font-size:12px;color:var(--hint);margin-top:2px;">
+                            ${title} · <b style="color:var(--emerald);">${party.mode}</b>
+                            ${party.is_club_party ? ' · 🛡️ клановая' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('partyAcceptBtn').textContent = iAmLeader ? '✅ ПРИНЯТЬ' : '✅ ВСТУПИТЬ';
+
+            document.getElementById('partyInviteOverlay').classList.add('active');
+            document.getElementById('partyInviteSheet').classList.add('active');
+            haptic('medium');
+        }
+
+        async function acceptPartyInvite() {
+            if (!activePartyInvite) return;
+            const { invite, party } = activePartyInvite;
+            const iAmLeader = party.leader_id === currentUser.telegram_id;
+
+            try {
+                if (iAmLeader) {
+                    const newMemberId = invite.from_id;
+                    const { data: members } = await sb.from('party_members').select('telegram_id').eq('party_id', party.id);
+                    const maxSize = party.mode === '5x5' ? 5 : 2;
+                    if ((members || []).length >= maxSize) {
+                        showToast('Комната заполнена');
+                        closePartyInvite();
+                        return;
+                    }
+
+                    await sb.from('party_members').insert({
+                        party_id: party.id,
+                        telegram_id: newMemberId
+                    });
+                    await sb.from('party_invites').update({ status: 'accepted' })
+                        .eq('party_id', party.id).eq('to_id', currentUser.telegram_id).eq('from_id', newMemberId);
+
+                    notify(newMemberId, `✅ Тебя приняли в комнату. Открой приложение!`);
+                    showToast('✅ Игрок вступил');
+                } else {
+                    const { data: myMember } = await sb.from('party_members')
+                        .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+                    if (myMember) {
+                        await sb.from('party_members').delete()
+                            .eq('party_id', myMember.party_id).eq('telegram_id', currentUser.telegram_id);
+                        const { data: myPartyObj } = await sb.from('parties').select('leader_id').eq('id', myMember.party_id).single();
+                        if (myPartyObj?.leader_id === currentUser.telegram_id) {
+                            await sb.from('parties').delete().eq('id', myMember.party_id);
+                        }
+                    }
+
+                    await sb.from('party_members').insert({
+                        party_id: party.id,
+                        telegram_id: currentUser.telegram_id
+                    });
+                    await sb.from('party_invites').update({ status: 'accepted' })
+                        .eq('party_id', party.id).eq('to_id', currentUser.telegram_id);
+
+                    notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> вступил в пати.`);
+                    showToast('✅ Ты в пати!');
+                }
+
+                closePartyInvite();
+                switchPage('play');
+                await loadOrCreateParty();
+                await loadOpenRooms();
+            } catch (e) {
+                showToast('Ошибка: ' + e.message);
+            }
+        }
+
+        async function declinePartyInvite() {
+            if (activePartyInvite) {
+                try {
+                    await sb.from('party_invites').update({ status: 'declined' })
+                        .eq('party_id', activePartyInvite.party.id)
+                        .eq('to_id', currentUser.telegram_id);
+                } catch (e) {}
+            }
+            closePartyInvite();
+        }
+
+        function closePartyInvite() {
+            activePartyInvite = null;
+            document.getElementById('partyInviteOverlay').classList.remove('active');
+            document.getElementById('partyInviteSheet').classList.remove('active');
+        }
+
+        function subscribePartyInvitesRealtime() {
+            if (window._partyInviteChannel) sb.removeChannel(window._partyInviteChannel);
+
+            window._partyInviteChannel = sb.channel('party_invites_' + currentUser.telegram_id)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'party_invites',
+                    filter: `to_id=eq.${currentUser.telegram_id}`
+                }, async (payload) => {
+                    const inv = payload.new;
+                    if (inv.status !== 'pending') return;
+
+                    const { data: party } = await sb.from('parties').select('*').eq('id', inv.party_id).single();
+                    const { data: leader } = await sb.from('users')
+                        .select('telegram_id, display_name, custom_avatar, photo_url')
+                        .eq('telegram_id', inv.from_id).single();
+
+                    if (party && leader) {
+                        showPartyInvite(inv, party, leader);
+                    }
+                })
+                .subscribe();
+        }
+
+        function subscribeQueueRealtime() {
+            if (window._queueChannel) sb.removeChannel(window._queueChannel);
+            window._queueChannel = sb.channel('queue_realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'mm_queue' }, () => {
+                    if (document.getElementById('page-play').classList.contains('active')) {
+                        loadOpenRooms();
+                    }
+                })
+                .subscribe();
+        }
+
+        // ============================================================
+        // INVITE (приглашение из пати)
         // ============================================================
         async function openInviteSheet() {
             if (!myParty) {
@@ -2866,7 +3352,6 @@ async function ensureParty(mode) {
             container.innerHTML = '<div class="empty">Загрузка...</div>';
 
             try {
-                // Друзья
                 const me = currentUser.telegram_id;
                 const { data: rels } = await sb.from('friendships')
                     .select('requester_id, addressee_id, status')
@@ -2928,7 +3413,7 @@ async function ensureParty(mode) {
         }
 
         // ============================================================
-        // MATCHMAKING — SEARCH
+        // SEARCH
         // ============================================================
         async function startSearch() {
             if (!myParty) { await ensureParty(selectedMode); await loadOrCreateParty(); }
@@ -2957,8 +3442,8 @@ async function ensureParty(mode) {
                 await checkIfMatchCreated();
             }, 5000);
 
-            // Сразу дёрнем tick
             await mmCall('tick');
+            await checkIfMatchCreated();
         }
 
         function updateSearchTimer() {
@@ -2974,10 +3459,9 @@ async function ensureParty(mode) {
         }
 
         async function checkIfMatchCreated() {
-            if (!myParty) return;
+            if (!currentUser) return;
             try {
                 const me = currentUser.telegram_id;
-                // Проверяем, есть ли активный матч, где я участвую
                 const { data: matches } = await sb.from('game_matches')
                     .select('*')
                     .in('status', ['confirm', 'veto', 'ready', 'result'])
@@ -2988,6 +3472,7 @@ async function ensureParty(mode) {
                 for (const m of matches) {
                     const allIds = [...(m.team_a_players || []), ...(m.team_b_players || [])].map(p => p.telegram_id);
                     if (allIds.includes(me)) {
+                        if (currentMatch?.id === m.id) return;
                         currentMatch = m;
                         onMatchFound(m);
                         return;
@@ -3003,10 +3488,11 @@ async function ensureParty(mode) {
                 try { await sb.from('mm_queue').delete().eq('party_id', myParty.party.id); } catch (e) {}
             }
             switchPage('play');
+            await loadOpenRooms();
         }
 
         // ============================================================
-        // MATCH FOUND → CONFIRM
+        // MATCH FOUND
         // ============================================================
         function onMatchFound(match) {
             clearInterval(searchTickInterval);
@@ -3039,75 +3525,66 @@ async function ensureParty(mode) {
                     else if (currentMatch.status === 'finished') showFinishedScreen();
                     else if (currentMatch.status === 'cancelled') {
                         showToast('Матч отменён');
-                        clearInterval(matchPollTimer);
+                        if (matchPollTimer) clearInterval(matchPollTimer);
                         switchPage('play');
                     }
                 })
                 .subscribe();
         }
 
-function showConfirmScreen() {
-    switchPage('confirm');
-    renderConfirmScreen();  // заполнит #confirmTeams
-    startConfirmCountdown();
+        function showConfirmScreen() {
+            switchPage('confirm');
+            renderConfirmScreen();
+            startConfirmCountdown();
 
-    if (matchPollTimer) clearInterval(matchPollTimer);
-    matchPollTimer = setInterval(async () => {
-        await mmCall('tick');
-        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
-        if (data) {
-            currentMatch = data;
-            if (data.status === 'veto') { clearInterval(matchPollTimer); showVetoScreen(); }
-            else if (data.status === 'cancelled') { clearInterval(matchPollTimer); showToast('Отменено'); switchPage('play'); }
+            if (matchPollTimer) clearInterval(matchPollTimer);
+            matchPollTimer = setInterval(async () => {
+                await mmCall('tick');
+                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+                if (data) {
+                    currentMatch = data;
+                    if (data.status === 'veto') { clearInterval(matchPollTimer); showVetoScreen(); }
+                    else if (data.status === 'cancelled') { clearInterval(matchPollTimer); showToast('Отменено'); switchPage('play'); }
+                }
+            }, 3000);
         }
-    }, 3000);
-}
 
-        function renderConfirmScreen() {
+        async function renderConfirmScreen(targetId = 'confirmTeams') {
             const teamA = currentMatch.team_a_players || [];
             const teamB = currentMatch.team_b_players || [];
-            const me = currentUser.telegram_id;
 
-            renderConfirmTeam('A', teamA, me);
-            renderConfirmTeam('B', teamB, me);
+            const allIds = [...teamA, ...teamB].map(p => p.telegram_id);
+            const { data: users } = await sb.from('users')
+                .select('telegram_id, display_name, custom_avatar, photo_url')
+                .in('telegram_id', allIds.length ? allIds : [0]);
+            const userMap = {};
+            (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+            const renderTeam = (team, players) => `
+                <div class="confirm-team">
+                    <div class="confirm-team-title">Команда ${team}</div>
+                    <div class="confirm-team-players">
+                        ${players.map(p => {
+                            const u = userMap[p.telegram_id] || {};
+                            const src = u.custom_avatar || u.photo_url;
+                            const initial = (u.display_name || 'U')[0].toUpperCase();
+                            const av = src ? `<img src="${src}" alt="">` : initial;
+                            return `
+                                <div class="confirm-player ${p.captain ? 'captain' : ''}">
+                                    <div class="cp-avatar">${av}</div>
+                                    <span class="cp-name">${escapeHtml(u.display_name || 'Игрок')}</span>
+                                    ${p.captain ? '<span class="cp-tag">👑</span>' : ''}
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            const el = document.getElementById(targetId);
+            if (el) {
+                el.innerHTML = renderTeam('A', teamA) + renderTeam('B', teamB);
+            }
         }
-
-async function renderConfirmScreen(targetId = 'confirmTeams') {
-    const teamA = currentMatch.team_a_players || [];
-    const teamB = currentMatch.team_b_players || [];
-
-    const allIds = [...teamA, ...teamB].map(p => p.telegram_id);
-    const { data: users } = await sb.from('users')
-        .select('telegram_id, display_name, custom_avatar, photo_url')
-        .in('telegram_id', allIds.length ? allIds : [0]);
-    const userMap = {};
-    (users || []).forEach(u => userMap[u.telegram_id] = u);
-
-    const renderTeam = (team, players) => `
-        <div class="confirm-team">
-            <div class="confirm-team-title">Команда ${team}</div>
-            <div class="confirm-team-players">
-                ${players.map(p => {
-                    const u = userMap[p.telegram_id] || {};
-                    const src = u.custom_avatar || u.photo_url;
-                    const initial = (u.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
-                    return `
-                        <div class="confirm-player ${p.captain ? 'captain' : ''}">
-                            <div class="cp-avatar">${av}</div>
-                            <span class="cp-name">${escapeHtml(u.display_name || 'Игрок')}</span>
-                            ${p.captain ? '<span class="cp-tag">👑</span>' : ''}
-                        </div>`;
-                }).join('')}
-            </div>
-        </div>
-    `;
-
-    const el = document.getElementById(targetId);
-    if (el) {
-        el.innerHTML = renderTeam('A', teamA) + renderTeam('B', teamB);
-    }
-}
 
         function startConfirmCountdown() {
             let left = 30;
@@ -3129,7 +3606,7 @@ async function renderConfirmScreen(targetId = 'confirmTeams') {
             });
             if (!agree) {
                 showToast('Отказались');
-                clearInterval(matchPollTimer);
+                if (matchPollTimer) clearInterval(matchPollTimer);
                 switchPage('play');
             } else {
                 showToast('✅ Подтверждено');
@@ -3190,7 +3667,6 @@ async function renderConfirmScreen(targetId = 'confirmTeams') {
                 });
                 if (res?.ban?.error) { showToast(res.ban.error); return; }
                 haptic('medium');
-                // Обновим матч
                 const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
                 if (data) {
                     currentMatch = data;
@@ -3215,33 +3691,31 @@ async function renderConfirmScreen(targetId = 'confirmTeams') {
         // ============================================================
         // MATCH (ИГРАЕМ)
         // ============================================================
-function showMatchScreen() {
-    switchPage('match');
+        function showMatchScreen() {
+            switchPage('match');
 
-    document.getElementById('matchMap').textContent = currentMatch.final_map || '—';
+            document.getElementById('matchMap').textContent = currentMatch.final_map || '—';
 
-    const hostId = currentMatch.host_id;
-    (async () => {
-        const { data: host } = await sb.from('users')
-            .select('telegram_id, display_name, standoff_id')
-            .eq('telegram_id', hostId).single();
-        document.getElementById('matchHostName').textContent = host?.display_name || '—';
-        document.getElementById('matchHostId').textContent = host?.standoff_id || '—';
-    })();
+            const hostId = currentMatch.host_id;
+            (async () => {
+                const { data: host } = await sb.from('users')
+                    .select('telegram_id, display_name, standoff_id')
+                    .eq('telegram_id', hostId).single();
+                document.getElementById('matchHostName').textContent = host?.display_name || '—';
+                document.getElementById('matchHostId').textContent = host?.standoff_id || '—';
+            })();
 
-    // Превью команд — рендерим в matchTeamsPreview
-    renderConfirmScreen('matchTeamsPreview');
+            renderConfirmScreen('matchTeamsPreview');
 
-    // Poll статуса
-    if (matchPollTimer) clearInterval(matchPollTimer);
-    matchPollTimer = setInterval(async () => {
-        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
-        if (data) {
-            currentMatch = data;
-            if (data.status === 'result') { clearInterval(matchPollTimer); showResultScreen(); }
+            if (matchPollTimer) clearInterval(matchPollTimer);
+            matchPollTimer = setInterval(async () => {
+                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+                if (data) {
+                    currentMatch = data;
+                    if (data.status === 'result') { clearInterval(matchPollTimer); showResultScreen(); }
+                }
+            }, 5000);
         }
-    }, 5000);
-}
 
         function copyHostId() {
             const id = document.getElementById('matchHostId').textContent;
@@ -3270,11 +3744,11 @@ function showMatchScreen() {
         // ============================================================
         // RESULT
         // ============================================================
-function showResultScreen() {
-    selectedWinner = null;
-    switchPage('result');
-    renderResultScreen();
-}
+        function showResultScreen() {
+            selectedWinner = null;
+            switchPage('result');
+            renderResultScreen();
+        }
 
         async function renderResultScreen() {
             const container = document.getElementById('resultContent');
@@ -3283,13 +3757,11 @@ function showResultScreen() {
             const isCapB = currentMatch.captain_b_id === me;
             const isCaptain = isCapA || isCapB;
 
-            // Проверяем, загружал ли я скрин
             const { data: screenshots } = await sb.from('match_screenshots')
                 .select('*').eq('match_id', currentMatch.id);
 
             const myShot = (screenshots || []).find(s => s.uploader_id === me);
 
-            // Проверяем, голосовал ли я
             const { data: votes } = await sb.from('match_votes')
                 .select('*').eq('match_id', currentMatch.id);
 
@@ -3302,7 +3774,6 @@ function showResultScreen() {
                 </div>
             `;
 
-            // Скрин
             if (!myShot) {
                 html += `
                     <div class="profile-hero">
@@ -3320,7 +3791,6 @@ function showResultScreen() {
                 `;
             }
 
-            // Голосование — только для капитанов
             if (isCaptain) {
                 if (!myVote) {
                     html += `
@@ -3328,11 +3798,11 @@ function showResultScreen() {
                         <div class="score-input-row">
                             <div class="score-input-col">
                                 <label>Счёт A</label>
-                                <input type="number" id="scoreA" min="0" max="30" value="${currentMatch.score_a ?? 0}" oninput="syncScores()">
+                                <input type="number" id="scoreA" min="0" max="30" value="${currentMatch.score_a ?? 0}">
                             </div>
                             <div class="score-input-col">
                                 <label>Счёт B</label>
-                                <input type="number" id="scoreB" min="0" max="30" value="${currentMatch.score_b ?? 0}" oninput="syncScores()">
+                                <input type="number" id="scoreB" min="0" max="30" value="${currentMatch.score_b ?? 0}">
                             </div>
                         </div>
                         <div class="winner-choice">
@@ -3357,7 +3827,6 @@ function showResultScreen() {
                 `;
             }
 
-            // Список скринов
             if (screenshots?.length) {
                 html += `
                     <div class="section-title" style="margin-top:20px;">Скриншоты матча</div>
@@ -3375,7 +3844,6 @@ function showResultScreen() {
 
             container.innerHTML = html;
 
-            // Poll статуса
             if (matchPollTimer) clearInterval(matchPollTimer);
             matchPollTimer = setInterval(async () => {
                 const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
@@ -3390,7 +3858,6 @@ function showResultScreen() {
             }, 5000);
         }
 
-        let selectedWinner = null;
         function selectWinner(team) {
             selectedWinner = team;
             document.getElementById('winBtnA').classList.toggle('active', team === 'A');
@@ -3399,26 +3866,26 @@ function showResultScreen() {
 
         function syncScores() {}
 
-async function submitWinner() {
-    if (!selectedWinner) { showToast('Выберите победителя'); return; }
-    const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
-    const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
+        async function submitWinner() {
+            if (!selectedWinner) { showToast('Выберите победителя'); return; }
+            const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
+            const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
 
-    if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
+            if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
 
-    try {
-        const res = await mmCall('report_winner', {
-            match_id: currentMatch.id,
-            telegram_id: currentUser.telegram_id,
-            winner: selectedWinner,
-            score_a: scoreA,
-            score_b: scoreB
-        });
-        showToast('✅ Отправлено');
-        selectedWinner = null;  // сброс — при перерендере кнопки не будут активны
-        renderResultScreen();
-    } catch (e) { showToast('Ошибка: ' + e.message); }
-}
+            try {
+                const res = await mmCall('report_winner', {
+                    match_id: currentMatch.id,
+                    telegram_id: currentUser.telegram_id,
+                    winner: selectedWinner,
+                    score_a: scoreA,
+                    score_b: scoreB
+                });
+                showToast('✅ Отправлено');
+                selectedWinner = null;
+                renderResultScreen();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
 
         // Скриншоты
         document.getElementById('screenshotInput').addEventListener('change', async (e) => {
@@ -3539,8 +4006,7 @@ async function submitWinner() {
                 }
             } catch (e) {}
         }
-
-        // ============================================================
+                    // ============================================================
         // ADMIN PANEL
         // ============================================================
         async function openAdminPanel() {
@@ -3642,8 +4108,6 @@ async function submitWinner() {
             const { data: m } = await sb.from('game_matches').select('*').eq('id', matchId).single();
             if (!m) return;
 
-            const teamA = m.team_a_players || [];
-            const teamB = m.team_b_players || [];
             const winner = prompt(`Спорный матч #${m.id}\n\nСчёт: ${m.score_a ?? '?'} : ${m.score_b ?? '?'}\n\nВведите победителя (A или B):`);
             if (winner !== 'A' && winner !== 'B') return;
 
