@@ -1421,6 +1421,143 @@ body::after {
     50% { transform: scale(1.02); box-shadow: 0 0 0 16px rgba(var(--emerald-rgb), 0); }
     100% { transform: scale(1); }
 }
+
+    /* ============ MENU DRAWER ============ */
+.menu-drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 900;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+}
+.menu-drawer-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.menu-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(320px, 82vw);
+    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+    border-left: 1px solid var(--border-strong);
+    z-index: 901;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);
+    box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+}
+.menu-drawer.active {
+    transform: translateX(0);
+}
+
+.menu-drawer-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid var(--border);
+}
+.menu-drawer-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 20px;
+    color: #04140e;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(var(--emerald-rgb), 0.25),
+                0 0 16px rgba(var(--emerald-rgb), 0.35);
+}
+.menu-drawer-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.menu-drawer-user {
+    min-width: 0;
+    flex: 1;
+}
+.menu-drawer-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.menu-drawer-username {
+    font-size: 12px;
+    color: var(--hint);
+    margin-top: 3px;
+}
+
+.menu-drawer-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.menu-drawer-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(var(--emerald-rgb), 0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                background 0.22s ease,
+                border-color 0.22s ease;
+}
+.menu-drawer-btn:active {
+    transform: scale(0.98);
+    background: rgba(var(--emerald-rgb), 0.10);
+    border-color: var(--border-strong);
+}
+.menu-drawer-icon {
+    font-size: 18px;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.menu-drawer-footer {
+    padding: 10px 14px 20px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+}
+.menu-drawer-btn.admin {
+    background: linear-gradient(135deg, rgba(217, 171, 90, 0.18), rgba(217, 171, 90, 0.06));
+    border-color: rgba(217, 171, 90, 0.4);
+    color: var(--gold);
+}
+.menu-drawer-btn.admin:active {
+    background: rgba(217, 171, 90, 0.25);
+}
+    
 </style>
 </head>
 <body>
@@ -1594,14 +1731,20 @@ body::after {
     </div>
 
     <!-- ============ NAV ============ -->
-    <nav class="bottom-nav">
-        <button class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')"><span class="nav-icon">🏠</span><span>Главная</span></button>
-        <button class="nav-item" data-page="profile" onclick="switchPage('profile')"><span class="nav-icon">👤</span><span>Профиль</span></button>
-<button class="nav-item" data-page="club" onclick="openClubPage()"><span class="nav-icon">🛡️</span><span>Клуб</span></button>
-<button class="nav-item" onclick="showToast('Раздел в разработке')">
-    <span class="nav-icon">💬</span><span>Чат</span>
-</button>
-    </nav>
+<nav class="bottom-nav">
+    <button class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+        <span class="nav-icon">🏠</span><span>Главная</span>
+    </button>
+    <button class="nav-item" data-page="chat" onclick="openChatPage()">
+        <span class="nav-icon">💬</span><span>Чат</span>
+    </button>
+    <button class="nav-item" data-page="club" onclick="openClubPage()">
+        <span class="nav-icon">🛡️</span><span>Клуб</span>
+    </button>
+    <button class="nav-item" id="menuNavBtn" onclick="toggleMenuDrawer()">
+        <span class="nav-icon">☰</span><span>Меню</span>
+    </button>
+</nav>
 
     <!-- ============ CHAT VIEW ============ -->
     <div class="chat-view" id="chatView">
@@ -1723,6 +1866,44 @@ body::after {
         </div>
     </div>
     <div class="active-room-arrow">→</div>
+</div>
+    <!-- ============ MENU DRAWER ============ -->
+<div class="menu-drawer-overlay" id="menuDrawerOverlay" onclick="closeMenuDrawer()"></div>
+<div class="menu-drawer" id="menuDrawer">
+    <div class="menu-drawer-header">
+        <div class="menu-drawer-avatar" id="menuDrawerAvatar">?</div>
+        <div class="menu-drawer-user">
+            <div class="menu-drawer-name" id="menuDrawerName">Игрок</div>
+            <div class="menu-drawer-username" id="menuDrawerUsername">@—</div>
+        </div>
+    </div>
+
+    <div class="menu-drawer-list">
+        <button class="menu-drawer-btn" onclick="menuDrawerGo('profile')">
+            <span class="menu-drawer-icon">👤</span> Профиль
+        </button>
+        <button class="menu-drawer-btn" onclick="menuDrawerGo('matches')">
+            <span class="menu-drawer-icon">🎯</span> Матчи
+        </button>
+        <button class="menu-drawer-btn" onclick="menuDrawerGo('settings')">
+            <span class="menu-drawer-icon">⚙️</span> Настройки
+        </button>
+        <button class="menu-drawer-btn" onclick="menuDrawerGo('friends')">
+            <span class="menu-drawer-icon">👥</span> Друзья
+        </button>
+        <button class="menu-drawer-btn" onclick="menuDrawerGo('theme')">
+            <span class="menu-drawer-icon">🎨</span> Тема оформления
+        </button>
+        <button class="menu-drawer-btn" onclick="menuDrawerGo('privacy')">
+            <span class="menu-drawer-icon">🔒</span> Приватность
+        </button>
+    </div>
+
+    <div class="menu-drawer-footer" id="menuDrawerFooter" style="display: none;">
+        <button class="menu-drawer-btn admin" onclick="menuDrawerGo('admin')">
+            <span class="menu-drawer-icon">👑</span> Админ-панель
+        </button>
+    </div>
 </div>
     <div class="toast" id="toast"></div>
     <div class="page-loading-bar" id="pageLoadingBar"></div>
@@ -6432,6 +6613,79 @@ function pickTheme(theme) {
 
 // Применяем тему при загрузке
 document.documentElement.setAttribute('data-theme', getCurrentTheme());
+
+            // ============================================================
+// MENU DRAWER
+// ============================================================
+const ADMIN_USERNAME = 'Mark1zell'; // ← твой username без @
+
+function toggleMenuDrawer() {
+    const drawer = document.getElementById('menuDrawer');
+    const overlay = document.getElementById('menuDrawerOverlay');
+    if (!drawer) return;
+
+    if (drawer.classList.contains('active')) {
+        closeMenuDrawer();
+    } else {
+        fillMenuDrawerUser();
+        // Показ админки — только для владельца
+        const isAdmin = (currentUser?.username || '').toLowerCase() === ADMIN_USERNAME.toLowerCase()
+                     || currentUser?.is_admin === true;
+        const footer = document.getElementById('menuDrawerFooter');
+        if (footer) footer.style.display = isAdmin ? 'block' : 'none';
+
+        drawer.classList.add('active');
+        overlay.classList.add('active');
+        haptic('light');
+    }
+}
+
+function closeMenuDrawer() {
+    const drawer = document.getElementById('menuDrawer');
+    const overlay = document.getElementById('menuDrawerOverlay');
+    if (drawer) drawer.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+}
+
+function fillMenuDrawerUser() {
+    if (!currentUser) return;
+    const src = currentUser.custom_avatar || currentUser.photo_url;
+    const initial = (currentUser.display_name || 'U')[0].toUpperCase();
+    const avEl = document.getElementById('menuDrawerAvatar');
+    avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+
+    document.getElementById('menuDrawerName').textContent = currentUser.display_name || 'Игрок';
+    document.getElementById('menuDrawerUsername').textContent = currentUser.username
+        ? '@' + currentUser.username : '@—';
+}
+
+function menuDrawerGo(dest) {
+    closeMenuDrawer();
+    haptic();
+    setTimeout(() => {
+        switch (dest) {
+            case 'profile':
+                switchPage('profile');
+                break;
+            case 'admin':
+                openAdminPanel();
+                break;
+            case 'friends':
+                openFriendsPage();
+                break;
+            case 'theme':
+                openThemeSheet();
+                break;
+            case 'privacy':
+                openPrivacySheet();
+                break;
+            case 'matches':
+            case 'settings':
+            default:
+                showToast('Раздел в разработке');
+        }
+    }, 260); // ждём, пока панель закроется
+}
 
         // ============================================================
         // BOOT
