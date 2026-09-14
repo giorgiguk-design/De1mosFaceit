@@ -1783,6 +1783,76 @@ body::after {
     background: rgba(255, 255, 255, 0.05);
     color: var(--hint);
 }
+
+    .copy-id-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(var(--emerald-rgb), 0.10);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-family: inherit;
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                background 0.22s ease;
+    flex-shrink: 0;
+}
+.copy-id-btn:active { transform: scale(0.88); background: rgba(var(--emerald-rgb), 0.2); }
+
+    /* ============ MATCHES HISTORY ============ */
+.match-history-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.22s ease,
+                box-shadow 0.22s ease;
+}
+.match-history-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: 0 8px 24px rgba(var(--emerald-rgb), 0.12);
+}
+.match-history-item:active { transform: scale(0.98); }
+.mh-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.mh-map {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+}
+.mh-result { font-size: 12px; }
+.mh-mid {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.mh-score {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 1px;
+}
+.mh-delta { font-size: 14px; }
+.mh-bottom {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--hint);
+}
     
 </style>
 </head>
@@ -1821,13 +1891,11 @@ body::after {
     <span class="btn-cover-bg"></span>
     <span class="play-btn-text">🎮 ИГРАТЬ</span>
 </button>
-        <div class="section-title">Быстрые действия</div>
-        <div class="menu-grid">
-            <button class="menu-item" onclick="openFriendsPage()"><span class="menu-icon">👥</span> Друзья</button>
-            <button class="menu-item" onclick="openClubPage()"><span class="menu-icon">🛡️</span> Клуб</button>
-            <button class="menu-item" onclick="openAdminPanel()"><span class="menu-icon">👑</span> Админ-панель</button>
-            <button class="menu-item" onclick="openChatPage()"><span class="menu-icon">💬</span> Чаты</button>
-        </div>
+<div class="section-title">Быстрые действия</div>
+<div class="menu-grid">
+    <button class="menu-item" onclick="openFriendsPage()"><span class="menu-icon">👥</span> Друзья</button>
+    <button class="menu-item" onclick="openMatchesHistory()"><span class="menu-icon">🎯</span> Последние матчи</button>
+</div>
         <div class="section-title">Лидерборд</div>
         <div id="leaderboard"><div class="empty">Загрузка...</div></div>
     </div>
@@ -1859,6 +1927,12 @@ body::after {
     <div class="container page" id="page-chat">
         <div class="section-title" style="margin-top: 0;">Чаты</div>
         <div id="chatList"><div class="empty">Загрузка...</div></div>
+    </div>
+
+        <!-- ============ MATCHES HISTORY ============ -->
+    <div class="container page" id="page-matches">
+        <div class="section-title" style="margin-top: 0;">🎯 Последние матчи</div>
+        <div id="matchesHistoryList"><div class="empty">Загрузка...</div></div>
     </div>
 
     <!-- ============ PLAY (выбор режима и пати) ============ -->
@@ -2107,6 +2181,24 @@ body::after {
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 
+    <!-- ============ SETTINGS SHEET ============ -->
+<div class="sheet" id="settingsSheet">
+    <div class="sheet-title">⚙️ Настройки</div>
+    <button class="sheet-option" onclick="closeAllSheets(); setTimeout(() => openThemeSheet(), 260);">
+        <span style="font-size: 18px;">🎨</span> Тема оформления
+    </button>
+    <button class="sheet-option" onclick="closeAllSheets(); setTimeout(() => openPrivacySheet(), 260);">
+        <span style="font-size: 18px;">🔒</span> Приватность
+    </button>
+    <button class="sheet-option" onclick="openNotificationsSettingsInfo()">
+        <span style="font-size: 18px;">🔔</span> Уведомления
+    </button>
+    <button class="sheet-option" onclick="menuDrawerSupport()">
+        <span style="font-size: 18px;">🆘</span> Тех-поддержка
+    </button>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
     <!-- ============ PARTY INVITE ============ -->
     <div class="sheet-overlay" id="partyInviteOverlay" onclick="declinePartyInvite()"></div>
     <div class="sheet" id="partyInviteSheet" style="z-index: 700;">
@@ -2145,26 +2237,23 @@ body::after {
         </div>
     </div>
 
-    <div class="menu-drawer-list">
-        <button class="menu-drawer-btn" onclick="menuDrawerGo('profile')">
-            <span class="menu-drawer-icon">👤</span> Профиль
-        </button>
-        <button class="menu-drawer-btn" onclick="menuDrawerGo('matches')">
-            <span class="menu-drawer-icon">🎯</span> Матчи
-        </button>
-        <button class="menu-drawer-btn" onclick="menuDrawerGo('settings')">
-            <span class="menu-drawer-icon">⚙️</span> Настройки
-        </button>
-        <button class="menu-drawer-btn" onclick="menuDrawerGo('friends')">
-            <span class="menu-drawer-icon">👥</span> Друзья
-        </button>
-        <button class="menu-drawer-btn" onclick="menuDrawerGo('theme')">
-            <span class="menu-drawer-icon">🎨</span> Тема оформления
-        </button>
-        <button class="menu-drawer-btn" onclick="menuDrawerGo('privacy')">
-            <span class="menu-drawer-icon">🔒</span> Приватность
-        </button>
-    </div>
+<div class="menu-drawer-list">
+    <button class="menu-drawer-btn" onclick="menuDrawerGo('profile')">
+        <span class="menu-drawer-icon">👤</span> Профиль
+    </button>
+    <button class="menu-drawer-btn" onclick="menuDrawerGo('matches')">
+        <span class="menu-drawer-icon">🎯</span> Последние матчи
+    </button>
+    <button class="menu-drawer-btn" onclick="menuDrawerGo('friends')">
+        <span class="menu-drawer-icon">👥</span> Друзья
+    </button>
+    <button class="menu-drawer-btn" onclick="menuDrawerGo('settings')">
+        <span class="menu-drawer-icon">⚙️</span> Настройки
+    </button>
+    <button class="menu-drawer-btn" onclick="menuDrawerSupport()">
+        <span class="menu-drawer-icon">🆘</span> Тех-поддержка
+    </button>
+</div>
 
 <div class="menu-drawer-footer" id="menuDrawerFooter" style="display: none;">
 <button class="menu-drawer-btn cover-btn" onclick="closeMenuDrawer(); setTimeout(() => openCoverPickerSheet(), 260);">
@@ -2447,7 +2536,13 @@ body::after {
                     <div class="profile-stat"><div class="profile-stat-value">${hours}ч</div><div class="profile-stat-label">На Faceit</div></div>
                 </div>
 
-                <div class="profile-view-row"><span class="profile-view-label">Standoff 2 ID</span><span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span></div>
+                <div class="profile-view-row">
+    <span class="profile-view-label">Standoff 2 ID</span>
+    <span class="profile-view-value" style="display: flex; align-items: center; gap: 8px;">
+        <span id="myStandoffId">${escapeHtml(user.standoff_id || '—')}</span>
+        ${user.standoff_id ? `<button class="copy-id-btn" onclick="copyStandoffId('myStandoffId')" title="Скопировать">📋</button>` : ''}
+    </span>
+</div>
                 <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
                 <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
 
@@ -2455,8 +2550,6 @@ body::after {
     <span class="btn-cover-bg"></span>
     ✏️ РЕДАКТИРОВАТЬ
 </button>
-                <button class="profile-action-btn cancel" onclick="openPrivacySheet()">🔒 ПРИВАТНОСТЬ</button>
-                <button class="profile-action-btn cancel" onclick="openThemeSheet()">🎨 ТЕМА ОФОРМЛЕНИЯ</button>
 
                 <div class="section-title" style="margin-top: 24px;">История матчей</div>
                 <div id="profileMatchHistory"><div class="empty">Матчей пока нет</div></div>
@@ -2638,7 +2731,13 @@ async function openPlayerProfile(userId) {
                 <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
                 <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
             </div>
-            <div class="profile-view-row"><span class="profile-view-label">Standoff 2 ID</span><span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span></div>
+            <div class="profile-view-row">
+    <span class="profile-view-label">Standoff 2 ID</span>
+    <span class="profile-view-value" style="display: flex; align-items: center; gap: 8px;">
+        <span id="playerStandoffId">${escapeHtml(user.standoff_id || '—')}</span>
+        ${user.standoff_id ? `<button class="copy-id-btn" onclick="copyStandoffId('playerStandoffId')" title="Скопировать">📋</button>` : ''}
+    </span>
+</div>
             ${user.hide_matches ? '' : `
                 <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
                 <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
@@ -2710,10 +2809,12 @@ async function removeFriendFromProfile(relId, btn) {
             document.getElementById('sheetOverlay').classList.add('active');
             document.getElementById('clubLogoSheet').classList.add('active');
         }
-        function closeAllSheets() {
-            document.querySelectorAll('.sheet').forEach(s => s.classList.remove('active'));
-            document.getElementById('sheetOverlay').classList.remove('active');
-        }
+function closeAllSheets() {
+    document.querySelectorAll('.sheet').forEach(s => s.classList.remove('active'));
+    document.getElementById('sheetOverlay').classList.remove('active');
+    const support = document.getElementById('supportSheet');
+    if (support) setTimeout(() => support.remove(), 400);
+}
 
         function pickFromTelegram() {
             closeAllSheets();
@@ -7027,18 +7128,31 @@ function menuDrawerGo(dest) {
             case 'friends':
                 openFriendsPage();
                 break;
+            case 'matches':
+                openMatchesHistory();
+                break;
+            case 'settings':
+                openSettingsSheet();
+                break;
             case 'theme':
                 openThemeSheet();
                 break;
             case 'privacy':
                 openPrivacySheet();
                 break;
-            case 'matches':
-            case 'settings':
             default:
                 showToast('Раздел в разработке');
         }
     }, 260);
+}
+
+function openSettingsSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('settingsSheet').classList.add('active');
+}
+
+function openNotificationsSettingsInfo() {
+    showToast('Настройки уведомлений в разработке');
 }
 
 // ============================================================
@@ -7475,6 +7589,196 @@ function subscribeNotificationsRealtime() {
             filter: `to_id=eq.${currentUser.telegram_id}`
         }, () => { updateNotifBadge(); haptic('medium'); })
         .subscribe();
+}
+
+            function copyStandoffId(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const text = el.textContent.trim();
+    if (!text || text === '—') return;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('📋 ID скопирован');
+            haptic('medium');
+        }).catch(() => {
+            fallbackCopy(text);
+        });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand('copy');
+        showToast('📋 ID скопирован');
+        haptic('medium');
+    } catch (e) {
+        showToast('Не удалось скопировать');
+    }
+    document.body.removeChild(ta);
+}
+
+            // ============================================================
+// MATCHES HISTORY
+// ============================================================
+function openMatchesHistory() {
+    switchPage('matches');
+    loadMatchesHistory();
+}
+
+async function loadMatchesHistory() {
+    const container = document.getElementById('matchesHistoryList');
+    if (!container) return;
+    container.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    try {
+        const me = currentUser.telegram_id;
+
+        // Получаем матчи, где я участвовал
+        const { data: matches } = await sb.from('game_matches')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        const myMatches = (matches || []).filter(m => {
+            const ids = [...(m.team_a_players || []), ...(m.team_b_players || [])].map(p => p.telegram_id);
+            return ids.includes(me);
+        });
+
+        if (!myMatches.length) {
+            container.innerHTML = '<div class="empty">Матчей пока нет</div>';
+            return;
+        }
+
+        container.innerHTML = myMatches.map(m => {
+            const myTeam = (m.team_a_players || []).some(p => p.telegram_id === me) ? 'A' : 'B';
+            const isWinner = m.winner_team === myTeam;
+            const myBefore = ((myTeam === 'A' ? m.team_a_players : m.team_b_players) || [])
+                .find(p => p.telegram_id === me)?.elo_before || 0;
+            const myAfter = ((myTeam === 'A' ? m.team_a_players : m.team_b_players) || [])
+                .find(p => p.telegram_id === me)?.elo_after || 0;
+            const delta = myAfter - myBefore;
+
+            const statusMap = {
+                'finished': { text: 'Завершён', color: 'var(--emerald)' },
+                'result':   { text: 'Результат', color: 'var(--gold)' },
+                'cancelled':{ text: 'Отменён', color: 'var(--hint)' },
+                'confirm':  { text: 'Подтверждение', color: 'var(--gold)' },
+                'veto':     { text: 'Пики карт', color: 'var(--gold)' },
+                'ready':    { text: 'Идёт', color: 'var(--emerald)' },
+            };
+            const status = statusMap[m.status] || { text: m.status, color: 'var(--hint)' };
+            const date = new Date(m.created_at).toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            });
+
+            const scoreText = (m.score_a != null && m.score_b != null)
+                ? `${m.score_a} : ${m.score_b}` : '— : —';
+
+            const resultBadge = m.status === 'finished'
+                ? (isWinner
+                    ? '<span style="color: var(--emerald); font-weight: 800;">🏆 ПОБЕДА</span>'
+                    : '<span style="color: var(--red); font-weight: 800;">💀 ПОРАЖЕНИЕ</span>')
+                : `<span style="color: ${status.color}; font-weight: 700; font-size: 11px;">${status.text}</span>`;
+
+            const deltaText = m.status === 'finished' && delta !== 0
+                ? `<span style="color: ${delta > 0 ? 'var(--emerald)' : 'var(--red)'}; font-weight: 800;">${delta > 0 ? '+' : ''}${delta}</span>`
+                : '';
+
+            return `
+                <div class="match-history-item" onclick="openMatchDetails(${m.id})">
+                    <div class="mh-top">
+                        <div class="mh-map">${escapeHtml(m.final_map || '—')}</div>
+                        <div class="mh-result">${resultBadge}</div>
+                    </div>
+                    <div class="mh-mid">
+                        <div class="mh-score">${scoreText}</div>
+                        <div class="mh-delta">${deltaText}</div>
+                    </div>
+                    <div class="mh-bottom">
+                        <span>${date}</span>
+                        <span>${m.mode || '5x5'}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка загрузки</div>';
+    }
+}
+
+function openMatchDetails(matchId) {
+    showToast('Детали матча в разработке');
+}
+
+            // ============================================================
+// TECH SUPPORT
+// ============================================================
+const SUPPORT_USERNAME = 'Mark1zell';
+
+function menuDrawerSupport() {
+    closeMenuDrawer();
+    setTimeout(() => openSupportSheet(), 260);
+}
+
+function openSupportSheet() {
+    // Убираем старый, если есть
+    const old = document.getElementById('supportSheet');
+    if (old) old.remove();
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.id = 'supportSheet';
+    sheet.innerHTML = `
+        <div class="sheet-title">🆘 Тех-поддержка</div>
+        <div style="text-align: center; padding: 16px 0 20px;">
+            <div style="font-size: 56px; margin-bottom: 12px;">💬</div>
+            <div style="font-size: 15px; font-weight: 700; margin-bottom: 8px;">Связь с администрацией</div>
+            <div style="font-size: 12px; color: var(--hint); margin-bottom: 20px; line-height: 1.5;">
+                По вопросам багов, апелляций,<br>жалоб и предложений
+            </div>
+            <div style="display: inline-block; padding: 10px 18px; background: rgba(var(--emerald-rgb), 0.08); border: 1px solid var(--border-strong); border-radius: 12px; font-family: 'Courier New', monospace; font-size: 15px; font-weight: 800; color: var(--emerald); margin-bottom: 20px;">
+                @${SUPPORT_USERNAME}
+            </div>
+        </div>
+        <button class="sheet-option" onclick="copySupportUsername()">
+            <span style="font-size: 18px;">📋</span> Скопировать @${SUPPORT_USERNAME}
+        </button>
+        <button class="sheet-option" onclick="openSupportTelegram()">
+            <span style="font-size: 18px;">✈️</span> Открыть в Telegram
+        </button>
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    `;
+    document.body.appendChild(sheet);
+
+    document.getElementById('sheetOverlay').classList.add('active');
+    requestAnimationFrame(() => sheet.classList.add('active'));
+}
+
+function copySupportUsername() {
+    fallbackCopy('@' + SUPPORT_USERNAME);
+}
+
+function openSupportTelegram() {
+    const url = 'https://t.me/' + SUPPORT_USERNAME;
+    if (tg?.openTelegramLink) {
+        tg.openTelegramLink(url);
+    } else if (tg?.openLink) {
+        tg.openLink(url);
+    } else {
+        window.open(url, '_blank');
+    }
+    closeAllSheets();
 }
 
 // ============================================================
