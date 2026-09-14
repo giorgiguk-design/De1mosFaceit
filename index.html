@@ -1295,6 +1295,49 @@
 }
 .side-icon { font-size: 36px; margin-bottom: 8px; }
 .side-name { font-size: 15px; font-weight: 800; color: var(--text); }
+
+        /* ============ HOST TAG ============ */
+.team-player.is-host {
+    background: rgba(217,171,90,0.12);
+    border: 1px solid rgba(217,171,90,0.4);
+    box-shadow: 0 0 12px rgba(217,171,90,0.2);
+}
+.host-tag {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: var(--gold);
+    background: rgba(217,171,90,0.15);
+    border: 1px solid rgba(217,171,90,0.4);
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+.player-menu-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    color: var(--hint);
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    line-height: 1;
+    padding-bottom: 4px;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+.player-menu-btn:active {
+    background: rgba(0,224,138,0.15);
+    color: var(--emerald);
+    transform: scale(0.9);
+}
         
     </style>
 </head>
@@ -5098,7 +5141,7 @@ async function renderRoomContent(roomId) {
 
         if (!room) { content.innerHTML = 'Комната не найдена'; return; }
 
-        // Если комната в стадии veto/side/link — показываем соответствующий экран
+        // Роутинг по статусу (Realtime позовёт нужный экран)
         if (room.status === 'veto') { openVetoView(roomId); return; }
         if (room.status === 'side_pick') { showSidePick(roomId); return; }
         if (room.status === 'waiting_link' || room.status === 'in_game') {
@@ -5106,7 +5149,6 @@ async function renderRoomContent(roomId) {
             return;
         }
 
-        // Иначе — стандартный экран ожидания игроков
         const playerIds = (players || []).map(p => p.telegram_id);
         let users = [];
         if (playerIds.length > 0) {
@@ -5128,15 +5170,27 @@ async function renderRoomContent(roomId) {
         const needPerTeam = room.mode === '2x2' ? 2 : 5;
         const canStart = teamA.length >= needPerTeam && teamB.length >= needPerTeam;
 
+        // ---------- Карточка игрока с меткой «Хост» ----------
         const renderPlayer = (p) => {
             const u = userById[p.telegram_id] || {};
             const avatarSrc = u.custom_avatar || u.photo_url;
             const initial = (u.display_name || 'U')[0].toUpperCase();
             const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
+            const isHost = String(p.telegram_id) === String(room.leader_id);
+            const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
+
+            // Кнопка меню: только хост может открыть меню передачи/кика, и только на других
+            const showMenu = iAmLeader && !isMe;
+            const menuBtn = showMenu
+                ? `<button class="player-menu-btn" onclick="event.stopPropagation();openPlayerActions(${p.telegram_id}, ${roomId})" title="Меню">⋯</button>`
+                : '';
+
             return `
-                <div class="team-player">
+                <div class="team-player ${isHost ? 'is-host' : ''}" onclick="${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
                     <div class="tp-avatar">${avatarHTML}</div>
                     <div class="tp-name">${escapeHtml(u.display_name || 'Игрок')}</div>
+                    ${isHost ? '<span class="host-tag">ХОСТ</span>' : ''}
+                    ${menuBtn}
                 </div>
             `;
         };
@@ -5151,6 +5205,7 @@ async function renderRoomContent(roomId) {
                 <div class="room-view-title">${escapeHtml(room.name)}</div>
                 <div class="room-view-meta">${room.mode}</div>
                 <div class="room-view-count">${(players || []).length}/${room.max_players} игроков</div>
+                ${iAmLeader ? `<div style="font-size: 11px; color: var(--gold); margin-top: 6px; font-weight: 700;">👑 Ты хост этой комнаты</div>` : ''}
             </div>
 
             <div class="teams-grid">
@@ -5267,15 +5322,64 @@ async function chooseTeam(roomId, team) {
 
 async function leaveRoom(roomId) {
     if (!confirm('Покинуть комнату?')) return;
-    await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id);
-    showToast('Ты покинул комнату');
+
+    const myId = currentUser.telegram_id;
+
+    // 1. Загружаем текущее состояние комнаты
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    if (!room) {
+        unsubscribeRoomRealtime();
+        closePlayScreen();
+        return;
+    }
+
+    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+    const others = (players || []).filter(p => String(p.telegram_id) !== String(myId));
+
+    // 2. Удаляем себя из комнаты
+    await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', myId);
+
+    // 3. Если я был хостом — передаём хоста следующему игроку (по времени входа)
+    if (String(room.leader_id) === String(myId)) {
+        if (others.length > 0) {
+            // Находим самого раннего по joined_at
+            const sorted = [...others].sort((a, b) => 
+                new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
+            );
+            const newHost = sorted[0];
+            await sb.from('rooms').update({ leader_id: newHost.telegram_id }).eq('id', roomId);
+            // Realtime обновит у всех
+        }
+    }
+
+    // 4. Если я последний — удаляем комнату целиком
+    if (others.length === 0) {
+        await sb.from('room_players').delete().eq('room_id', roomId);
+        await sb.from('rooms').delete().eq('id', roomId);
+        showToast('Комната закрыта');
+    } else {
+        showToast('Ты покинул комнату');
+    }
+
+    unsubscribeRoomRealtime();
     renderPlayList();
 }
 
 async function closeRoom(roomId) {
     if (!confirm('Закрыть комнату для всех?')) return;
+
+    const { data: room } = await sb.from('rooms').select('leader_id').eq('id', roomId).single();
+    if (!room) { unsubscribeRoomRealtime(); closePlayScreen(); return; }
+
+    if (String(room.leader_id) !== String(currentUser.telegram_id)) {
+        showToast('Только хост может закрыть комнату');
+        return;
+    }
+
     await sb.from('room_players').delete().eq('room_id', roomId);
     await sb.from('rooms').delete().eq('id', roomId);
+
+    unsubscribeRoomRealtime();
     showToast('Комната закрыта');
     renderPlayList();
 }
@@ -5695,6 +5799,76 @@ async function closeRoom(roomId) {
     unsubscribeRoomRealtime();
     showToast('Комната закрыта');
     renderPlayList();
+}
+
+            // ============================================================
+// ДЕЙСТВИЯ НАД ИГРОКОМ (передать хоста, кикнуть)
+// ============================================================
+function openPlayerActions(playerId, roomId) {
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet-overlay active';
+    sheet.id = 'playerActionsOverlay';
+    sheet.onclick = (e) => { if (e.target === sheet) sheet.remove(); };
+
+    sheet.innerHTML = `
+        <div class="sheet active" id="playerActionsSheet">
+            <div class="sheet-title">Управление игроком</div>
+            <button class="sheet-option" onclick="transferHost(${playerId}, ${roomId}); closePlayerActions();">
+                <span style="font-size: 18px;">👑</span> Передать хоста
+            </button>
+            <button class="sheet-option danger" onclick="kickPlayer(${playerId}, ${roomId}); closePlayerActions();">
+                <span style="font-size: 18px;">🚪</span> Кикнуть из комнаты
+            </button>
+            <button class="sheet-cancel" onclick="closePlayerActions()">ОТМЕНА</button>
+        </div>
+    `;
+    document.body.appendChild(sheet);
+}
+
+function closePlayerActions() {
+    const el = document.getElementById('playerActionsOverlay');
+    if (el) el.remove();
+}
+
+async function transferHost(newHostId, roomId) {
+    const { data: room } = await sb.from('rooms').select('leader_id').eq('id', roomId).single();
+    if (!room) return;
+    if (String(room.leader_id) !== String(currentUser.telegram_id)) {
+        showToast('Только хост может передать права');
+        return;
+    }
+    if (String(room.leader_id) === String(newHostId)) {
+        showToast('Этот игрок уже хост');
+        return;
+    }
+
+    await sb.from('rooms').update({ leader_id: newHostId }).eq('id', roomId);
+    haptic('medium');
+    showToast('✅ Хост передан');
+    // Realtime обновит у всех
+}
+
+async function kickPlayer(playerId, roomId) {
+    const { data: room } = await sb.from('rooms').select('leader_id').eq('id', roomId).single();
+    if (!room) return;
+    if (String(room.leader_id) !== String(currentUser.telegram_id)) {
+        showToast('Только хост может кикать');
+        return;
+    }
+    if (String(room.leader_id) === String(playerId)) {
+        showToast('Нельзя кикнуть самого себя');
+        return;
+    }
+    if (!confirm('Кикнуть игрока из комнаты?')) return;
+
+    await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', playerId);
+
+    // Уведомим кикнутого, если бот доступен
+    // (можно добавить notify() если есть функция)
+
+    haptic('medium');
+    showToast('✅ Игрок кикнут');
+    // Realtime обновит у всех
 }
 
         // ============================================================
