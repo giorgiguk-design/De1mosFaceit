@@ -4091,7 +4091,6 @@ function openFriendSearchSheet() {
                 switchPage('play');
                 await loadOrCreateParty();
                 await loadOpenRooms();
-                subscribePartyInvitesRealtime();
                 subscribeQueueRealtime();
             } catch (e) {
                 console.error(e);
@@ -4518,7 +4517,6 @@ function closeChatView() {
             switchPage('play');
             await loadOrCreateParty();
             await loadOpenRooms();
-            subscribePartyInvitesRealtime();
             subscribeQueueRealtime();
         }
 
@@ -4778,45 +4776,46 @@ function closeChatView() {
             }
         }
 
-        async function askJoinRoom(partyId) {
-            try {
-                const { data: party } = await sb.from('parties').select('*').eq('id', partyId).single();
-                const { data: members } = await sb.from('party_members').select('telegram_id').eq('party_id', partyId);
-                const maxSize = party.mode === '5x5' ? 5 : 2;
+async function askJoinRoom(partyId) {
+    try {
+        const { data: party } = await sb.from('parties').select('*').eq('id', partyId).single();
+        const { data: members } = await sb.from('party_members').select('telegram_id').eq('party_id', partyId);
+        const maxSize = party.mode === '5x5' ? 5 : 2;
 
-                if ((members || []).length >= maxSize) {
-                    showToast('Комната заполнена');
-                    return;
-                }
-
-                const { data: myMember } = await sb.from('party_members')
-                    .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
-                if (myMember) {
-                    const { data: myPartyObj } = await sb.from('parties').select('leader_id').eq('id', myMember.party_id).single();
-                    if (myPartyObj?.leader_id === currentUser.telegram_id) {
-                        showToast('Ты лидер своей пати. Сначала покинь её.');
-                        return;
-                    }
-                    await sb.from('party_members').delete().eq('party_id', myMember.party_id).eq('telegram_id', currentUser.telegram_id);
-                }
-
-                await sb.from('party_invites').upsert({
-                    party_id: partyId,
-                    from_id: currentUser.telegram_id,
-                    to_id: party.leader_id,
-                    status: 'pending'
-                }, { onConflict: 'party_id,to_id' });
-
-                notify(party.leader_id,
-                    `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет вступить в твою комнату ${party.mode}.`
-                );
-
-                showToast('✅ Запрос отправлен лидеру');
-                closePlayerModal();
-            } catch (e) {
-                showToast('Ошибка: ' + e.message);
-            }
+        if ((members || []).length >= maxSize) {
+            showToast('Комната заполнена');
+            return;
         }
+
+        const { data: myMember } = await sb.from('party_members')
+            .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+        if (myMember) {
+            const { data: myPartyObj } = await sb.from('parties').select('leader_id').eq('id', myMember.party_id).single();
+            if (myPartyObj?.leader_id === currentUser.telegram_id) {
+                showToast('Ты лидер своей пати. Сначала покинь её.');
+                return;
+            }
+            await sb.from('party_members').delete().eq('party_id', myMember.party_id).eq('telegram_id', currentUser.telegram_id);
+        }
+
+        await sb.from('party_invites').upsert({
+            party_id: partyId,
+            from_id: currentUser.telegram_id,
+            to_id: party.leader_id,
+            kind: 'join_request',  
+            status: 'pending'
+        }, { onConflict: 'party_id,to_id' });
+
+        await notify(party.leader_id,
+            `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет вступить в твою комнату ${party.mode}.`
+        );
+
+        showToast('✅ Запрос отправлен лидеру');
+        closePlayerModal();
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
+}
 
         // ============================================================
         // PARTY INVITES (приглашения)
@@ -5044,20 +5043,23 @@ function closeChatView() {
             } catch (e) { container.innerHTML = '<div class="empty">Ошибка</div>'; }
         }
 
-        async function inviteToParty(userId) {
-            if (!myParty) return;
-            try {
-                await sb.from('party_invites').upsert({
-                    party_id: myParty.party.id, from_id: currentUser.telegram_id,
-                    to_id: userId, status: 'pending'
-                }, { onConflict: 'party_id,to_id' });
+async function inviteToParty(userId) {
+    if (!myParty) return;
+    try {
+        await sb.from('party_invites').upsert({
+            party_id: myParty.party.id,
+            from_id: currentUser.telegram_id,
+            to_id: userId,
+            kind: 'party',
+            status: 'pending'
+        }, { onConflict: 'party_id,to_id' });
 
-                notify(userId,
-                    `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в пати ${myParty.party.mode}. Открой приложение!`
-                );
-                showToast('✅ Приглашение отправлено');
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        }
+        await notify(userId,
+            `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в пати ${myParty.party.mode}. Открой приложение!`
+        );
+        showToast('✅ Приглашение отправлено');
+    } catch (e) { showToast('Ошибка: ' + e.message); }
+}
 
         // ============================================================
         // SEARCH
@@ -6175,7 +6177,7 @@ async function renderRoomContent(roomId) {
         ${iAmLeader ? `
             <button class="room-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть комнату">
                 <span class="rib-icon">⛔</span>
-                <span class="rib-label">Закрыть</span>
+                <span class="rib-label">Удалить</span>
             </button>
         ` : ''}
     </div>
@@ -7583,16 +7585,22 @@ async function loadNotifications() {
 
 (invites || []).forEach(i => {
     const party = partyMap[i.party_id] || {};
-    const isRoom = i.kind === 'room';
+    const kind = i.kind || 'party';
     const clubText = party.is_club_party ? ' (клановая)' : '';
-    const label = isRoom
-        ? `приглашает в комнату`
-        : `приглашает в матч ${party.mode || ''}${clubText}`;
+
+    let label;
+    if (kind === 'room') {
+        label = `приглашает в комнату`;
+    } else if (kind === 'join_request') {
+        label = `хочет вступить в твою комнату ${party.mode || ''}`;
+    } else {
+        label = `приглашает в пати ${party.mode || ''}${clubText}`;
+    }
 
     list.push({
         id: 'invite_' + i.id,
         type: 'party_invite',
-        kind: i.kind || 'party',
+        kind,
         inviteId: i.id,
         partyId: i.party_id,
         userId: i.from_id,
@@ -7716,10 +7724,12 @@ async function acceptInviteNotif(inviteId, partyId) {
     try {
         const { data: invite } = await sb.from('party_invites')
             .select('*').eq('id', inviteId).single();
-        const isRoom = invite?.kind === 'room';
+        if (!invite) { showToast('Приглашение не найдено'); return; }
 
-        if (isRoom) {
-            // Присоединяемся к комнате
+        const kind = invite.kind || 'party';
+
+        if (kind === 'room') {
+            // ---- Присоединяемся к комнате ----
             const { data: room } = await sb.from('rooms')
                 .select('*').eq('id', partyId).maybeSingle();
             if (!room) {
@@ -7730,14 +7740,12 @@ async function acceptInviteNotif(inviteId, partyId) {
                 return;
             }
 
-            // Проверяем, не в комнате ли уже
             const { data: existing } = await sb.from('room_players')
                 .select('id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
             if (existing) {
                 await sb.from('room_players').delete().eq('telegram_id', currentUser.telegram_id);
             }
 
-            // Проверяем заполненность
             const { data: players } = await sb.from('room_players')
                 .select('id').eq('room_id', partyId);
             if ((players || []).length >= room.max_players) {
@@ -7757,12 +7765,57 @@ async function acceptInviteNotif(inviteId, partyId) {
 
             showToast('✅ Ты в комнате');
             closeAllSheets();
-            // Открываем комнату
             const screen = document.getElementById('playScreen');
             if (screen) screen.classList.add('active');
             openRoomView(partyId);
+
+        } else if (kind === 'join_request') {
+            // ---- КТО-ТО ПРОСИТСЯ В МОЮ КОМНАТУ ----
+            // Я (лидер) принимаю его
+            const requesterId = invite.from_id;
+
+            const { data: party } = await sb.from('parties')
+                .select('*').eq('id', partyId).maybeSingle();
+            if (!party) {
+                showToast('Пати не найдена');
+                await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+                await renderNotifList();
+                await updateNotifBadge();
+                return;
+            }
+
+            const { data: members } = await sb.from('party_members')
+                .select('telegram_id').eq('party_id', partyId);
+            const maxSize = party.mode === '5x5' ? 5 : 2;
+            if ((members || []).length >= maxSize) {
+                showToast('Пати заполнено');
+                await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+                await renderNotifList();
+                await updateNotifBadge();
+                return;
+            }
+
+            // Убедимся, что requester не в другой пати
+            const { data: myMember } = await sb.from('party_members')
+                .select('party_id').eq('telegram_id', requesterId).maybeSingle();
+            if (myMember) {
+                await sb.from('party_members').delete()
+                    .eq('party_id', myMember.party_id)
+                    .eq('telegram_id', requesterId);
+            }
+
+            await sb.from('party_members').insert({
+                party_id: partyId,
+                telegram_id: requesterId
+            });
+            await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
+
+            await notify(requesterId, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял тебя в пати.`);
+            showToast('✅ Игрок принят');
+            await loadOrCreateParty();
+
         } else {
-            // Старая логика с пати
+            // ---- ОБЫЧНОЕ ПРИГЛАШЕНИЕ В ПАТИ ----
             const { data: party } = await sb.from('parties').select('*').eq('id', partyId).maybeSingle();
             if (!party) {
                 showToast('Приглашение устарело');
@@ -7785,7 +7838,7 @@ async function acceptInviteNotif(inviteId, partyId) {
                 telegram_id: currentUser.telegram_id
             });
             await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
-            notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`);
+            await notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`);
 
             showToast('✅ Ты в пати');
             closeAllSheets();
