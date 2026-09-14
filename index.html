@@ -1420,6 +1420,109 @@
     0%, 100% { transform: translateX(0); }
     50% { transform: translateX(4px); }
 } 
+
+        .room-chat-btn {
+    padding: 14px;
+    background: rgba(0,224,138,0.10);
+    border: 1.5px solid var(--emerald);
+    border-radius: 14px;
+    color: var(--emerald);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.5px;
+    transition: transform 0.15s, background 0.2s;
+}
+.room-chat-btn:active { transform: scale(0.97); background: rgba(0,224,138,0.18); }
+
+        /* ============ ROOM CHAT ============ */
+.room-chat-btn.has-unread {
+    background: rgba(255,46,77,0.15);
+    border-color: var(--red);
+    color: var(--red);
+    animation: pulseChatBtn 1.8s ease-in-out infinite;
+}
+@keyframes pulseChatBtn {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,46,77,0.5); }
+    50% { box-shadow: 0 0 0 8px rgba(255,46,77,0); }
+}
+
+.room-chat-messages {
+    height: 55vh;
+    overflow-y: auto;
+    padding: 12px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.room-chat-bubble {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+.room-chat-bubble.me {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #00e08a, #00b874);
+    color: #04140e;
+    border-bottom-right-radius: 4px;
+}
+.room-chat-bubble.them {
+    align-self: flex-start;
+    background: rgba(0,224,138,0.08);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+}
+.room-chat-author {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--emerald);
+    margin-bottom: 3px;
+}
+.room-chat-time {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-top: 4px;
+    text-align: right;
+}
+.room-chat-input-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.room-chat-input-bar input {
+    flex: 1;
+    background: rgba(0,224,138,0.05);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+.room-chat-input-bar input:focus { border-color: var(--border-strong); }
+.room-chat-send {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--emerald);
+    color: #04140e;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+}
+.room-chat-send:active { transform: scale(0.92); }
         
     </style>
 </head>
@@ -5335,16 +5438,21 @@ async function renderRoomContent(roomId) {
                 </div>
             `}
 
-            <div class="room-view-actions">
-                ${iAmLeader ? `
-                    <button class="room-start-btn" onclick="startMatch(${room.id})" ${!canStart ? 'disabled style="opacity:0.5;"' : ''}>
-                        ▶️ ${canStart ? 'Начать матч' : `Нужно по ${needPerTeam} игроков`}
-                    </button>
-                ` : ''}
-                <button class="room-leave-btn" onclick="leaveRoom(${roomId})">Покинуть комнату</button>
-                ${iAmLeader ? `<button class="room-close-btn" onclick="closeRoom(${roomId})">Закрыть комнату для всех</button>` : ''}
-            </div>
+<div class="room-view-actions">
+    ${iAmLeader ? `
+        <button class="room-start-btn" onclick="startMatch(${room.id})" ${!canStart ? 'disabled style="opacity:0.5;"' : ''}>
+            ▶️ ${canStart ? 'Начать матч' : `Нужно по ${needPerTeam} игроков`}
+        </button>
+    ` : ''}
+    <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})">
+        💬 Чат комнаты
+    </button>
+    <button class="room-leave-btn" onclick="leaveRoom(${roomId})">Покинуть комнату</button>
+    ${iAmLeader ? `<button class="room-close-btn" onclick="closeRoom(${roomId})">Закрыть комнату для всех</button>` : ''}
+</div>
         `;
+        setTimeout(() => updateRoomChatButton(room.id), 100);
+        subscribeRoomChatCounter(roomId);
     } catch (e) {
         console.error('Room view error:', e);
         content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
@@ -5368,6 +5476,20 @@ function subscribeRoomRealtime(roomId) {
         }, async (payload) => {
             const room = payload.new;
             if (!room) return;
+
+            // ⬇️ ПРОВЕРКА: не кикнули ли меня
+            const kicked = room.kicked_users || [];
+            if (kicked.includes(Number(currentUser.telegram_id))) {
+                showToast('🚪 Тебя исключили из комнаты');
+                haptic('heavy');
+                unsubscribeRoomRealtime();
+                closePlayScreen();
+                checkActiveRoom();
+                // Убираем свой ID из массива, чтобы не зациклиться
+                const newKicked = kicked.filter(id => id !== Number(currentUser.telegram_id));
+                await sb.from('rooms').update({ kicked_users: newKicked }).eq('id', roomId);
+                return;
+            }
 
             // Обновляем баннер, если это наша активная комната
             if (activeRoomId === roomId) {
@@ -5441,11 +5563,12 @@ async function leaveRoom(roomId) {
 
     const myId = currentUser.telegram_id;
 
-    // 1. Загружаем текущее состояние комнаты
+    // 1. Загружаем текущее состояние
     const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
     if (!room) {
         unsubscribeRoomRealtime();
         closePlayScreen();
+        checkActiveRoom();
         return;
     }
 
@@ -5455,22 +5578,22 @@ async function leaveRoom(roomId) {
     // 2. Удаляем себя из комнаты
     await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', myId);
 
-    // 3. Если я был хостом — передаём хоста следующему игроку (по времени входа)
-    if (String(room.leader_id) === String(myId)) {
-        if (others.length > 0) {
-            // Находим самого раннего по joined_at
-            const sorted = [...others].sort((a, b) => 
-                new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
-            );
-            const newHost = sorted[0];
-            await sb.from('rooms').update({ leader_id: newHost.telegram_id }).eq('id', roomId);
-            // Realtime обновит у всех
-        }
+    // 3. Очищаем свой ID из kicked_users, если он там был
+    if (room.kicked_users) {
+        const clean = room.kicked_users.filter(id => id !== Number(myId));
+        await sb.from('rooms').update({ kicked_users: clean }).eq('id', roomId);
     }
 
-    // 4. Если я последний — удаляем комнату целиком
+    // 4. Если я был хостом — передаём следующему по времени входа
+    if (String(room.leader_id) === String(myId) && others.length > 0) {
+        const sorted = [...others].sort((a, b) =>
+            new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
+        );
+        await sb.from('rooms').update({ leader_id: sorted[0].telegram_id }).eq('id', roomId);
+    }
+
+    // 5. Если я последний — удаляем комнату целиком
     if (others.length === 0) {
-        await sb.from('room_players').delete().eq('room_id', roomId);
         await sb.from('rooms').delete().eq('id', roomId);
         showToast('Комната закрыта');
     } else {
@@ -5479,6 +5602,7 @@ async function leaveRoom(roomId) {
 
     unsubscribeRoomRealtime();
     renderPlayList();
+    checkActiveRoom();
 }
 
 async function closeRoom(roomId) {
@@ -5584,7 +5708,12 @@ async function openVetoView(roomId) {
                 Твой ход — забань карту
             </div>
         `}
+        <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
+            💬 Чат комнаты
+        </button>
     `;
+
+    setTimeout(() => updateRoomChatButton(roomId), 100);
 }
 
 function renderVetoGrid(room, bannedMaps, iAmCaptain) {
@@ -5697,7 +5826,12 @@ async function showSidePick(roomId) {
                 </div>
             </div>
         ` : ''}
+        <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
+            💬 Чат комнаты
+        </button>
     `;
+
+    setTimeout(() => updateRoomChatButton(roomId), 100);
 }
 
 async function pickSide(roomId, side) {
@@ -5759,12 +5893,16 @@ async function showLobbyScreen(roomId, room) {
                     Хост создаёт лобби в Standoff 2<br>
                     <b>${escapeHtml(room.final_map || '—')}</b>
                 </div>
-                <div style="font-size: 32px; font-weight: 900; color: var(--emerald);" id="linkTimer">10:00</div>
+                                <div style="font-size: 32px; font-weight: 900; color: var(--emerald);" id="linkTimer">10:00</div>
                 <div style="font-size: 11px; color: var(--hint); margin-top: 8px;">
                     Если ссылка не поступит за 10 минут, матч отменится
                 </div>
             </div>
+            <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
+                💬 Чат комнаты
+            </button>
         `;
+        setTimeout(() => updateRoomChatButton(roomId), 100);
         startLinkTimer(roomId);
         return;
     }
@@ -5782,12 +5920,17 @@ async function showLobbyScreen(roomId, room) {
                 Карта: <b style="color: var(--emerald);">${escapeHtml(room.final_map)}</b><br>
                 Ты в команде <b style="color: ${(room.side_a && room.side_a === 'Спецназ') ? 'var(--emerald)' : '#ff5470'};">...</b>
             </div>
-            <a href="${room.host_link}" target="_blank" 
+                        <a href="${room.host_link}" target="_blank" 
                style="display: block; padding: 16px; background: linear-gradient(135deg, #00e08a, #00b874); color: #04140e; font-size: 16px; font-weight: 900; text-decoration: none; border-radius: 14px;">
                 🎮 ВСТУПИТЬ В ЛОББИ
             </a>
+            <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 12px;">
+                💬 Чат комнаты
+            </button>
         </div>
     `;
+
+    setTimeout(() => updateRoomChatButton(roomId), 100);
 }
 
 async function submitHostLink(roomId) {
@@ -5900,23 +6043,6 @@ function subscribeSidePickRealtime(roomId) {
     closePlayScreen();
 }
 
-async function leaveRoom(roomId) {
-    if (!confirm('Покинуть комнату?')) return;
-    await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id);
-    unsubscribeRoomRealtime();
-    showToast('Ты покинул комнату');
-    renderPlayList();
-}
-
-async function closeRoom(roomId) {
-    if (!confirm('Закрыть комнату для всех?')) return;
-    await sb.from('room_players').delete().eq('room_id', roomId);
-    await sb.from('rooms').delete().eq('id', roomId);
-    unsubscribeRoomRealtime();
-    showToast('Комната закрыта');
-    renderPlayList();
-}
-
             // ============================================================
 // ДЕЙСТВИЯ НАД ИГРОКОМ (передать хоста, кикнуть)
 // ============================================================
@@ -5965,7 +6091,7 @@ async function transferHost(newHostId, roomId) {
 }
 
 async function kickPlayer(playerId, roomId) {
-    const { data: room } = await sb.from('rooms').select('leader_id').eq('id', roomId).single();
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
     if (!room) return;
     if (String(room.leader_id) !== String(currentUser.telegram_id)) {
         showToast('Только хост может кикать');
@@ -5977,10 +6103,13 @@ async function kickPlayer(playerId, roomId) {
     }
     if (!confirm('Кикнуть игрока из комнаты?')) return;
 
+    // 1. Удаляем из комнаты
     await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', playerId);
 
-    // Уведомим кикнутого, если бот доступен
-    // (можно добавить notify() если есть функция)
+    // 2. Добавляем в список кикнутых (для уведомления)
+    const kicked = room.kicked_users || [];
+    if (!kicked.includes(playerId)) kicked.push(playerId);
+    await sb.from('rooms').update({ kicked_users: kicked }).eq('id', roomId);
 
     haptic('medium');
     showToast('✅ Игрок кикнут');
@@ -5991,6 +6120,10 @@ async function kickPlayer(playerId, roomId) {
 // ACTIVE ROOM BANNER
 // ============================================================
 let activeRoomId = null;
+let roomUnreadCount = 0;
+let roomChatChannel = null;
+let roomChatOpen = false;
+let lastRoomReadAt = localStorage.getItem('roomLastReadAt') ? new Date(localStorage.getItem('roomLastReadAt')) : new Date(0);
 
 async function checkActiveRoom() {
     if (!currentUser) return;
@@ -6093,6 +6226,225 @@ document.addEventListener('visibilitychange', () => {
     if (!document.hidden) checkActiveRoom();
 });
 window.addEventListener('focus', checkActiveRoom);
+
+            // ============================================================
+// ROOM CHAT — непрочитанные
+// ============================================================
+async function countUnreadRoomMessages(roomId) {
+    if (!currentUser) return 0;
+    try {
+        const { count } = await sb
+            .from('room_messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('room_id', roomId)
+            .gt('created_at', lastRoomReadAt.toISOString())
+            .neq('sender_id', currentUser.telegram_id);
+        return count || 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+async function updateRoomChatButton(roomId) {
+    const btn = document.getElementById('roomChatBtn');
+    if (!btn) return;
+    const count = await countUnreadRoomMessages(roomId);
+    roomUnreadCount = count;
+    btn.textContent = count > 0 ? `💬 Чат комнаты (${count})` : '💬 Чат комнаты';
+}
+
+async function markRoomChatRead(roomId) {
+    lastRoomReadAt = new Date();
+    localStorage.setItem('roomLastReadAt', lastRoomReadAt.toISOString());
+    roomUnreadCount = 0;
+    updateRoomChatButton(roomId);
+}
+
+            // ============================================================
+// ROOM CHAT
+// ============================================================
+async function openRoomChat(roomId) {
+    roomChatOpen = true;
+    await markRoomChatRead(roomId);
+
+    const content = document.getElementById('playScreenContent');
+    if (!content) return;
+
+    const { data: room } = await sb.from('rooms').select('name, mode, final_map').eq('id', roomId).single();
+
+    content.innerHTML = `
+        <div class="play-header">
+            <div class="play-title">💬 Чат комнаты</div>
+            <button class="play-close" onclick="closeRoomChat(${roomId})">×</button>
+        </div>
+        <div style="text-align: center; font-size: 12px; color: var(--hint); margin-bottom: 12px;">
+            ${escapeHtml(room?.name || '')} · ${room?.mode || ''}
+        </div>
+        <div class="room-chat-messages" id="roomChatMessages">
+            <div class="empty-rooms">Загрузка...</div>
+        </div>
+        <div class="room-chat-input-bar">
+            <input type="text" id="roomChatInput" placeholder="Сообщение..." autocomplete="off">
+            <button class="room-chat-send" onclick="sendRoomMessage(${roomId})">➤</button>
+        </div>
+    `;
+
+    await loadRoomMessages(roomId);
+    subscribeRoomChat(roomId);
+
+    setTimeout(() => {
+        const input = document.getElementById('roomChatInput');
+        if (input) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendRoomMessage(roomId);
+                }
+            });
+            input.focus();
+        }
+    }, 100);
+}
+
+async function closeRoomChat(roomId) {
+    roomChatOpen = false;
+    if (roomChatChannel) {
+        sb.removeChannel(roomChatChannel);
+        roomChatChannel = null;
+    }
+    // Возвращаемся в комнату
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    if (room) {
+        if (room.status === 'veto') openVetoView(roomId);
+        else if (room.status === 'side_pick') showSidePick(roomId);
+        else if (room.status === 'waiting_link' || room.status === 'in_game') showLobbyScreen(roomId, room);
+        else renderRoomContent(roomId);
+    }
+}
+
+async function loadRoomMessages(roomId) {
+    const container = document.getElementById('roomChatMessages');
+    if (!container) return;
+
+    const { data: messages } = await sb
+        .from('room_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+        .limit(200);
+
+    if (!messages || messages.length === 0) {
+        container.innerHTML = '<div class="empty-rooms">Сообщений пока нет</div>';
+        return;
+    }
+
+    const senderIds = [...new Set(messages.map(m => m.sender_id))];
+    const { data: users } = await sb
+        .from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url')
+        .in('telegram_id', senderIds);
+    const userById = {};
+    (users || []).forEach(u => userById[u.telegram_id] = u);
+
+    container.innerHTML = messages.map(m => renderRoomBubble(m, userById[m.sender_id])).join('');
+    container.scrollTop = container.scrollHeight;
+}
+
+function renderRoomBubble(msg, user) {
+    const isMe = String(msg.sender_id) === String(currentUser.telegram_id);
+    const cls = isMe ? 'me' : 'them';
+    const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const author = !isMe
+        ? `<div class="room-chat-author">${escapeHtml(user?.display_name || 'Игрок')}</div>`
+        : '';
+
+    let body = '';
+    if (msg.text) body += `<div>${escapeHtml(msg.text)}</div>`;
+    if (msg.image_url) body += `<img src="${msg.image_url}" style="max-width:100%;border-radius:10px;margin-top:6px;">`;
+
+    return `
+        <div class="room-chat-bubble ${cls}">
+            ${author}
+            ${body}
+            <div class="room-chat-time">${time}</div>
+        </div>
+    `;
+}
+
+async function sendRoomMessage(roomId) {
+    const input = document.getElementById('roomChatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+
+    try {
+        await sb.from('room_messages').insert({
+            room_id: roomId,
+            sender_id: currentUser.telegram_id,
+            text
+        });
+        await markRoomChatRead(roomId);
+    } catch (e) {
+        showToast('Ошибка отправки: ' + e.message);
+    }
+}
+
+function subscribeRoomChat(roomId) {
+    if (roomChatChannel) sb.removeChannel(roomChatChannel);
+    roomChatChannel = sb.channel('room_chat_' + roomId)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'room_messages',
+            filter: 'room_id=eq.' + roomId
+        }, async (payload) => {
+            const m = payload.new;
+            if (!roomChatOpen) return;
+
+            const container = document.getElementById('roomChatMessages');
+            if (!container) return;
+
+            const { data: user } = await sb
+                .from('users')
+                .select('telegram_id, display_name')
+                .eq('telegram_id', m.sender_id)
+                .single();
+
+            container.insertAdjacentHTML('beforeend', renderRoomBubble(m, user));
+            container.scrollTop = container.scrollHeight;
+
+            if (String(m.sender_id) !== String(currentUser.telegram_id)) {
+                await markRoomChatRead(roomId);
+            }
+        })
+        .subscribe();
+}
+
+function subscribeRoomChatCounter(roomId) {
+    if (window._roomChatCounterChannel) sb.removeChannel(window._roomChatCounterChannel);
+    window._roomChatCounterChannel = sb.channel('room_chat_counter_' + roomId)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'room_messages',
+            filter: 'room_id=eq.' + roomId
+        }, async (payload) => {
+            const m = payload.new;
+            // Если это чужое сообщение и чат не открыт — увеличиваем счётчик
+            if (!roomChatOpen && String(m.sender_id) !== String(currentUser.telegram_id)) {
+                roomUnreadCount++;
+                const btn = document.getElementById('roomChatBtn');
+                if (btn) {
+                    btn.textContent = `💬 Чат комнаты (${roomUnreadCount})`;
+                    btn.classList.add('has-unread');
+                }
+                haptic('light');
+            }
+        })
+        .subscribe();
+}
 
         // ============================================================
         // BOOT
