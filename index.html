@@ -1237,6 +1237,64 @@
     cursor: pointer;
     box-shadow: 0 6px 22px rgba(0,224,138,0.3);
 }
+
+        /* ============ VETO ============ */
+.veto-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.veto-card {
+    padding: 20px 12px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+}
+.veto-card:active { transform: scale(0.97); }
+.veto-card:disabled { opacity: 0.5; cursor: not-allowed; }
+.veto-card.banned {
+    opacity: 0.3;
+    background: rgba(255,84,112,0.1);
+    border-color: rgba(255,84,112,0.3);
+    text-decoration: line-through;
+    color: var(--red);
+}
+.veto-card-map { font-size: 15px; font-weight: 800; }
+
+/* ============ SIDE CHOICE ============ */
+.side-choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 20px 0;
+}
+.side-card {
+    padding: 24px 16px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.side-card:active { transform: scale(0.97); }
+.side-card:disabled { opacity: 0.5; cursor: not-allowed; }
+.side-card.active {
+    border-color: var(--emerald);
+    background: rgba(0,224,138,0.12);
+    box-shadow: 0 0 20px rgba(0,224,138,0.3);
+}
+.side-icon { font-size: 36px; margin-bottom: 8px; }
+.side-name { font-size: 15px; font-weight: 800; color: var(--text); }
         
     </style>
 </head>
@@ -4800,14 +4858,6 @@ function renderPlayList() {
             </div>
         </div>
 
-        <div class="play-section-label">Карта</div>
-        <div class="map-selector">
-            <div class="map-chip ${selectedMap === 'Sandstone' ? 'active' : ''}" onclick="selectMap('Sandstone')">Sandstone</div>
-            <div class="map-chip ${selectedMap === 'Rust' ? 'active' : ''}" onclick="selectMap('Rust')">Rust</div>
-            <div class="map-chip ${selectedMap === 'Province' ? 'active' : ''}" onclick="selectMap('Province')">Province</div>
-            <div class="map-chip ${selectedMap === 'любая' ? 'active' : ''}" onclick="selectMap('любая')">Любая</div>
-        </div>
-
         <div class="play-actions">
             <button class="play-btn-find" onclick="findOrCreateRoom()">🔍 Найти матч</button>
             <button class="play-btn-create" onclick="createRoomInline()">➕ Создать комнату</button>
@@ -5152,11 +5202,354 @@ async function closeRoom(roomId) {
 }
 
 async function startMatch(roomId) {
-    if (!confirm('Начать матч? Комната закроется.')) return;
-    await sb.from('rooms').update({ status: 'in_game' }).eq('id', roomId);
-    showToast('🎮 Матч начался!');
-    renderPlayList();
-}     
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+    
+    const teamA = (players || []).filter(p => p.team === 'A');
+    const teamB = (players || []).filter(p => p.team === 'B');
+    const needPerTeam = room.mode === '2x2' ? 2 : 5;
+    
+    if (teamA.length < needPerTeam || teamB.length < needPerTeam) {
+        showToast(`Нужно по ${needPerTeam} игрока в каждой команде`);
+        return;
+    }
+    if (!confirm('Начать матч? Комната перейдёт в режим пиков карт.')) return;
+    
+    await sb.from('rooms').update({ 
+        status: 'veto',
+        current_turn: 'A',
+        started_at: new Date().toISOString()
+    }).eq('id', roomId);
+    
+    showToast('🎯 Пики карт начались!');
+    openVetoView(roomId);
+}
+
+            // ============================================================
+// VETO (пики/баны карт)
+// ============================================================
+const STANDOFF_MAPS = ['Sandstone', 'Rust', 'Province', 'Zone 9', 'Breeze', 'Dune', 'Hanami'];
+
+async function openVetoView(roomId) {
+    const content = document.getElementById('playScreenContent');
+    content.innerHTML = '<div class="empty-rooms">Загрузка пиков...</div>';
+
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+    const { data: votes } = await sb.from('room_votes').select('*').eq('room_id', roomId);
+
+    if (!room) { content.innerHTML = 'Комната не найдена'; return; }
+
+    const myPlayer = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
+    const myTeam = myPlayer?.team;
+    const iAmCaptain = (myTeam === 'A' && room.current_turn === 'A') || (myTeam === 'B' && room.current_turn === 'B');
+
+    const vetoLog = room.veto_log || [];
+    const bannedMaps = vetoLog.map(v => v.map);
+
+    content.innerHTML = `
+        <div class="play-header">
+            <div class="play-title">🚫 Пики карт</div>
+            <button class="play-close" onclick="closePlayScreen()">×</button>
+        </div>
+        <div class="room-view-header">
+            <div class="room-view-title">Ход команды ${room.current_turn}</div>
+            <div class="room-view-meta">Осталось карт: ${STANDOFF_MAPS.length - bannedMaps.length}</div>
+        </div>
+        <div class="veto-grid" id="vetoGrid"></div>
+        <div id="vetoLog" style="margin-top: 20px;"></div>
+        <div id="sideChoice" style="margin-top: 20px;"></div>
+    `;
+
+    renderVetoGrid(room, bannedMaps, iAmCaptain);
+    renderVetoLog(vetoLog);
+    subscribeVetoRealtime(roomId);
+}
+
+function renderVetoGrid(room, bannedMaps, iAmCaptain) {
+    const grid = document.getElementById('vetoGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = STANDOFF_MAPS.map(map => {
+        const isBanned = bannedMaps.includes(map);
+        return `
+            <button class="veto-card ${isBanned ? 'banned' : ''}"
+                    onclick="banMap(${room.id}, '${map}')"
+                    ${isBanned || !iAmCaptain ? 'disabled' : ''}>
+                <div class="veto-card-map">${map}</div>
+            </button>
+        `;
+    }).join('');
+}
+
+function renderVetoLog(vetoLog) {
+    const log = document.getElementById('vetoLog');
+    if (!log) return;
+    if (vetoLog.length === 0) { log.innerHTML = ''; return; }
+    log.innerHTML = `
+        <div class="section-title">История банов</div>
+        ${vetoLog.map(v => `
+            <div style="font-size: 12px; color: var(--hint); margin-bottom: 4px;">
+                Команда ${v.team}: <b style="color: var(--red);">${v.map}</b>
+            </div>
+        `).join('')}
+    `;
+}
+
+async function banMap(roomId, map) {
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+    
+    const myPlayer = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
+    const myTeam = myPlayer?.team;
+    
+    if (myTeam !== room.current_turn) {
+        showToast('Не твой ход');
+        return;
+    }
+    
+    const vetoLog = room.veto_log || [];
+    vetoLog.push({ team: myTeam, map });
+    
+    const remainingMaps = STANDOFF_MAPS.filter(m => !vetoLog.map(v => v.map).includes(m));
+    
+    let update = { veto_log: vetoLog };
+    
+    if (remainingMaps.length === 1) {
+        // Последняя карта — финал
+        update.final_map = remainingMaps[0];
+        update.status = 'side_pick';
+    } else {
+        update.current_turn = myTeam === 'A' ? 'B' : 'A';
+    }
+    
+    await sb.from('rooms').update(update).eq('id', roomId);
+    haptic('medium');
+    
+    const { data: updatedRoom } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    
+    if (updatedRoom.status === 'side_pick') {
+        showSidePick(roomId);
+    } else {
+        openVetoView(roomId);
+    }
+}
+
+// ============================================================
+// SIDE PICK (выбор стороны)
+// ============================================================
+async function showSidePick(roomId) {
+    const content = document.getElementById('playScreenContent');
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+    
+    const myPlayer = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
+    const myTeam = myPlayer?.team;
+    
+    content.innerHTML = `
+        <div class="play-header">
+            <div class="play-title">⚔️ Выбор стороны</div>
+            <button class="play-close" onclick="closePlayScreen()">×</button>
+        </div>
+        <div class="room-view-header">
+            <div class="room-view-title">Карта: ${room.final_map}</div>
+        </div>
+        <div class="side-choice-grid">
+            <button class="side-card ${room.side_a === 'Спецназ' ? 'active' : ''}" 
+                    onclick="pickSide(${roomId}, 'Спецназ')" ${myTeam !== 'A' ? 'disabled' : ''}>
+                <div class="side-icon">🛡️</div>
+                <div class="side-name">Спецназ</div>
+            </button>
+            <button class="side-card ${room.side_a === 'Террорист' ? 'active' : ''}"
+                    onclick="pickSide(${roomId}, 'Террорист')" ${myTeam !== 'A' ? 'disabled' : ''}>
+                <div class="side-icon">💣</div>
+                <div class="side-name">Террорист</div>
+            </button>
+        </div>
+        <div style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--hint);">
+            ${myTeam === 'A' ? 'Ты выбираешь сторону для команды A' : 'Ожидай выбор команды A'}
+        </div>
+        <div id="hostLinkSection" style="margin-top: 20px;"></div>
+    `;
+    
+    subscribeSidePickRealtime(roomId);
+}
+
+async function pickSide(roomId, side) {
+    const opposite = side === 'Спецназ' ? 'Террорист' : 'Спецназ';
+    await sb.from('rooms').update({
+        side_a: side,
+        side_b: opposite,
+        status: 'waiting_link'
+    }).eq('id', roomId);
+    
+    haptic('medium');
+    showToast(`✅ Сторона A: ${side}`);
+    
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    showHostLinkInput(roomId, room);
+}
+
+// ============================================================
+// HOST LINK
+// ============================================================
+async function showHostLinkInput(roomId, room) {
+    const section = document.getElementById('hostLinkSection');
+    if (!section) return;
+    
+    const iAmLeader = String(room.leader_id) === String(currentUser.telegram_id);
+    const hasLink = !!room.host_link;
+    
+    if (!iAmLeader && !hasLink) {
+        section.innerHTML = `
+            <div class="profile-hero" style="text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 10px;">⏳</div>
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Ожидайте ссылку на вход</div>
+                <div style="font-size: 12px; color: var(--hint);">Хост создаёт лобби в Standoff 2...</div>
+                <div style="font-size: 24px; font-weight: 900; color: var(--emerald); margin-top: 12px;" id="linkTimer">10:00</div>
+            </div>
+        `;
+        startLinkTimer(roomId);
+        return;
+    }
+    
+    if (iAmLeader && !hasLink) {
+        section.innerHTML = `
+            <div class="profile-hero">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">🔗 Вставь ссылку на лобби</div>
+                <div style="font-size: 11px; color: var(--hint); margin-bottom: 10px;">
+                    Создай соревновательный режим (непубличный), 13 раундов, скопируй ссылку и вставь сюда.
+                </div>
+                <input type="text" class="field-input" id="hostLinkInput" 
+                       placeholder="https://link.standoff2.com/..." 
+                       style="margin-bottom: 10px;">
+                <button class="save-btn" onclick="submitHostLink(${roomId})">✅ Отправить</button>
+            </div>
+        `;
+        return;
+    }
+    
+    if (hasLink) {
+        section.innerHTML = `
+            <div class="profile-hero" style="text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 10px;">✅</div>
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Ссылка получена</div>
+                <a href="${room.host_link}" target="_blank" style="display: block; padding: 14px; background: linear-gradient(135deg, #00e08a, #00b874); color: #04140e; font-size: 15px; font-weight: 800; text-decoration: none; border-radius: 14px; margin-top: 10px;">
+                    🎮 ВСТУПИТЬ В ЛОББИ
+                </a>
+            </div>
+        `;
+    }
+}
+
+async function submitHostLink(roomId) {
+    const input = document.getElementById('hostLinkInput');
+    const link = input.value.trim();
+    
+    if (!link || !link.includes('link.standoff2.com')) {
+        showToast('Вставь корректную ссылку из Standoff 2');
+        return;
+    }
+    
+    await sb.from('rooms').update({
+        host_link: link,
+        link_added_at: new Date().toISOString(),
+        status: 'in_game'
+    }).eq('id', roomId);
+    
+    showToast('✅ Ссылка отправлена');
+    haptic('medium');
+    
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    showHostLinkInput(roomId, room);
+}
+
+// ============================================================
+// TIMER для ожидания ссылки (10 минут)
+// ============================================================
+function startLinkTimer(roomId) {
+    const startTime = Date.now();
+    const tenMinutes = 10 * 60 * 1000;
+    
+    const tick = async () => {
+        const elapsed = Date.now() - startTime;
+        const remaining = tenMinutes - elapsed;
+        
+        const timerEl = document.getElementById('linkTimer');
+        if (!timerEl) return;
+        
+        if (remaining <= 0) {
+            // Техническая неполадка — матч отменён
+            await sb.from('rooms').update({ status: 'cancelled' }).eq('id', roomId);
+            timerEl.textContent = '00:00';
+            timerEl.style.color = '#ff5470';
+            
+            setTimeout(() => {
+                showToast('❌ Матч отменён: хост не прислал ссылку за 10 минут');
+                closePlayScreen();
+            }, 2000);
+            return;
+        }
+        
+        const mm = String(Math.floor(remaining / 60000)).padStart(2, '0');
+        const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
+        timerEl.textContent = `${mm}:${ss}`;
+        
+        if (remaining < 60000) {
+            timerEl.style.color = '#ff5470';
+        }
+        
+        setTimeout(tick, 1000);
+    };
+    
+    tick();
+}
+
+// ============================================================
+// REALTIME подписки для veto и side pick
+// ============================================================
+let vetoChannel = null;
+let sideChannel = null;
+
+function subscribeVetoRealtime(roomId) {
+    if (vetoChannel) sb.removeChannel(vetoChannel);
+    vetoChannel = sb.channel('veto_' + roomId)
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'rooms',
+            filter: 'id=eq.' + roomId
+        }, (payload) => {
+            const room = payload.new;
+            if (room.status === 'veto') {
+                openVetoView(roomId);
+            } else if (room.status === 'side_pick') {
+                showSidePick(roomId);
+            } else if (room.status === 'waiting_link' || room.status === 'in_game') {
+                showHostLinkInput(roomId, room);
+            }
+        })
+        .subscribe();
+}
+
+function subscribeSidePickRealtime(roomId) {
+    if (sideChannel) sb.removeChannel(sideChannel);
+    sideChannel = sb.channel('side_' + roomId)
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'rooms',
+            filter: 'id=eq.' + roomId
+        }, (payload) => {
+            const room = payload.new;
+            if (room.status === 'side_pick') {
+                showSidePick(roomId);
+            } else if (room.status === 'waiting_link' || room.status === 'in_game') {
+                showHostLinkInput(roomId, room);
+            }
+        })
+        .subscribe();
+}
 
         // ============================================================
         // BOOT
