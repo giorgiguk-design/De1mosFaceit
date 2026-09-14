@@ -6962,7 +6962,116 @@ function menuDrawerGo(dest) {
             default:
                 showToast('Раздел в разработке');
         }
-    }, 260); // ждём, пока панель закроется
+    }, 260);
+}
+
+// 👇👇👇 ВОТ СЮДА ВСТАВЬ ЭТОТ БЛОК 👇👇👇
+
+// ============================================================
+// PLAY BUTTON COVER (admin only)
+// ============================================================
+const PLAY_COVER_KEY = 'play_btn_cover';
+const ADMIN_USERNAME_FOR_COVER = 'Mark1zell';
+
+function isCurrentUserAdmin() {
+    return (currentUser?.username || '').toLowerCase() === ADMIN_USERNAME_FOR_COVER.toLowerCase()
+        || currentUser?.is_admin === true;
+}
+
+async function loadPlayCover() {
+    try {
+        const { data } = await sb.from('app_settings')
+            .select('value').eq('key', PLAY_COVER_KEY).maybeSingle();
+        const url = data?.value;
+        applyPlayCover(url);
+    } catch (e) {
+        console.warn('loadPlayCover:', e);
+    }
+}
+
+function applyPlayCover(url) {
+    const btn = document.getElementById('playBtnMain');
+    const bg = document.getElementById('playBtnBg');
+    if (!btn || !bg) return;
+
+    if (url) {
+        bg.style.backgroundImage = `url("${url}")`;
+        btn.classList.add('has-cover');
+    } else {
+        bg.style.backgroundImage = '';
+        btn.classList.remove('has-cover');
+    }
+}
+
+function menuDrawerPickCover() {
+    if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
+    closeMenuDrawer();
+    setTimeout(() => {
+        const input = document.getElementById('playCoverInput');
+        if (input) input.click();
+        else showToast('input не найден');
+    }, 260);
+}
+
+async function menuDrawerRemoveCover() {
+    if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
+    if (!confirm('Убрать обложку с кнопки «Играть»?')) return;
+    try {
+        await sb.from('app_settings').upsert(
+            { key: PLAY_COVER_KEY, value: null, updated_at: new Date().toISOString() },
+            { onConflict: 'key' }
+        );
+        applyPlayCover(null);
+        showToast('✅ Обложка убрана');
+        closeMenuDrawer();
+    } catch (e) { showToast('Ошибка: ' + e.message); }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('playCoverInput')?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
+
+        showToast('Загрузка...');
+        try {
+            const blob = await compressImage(file, 800, 0.85);
+            const path = `play_cover_${Date.now()}.jpg`;
+
+            const { error: upErr } = await sb.storage.from('branding')
+                .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+            if (upErr) throw upErr;
+
+            const { data: urlData } = sb.storage.from('branding').getPublicUrl(path);
+
+            await sb.from('app_settings').upsert(
+                { key: PLAY_COVER_KEY, value: urlData.publicUrl, updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+
+            applyPlayCover(urlData.publicUrl);
+            showToast('✅ Обложка обновлена');
+            closeMenuDrawer();
+        } catch (err) {
+            console.error(err);
+            showToast('Ошибка: ' + err.message);
+        }
+    });
+});
+
+let playCoverChannel = null;
+function subscribePlayCoverRealtime() {
+    if (playCoverChannel) sb.removeChannel(playCoverChannel);
+    playCoverChannel = sb.channel('play_cover_rt')
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'app_settings',
+            filter: `key=eq.${PLAY_COVER_KEY}`
+        }, (payload) => {
+            const url = payload.new?.value || null;
+            applyPlayCover(url);
+        })
+        .subscribe();
 }
 
             // ============================================================
