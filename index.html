@@ -1694,6 +1694,40 @@ body::after {
 }
 .notif-btn-accept:active,
 .notif-btn-decline:active { transform: scale(0.97); }
+
+    /* ============ PLAY BUTTON COVER ============ */
+.play-btn {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+.play-btn-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;                /* по умолчанию скрыт */
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 0;
+    /* микс-режим чтобы обложка «легла» на градиент кнопки */
+    mix-blend-mode: overlay;
+}
+.play-btn.has-cover .play-btn-bg {
+    opacity: 0.18;             /* 🔥 вот эта цифра — «еле-еле видно» */
+}
+.play-btn-text {
+    position: relative;
+    z-index: 1;
+}
+
+/* Для админа: кнопка загрузки обложки в меню-панели */
+.menu-drawer-btn.cover-btn {
+    background: linear-gradient(135deg, rgba(217, 171, 90, 0.16), rgba(217, 171, 90, 0.05));
+    border-color: rgba(217, 171, 90, 0.35);
+    color: var(--gold);
+}
     
 </style>
 </head>
@@ -1728,7 +1762,10 @@ body::after {
             <div class="stat-card"><div class="stat-value" id="statWins">—</div><div class="stat-label">Побед</div></div>
             <div class="stat-card"><div class="stat-value" id="statWinrate">—</div><div class="stat-label">Winrate</div></div>
         </div>
-        <button class="play-btn" onclick="openPlayScreen()">🎮 ИГРАТЬ</button>
+        <button class="play-btn" id="playBtnMain" onclick="openPlayScreen()">
+    <span class="play-btn-bg" id="playBtnBg"></span>
+    <span class="play-btn-text">🎮 ИГРАТЬ</span>
+</button>
         <div class="section-title">Быстрые действия</div>
         <div class="menu-grid">
             <button class="menu-item" onclick="openFriendsPage()"><span class="menu-icon">👥</span> Друзья</button>
@@ -2013,6 +2050,7 @@ body::after {
     <input type="file" id="avatarFileInput" accept="image/*">
     <input type="file" id="clubLogoFileInput" accept="image/*">
     <input type="file" id="screenshotInput" accept="image/*">
+    <input type="file" id="playCoverInput" accept="image/*" style="display: none;">
 
     <!-- ============ ACTIVE ROOM BANNER ============ -->
 <div class="active-room-banner" id="activeRoomBanner" onclick="reopenActiveRoom()">
@@ -2057,11 +2095,17 @@ body::after {
         </button>
     </div>
 
-    <div class="menu-drawer-footer" id="menuDrawerFooter" style="display: none;">
-        <button class="menu-drawer-btn admin" onclick="menuDrawerGo('admin')">
-            <span class="menu-drawer-icon">👑</span> Админ-панель
-        </button>
-    </div>
+<div class="menu-drawer-footer" id="menuDrawerFooter" style="display: none;">
+    <button class="menu-drawer-btn cover-btn" onclick="menuDrawerPickCover()">
+        <span class="menu-drawer-icon">🎨</span> Обложка кнопки «Играть»
+    </button>
+    <button class="menu-drawer-btn cover-btn" onclick="menuDrawerRemoveCover()">
+        <span class="menu-drawer-icon">🗑️</span> Убрать обложку
+    </button>
+    <button class="menu-drawer-btn admin" onclick="menuDrawerGo('admin')">
+        <span class="menu-drawer-icon">👑</span> Админ-панель
+    </button>
+</div>
 </div>
     <div class="toast" id="toast"></div>
     <div class="page-loading-bar" id="pageLoadingBar"></div>
@@ -2235,6 +2279,8 @@ body::after {
                 checkActiveMatch();
                 updateNotifBadge();
                 subscribeNotificationsRealtime();
+                loadPlayCover();
+                subscribePlayCoverRealtime();
             } catch (e) {
                 console.error('Init error:', e);
                 showToast('Ошибка: ' + (e?.message || e));
