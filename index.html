@@ -5081,7 +5081,16 @@ async function joinRoom(roomId) {
 
 async function openRoomView(roomId) {
     const content = document.getElementById('playScreenContent');
+    if (!content) return;
     content.innerHTML = '<div class="empty-rooms">Загрузка комнаты...</div>';
+
+    await renderRoomContent(roomId);
+    subscribeRoomRealtime(roomId);
+}
+
+async function renderRoomContent(roomId) {
+    const content = document.getElementById('playScreenContent');
+    if (!content) return;
 
     try {
         const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
@@ -5089,6 +5098,15 @@ async function openRoomView(roomId) {
 
         if (!room) { content.innerHTML = 'Комната не найдена'; return; }
 
+        // Если комната в стадии veto/side/link — показываем соответствующий экран
+        if (room.status === 'veto') { openVetoView(roomId); return; }
+        if (room.status === 'side_pick') { showSidePick(roomId); return; }
+        if (room.status === 'waiting_link' || room.status === 'in_game') {
+            showLobbyScreen(roomId, room);
+            return;
+        }
+
+        // Иначе — стандартный экран ожидания игроков
         const playerIds = (players || []).map(p => p.telegram_id);
         let users = [];
         if (playerIds.length > 0) {
@@ -5107,6 +5125,9 @@ async function openRoomView(roomId) {
         const me = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
         const myTeam = me?.team;
 
+        const needPerTeam = room.mode === '2x2' ? 2 : 5;
+        const canStart = teamA.length >= needPerTeam && teamB.length >= needPerTeam;
+
         const renderPlayer = (p) => {
             const u = userById[p.telegram_id] || {};
             const avatarSrc = u.custom_avatar || u.photo_url;
@@ -5115,7 +5136,7 @@ async function openRoomView(roomId) {
             return `
                 <div class="team-player">
                     <div class="tp-avatar">${avatarHTML}</div>
-                    <div class="tp-name">${u.display_name || 'Игрок'}</div>
+                    <div class="tp-name">${escapeHtml(u.display_name || 'Игрок')}</div>
                 </div>
             `;
         };
@@ -5123,26 +5144,26 @@ async function openRoomView(roomId) {
         content.innerHTML = `
             <div class="play-header">
                 <div class="play-title">Комната</div>
-                <button class="play-close" onclick="renderPlayList()">×</button>
+                <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
             </div>
 
             <div class="room-view-header">
-                <div class="room-view-title">${room.name}</div>
-                <div class="room-view-meta">${room.mode} · ${room.map || 'любая'}</div>
+                <div class="room-view-title">${escapeHtml(room.name)}</div>
+                <div class="room-view-meta">${room.mode}</div>
                 <div class="room-view-count">${(players || []).length}/${room.max_players} игроков</div>
             </div>
 
             <div class="teams-grid">
                 <div class="team-card team-a ${myTeam === 'A' ? 'active' : ''}">
                     <div class="team-card-title">Команда A</div>
-                    <div class="team-card-count">${teamA.length} игроков</div>
+                    <div class="team-card-count">${teamA.length}/${needPerTeam}</div>
                     <div class="team-card-players">
                         ${teamA.length === 0 ? '<div class="team-empty">Пусто</div>' : teamA.map(renderPlayer).join('')}
                     </div>
                 </div>
                 <div class="team-card team-b ${myTeam === 'B' ? 'active' : ''}">
                     <div class="team-card-title">Команда B</div>
-                    <div class="team-card-count">${teamB.length} игроков</div>
+                    <div class="team-card-count">${teamB.length}/${needPerTeam}</div>
                     <div class="team-card-players">
                         ${teamB.length === 0 ? '<div class="team-empty">Пусто</div>' : teamB.map(renderPlayer).join('')}
                     </div>
@@ -5161,16 +5182,74 @@ async function openRoomView(roomId) {
             `}
 
             <div class="room-view-actions">
-                ${iAmLeader && (teamA.length + teamB.length) >= 2 ? `
-                    <button class="room-start-btn" onclick="startMatch(${room.id})">▶️ Начать матч</button>
+                ${iAmLeader ? `
+                    <button class="room-start-btn" onclick="startMatch(${room.id})" ${!canStart ? 'disabled style="opacity:0.5;"' : ''}>
+                        ▶️ ${canStart ? 'Начать матч' : `Нужно по ${needPerTeam} игроков`}
+                    </button>
                 ` : ''}
-                <button class="room-leave-btn" onclick="leaveRoom(${room.id})">Покинуть комнату</button>
-                ${iAmLeader ? `<button class="room-close-btn" onclick="closeRoom(${room.id})">Закрыть комнату для всех</button>` : ''}
+                <button class="room-leave-btn" onclick="leaveRoom(${roomId})">Покинуть комнату</button>
+                ${iAmLeader ? `<button class="room-close-btn" onclick="closeRoom(${roomId})">Закрыть комнату для всех</button>` : ''}
             </div>
         `;
     } catch (e) {
         console.error('Room view error:', e);
         content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
+    }
+}
+
+// ============================================================
+// REALTIME ПОДПИСКА НА КОМНАТУ
+// ============================================================
+let roomRealtimeChannel = null;
+
+function subscribeRoomRealtime(roomId) {
+    if (roomRealtimeChannel) sb.removeChannel(roomRealtimeChannel);
+
+    roomRealtimeChannel = sb.channel('room_rt_' + roomId)
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'rooms',
+            filter: 'id=eq.' + roomId
+        }, async (payload) => {
+            const room = payload.new;
+            if (!room) return;
+            
+            // Роутим на нужный экран
+            if (room.status === 'veto') { openVetoView(roomId); return; }
+            if (room.status === 'side_pick') { showSidePick(roomId); return; }
+            if (room.status === 'waiting_link' || room.status === 'in_game') {
+                showLobbyScreen(roomId, room);
+                return;
+            }
+            if (room.status === 'cancelled') {
+                showToast('❌ Матч отменён');
+                closePlayScreen();
+                return;
+            }
+            if (room.status === 'open') {
+                await renderRoomContent(roomId);
+            }
+        })
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'room_players',
+            filter: 'room_id=eq.' + roomId
+        }, async () => {
+            // Любое изменение в составе → перерисовываем
+            const { data: room } = await sb.from('rooms').select('status').eq('id', roomId).single();
+            if (room?.status === 'open') {
+                await renderRoomContent(roomId);
+            }
+        })
+        .subscribe();
+}
+
+function unsubscribeRoomRealtime() {
+    if (roomRealtimeChannel) {
+        sb.removeChannel(roomRealtimeChannel);
+        roomRealtimeChannel = null;
     }
 }
 
@@ -5213,7 +5292,7 @@ async function startMatch(roomId) {
         showToast(`Нужно по ${needPerTeam} игрока в каждой команде`);
         return;
     }
-    if (!confirm('Начать матч? Комната перейдёт в режим пиков карт.')) return;
+    if (!confirm('Начать матч? Команды будут заблокированы.')) return;
     
     await sb.from('rooms').update({ 
         status: 'veto',
@@ -5222,7 +5301,6 @@ async function startMatch(roomId) {
     }).eq('id', roomId);
     
     showToast('🎯 Пики карт начались!');
-    openVetoView(roomId);
 }
 
             // ============================================================
@@ -5232,17 +5310,16 @@ const STANDOFF_MAPS = ['Sandstone', 'Rust', 'Province', 'Zone 9', 'Breeze', 'Dun
 
 async function openVetoView(roomId) {
     const content = document.getElementById('playScreenContent');
-    content.innerHTML = '<div class="empty-rooms">Загрузка пиков...</div>';
+    if (!content) return;
 
     const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
     const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
-    const { data: votes } = await sb.from('room_votes').select('*').eq('room_id', roomId);
 
-    if (!room) { content.innerHTML = 'Комната не найдена'; return; }
+    if (!room) return;
 
     const myPlayer = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
     const myTeam = myPlayer?.team;
-    const iAmCaptain = (myTeam === 'A' && room.current_turn === 'A') || (myTeam === 'B' && room.current_turn === 'B');
+    const iAmCaptain = myTeam === room.current_turn;
 
     const vetoLog = room.veto_log || [];
     const bannedMaps = vetoLog.map(v => v.map);
@@ -5250,20 +5327,44 @@ async function openVetoView(roomId) {
     content.innerHTML = `
         <div class="play-header">
             <div class="play-title">🚫 Пики карт</div>
-            <button class="play-close" onclick="closePlayScreen()">×</button>
+            <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
         </div>
         <div class="room-view-header">
             <div class="room-view-title">Ход команды ${room.current_turn}</div>
             <div class="room-view-meta">Осталось карт: ${STANDOFF_MAPS.length - bannedMaps.length}</div>
         </div>
-        <div class="veto-grid" id="vetoGrid"></div>
-        <div id="vetoLog" style="margin-top: 20px;"></div>
-        <div id="sideChoice" style="margin-top: 20px;"></div>
+        <div class="veto-grid" id="vetoGrid">
+            ${STANDOFF_MAPS.map(map => {
+                const isBanned = bannedMaps.includes(map);
+                return `
+                    <button class="veto-card ${isBanned ? 'banned' : ''}"
+                            onclick="banMap(${roomId}, '${map}')"
+                            ${isBanned || !iAmCaptain ? 'disabled' : ''}>
+                        <div class="veto-card-map">${map}</div>
+                    </button>
+                `;
+            }).join('')}
+        </div>
+        <div id="vetoLog">
+            ${vetoLog.length ? `
+                <div class="section-title">История банов</div>
+                ${vetoLog.map(v => `
+                    <div style="font-size: 12px; color: var(--hint); margin-bottom: 4px;">
+                        Команда ${v.team}: <b style="color: var(--red);">${escapeHtml(v.map)}</b>
+                    </div>
+                `).join('')}
+            ` : ''}
+        </div>
+        ${!iAmCaptain ? `
+            <div style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--hint);">
+                ${myTeam ? `Ожидай ход команды ${room.current_turn}` : 'Ты зритель'}
+            </div>
+        ` : `
+            <div style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--emerald); font-weight: 700;">
+                Твой ход — забань карту
+            </div>
+        `}
     `;
-
-    renderVetoGrid(room, bannedMaps, iAmCaptain);
-    renderVetoLog(vetoLog);
-    subscribeVetoRealtime(roomId);
 }
 
 function renderVetoGrid(room, bannedMaps, iAmCaptain) {
@@ -5327,12 +5428,6 @@ async function banMap(roomId, map) {
     haptic('medium');
     
     const { data: updatedRoom } = await sb.from('rooms').select('*').eq('id', roomId).single();
-    
-    if (updatedRoom.status === 'side_pick') {
-        showSidePick(roomId);
-    } else {
-        openVetoView(roomId);
-    }
 }
 
 // ============================================================
@@ -5340,39 +5435,49 @@ async function banMap(roomId, map) {
 // ============================================================
 async function showSidePick(roomId) {
     const content = document.getElementById('playScreenContent');
+    if (!content) return;
+
     const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
     const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
-    
+
+    if (!room) return;
+
     const myPlayer = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
     const myTeam = myPlayer?.team;
-    
+    const iAmCapA = myTeam === 'A';
+    const alreadyPicked = !!room.side_a;
+
     content.innerHTML = `
         <div class="play-header">
             <div class="play-title">⚔️ Выбор стороны</div>
-            <button class="play-close" onclick="closePlayScreen()">×</button>
+            <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
         </div>
         <div class="room-view-header">
-            <div class="room-view-title">Карта: ${room.final_map}</div>
+            <div class="room-view-title">Карта: ${escapeHtml(room.final_map || '—')}</div>
         </div>
         <div class="side-choice-grid">
             <button class="side-card ${room.side_a === 'Спецназ' ? 'active' : ''}" 
-                    onclick="pickSide(${roomId}, 'Спецназ')" ${myTeam !== 'A' ? 'disabled' : ''}>
+                    onclick="pickSide(${roomId}, 'Спецназ')" ${!iAmCapA || alreadyPicked ? 'disabled' : ''}>
                 <div class="side-icon">🛡️</div>
                 <div class="side-name">Спецназ</div>
             </button>
             <button class="side-card ${room.side_a === 'Террорист' ? 'active' : ''}"
-                    onclick="pickSide(${roomId}, 'Террорист')" ${myTeam !== 'A' ? 'disabled' : ''}>
+                    onclick="pickSide(${roomId}, 'Террорист')" ${!iAmCapA || alreadyPicked ? 'disabled' : ''}>
                 <div class="side-icon">💣</div>
                 <div class="side-name">Террорист</div>
             </button>
         </div>
         <div style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--hint);">
-            ${myTeam === 'A' ? 'Ты выбираешь сторону для команды A' : 'Ожидай выбор команды A'}
+            ${iAmCapA ? (alreadyPicked ? `Выбрано: ${room.side_a}` : 'Выбери сторону для команды A') : (alreadyPicked ? `Команда A выбрала: ${room.side_a}` : 'Ожидай выбор команды A')}
         </div>
-        <div id="hostLinkSection" style="margin-top: 20px;"></div>
+        ${room.side_a ? `
+            <div style="margin-top: 20px; text-align: center;">
+                <div style="font-size: 13px; color: var(--hint); margin-bottom: 10px;">
+                    Команда A: <b style="color: var(--emerald);">${room.side_a}</b> · Команда B: <b style="color: #ff5470;">${room.side_b}</b>
+                </div>
+            </div>
+        ` : ''}
     `;
-    
-    subscribeSidePickRealtime(roomId);
 }
 
 async function pickSide(roomId, side) {
@@ -5385,65 +5490,89 @@ async function pickSide(roomId, side) {
     
     haptic('medium');
     showToast(`✅ Сторона A: ${side}`);
-    
-    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
-    showHostLinkInput(roomId, room);
 }
 
 // ============================================================
 // HOST LINK
 // ============================================================
-async function showHostLinkInput(roomId, room) {
-    const section = document.getElementById('hostLinkSection');
-    if (!section) return;
-    
+async function showLobbyScreen(roomId, room) {
+    const content = document.getElementById('playScreenContent');
+    if (!content) return;
+
     const iAmLeader = String(room.leader_id) === String(currentUser.telegram_id);
     const hasLink = !!room.host_link;
-    
-    if (!iAmLeader && !hasLink) {
-        section.innerHTML = `
+
+    if (!hasLink && iAmLeader) {
+        content.innerHTML = `
+            <div class="play-header">
+                <div class="play-title">🔗 Создание лобби</div>
+                <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
+            </div>
+            <div class="profile-hero">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Ты хост матча</div>
+                <div style="font-size: 12px; color: var(--hint); margin-bottom: 14px; line-height: 1.5;">
+                    1. Открой Standoff 2<br>
+                    2. Создай соревновательный режим (непубличный)<br>
+                    3. Установи до 13 раундов<br>
+                    4. Скопируй ссылку на лобби<br>
+                    5. Вставь её сюда
+                </div>
+                <input type="text" class="field-input" id="hostLinkInput" 
+                       placeholder="https://link.standoff2.com/..." 
+                       style="margin-bottom: 10px;">
+                <button class="save-btn" onclick="submitHostLink(${roomId})">✅ Отправить ссылку</button>
+            </div>
+        `;
+        return;
+    }
+
+    if (!hasLink && !iAmLeader) {
+        content.innerHTML = `
+            <div class="play-header">
+                <div class="play-title">⏳ Ожидание</div>
+                <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
+            </div>
             <div class="profile-hero" style="text-align: center;">
-                <div style="font-size: 32px; margin-bottom: 10px;">⏳</div>
-                <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Ожидайте ссылку на вход</div>
-                <div style="font-size: 12px; color: var(--hint);">Хост создаёт лобби в Standoff 2...</div>
-                <div style="font-size: 24px; font-weight: 900; color: var(--emerald); margin-top: 12px;" id="linkTimer">10:00</div>
+                <div style="font-size: 40px; margin-bottom: 12px;">⏳</div>
+                <div style="font-size: 15px; font-weight: 700; margin-bottom: 8px;">Ожидайте ссылку на вход</div>
+                <div style="font-size: 12px; color: var(--hint); margin-bottom: 16px;">
+                    Хост создаёт лобби в Standoff 2<br>
+                    <b>${escapeHtml(room.final_map || '—')}</b>
+                </div>
+                <div style="font-size: 32px; font-weight: 900; color: var(--emerald);" id="linkTimer">10:00</div>
+                <div style="font-size: 11px; color: var(--hint); margin-top: 8px;">
+                    Если ссылка не поступит за 10 минут, матч отменится
+                </div>
             </div>
         `;
         startLinkTimer(roomId);
         return;
     }
-    
-    if (iAmLeader && !hasLink) {
-        section.innerHTML = `
-            <div class="profile-hero">
-                <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">🔗 Вставь ссылку на лобби</div>
-                <div style="font-size: 11px; color: var(--hint); margin-bottom: 10px;">
-                    Создай соревновательный режим (непубличный), 13 раундов, скопируй ссылку и вставь сюда.
-                </div>
-                <input type="text" class="field-input" id="hostLinkInput" 
-                       placeholder="https://link.standoff2.com/..." 
-                       style="margin-bottom: 10px;">
-                <button class="save-btn" onclick="submitHostLink(${roomId})">✅ Отправить</button>
+
+    // Есть ссылка
+    content.innerHTML = `
+        <div class="play-header">
+            <div class="play-title">🎮 Лобби готово</div>
+            <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
+        </div>
+        <div class="profile-hero" style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
+            <div style="font-size: 15px; font-weight: 700; margin-bottom: 6px;">Ссылка на лобби получена</div>
+            <div style="font-size: 12px; color: var(--hint); margin-bottom: 14px;">
+                Карта: <b style="color: var(--emerald);">${escapeHtml(room.final_map)}</b><br>
+                Ты в команде <b style="color: ${(room.side_a && room.side_a === 'Спецназ') ? 'var(--emerald)' : '#ff5470'};">...</b>
             </div>
-        `;
-        return;
-    }
-    
-    if (hasLink) {
-        section.innerHTML = `
-            <div class="profile-hero" style="text-align: center;">
-                <div style="font-size: 32px; margin-bottom: 10px;">✅</div>
-                <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Ссылка получена</div>
-                <a href="${room.host_link}" target="_blank" style="display: block; padding: 14px; background: linear-gradient(135deg, #00e08a, #00b874); color: #04140e; font-size: 15px; font-weight: 800; text-decoration: none; border-radius: 14px; margin-top: 10px;">
-                    🎮 ВСТУПИТЬ В ЛОББИ
-                </a>
-            </div>
-        `;
-    }
+            <a href="${room.host_link}" target="_blank" 
+               style="display: block; padding: 16px; background: linear-gradient(135deg, #00e08a, #00b874); color: #04140e; font-size: 16px; font-weight: 900; text-decoration: none; border-radius: 14px;">
+                🎮 ВСТУПИТЬ В ЛОББИ
+            </a>
+        </div>
+    `;
 }
 
 async function submitHostLink(roomId) {
     const input = document.getElementById('hostLinkInput');
+    if (!input) return;
     const link = input.value.trim();
     
     if (!link || !link.includes('link.standoff2.com')) {
@@ -5451,27 +5580,32 @@ async function submitHostLink(roomId) {
         return;
     }
     
+    const btn = input.nextElementSibling;
+    if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
+    
     await sb.from('rooms').update({
         host_link: link,
         link_added_at: new Date().toISOString(),
         status: 'in_game'
     }).eq('id', roomId);
     
-    showToast('✅ Ссылка отправлена');
+    showToast('✅ Ссылка отправлена игрокам');
     haptic('medium');
-    
-    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
-    showHostLinkInput(roomId, room);
+    // Realtime обновит у всех, включая хоста
 }
 
 // ============================================================
 // TIMER для ожидания ссылки (10 минут)
 // ============================================================
 function startLinkTimer(roomId) {
-    const startTime = Date.now();
-    const tenMinutes = 10 * 60 * 1000;
-    
     const tick = async () => {
+        const { data: room } = await sb.from('rooms').select('started_at, status, host_link').eq('id', roomId).single();
+        
+        // Если ссылка уже добавлена или комната в другом статусе — стоп
+        if (!room || room.status !== 'waiting_link' || room.host_link) return;
+        
+        const startTime = new Date(room.started_at).getTime();
+        const tenMinutes = 10 * 60 * 1000;
         const elapsed = Date.now() - startTime;
         const remaining = tenMinutes - elapsed;
         
@@ -5479,15 +5613,7 @@ function startLinkTimer(roomId) {
         if (!timerEl) return;
         
         if (remaining <= 0) {
-            // Техническая неполадка — матч отменён
             await sb.from('rooms').update({ status: 'cancelled' }).eq('id', roomId);
-            timerEl.textContent = '00:00';
-            timerEl.style.color = '#ff5470';
-            
-            setTimeout(() => {
-                showToast('❌ Матч отменён: хост не прислал ссылку за 10 минут');
-                closePlayScreen();
-            }, 2000);
             return;
         }
         
@@ -5495,9 +5621,7 @@ function startLinkTimer(roomId) {
         const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
         timerEl.textContent = `${mm}:${ss}`;
         
-        if (remaining < 60000) {
-            timerEl.style.color = '#ff5470';
-        }
+        if (remaining < 60000) timerEl.style.color = '#ff5470';
         
         setTimeout(tick, 1000);
     };
@@ -5549,6 +5673,28 @@ function subscribeSidePickRealtime(roomId) {
             }
         })
         .subscribe();
+}
+
+            async function closeRoomAndExit(roomId) {
+    unsubscribeRoomRealtime();
+    closePlayScreen();
+}
+
+async function leaveRoom(roomId) {
+    if (!confirm('Покинуть комнату?')) return;
+    await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id);
+    unsubscribeRoomRealtime();
+    showToast('Ты покинул комнату');
+    renderPlayList();
+}
+
+async function closeRoom(roomId) {
+    if (!confirm('Закрыть комнату для всех?')) return;
+    await sb.from('room_players').delete().eq('room_id', roomId);
+    await sb.from('rooms').delete().eq('id', roomId);
+    unsubscribeRoomRealtime();
+    showToast('Комната закрыта');
+    renderPlayList();
 }
 
         // ============================================================
