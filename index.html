@@ -3047,21 +3047,22 @@
                 .subscribe();
         }
 
-        function showConfirmScreen() {
-            switchPage('confirm');
-            renderConfirmScreen();
-            startConfirmCountdown();
+function showConfirmScreen() {
+    switchPage('confirm');
+    renderConfirmScreen();  // заполнит #confirmTeams
+    startConfirmCountdown();
 
-            matchPollTimer = setInterval(async () => {
-                await mmCall('tick');
-                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
-                if (data) {
-                    currentMatch = data;
-                    if (data.status === 'veto') { clearInterval(matchPollTimer); showVetoScreen(); }
-                    else if (data.status === 'cancelled') { clearInterval(matchPollTimer); showToast('Отменено'); switchPage('play'); }
-                }
-            }, 3000);
+    if (matchPollTimer) clearInterval(matchPollTimer);
+    matchPollTimer = setInterval(async () => {
+        await mmCall('tick');
+        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        if (data) {
+            currentMatch = data;
+            if (data.status === 'veto') { clearInterval(matchPollTimer); showVetoScreen(); }
+            else if (data.status === 'cancelled') { clearInterval(matchPollTimer); showToast('Отменено'); switchPage('play'); }
         }
+    }, 3000);
+}
 
         function renderConfirmScreen() {
             const teamA = currentMatch.team_a_players || [];
@@ -3072,41 +3073,42 @@
             renderConfirmTeam('B', teamB, me);
         }
 
-        async function renderConfirmTeam(team, players, me) {
-            const elId = team === 'A' ? 'confirmTeams' : null;
-            const ids = players.map(p => p.telegram_id);
-            const { data: users } = await sb.from('users')
-                .select('telegram_id, display_name, custom_avatar, photo_url')
-                .in('telegram_id', ids);
-            const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+async function renderConfirmScreen(targetId = 'confirmTeams') {
+    const teamA = currentMatch.team_a_players || [];
+    const teamB = currentMatch.team_b_players || [];
 
-            const html = `
-                <div class="confirm-team" data-team="${team}">
-                    <div class="confirm-team-title">Команда ${team}</div>
-                    <div class="confirm-team-players">
-                        ${players.map(p => {
-                            const u = userMap[p.telegram_id] || {};
-                            const src = u.custom_avatar || u.photo_url;
-                            const initial = (u.display_name || 'U')[0].toUpperCase();
-                            const av = src ? `<img src="${src}" alt="">` : initial;
-                            return `
-                                <div class="confirm-player ${p.captain ? 'captain' : ''}">
-                                    <div class="cp-avatar">${av}</div>
-                                    <span class="cp-name">${escapeHtml(u.display_name || 'Игрок')}</span>
-                                    ${p.captain ? '<span class="cp-tag">👑</span>' : ''}
-                                </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
+    const allIds = [...teamA, ...teamB].map(p => p.telegram_id);
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url')
+        .in('telegram_id', allIds.length ? allIds : [0]);
+    const userMap = {};
+    (users || []).forEach(u => userMap[u.telegram_id] = u);
 
-            // Определяем A/B порядок
-            if (team === 'A') {
-                document.getElementById('confirmTeams').innerHTML = html;
-            } else {
-                document.getElementById('confirmTeams').insertAdjacentHTML('beforeend', html);
-            }
-        }
+    const renderTeam = (team, players) => `
+        <div class="confirm-team">
+            <div class="confirm-team-title">Команда ${team}</div>
+            <div class="confirm-team-players">
+                ${players.map(p => {
+                    const u = userMap[p.telegram_id] || {};
+                    const src = u.custom_avatar || u.photo_url;
+                    const initial = (u.display_name || 'U')[0].toUpperCase();
+                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    return `
+                        <div class="confirm-player ${p.captain ? 'captain' : ''}">
+                            <div class="cp-avatar">${av}</div>
+                            <span class="cp-name">${escapeHtml(u.display_name || 'Игрок')}</span>
+                            ${p.captain ? '<span class="cp-tag">👑</span>' : ''}
+                        </div>`;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    const el = document.getElementById(targetId);
+    if (el) {
+        el.innerHTML = renderTeam('A', teamA) + renderTeam('B', teamB);
+    }
+}
 
         function startConfirmCountdown() {
             let left = 30;
@@ -3214,37 +3216,33 @@
         // ============================================================
         // MATCH (ИГРАЕМ)
         // ============================================================
-        function showMatchScreen() {
-            switchPage('match');
+function showMatchScreen() {
+    switchPage('match');
 
-            document.getElementById('matchMap').textContent = currentMatch.final_map || '—';
+    document.getElementById('matchMap').textContent = currentMatch.final_map || '—';
 
-            const hostId = currentMatch.host_id;
-            (async () => {
-                const { data: host } = await sb.from('users')
-                    .select('telegram_id, display_name, standoff_id')
-                    .eq('telegram_id', hostId).single();
-                document.getElementById('matchHostName').textContent = host?.display_name || '—';
-                document.getElementById('matchHostId').textContent = host?.standoff_id || '—';
-            })();
+    const hostId = currentMatch.host_id;
+    (async () => {
+        const { data: host } = await sb.from('users')
+            .select('telegram_id, display_name, standoff_id')
+            .eq('telegram_id', hostId).single();
+        document.getElementById('matchHostName').textContent = host?.display_name || '—';
+        document.getElementById('matchHostId').textContent = host?.standoff_id || '—';
+    })();
 
-            // Превью команд
-            const teamA = currentMatch.team_a_players || [];
-            const teamB = currentMatch.team_b_players || [];
-            const me = currentUser.telegram_id;
-            renderConfirmTeam('A', teamA, me);
-            renderConfirmTeam('B', teamB, me);
+    // Превью команд — рендерим в matchTeamsPreview
+    renderConfirmScreen('matchTeamsPreview');
 
-            // Poll статуса
-            if (matchPollTimer) clearInterval(matchPollTimer);
-            matchPollTimer = setInterval(async () => {
-                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
-                if (data) {
-                    currentMatch = data;
-                    if (data.status === 'result') { clearInterval(matchPollTimer); showResultScreen(); }
-                }
-            }, 5000);
+    // Poll статуса
+    if (matchPollTimer) clearInterval(matchPollTimer);
+    matchPollTimer = setInterval(async () => {
+        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        if (data) {
+            currentMatch = data;
+            if (data.status === 'result') { clearInterval(matchPollTimer); showResultScreen(); }
         }
+    }, 5000);
+}
 
         function copyHostId() {
             const id = document.getElementById('matchHostId').textContent;
@@ -3273,10 +3271,11 @@
         // ============================================================
         // RESULT
         // ============================================================
-        function showResultScreen() {
-            switchPage('result');
-            renderResultScreen();
-        }
+function showResultScreen() {
+    selectedWinner = null;
+    switchPage('result');
+    renderResultScreen();
+}
 
         async function renderResultScreen() {
             const container = document.getElementById('resultContent');
@@ -3401,25 +3400,26 @@
 
         function syncScores() {}
 
-        async function submitWinner() {
-            if (!selectedWinner) { showToast('Выберите победителя'); return; }
-            const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
-            const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
+async function submitWinner() {
+    if (!selectedWinner) { showToast('Выберите победителя'); return; }
+    const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
+    const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
 
-            if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
+    if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
 
-            try {
-                const res = await mmCall('report_winner', {
-                    match_id: currentMatch.id,
-                    telegram_id: currentUser.telegram_id,
-                    winner: selectedWinner,
-                    score_a: scoreA,
-                    score_b: scoreB
-                });
-                showToast('✅ Отправлено');
-                renderResultScreen();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        }
+    try {
+        const res = await mmCall('report_winner', {
+            match_id: currentMatch.id,
+            telegram_id: currentUser.telegram_id,
+            winner: selectedWinner,
+            score_a: scoreA,
+            score_b: scoreB
+        });
+        showToast('✅ Отправлено');
+        selectedWinner = null;  // сброс — при перерендере кнопки не будут активны
+        renderResultScreen();
+    } catch (e) { showToast('Ошибка: ' + e.message); }
+}
 
         // Скриншоты
         document.getElementById('screenshotInput').addEventListener('change', async (e) => {
