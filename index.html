@@ -1695,38 +1695,93 @@ body::after {
 .notif-btn-accept:active,
 .notif-btn-decline:active { transform: scale(0.97); }
 
-    /* ============ PLAY BUTTON COVER ============ */
-.play-btn {
+/* ============ UNIVERSAL BUTTON COVERS ============ */
+.btn-with-cover {
     position: relative;
     overflow: hidden;
     isolation: isolate;
 }
-.play-btn-bg {
+.btn-cover-bg {
     position: absolute;
     inset: 0;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0;                /* по умолчанию скрыт */
+    opacity: 0;
     transition: opacity 0.4s ease;
     pointer-events: none;
     z-index: 0;
-    /* микс-режим чтобы обложка «легла» на градиент кнопки */
     mix-blend-mode: overlay;
 }
-.play-btn.has-cover .play-btn-bg {
-    opacity: 0.18;             /* 🔥 вот эта цифра — «еле-еле видно» */
+.btn-with-cover.has-cover .btn-cover-bg {
+    opacity: 0.18;   /* 🔥 сила прозрачности */
 }
-.play-btn-text {
+.btn-with-cover > *:not(.btn-cover-bg) {
     position: relative;
     z-index: 1;
 }
 
-/* Для админа: кнопка загрузки обложки в меню-панели */
-.menu-drawer-btn.cover-btn {
-    background: linear-gradient(135deg, rgba(217, 171, 90, 0.16), rgba(217, 171, 90, 0.05));
-    border-color: rgba(217, 171, 90, 0.35);
-    color: var(--gold);
+/* ============ ADMIN: COVER PICKER ============ */
+.cover-picker-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.cover-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(var(--emerald-rgb), 0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                background 0.22s ease,
+                border-color 0.22s ease;
+}
+.cover-picker-item:active {
+    transform: scale(0.98);
+    background: rgba(var(--emerald-rgb), 0.10);
+    border-color: var(--border-strong);
+}
+.cover-picker-thumb {
+    width: 56px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+.cover-picker-info { flex: 1; min-width: 0; }
+.cover-picker-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+}
+.cover-picker-key {
+    font-size: 10px;
+    color: var(--hint);
+    font-family: 'Courier New', monospace;
+    margin-top: 2px;
+}
+.cover-picker-status {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+.cover-picker-status.has {
+    background: rgba(var(--emerald-rgb), 0.15);
+    color: var(--emerald);
+}
+.cover-picker-status.empty {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--hint);
 }
     
 </style>
@@ -1762,8 +1817,8 @@ body::after {
             <div class="stat-card"><div class="stat-value" id="statWins">—</div><div class="stat-label">Побед</div></div>
             <div class="stat-card"><div class="stat-value" id="statWinrate">—</div><div class="stat-label">Winrate</div></div>
         </div>
-        <button class="play-btn" id="playBtnMain" onclick="openPlayScreen()">
-    <span class="play-btn-bg" id="playBtnBg"></span>
+<button class="play-btn btn-with-cover" id="playBtnMain" data-cover="play_main" onclick="openPlayScreen()">
+    <span class="btn-cover-bg"></span>
     <span class="play-btn-text">🎮 ИГРАТЬ</span>
 </button>
         <div class="section-title">Быстрые действия</div>
@@ -1837,7 +1892,10 @@ body::after {
             <button class="party-add-btn" id="partyAddBtn" onclick="openInviteSheet()">➕ Пригласить игрока</button>
         </div>
 
-        <button class="play-btn" id="startSearchBtn" onclick="startSearch()">🎯 НАЙТИ МАТЧ</button>
+        <button class="play-btn btn-with-cover" id="startSearchBtn" data-cover="start_search" onclick="startSearch()">
+    <span class="btn-cover-bg"></span>
+    🎯 НАЙТИ МАТЧ
+</button>
         <button class="profile-action-btn cancel" onclick="leavePartyAndGoBack()">◀ Назад</button>
     </div>
 
@@ -2037,6 +2095,18 @@ body::after {
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 
+    <!-- ============ COVER PICKER SHEET ============ -->
+<div class="sheet" id="coverPickerSheet" style="max-height: 88vh;">
+    <div class="sheet-title">🎨 Обложки кнопок</div>
+    <div style="font-size: 12px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+        Нажми на кнопку, чтобы загрузить/сменить обложку
+    </div>
+    <div class="cover-picker-grid" id="coverPickerGrid">
+        <div class="empty">Загрузка...</div>
+    </div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
     <!-- ============ PARTY INVITE ============ -->
     <div class="sheet-overlay" id="partyInviteOverlay" onclick="declinePartyInvite()"></div>
     <div class="sheet" id="partyInviteSheet" style="z-index: 700;">
@@ -2051,6 +2121,7 @@ body::after {
     <input type="file" id="clubLogoFileInput" accept="image/*">
     <input type="file" id="screenshotInput" accept="image/*">
     <input type="file" id="playCoverInput" accept="image/*" style="display: none;">
+    <input type="file" id="coverFileInput" accept="image/*" style="display: none;">
 
     <!-- ============ ACTIVE ROOM BANNER ============ -->
 <div class="active-room-banner" id="activeRoomBanner" onclick="reopenActiveRoom()">
@@ -2383,7 +2454,10 @@ body::after {
                 <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
                 <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
 
-                <button class="profile-action-btn edit" onclick="enterProfileEditMode()">✏️ РЕДАКТИРОВАТЬ</button>
+                <button class="profile-action-btn edit btn-with-cover" data-cover="profile_edit" onclick="enterProfileEditMode()">
+    <span class="btn-cover-bg"></span>
+    ✏️ РЕДАКТИРОВАТЬ
+</button>
                 <button class="profile-action-btn cancel" onclick="openPrivacySheet()">🔒 ПРИВАТНОСТЬ</button>
                 <button class="profile-action-btn cancel" onclick="openThemeSheet()">🎨 ТЕМА ОФОРМЛЕНИЯ</button>
 
@@ -3100,7 +3174,10 @@ function openFriendSearchSheet() {
             // КНОПКА "НАЧАТЬ ИГРУ" только для OWNER/ELDER
             const playBtn = (isOwner || isElder) ? `
                 <div class="section-title" style="margin-top: 22px;">Клановая битва</div>
-                <button class="club-full-btn club-btn-play" onclick="startClubParty()">🎮 НАЧАТЬ ИГРУ</button>
+<button class="club-full-btn club-btn-play btn-with-cover" data-cover="club_play" onclick="startClubParty()">
+    <span class="btn-cover-bg"></span>
+    🎮 НАЧАТЬ ИГРУ
+</button>
             ` : '';
 
             container.innerHTML = `
@@ -5818,13 +5895,15 @@ async function renderRoomContent(roomId) {
 
 <div class="room-view-actions">
     ${iAmLeader ? `
-        <button class="room-start-btn" onclick="startMatch(${room.id})" ${!canStart ? 'disabled style="opacity:0.5;"' : ''}>
-            ▶️ ${canStart ? 'Начать матч' : `Нужно по ${needPerTeam} игроков`}
-        </button>
+<button class="room-start-btn btn-with-cover" data-cover="room_start" onclick="startMatch(${room.id})">
+    <span class="btn-cover-bg"></span>
+    ▶️ Начать матч
+</button>
     ` : ''}
-    <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})">
-        💬 Чат комнаты
-    </button>
+<button class="room-chat-btn btn-with-cover" id="roomChatBtn" data-cover="room_chat" onclick="openRoomChat(${roomId})">
+    <span class="btn-cover-bg"></span>
+    💬 Чат комнаты
+</button>
     <button class="room-leave-btn" onclick="leaveRoom(${roomId})">Покинуть комнату</button>
     ${iAmLeader ? `<button class="room-close-btn" onclick="closeRoom(${roomId})">Закрыть комнату для всех</button>` : ''}
 </div>
@@ -6965,79 +7044,133 @@ function menuDrawerGo(dest) {
     }, 260);
 }
 
-// 👇👇👇 ВОТ СЮДА ВСТАВЬ ЭТОТ БЛОК 👇👇👇
+// ============================================================
+// UNIVERSAL BUTTON COVERS
+// ============================================================
+const COVERABLE_BUTTONS = [
+    // key                 emoji  название                     селектор
+    { key: 'play_main',    icon: '🎮', name: 'Играть (главная)',  selector: '#playBtnMain' },
+    { key: 'profile_edit', icon: '✏️', name: 'Редактировать профиль', selector: '[data-cover="profile_edit"]' },
+    { key: 'start_search', icon: '🎯', name: 'Найти матч',           selector: '[data-cover="start_search"]' },
+    { key: 'club_play',    icon: '🛡️', name: 'Клановый матч',        selector: '[data-cover="club_play"]' },
+    { key: 'room_start',   icon: '▶️', name: 'Начать матч (комната)', selector: '[data-cover="room_start"]' },
+    { key: 'room_chat',    icon: '💬', name: 'Чат комнаты',          selector: '[data-cover="room_chat"]' },
+];
 
-// ============================================================
-// PLAY BUTTON COVER (admin only)
-// ============================================================
-const PLAY_COVER_KEY = 'play_btn_cover';
 const ADMIN_USERNAME_FOR_COVER = 'Mark1zell';
+let coversCache = {};         // { 'play_main': 'url', ... }
+let coversChannel = null;
 
 function isCurrentUserAdmin() {
     return (currentUser?.username || '').toLowerCase() === ADMIN_USERNAME_FOR_COVER.toLowerCase()
         || currentUser?.is_admin === true;
 }
 
-async function loadPlayCover() {
+// --- Загрузка всех обложек ---
+async function loadAllCovers() {
     try {
+        const keys = COVERABLE_BUTTONS.map(b => 'cover_' + b.key);
         const { data } = await sb.from('app_settings')
-            .select('value').eq('key', PLAY_COVER_KEY).maybeSingle();
-        const url = data?.value;
-        applyPlayCover(url);
+            .select('key, value').in('key', keys);
+        coversCache = {};
+        (data || []).forEach(row => {
+            const key = row.key.replace(/^cover_/, '');
+            if (row.value) coversCache[key] = row.value;
+        });
+        applyAllCovers();
     } catch (e) {
-        console.warn('loadPlayCover:', e);
+        console.warn('loadAllCovers:', e);
     }
 }
 
-function applyPlayCover(url) {
-    const btn = document.getElementById('playBtnMain');
-    const bg = document.getElementById('playBtnBg');
-    if (!btn || !bg) return;
-
-    if (url) {
-        bg.style.backgroundImage = `url("${url}")`;
-        btn.classList.add('has-cover');
-    } else {
-        bg.style.backgroundImage = '';
-        btn.classList.remove('has-cover');
-    }
+function applyAllCovers() {
+    COVERABLE_BUTTONS.forEach(b => {
+        applyCoverToButton(b.key, coversCache[b.key] || null);
+    });
 }
 
-function menuDrawerPickCover() {
+function applyCoverToButton(key, url) {
+    // Ищем по data-cover — это универсально
+    const btns = document.querySelectorAll(`[data-cover="${key}"]`);
+    btns.forEach(btn => {
+        const bg = btn.querySelector('.btn-cover-bg');
+        if (!bg) {
+            // на случай, если span не добавлен — создаём динамически
+            const span = document.createElement('span');
+            span.className = 'btn-cover-bg';
+            btn.insertBefore(span, btn.firstChild);
+            btn.classList.add('btn-with-cover');
+            return applyCoverToButton(key, url);
+        }
+        if (url) {
+            bg.style.backgroundImage = `url("${url}")`;
+            btn.classList.add('has-cover');
+        } else {
+            bg.style.backgroundImage = '';
+            btn.classList.remove('has-cover');
+        }
+    });
+}
+
+// --- Админ: открытие sheet'а с обложками ---
+async function openCoverPickerSheet() {
     if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
-    closeMenuDrawer();
-    setTimeout(() => {
-        const input = document.getElementById('playCoverInput');
-        if (input) input.click();
-        else showToast('input не найден');
-    }, 260);
+
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('coverPickerSheet').classList.add('active');
+
+    await renderCoverPickerGrid();
 }
 
-async function menuDrawerRemoveCover() {
-    if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
-    if (!confirm('Убрать обложку с кнопки «Играть»?')) return;
-    try {
-        await sb.from('app_settings').upsert(
-            { key: PLAY_COVER_KEY, value: null, updated_at: new Date().toISOString() },
-            { onConflict: 'key' }
-        );
-        applyPlayCover(null);
-        showToast('✅ Обложка убрана');
-        closeMenuDrawer();
-    } catch (e) { showToast('Ошибка: ' + e.message); }
+async function renderCoverPickerGrid() {
+    const el = document.getElementById('coverPickerGrid');
+    el.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    // Подтягиваем актуальные данные
+    await loadAllCovers();
+
+    el.innerHTML = COVERABLE_BUTTONS.map(b => {
+        const url = coversCache[b.key];
+        const thumbStyle = url ? `style="background-image: url('${url}')"` : '';
+        const status = url
+            ? '<span class="cover-picker-status has">✓ ЕСТЬ</span>'
+            : '<span class="cover-picker-status empty">НЕТ</span>';
+        return `
+            <div class="cover-picker-item" onclick="pickCoverFor('${b.key}')">
+                <div class="cover-picker-thumb" ${thumbStyle}></div>
+                <div class="cover-picker-info">
+                    <div class="cover-picker-name">${b.icon} ${b.name}</div>
+                    <div class="cover-picker-key">cover_${b.key}</div>
+                </div>
+                ${status}
+            </div>
+        `;
+    }).join('');
 }
 
+let _pendingCoverKey = null;
+
+function pickCoverFor(key) {
+    if (!isCurrentUserAdmin()) return;
+    _pendingCoverKey = key;
+    document.getElementById('coverFileInput').click();
+}
+
+// Обработчик файла
 window.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('playCoverInput')?.addEventListener('change', async (e) => {
+    document.getElementById('coverFileInput')?.addEventListener('change', async (e) => {
         const file = e.target.files?.[0];
         e.target.value = '';
-        if (!file) return;
-        if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
+        if (!file || !_pendingCoverKey) return;
+        if (!isCurrentUserAdmin()) return;
+
+        const key = _pendingCoverKey;
+        _pendingCoverKey = null;
 
         showToast('Загрузка...');
         try {
             const blob = await compressImage(file, 800, 0.85);
-            const path = `play_cover_${Date.now()}.jpg`;
+            const path = `cover_${key}_${Date.now()}.jpg`;
 
             const { error: upErr } = await sb.storage.from('branding')
                 .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
@@ -7046,13 +7179,18 @@ window.addEventListener('DOMContentLoaded', () => {
             const { data: urlData } = sb.storage.from('branding').getPublicUrl(path);
 
             await sb.from('app_settings').upsert(
-                { key: PLAY_COVER_KEY, value: urlData.publicUrl, updated_at: new Date().toISOString() },
+                {
+                    key: 'cover_' + key,
+                    value: urlData.publicUrl,
+                    updated_at: new Date().toISOString()
+                },
                 { onConflict: 'key' }
             );
 
-            applyPlayCover(urlData.publicUrl);
+            coversCache[key] = urlData.publicUrl;
+            applyCoverToButton(key, urlData.publicUrl);
             showToast('✅ Обложка обновлена');
-            closeMenuDrawer();
+            await renderCoverPickerGrid();
         } catch (err) {
             console.error(err);
             showToast('Ошибка: ' + err.message);
@@ -7060,16 +7198,34 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-let playCoverChannel = null;
-function subscribePlayCoverRealtime() {
-    if (playCoverChannel) sb.removeChannel(playCoverChannel);
-    playCoverChannel = sb.channel('play_cover_rt')
+// --- Удаление обложки ---
+async function removeCoverFor(key) {
+    if (!isCurrentUserAdmin()) return;
+    if (!confirm('Убрать обложку?')) return;
+    try {
+        await sb.from('app_settings').upsert(
+            { key: 'cover_' + key, value: null, updated_at: new Date().toISOString() },
+            { onConflict: 'key' }
+        );
+        coversCache[key] = null;
+        applyCoverToButton(key, null);
+        showToast('✅ Убрано');
+        await renderCoverPickerGrid();
+    } catch (e) { showToast('Ошибка'); }
+}
+
+// --- Realtime ---
+function subscribeCoversRealtime() {
+    if (coversChannel) sb.removeChannel(coversChannel);
+    coversChannel = sb.channel('covers_rt')
         .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'app_settings',
-            filter: `key=eq.${PLAY_COVER_KEY}`
+            event: '*', schema: 'public', table: 'app_settings'
         }, (payload) => {
-            const url = payload.new?.value || null;
-            applyPlayCover(url);
+            const key = payload.new?.key || payload.old?.key;
+            if (!key || !key.startsWith('cover_')) return;
+            const shortKey = key.replace(/^cover_/, '');
+            coversCache[shortKey] = payload.new?.value || null;
+            applyCoverToButton(shortKey, coversCache[shortKey]);
         })
         .subscribe();
 }
