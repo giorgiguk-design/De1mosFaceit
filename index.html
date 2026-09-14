@@ -1557,6 +1557,143 @@ body::after {
 .menu-drawer-btn.admin:active {
     background: rgba(217, 171, 90, 0.25);
 }
+
+    /* ============ FRIENDS SEARCH ============ */
+.friends-search-btn {
+    padding: 9px 16px;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    border: none;
+    border-radius: 12px;
+    color: #04140e;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(var(--emerald-rgb), 0.3);
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 0.22s ease;
+    flex-shrink: 0;
+}
+.friends-search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(var(--emerald-rgb), 0.4);
+}
+.friends-search-btn:active { transform: scale(0.96); }
+
+    /* ============ NOTIF BADGE ============ */
+.notif-btn {
+    position: relative;
+}
+.notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg);
+    animation: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.notif-btn.has-notif {
+    animation: notifPulse 1.6s ease-in-out infinite;
+}
+.notif-btn.has-notif::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: rgba(255, 46, 77, 0.35);
+    animation: notifRing 1.6s ease-out infinite;
+    z-index: -1;
+}
+@keyframes notifPulse {
+    0%, 100% { color: var(--red); transform: scale(1); }
+    50%      { color: var(--red); transform: scale(1.08); }
+}
+@keyframes notifRing {
+    0%   { transform: scale(0.9); opacity: 0.8; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ============ NOTIF ITEMS ============ */
+.notif-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(var(--emerald-rgb), 0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+}
+.notif-item.unread {
+    background: rgba(var(--emerald-rgb), 0.08);
+    border-color: var(--border-strong);
+}
+.notif-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #04140e;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.notif-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+}
+.notif-text b { color: var(--emerald); }
+.notif-time {
+    font-size: 11px;
+    color: var(--hint);
+    margin-top: 4px;
+}
+.notif-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+.notif-btn-accept,
+.notif-btn-decline {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+}
+.notif-btn-accept {
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    color: #04140e;
+}
+.notif-btn-decline {
+    background: rgba(255, 84, 112, 0.12);
+    color: var(--red);
+    border: 1px solid rgba(255, 84, 112, 0.3);
+}
+.notif-btn-accept:active,
+.notif-btn-decline:active { transform: scale(0.97); }
     
 </style>
 </head>
@@ -1571,7 +1708,10 @@ body::after {
                 <div class="hri-dot"></div>
                 🎮
             </div>
-            <button class="notif-btn" onclick="openNotifications()">🔔</button>
+            <button class="notif-btn" id="notifBtn" onclick="openNotificationsSheet()">
+    🔔
+    <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+</button>
         </div>
     </header>
 
@@ -1606,17 +1746,17 @@ body::after {
     </div>
 
     <!-- ============ FRIENDS ============ -->
-    <div class="container page" id="page-friends">
-        <div class="profile-hero">
-            <h3 style="margin-bottom: 14px;">🔍 Поиск игроков</h3>
-            <input type="text" class="field-input" id="friendSearchInput" placeholder="Введите ник или ID для фильтра" autocomplete="off" oninput="debouncedFriendsFilter()">
-            <div id="friendSearchResults" style="margin-top: 14px;"></div>
+<div class="container page" id="page-friends">
+    <div class="profile-hero">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px;">
+            <h3 style="margin: 0;">👥 Мои друзья</h3>
+            <button class="friends-search-btn" onclick="openFriendSearchSheet()">
+                🔍 Поиск
+            </button>
         </div>
-        <div class="profile-hero">
-            <h3 style="margin-bottom: 14px;">👥 Мои друзья</h3>
-            <div id="friendsList" style="margin-top: 14px;"></div>
-        </div>
+        <div id="friendsList"><div class="empty">Загрузка...</div></div>
     </div>
+</div>
 
     <!-- ============ CLUB ============ -->
     <div class="container page" id="page-club">
@@ -1836,11 +1976,29 @@ body::after {
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
 
+    <!-- ============ FRIEND SEARCH SHEET ============ -->
+<div class="sheet" id="friendSearchSheet">
+    <div class="sheet-title">🔍 Поиск игроков</div>
+    <input type="text" class="field-input" id="friendSearchInput"
+           placeholder="Введите ник, @username или Standoff ID"
+           autocomplete="off" oninput="debouncedFriendsFilter()"
+           style="margin-bottom: 14px;">
+    <div id="friendSearchResults"></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
     <div class="sheet" id="privacySheet">
         <div class="sheet-title">Приватность</div>
         <div id="privacyOptions"></div>
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
+
+    <!-- ============ NOTIFICATIONS SHEET ============ -->
+<div class="sheet" id="notifSheet" style="max-height: 88vh;">
+    <div class="sheet-title">🔔 Уведомления</div>
+    <div id="notifList"><div class="empty">Загрузка...</div></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
 
     <!-- ============ PARTY INVITE ============ -->
     <div class="sheet-overlay" id="partyInviteOverlay" onclick="declinePartyInvite()"></div>
@@ -2075,6 +2233,8 @@ body::after {
                 loadProfile(currentUser);
                 loadLeaderboard();
                 checkActiveMatch();
+                updateNotifBadge();
+                subscribeNotificationsRealtime();
             } catch (e) {
                 console.error('Init error:', e);
                 showToast('Ошибка: ' + (e?.message || e));
@@ -2302,50 +2462,122 @@ body::after {
         // ============================================================
         // PUBLIC PROFILE
         // ============================================================
-        async function openPlayerProfile(userId) {
-            if (String(userId) === String(currentUser?.telegram_id)) { switchPage('profile'); return; }
-            const modal = document.getElementById('playerModal');
-            const content = document.getElementById('playerModalContent');
-            content.innerHTML = '<div class="empty">Загрузка...</div>';
-            modal.classList.add('active');
-            try {
-                const { data: user, error } = await sb.from('users')
-                    .select('*').eq('telegram_id', userId).single();
-                if (error) throw error;
+async function openPlayerProfile(userId) {
+    if (String(userId) === String(currentUser?.telegram_id)) {
+        switchPage('profile');
+        return;
+    }
+    const modal = document.getElementById('playerModal');
+    const content = document.getElementById('playerModalContent');
+    content.innerHTML = '<div class="empty">Загрузка...</div>';
+    modal.classList.add('active');
 
-                const avatarSrc = user.custom_avatar || user.photo_url;
-                const initial = (user.display_name || 'U')[0].toUpperCase();
-                const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
-                const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
-                const hours = Math.round(((user.matches_played || 0) * 45) / 60);
-                const level = eloToLevel(user.elo);
+    try {
+        const { data: user, error } = await sb.from('users')
+            .select('*').eq('telegram_id', userId).single();
+        if (error) throw error;
 
-                content.innerHTML = `
-                    <div style="display: flex; flex-direction: column; align-items: center; padding: 4px 0 10px;">
-                        <div class="profile-avatar" style="width: 90px; height: 90px; font-size: 34px; margin-bottom: 12px;">${avatarHTML}</div>
-                        <div style="font-size: 20px; font-weight: 800; text-align: center;">${escapeHtml(user.display_name || 'Игрок')}</div>
-                        <div style="font-size: 13px; color: var(--hint); margin-top: 4px;">${user.username ? '@' + escapeHtml(user.username) : '@—'}</div>
-                        <div class="profile-level-badge" style="margin-top: 10px;">⚡ Уровень ${level}</div>
-                    </div>
-                    <div class="profile-stats-grid">
-                        <div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">ELO</div></div>
-                        <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
-                        <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
-                    </div>
-                    <div class="profile-view-row"><span class="profile-view-label">Standoff 2 ID</span><span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span></div>
-                    ${user.hide_matches ? '' : `
-                        <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
-                        <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
-                    `}
-                    <button class="profile-action-btn edit" style="margin-top: 20px;" onclick="closePlayerModal(); openChatWithUser(${user.telegram_id})">
-                        💬 НАПИСАТЬ СООБЩЕНИЕ
-                    </button>
-                `;
-            } catch (e) {
-                content.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить</div>';
+        // Проверяем, есть ли уже связь
+        const { data: rel } = await sb.from('friendships')
+            .select('id, status, requester_id, addressee_id')
+            .or(`and(requester_id.eq.${currentUser.telegram_id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUser.telegram_id})`)
+            .maybeSingle();
+
+        const avatarSrc = user.custom_avatar || user.photo_url;
+        const initial = (user.display_name || 'U')[0].toUpperCase();
+        const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
+        const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
+        const hours = Math.round(((user.matches_played || 0) * 45) / 60);
+        const level = eloToLevel(user.elo);
+
+        // Кнопка друга
+        let friendBtn = '';
+        if (!rel) {
+            friendBtn = `<button class="profile-action-btn save" style="margin-top: 14px;" onclick="addFriendFromProfile(${userId}, this)">👥 ДОБАВИТЬ В ДРУЗЬЯ</button>`;
+        } else if (rel.status === 'pending') {
+            const isIncoming = rel.requester_id === userId;
+            if (isIncoming) {
+                friendBtn = `
+                    <div style="display: flex; gap: 8px; margin-top: 14px;">
+                        <button class="profile-action-btn save" style="flex: 1;" onclick="acceptFriendFromProfile(${rel.id}, this)">✅ ПРИНЯТЬ</button>
+                        <button class="profile-action-btn cancel" style="flex: 1;" onclick="removeFriendFromProfile(${rel.id}, this)">✕ ОТКЛОНИТЬ</button>
+                    </div>`;
+            } else {
+                friendBtn = `<button class="profile-action-btn cancel" style="margin-top: 14px;" disabled>⏳ ЗАПРОС ОТПРАВЛЕН</button>`;
             }
+        } else if (rel.status === 'accepted') {
+            friendBtn = `<button class="profile-action-btn cancel" style="margin-top: 14px;" onclick="removeFriendFromProfile(${rel.id}, this)">✓ В ДРУЗЬЯХ · УДАЛИТЬ</button>`;
         }
 
+        content.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; padding: 4px 0 10px;">
+                <div class="profile-avatar" style="width: 90px; height: 90px; font-size: 34px; margin-bottom: 12px;">${avatarHTML}</div>
+                <div style="font-size: 20px; font-weight: 800; text-align: center;">${escapeHtml(user.display_name || 'Игрок')}</div>
+                <div style="font-size: 13px; color: var(--hint); margin-top: 4px;">${user.username ? '@' + escapeHtml(user.username) : '@—'}</div>
+                <div class="profile-level-badge" style="margin-top: 10px;">⚡ Уровень ${level}</div>
+            </div>
+            <div class="profile-stats-grid">
+                <div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">ELO</div></div>
+                <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
+                <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
+            </div>
+            <div class="profile-view-row"><span class="profile-view-label">Standoff 2 ID</span><span class="profile-view-value">${escapeHtml(user.standoff_id || '—')}</span></div>
+            ${user.hide_matches ? '' : `
+                <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
+                <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
+            `}
+            ${friendBtn}
+            <button class="profile-action-btn cancel" style="margin-top: 8px;" onclick="closePlayerModal(); openChatWithUser(${user.telegram_id})">
+                💬 НАПИСАТЬ СООБЩЕНИЕ
+            </button>
+        `;
+    } catch (e) {
+        content.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить</div>';
+    }
+}
+
+// --- Обёртки для кнопок внутри профиля ---
+async function addFriendFromProfile(userId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+        await sb.from('friendships').insert({
+            requester_id: currentUser.telegram_id,
+            addressee_id: userId,
+            status: 'pending'
+        });
+        await notify(userId, `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`);
+        showToast('✅ Запрос отправлен');
+        openPlayerProfile(userId); // перерисуем
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = '👥 ДОБАВИТЬ В ДРУЗЬЯ'; }
+    }
+}
+
+async function acceptFriendFromProfile(relId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+        await sb.from('friendships').update({ status: 'accepted' }).eq('id', relId);
+        showToast('✅ Теперь вы друзья');
+        // Обновим профиль
+        const modal = document.getElementById('playerModal');
+        if (modal.classList.contains('active')) {
+            // Найдём userId по текущему открытому профилю неудобно, перерисуем через замыкание
+            // Проще: закрыть и загрузить заново — оставляем как есть
+        }
+        closePlayerModal();
+        openFriendsPage();
+    } catch (e) { showToast('Ошибка'); if (btn) { btn.disabled = false; } }
+}
+
+async function removeFriendFromProfile(relId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+        await sb.from('friendships').delete().eq('id', relId);
+        showToast('Удалено');
+        closePlayerModal();
+    } catch (e) { showToast('Ошибка'); if (btn) { btn.disabled = false; } }
+}
         function closePlayerModal() { document.getElementById('playerModal').classList.remove('active'); }
 
         // ============================================================
@@ -2518,11 +2750,18 @@ async function loadLeaderboard() {
                     // ============================================================
         // FRIENDS
         // ============================================================
-        function openFriendsPage() {
-            switchPage('friends');
-            loadAllPlayers();
-            loadFriends();
-        }
+function openFriendsPage() {
+    switchPage('friends');
+    loadFriends();
+}
+
+function openFriendSearchSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('friendSearchSheet').classList.add('active');
+    document.getElementById('friendSearchInput').value = '';
+    loadAllPlayers();
+    setTimeout(() => document.getElementById('friendSearchInput')?.focus(), 300);
+}
 
         let friendsFilterTimer = null;
         function debouncedFriendsFilter() {
@@ -5151,13 +5390,6 @@ async function loadLeaderboard() {
             } catch (e) { showToast('Ошибка'); }
         }
 
-        // ============================================================
-        // NOTIFICATIONS (заглушка)
-        // ============================================================
-        function openNotifications() {
-            showToast('Уведомлений пока нет');
-        }
-
        // ============================================================
 // PLAY SCREEN (комнаты)
 // ============================================================
@@ -6687,10 +6919,263 @@ function menuDrawerGo(dest) {
     }, 260); // ждём, пока панель закроется
 }
 
-        // ============================================================
-        // BOOT
-        // ============================================================
-        init();
+            // ============================================================
+// NOTIFICATIONS SYSTEM
+// ============================================================
+let notifChannel = null;
+let notifCache = [];
+
+async function loadNotifications() {
+    if (!currentUser) return [];
+    try {
+        // Дружбы: входящие pending
+        const { data: friendships } = await sb.from('friendships')
+            .select('id, requester_id, status, created_at')
+            .eq('addressee_id', currentUser.telegram_id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        // Приглашения в пати
+        const { data: invites } = await sb.from('party_invites')
+            .select('id, party_id, from_id, status, created_at')
+            .eq('to_id', currentUser.telegram_id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        // Собираем все userId
+        const ids = new Set();
+        (friendships || []).forEach(f => ids.add(f.requester_id));
+        (invites || []).forEach(i => ids.add(i.from_id));
+
+        let userMap = {};
+        if (ids.size) {
+            const { data: users } = await sb.from('users')
+                .select('telegram_id, display_name, username, custom_avatar, photo_url')
+                .in('telegram_id', [...ids]);
+            (users || []).forEach(u => userMap[u.telegram_id] = u);
+        }
+
+        // Получаем инфу о пати
+        const partyIds = (invites || []).map(i => i.party_id);
+        let partyMap = {};
+        if (partyIds.length) {
+            const { data: parties } = await sb.from('parties')
+                .select('id, mode, is_club_party, club_id')
+                .in('id', partyIds);
+            (parties || []).forEach(p => partyMap[p.id] = p);
+        }
+
+        // Собираем список
+        const list = [];
+
+        (friendships || []).forEach(f => {
+            list.push({
+                id: 'friend_' + f.id,
+                type: 'friend_request',
+                relId: f.id,
+                userId: f.requester_id,
+                user: userMap[f.requester_id] || {},
+                text: `<b>${escapeHtml(userMap[f.requester_id]?.display_name || 'Игрок')}</b> хочет добавить тебя в друзья`,
+                time: f.created_at,
+                unread: true
+            });
+        });
+
+        (invites || []).forEach(i => {
+            const party = partyMap[i.party_id] || {};
+            const clubText = party.is_club_party ? ' (клановая)' : '';
+            list.push({
+                id: 'invite_' + i.id,
+                type: 'party_invite',
+                inviteId: i.id,
+                partyId: i.party_id,
+                userId: i.from_id,
+                user: userMap[i.from_id] || {},
+                text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> приглашает в матч ${party.mode || ''}${clubText}`,
+                time: i.created_at,
+                unread: true
+            });
+        });
+
+        // Сортировка по времени
+        list.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+        notifCache = list;
+        return list;
+    } catch (e) {
+        console.error('loadNotifications error:', e);
+        return [];
+    }
+}
+
+async function updateNotifBadge() {
+    const list = await loadNotifications();
+    const count = list.length;
+    const btn = document.getElementById('notifBtn');
+    const badge = document.getElementById('notifBadge');
+    if (!btn || !badge) return;
+
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'flex';
+        btn.classList.add('has-notif');
+    } else {
+        badge.style.display = 'none';
+        btn.classList.remove('has-notif');
+    }
+}
+
+async function openNotificationsSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('notifSheet').classList.add('active');
+    await renderNotifList();
+}
+
+async function renderNotifList() {
+    const el = document.getElementById('notifList');
+    el.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    const list = await loadNotifications();
+    if (!list.length) {
+        el.innerHTML = '<div class="empty">🔕 Уведомлений нет</div>';
+        return;
+    }
+
+    el.innerHTML = list.map(n => {
+        const src = n.user.custom_avatar || n.user.photo_url;
+        const initial = (n.user.display_name || 'U')[0].toUpperCase();
+        const av = src ? `<img src="${src}" alt="">` : initial;
+
+        const timeAgo = formatTimeAgo(n.time);
+
+        let actionsHTML = '';
+        if (n.type === 'friend_request') {
+            actionsHTML = `
+                <div class="notif-actions">
+                    <button class="notif-btn-accept" onclick="acceptFriendNotif(${n.relId}, ${n.userId})">✅ Принять</button>
+                    <button class="notif-btn-decline" onclick="declineFriendNotif(${n.relId})">✕ Отклонить</button>
+                </div>
+            `;
+        } else if (n.type === 'party_invite') {
+            actionsHTML = `
+                <div class="notif-actions">
+                    <button class="notif-btn-accept" onclick="acceptInviteNotif(${n.inviteId}, ${n.partyId})">✅ Принять</button>
+                    <button class="notif-btn-decline" onclick="declineInviteNotif(${n.inviteId})">✕ Отклонить</button>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="notif-item ${n.unread ? 'unread' : ''}">
+                <div class="notif-avatar" onclick="closeAllSheets(); openPlayerProfile(${n.userId})">${av}</div>
+                <div class="notif-body">
+                    <div class="notif-text">${n.text}</div>
+                    <div class="notif-time">${timeAgo}</div>
+                    ${actionsHTML}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatTimeAgo(iso) {
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
+    return Math.floor(diff / 86400) + ' дн назад';
+}
+
+// --- Действия по уведомлениям ---
+async function acceptFriendNotif(relId, userId) {
+    try {
+        await sb.from('friendships').update({ status: 'accepted' }).eq('id', relId);
+        notify(userId, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял твой запрос в друзья.`);
+        showToast('✅ Теперь вы друзья');
+        await renderNotifList();
+        await updateNotifBadge();
+    } catch (e) { showToast('Ошибка'); }
+}
+
+async function declineFriendNotif(relId) {
+    try {
+        await sb.from('friendships').delete().eq('id', relId);
+        showToast('Отклонено');
+        await renderNotifList();
+        await updateNotifBadge();
+    } catch (e) { showToast('Ошибка'); }
+}
+
+async function acceptInviteNotif(inviteId, partyId) {
+    try {
+        // Проверяем, что пати ещё существует
+        const { data: party } = await sb.from('parties').select('*').eq('id', partyId).maybeSingle();
+        if (!party) {
+            showToast('Приглашение устарело');
+            await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+            await renderNotifList();
+            await updateNotifBadge();
+            return;
+        }
+
+        // Удаляем игрока из его текущей пати, если он там
+        const { data: myMember } = await sb.from('party_members')
+            .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+        if (myMember) {
+            await sb.from('party_members').delete()
+                .eq('party_id', myMember.party_id)
+                .eq('telegram_id', currentUser.telegram_id);
+        }
+
+        // Добавляем в новую пати
+        await sb.from('party_members').insert({
+            party_id: partyId,
+            telegram_id: currentUser.telegram_id
+        });
+        await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
+        notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`);
+
+        showToast('✅ Ты в пати');
+        closeAllSheets();
+        switchPage('play');
+        await loadOrCreateParty();
+        await updateNotifBadge();
+    } catch (e) { showToast('Ошибка: ' + e.message); }
+}
+
+async function declineInviteNotif(inviteId) {
+    try {
+        await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+        showToast('Отклонено');
+        await renderNotifList();
+        await updateNotifBadge();
+    } catch (e) { showToast('Ошибка'); }
+}
+
+// --- Realtime-подписка на уведомления ---
+function subscribeNotificationsRealtime() {
+    if (!currentUser) return;
+    if (notifChannel) sb.removeChannel(notifChannel);
+
+    notifChannel = sb.channel('notif_' + currentUser.telegram_id)
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'friendships',
+            filter: `addressee_id=eq.${currentUser.telegram_id}`
+        }, () => { updateNotifBadge(); haptic('light'); })
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'party_invites',
+            filter: `to_id=eq.${currentUser.telegram_id}`
+        }, () => { updateNotifBadge(); haptic('medium'); })
+        .subscribe();
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+init();
+
+// Периодическое обновление бейджа уведомлений
+setInterval(() => { if (currentUser) updateNotifBadge(); }, 30000);
     </script>
 </body>
 </html>
