@@ -1065,6 +1065,179 @@
                 transition-duration: 0.01ms !important;
             }
         }
+/* ============ PLAY SCREEN ============ */
+.play-screen {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(6px);
+    z-index: 400;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    display: flex; align-items: flex-end; justify-content: center;
+}
+.play-screen.active { opacity: 1; pointer-events: auto; }
+.play-screen-content {
+    width: 100%; max-width: 560px; max-height: 92vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #0a1612 0%, #050807 100%);
+    border-top-left-radius: 24px; border-top-right-radius: 24px;
+    border-top: 1px solid var(--border-strong);
+    padding: 20px 18px 28px;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.play-screen.active .play-screen-content { transform: translateY(0); }
+.play-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.play-title { font-size: 20px; font-weight: 800; color: var(--text); }
+.play-close {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    color: var(--hint); font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+}
+.play-section-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--hint); font-weight: 700; margin: 4px 0 10px;
+}
+.mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.mode-card {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 12px 10px; text-align: center;
+    cursor: pointer; transition: all 0.2s;
+}
+.mode-card.active {
+    border-color: var(--emerald); background: rgba(0,224,138,0.08);
+    box-shadow: 0 0 18px rgba(0,224,138,0.25);
+}
+.mode-card:active { transform: scale(0.97); }
+.mode-icon { font-size: 20px; margin-bottom: 4px; }
+.mode-name { font-size: 14px; font-weight: 800; color: var(--text); }
+.mode-capacity { font-size: 10px; color: var(--hint); margin-top: 2px; }
+.map-selector { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; }
+.map-chip {
+    flex-shrink: 0; padding: 8px 16px; border-radius: 20px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    color: var(--hint); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.map-chip.active {
+    background: rgba(0,224,138,0.15);
+    border-color: var(--emerald); color: var(--emerald);
+}
+.map-chip:active { transform: scale(0.95); }
+.play-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+.play-btn-find, .play-btn-create {
+    padding: 14px; border-radius: 14px;
+    font-size: 13px; font-weight: 800;
+    letter-spacing: 0.5px; cursor: pointer; transition: transform 0.15s;
+}
+.play-btn-find {
+    background: linear-gradient(135deg, #00e08a, #00b874);
+    border: none; color: #04140e;
+    box-shadow: 0 4px 16px rgba(0,224,138,0.3);
+}
+.play-btn-create {
+    background: rgba(0,224,138,0.10);
+    border: 1.5px solid var(--emerald);
+    color: var(--emerald);
+}
+.play-btn-find:active, .play-btn-create:active { transform: scale(0.96); }
+.play-rooms-list { display: flex; flex-direction: column; gap: 10px; }
+.play-room-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 14px;
+}
+.play-room-card .room-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.play-room-card .room-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.play-room-card .room-meta { font-size: 11px; color: var(--hint); }
+.play-room-card .room-count { font-size: 16px; font-weight: 800; color: var(--emerald); text-align: right; }
+.play-room-card .room-count small { display: block; font-size: 10px; color: var(--hint); font-weight: 500; margin-top: 2px; }
+.play-room-card .room-actions { margin-top: 10px; }
+.room-join-btn {
+    width: 100%; padding: 10px;
+    background: linear-gradient(135deg, #00e08a, #00b874);
+    border: none; border-radius: 12px;
+    color: #04140e; font-size: 13px; font-weight: 800;
+    cursor: pointer;
+}
+.room-join-btn:disabled { background: rgba(255,255,255,0.05); color: var(--hint); cursor: not-allowed; }
+.room-open-btn {
+    width: 100%; padding: 10px;
+    background: rgba(0,224,138,0.15);
+    border: 1.5px solid var(--emerald);
+    border-radius: 12px;
+    color: var(--emerald); font-size: 13px; font-weight: 800;
+    cursor: pointer;
+}
+.empty-rooms { text-align: center; padding: 24px; color: var(--hint); font-size: 13px; }
+
+.room-view-header { text-align: center; margin-bottom: 18px; }
+.room-view-title { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.room-view-meta { font-size: 12px; color: var(--hint); margin-bottom: 4px; }
+.room-view-count { font-size: 14px; color: var(--emerald); font-weight: 700; margin-top: 8px; }
+.teams-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.team-card {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 16px 12px; text-align: center;
+    transition: all 0.2s;
+}
+.team-card.team-a { border-color: rgba(0,224,138,0.4); }
+.team-card.team-b { border-color: rgba(255,84,112,0.4); }
+.team-card.team-a.active { background: rgba(0,224,138,0.12); box-shadow: 0 0 20px rgba(0,224,138,0.3); }
+.team-card.team-b.active { background: rgba(255,84,112,0.12); box-shadow: 0 0 20px rgba(255,84,112,0.3); }
+.team-card-title { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.team-a .team-card-title { color: var(--emerald); }
+.team-b .team-card-title { color: #ff5470; }
+.team-card-count { font-size: 11px; color: var(--hint); margin-bottom: 10px; }
+.team-card-players { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.team-player {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 8px;
+    background: rgba(0,0,0,0.25); font-size: 12px;
+}
+.team-player .tp-avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; color: #04140e;
+    flex-shrink: 0; overflow: hidden;
+}
+.team-player .tp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.team-player .tp-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.team-empty { font-size: 11px; color: var(--hint); font-style: italic; text-align: center; padding: 8px 0; }
+.team-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.team-pick-btn {
+    padding: 14px; border: 1.5px solid; border-radius: 14px;
+    font-size: 13px; font-weight: 800;
+    cursor: pointer; transition: transform 0.15s; background: transparent;
+}
+.team-pick-btn.team-a { border-color: var(--emerald); color: var(--emerald); }
+.team-pick-btn.team-b { border-color: #ff5470; color: #ff5470; }
+.team-pick-btn:active { transform: scale(0.96); }
+.room-view-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.room-leave-btn {
+    padding: 14px;
+    background: rgba(255,84,112,0.15);
+    border: 1.5px solid rgba(255,84,112,0.4);
+    border-radius: 14px;
+    color: #ff5470; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.room-close-btn {
+    padding: 14px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--hint); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.room-start-btn {
+    padding: 16px;
+    background: linear-gradient(135deg, #00e08a, #00b874);
+    border: none; border-radius: 14px;
+    color: #04140e; font-size: 15px; font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 6px 22px rgba(0,224,138,0.3);
+}
+        
     </style>
 </head>
 <body>
@@ -1087,7 +1260,7 @@
             <div class="stat-card"><div class="stat-value" id="statWins">—</div><div class="stat-label">Побед</div></div>
             <div class="stat-card"><div class="stat-value" id="statWinrate">—</div><div class="stat-label">Winrate</div></div>
         </div>
-        <button class="play-btn" id="playBtn" onclick="openPlayPage()">🎮 ИГРАТЬ</button>
+        <button class="play-btn" onclick="openPlayScreen()">🎮 ИГРАТЬ</button>
         <div class="section-title">Быстрые действия</div>
         <div class="menu-grid">
             <button class="menu-item" onclick="openFriendsPage()"><span class="menu-icon">👥</span> Друзья</button>
@@ -1250,8 +1423,8 @@
         <button class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')"><span class="nav-icon">🏠</span><span>Главная</span></button>
         <button class="nav-item" data-page="profile" onclick="switchPage('profile')"><span class="nav-icon">👤</span><span>Профиль</span></button>
         <button class="nav-item" data-page="club" onclick="openClubPage()"><span class="nav-icon">🛡️</span><span>Клуб</span></button>
-<button class="nav-item" data-page="rooms" onclick="openRoomsPage()">
-    <span class="nav-icon">🏠</span><span>Комнаты</span>
+<button class="nav-item" onclick="showToast('Раздел в разработке')">
+    <span class="nav-icon">💬</span><span>Чат</span>
 </button>
     </nav>
 
@@ -1290,6 +1463,11 @@
     <div class="msg-menu-overlay" id="msgMenuOverlay" onclick="if(event.target===this)closeMsgMenu()">
         <div class="msg-menu" id="msgMenuContent"></div>
     </div>
+
+    <!-- ============ PLAY SCREEN ============ -->
+<div class="play-screen" id="playScreen">
+    <div class="play-screen-content" id="playScreenContent"></div>
+</div>
 
     <!-- ============ SHEETS ============ -->
     <div class="sheet-overlay" id="sheetOverlay" onclick="closeAllSheets()"></div>
@@ -4850,6 +5028,402 @@ async function closeRoom(roomId) {
     showToast('Комната закрыта');
     openRoomsPage();
 }
+
+       // ============================================================
+// PLAY SCREEN (комнаты)
+// ============================================================
+let selectedMode = '5x5';
+let selectedMap = 'Sandstone';
+
+function openPlayScreen() {
+    document.getElementById('playScreen').classList.add('active');
+    haptic();
+    renderPlayList();
+}
+
+function closePlayScreen() {
+    document.getElementById('playScreen').classList.remove('active');
+}
+
+function renderPlayList() {
+    const content = document.getElementById('playScreenContent');
+    content.innerHTML = `
+        <div class="play-header">
+            <div class="play-title">🎮 Играть</div>
+            <button class="play-close" onclick="closePlayScreen()">×</button>
+        </div>
+
+        <div class="play-section-label">Режим игры</div>
+        <div class="mode-selector">
+            <div class="mode-card ${selectedMode === '2x2' ? 'active' : ''}" onclick="selectMode('2x2')">
+                <div class="mode-icon">⚔️</div>
+                <div class="mode-name">2×2</div>
+                <div class="mode-capacity">до 4 игроков</div>
+            </div>
+            <div class="mode-card ${selectedMode === '5x5' ? 'active' : ''}" onclick="selectMode('5x5')">
+                <div class="mode-icon">🛡️</div>
+                <div class="mode-name">5×5</div>
+                <div class="mode-capacity">до 10 игроков</div>
+            </div>
+        </div>
+
+        <div class="play-section-label">Карта</div>
+        <div class="map-selector">
+            <div class="map-chip ${selectedMap === 'Sandstone' ? 'active' : ''}" onclick="selectMap('Sandstone')">Sandstone</div>
+            <div class="map-chip ${selectedMap === 'Rust' ? 'active' : ''}" onclick="selectMap('Rust')">Rust</div>
+            <div class="map-chip ${selectedMap === 'Province' ? 'active' : ''}" onclick="selectMap('Province')">Province</div>
+            <div class="map-chip ${selectedMap === 'любая' ? 'active' : ''}" onclick="selectMap('любая')">Любая</div>
+        </div>
+
+        <div class="play-actions">
+            <button class="play-btn-find" onclick="findOrCreateRoom()">🔍 Найти матч</button>
+            <button class="play-btn-create" onclick="createRoomInline()">➕ Создать комнату</button>
+        </div>
+
+        <div class="play-section-label">Открытые комнаты</div>
+        <div id="playRoomsList" class="play-rooms-list">
+            <div class="empty-rooms">Загрузка...</div>
+        </div>
+    `;
+    loadPlayRooms();
+}
+
+function selectMode(mode) {
+    selectedMode = mode;
+    haptic();
+    renderPlayList();
+}
+
+function selectMap(map) {
+    selectedMap = map;
+    haptic();
+    renderPlayList();
+}
+
+async function loadPlayRooms() {
+    const container = document.getElementById('playRoomsList');
+    if (!container) return;
+    container.innerHTML = '<div class="empty-rooms">Загрузка...</div>';
+
+    try {
+        const { data: rooms, error } = await sb
+            .from('rooms')
+            .select('*')
+            .eq('status', 'open')
+            .eq('mode', selectedMode)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+
+        if (!rooms || rooms.length === 0) {
+            container.innerHTML = '<div class="empty-rooms">Открытых комнат нет. Создай свою!</div>';
+            return;
+        }
+
+        const { data: players } = await sb
+            .from('room_players')
+            .select('room_id, telegram_id, team')
+            .in('room_id', rooms.map(r => r.id));
+
+        const byRoom = {};
+        (players || []).forEach(p => {
+            if (!byRoom[p.room_id]) byRoom[p.room_id] = [];
+            byRoom[p.room_id].push(p);
+        });
+
+        const myRoom = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
+        const amInSomeRoom = !!myRoom;
+
+        container.innerHTML = rooms.map(room => {
+            const inRoom = byRoom[room.id] || [];
+            const count = inRoom.length;
+            const isFull = count >= room.max_players;
+            const alreadyInThis = inRoom.some(p => String(p.telegram_id) === String(currentUser.telegram_id));
+            const isLeader = String(room.leader_id) === String(currentUser.telegram_id);
+
+            let actionHTML;
+            if (alreadyInThis) {
+                actionHTML = `<button class="room-open-btn" onclick="openRoomView(${room.id})">Открыть комнату</button>`;
+            } else if (isFull) {
+                actionHTML = `<button class="room-join-btn" disabled>Комната заполнена</button>`;
+            } else if (amInSomeRoom) {
+                actionHTML = `<button class="room-join-btn" disabled>Ты уже в комнате</button>`;
+            } else {
+                actionHTML = `<button class="room-join-btn" onclick="joinRoom(${room.id})">Войти</button>`;
+            }
+
+            return `
+                <div class="play-room-card">
+                    <div class="room-head">
+                        <div>
+                            <div class="room-name">${room.name}</div>
+                            <div class="room-meta">
+                                ${room.mode} · ${room.map || 'любая'} ${isLeader ? '· 👑 лидер' : ''}
+                            </div>
+                        </div>
+                        <div class="room-count">
+                            ${count}/${room.max_players}
+                            <small>игроков</small>
+                        </div>
+                    </div>
+                    <div class="room-actions">${actionHTML}</div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Load rooms error:', e);
+        container.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
+    }
+}
+
+async function findOrCreateRoom() {
+    try {
+        const { data: rooms } = await sb
+            .from('rooms')
+            .select('id, max_players')
+            .eq('status', 'open')
+            .eq('mode', selectedMode);
+
+        if (rooms && rooms.length > 0) {
+            for (const room of rooms) {
+                const { data: players } = await sb
+                    .from('room_players')
+                    .select('id')
+                    .eq('room_id', room.id);
+                if ((players || []).length < room.max_players) {
+                    await joinRoom(room.id);
+                    return;
+                }
+            }
+        }
+        await createRoomInline();
+    } catch (e) {
+        console.error('Find error:', e);
+        showToast('Ошибка поиска');
+    }
+}
+
+async function createRoomInline() {
+    const { data: mine } = await sb
+        .from('room_players')
+        .select('room_id')
+        .eq('telegram_id', currentUser.telegram_id);
+
+    if (mine && mine.length > 0) {
+        const myRoomId = mine[0].room_id;
+        const { data: myRoom } = await sb
+            .from('rooms').select('leader_id, name').eq('id', myRoomId).single();
+
+        if (myRoom && String(myRoom.leader_id) === String(currentUser.telegram_id)) {
+            const close = confirm(`Ты лидер комнаты "${myRoom.name}". Закрыть её и создать новую?`);
+            if (!close) return;
+            await sb.from('room_players').delete().eq('room_id', myRoomId);
+            await sb.from('rooms').delete().eq('id', myRoomId);
+        } else {
+            const leave = confirm('Ты уже в другой комнате. Выйти и создать новую?');
+            if (!leave) return;
+            await sb.from('room_players').delete().eq('telegram_id', currentUser.telegram_id);
+        }
+    }
+
+    const maxPlayers = selectedMode === '2x2' ? 4 : 10;
+    const roomName = `${currentUser.display_name || 'Комната'} · ${selectedMode}`;
+
+    const { data: created, error } = await sb.from('rooms').insert({
+        name: roomName,
+        mode: selectedMode,
+        map: selectedMap,
+        max_players: maxPlayers,
+        leader_id: currentUser.telegram_id,
+        status: 'open',
+    }).select().single();
+
+    if (error) { showToast('Ошибка: ' + error.message); return; }
+
+    await sb.from('room_players').insert({
+        room_id: created.id,
+        telegram_id: currentUser.telegram_id,
+        team: null,
+    });
+
+    showToast('✅ Комната создана');
+    openRoomView(created.id);
+}
+
+async function joinRoom(roomId) {
+    const { data: mine } = await sb
+        .from('room_players')
+        .select('room_id')
+        .eq('telegram_id', currentUser.telegram_id);
+
+    if (mine && mine.length > 0) {
+        const myRoomId = mine[0].room_id;
+        if (String(myRoomId) === String(roomId)) {
+            openRoomView(roomId);
+            return;
+        }
+        const { data: myRoom } = await sb
+            .from('rooms').select('leader_id, name').eq('id', myRoomId).single();
+
+        if (myRoom && String(myRoom.leader_id) === String(currentUser.telegram_id)) {
+            const close = confirm(`Ты лидер комнаты "${myRoom.name}". Закрыть её и войти в новую?`);
+            if (!close) return;
+            await sb.from('room_players').delete().eq('room_id', myRoomId);
+            await sb.from('rooms').delete().eq('id', myRoomId);
+        } else {
+            const leave = confirm('Ты уже в другой комнате. Выйти и войти сюда?');
+            if (!leave) return;
+            await sb.from('room_players').delete().eq('telegram_id', currentUser.telegram_id);
+        }
+    }
+
+    const { data: players } = await sb
+        .from('room_players').select('id').eq('room_id', roomId);
+    const { data: room } = await sb.from('rooms').select('max_players').eq('id', roomId).single();
+
+    if ((players || []).length >= room.max_players) {
+        showToast('Комната уже полная');
+        return;
+    }
+
+    const { error } = await sb.from('room_players').insert({
+        room_id: roomId,
+        telegram_id: currentUser.telegram_id,
+        team: null,
+    });
+    if (error) { showToast('Ошибка входа: ' + error.message); return; }
+
+    showToast('✅ Ты вошёл в комнату');
+    openRoomView(roomId);
+}
+
+async function openRoomView(roomId) {
+    const content = document.getElementById('playScreenContent');
+    content.innerHTML = '<div class="empty-rooms">Загрузка комнаты...</div>';
+
+    try {
+        const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+        const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+
+        if (!room) { content.innerHTML = 'Комната не найдена'; return; }
+
+        const playerIds = (players || []).map(p => p.telegram_id);
+        let users = [];
+        if (playerIds.length > 0) {
+            const { data: u } = await sb
+                .from('users')
+                .select('telegram_id, display_name, elo, custom_avatar, photo_url')
+                .in('telegram_id', playerIds);
+            users = u || [];
+        }
+        const userById = {};
+        users.forEach(u => userById[u.telegram_id] = u);
+
+        const teamA = (players || []).filter(p => p.team === 'A');
+        const teamB = (players || []).filter(p => p.team === 'B');
+        const iAmLeader = String(room.leader_id) === String(currentUser.telegram_id);
+        const me = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
+        const myTeam = me?.team;
+
+        const renderPlayer = (p) => {
+            const u = userById[p.telegram_id] || {};
+            const avatarSrc = u.custom_avatar || u.photo_url;
+            const initial = (u.display_name || 'U')[0].toUpperCase();
+            const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
+            return `
+                <div class="team-player">
+                    <div class="tp-avatar">${avatarHTML}</div>
+                    <div class="tp-name">${u.display_name || 'Игрок'}</div>
+                </div>
+            `;
+        };
+
+        content.innerHTML = `
+            <div class="play-header">
+                <div class="play-title">Комната</div>
+                <button class="play-close" onclick="renderPlayList()">×</button>
+            </div>
+
+            <div class="room-view-header">
+                <div class="room-view-title">${room.name}</div>
+                <div class="room-view-meta">${room.mode} · ${room.map || 'любая'}</div>
+                <div class="room-view-count">${(players || []).length}/${room.max_players} игроков</div>
+            </div>
+
+            <div class="teams-grid">
+                <div class="team-card team-a ${myTeam === 'A' ? 'active' : ''}">
+                    <div class="team-card-title">Команда A</div>
+                    <div class="team-card-count">${teamA.length} игроков</div>
+                    <div class="team-card-players">
+                        ${teamA.length === 0 ? '<div class="team-empty">Пусто</div>' : teamA.map(renderPlayer).join('')}
+                    </div>
+                </div>
+                <div class="team-card team-b ${myTeam === 'B' ? 'active' : ''}">
+                    <div class="team-card-title">Команда B</div>
+                    <div class="team-card-count">${teamB.length} игроков</div>
+                    <div class="team-card-players">
+                        ${teamB.length === 0 ? '<div class="team-empty">Пусто</div>' : teamB.map(renderPlayer).join('')}
+                    </div>
+                </div>
+            </div>
+
+            ${!myTeam ? `
+                <div class="team-buttons">
+                    <button class="team-pick-btn team-a" onclick="chooseTeam(${room.id}, 'A')">В команду A</button>
+                    <button class="team-pick-btn team-b" onclick="chooseTeam(${room.id}, 'B')">В команду B</button>
+                </div>
+            ` : `
+                <div style="text-align: center; margin-bottom: 14px; font-size: 13px; color: var(--hint);">
+                    Ты в команде <b style="color: ${myTeam === 'A' ? 'var(--emerald)' : '#ff5470'};">${myTeam}</b>
+                </div>
+            `}
+
+            <div class="room-view-actions">
+                ${iAmLeader && (teamA.length + teamB.length) >= 2 ? `
+                    <button class="room-start-btn" onclick="startMatch(${room.id})">▶️ Начать матч</button>
+                ` : ''}
+                <button class="room-leave-btn" onclick="leaveRoom(${room.id})">Покинуть комнату</button>
+                ${iAmLeader ? `<button class="room-close-btn" onclick="closeRoom(${room.id})">Закрыть комнату для всех</button>` : ''}
+            </div>
+        `;
+    } catch (e) {
+        console.error('Room view error:', e);
+        content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
+    }
+}
+
+async function chooseTeam(roomId, team) {
+    const { error } = await sb
+        .from('room_players')
+        .update({ team })
+        .eq('room_id', roomId)
+        .eq('telegram_id', currentUser.telegram_id);
+    if (error) { showToast('Ошибка: ' + error.message); return; }
+    haptic('medium');
+    showToast('✅ Ты в команде ' + team);
+    openRoomView(roomId);
+}
+
+async function leaveRoom(roomId) {
+    if (!confirm('Покинуть комнату?')) return;
+    await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id);
+    showToast('Ты покинул комнату');
+    renderPlayList();
+}
+
+async function closeRoom(roomId) {
+    if (!confirm('Закрыть комнату для всех?')) return;
+    await sb.from('room_players').delete().eq('room_id', roomId);
+    await sb.from('rooms').delete().eq('id', roomId);
+    showToast('Комната закрыта');
+    renderPlayList();
+}
+
+async function startMatch(roomId) {
+    if (!confirm('Начать матч? Комната закроется.')) return;
+    await sb.from('rooms').update({ status: 'in_game' }).eq('id', roomId);
+    showToast('🎮 Матч начался!');
+    renderPlayList();
+}     
 
         // ============================================================
         // BOOT
