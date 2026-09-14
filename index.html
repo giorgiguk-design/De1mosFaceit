@@ -2722,34 +2722,33 @@
             } catch (e) { console.error(e); }
         }
 
-        async function ensureParty(mode) {
-            const me = currentUser.telegram_id;
-            const { data: member } = await sb.from('party_members')
-                .select('party_id').eq('telegram_id', me).maybeSingle();
-            if (member) {
-                const { data: party } = await sb.from('parties').select('*').eq('id', member.party_id).single();
-                if (party) {
-                    if (party.mode !== mode) {
-                        await sb.from('parties').update({ mode }).eq('id', party.id);
-                        party.mode = mode;
-                    }
-                    return party;
-                }
+async function ensureParty(mode) {
+    const me = currentUser.telegram_id;
+    const { data: member } = await sb.from('party_members')
+        .select('party_id').eq('telegram_id', me).maybeSingle();
+    if (member) {
+        const { data: party } = await sb.from('parties').select('*').eq('id', member.party_id).single();
+        if (party) {
+            if (party.mode !== mode) {
+                await sb.from('parties').update({ mode }).eq('id', party.id);
+                party.mode = mode;
             }
-            // Проверим, нет ли у меня клуба — если да, привяжем
-            const { data: clubMember } = await sb.from('club_members').select('club_id, role')
-                .eq('telegram_id', me).maybeSingle();
-
-            const insert: any = { leader_id: me, mode };
-            if (clubMember) insert.club_id = clubMember.club_id;
-
-            const { data: party, error } = await sb.from('parties').insert(insert).select().single();
-            if (error) throw error;
-
-            await sb.from('party_members').insert({ party_id: party.id, telegram_id: me });
             return party;
         }
+    }
+    // Проверим, нет ли у меня клуба — если да, привяжем
+    const { data: clubMember } = await sb.from('club_members').select('club_id, role')
+        .eq('telegram_id', me).maybeSingle();
 
+    const insert = { leader_id: me, mode };
+    if (clubMember) insert.club_id = clubMember.club_id;
+
+    const { data: party, error } = await sb.from('parties').insert(insert).select().single();
+    if (error) throw error;
+
+    await sb.from('party_members').insert({ party_id: party.id, telegram_id: me });
+    return party;
+}
         async function loadPartyMembers(party) {
             const { data: members } = await sb.from('party_members').select('*').eq('party_id', party.id);
             const ids = (members || []).map(m => m.telegram_id);
