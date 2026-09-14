@@ -1853,6 +1853,148 @@ body::after {
     font-size: 11px;
     color: var(--hint);
 }
+
+    /* ============ ROOM ACTIONS V2 ============ */
+.room-actions-v2 {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.room-start-btn-v2 {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
+    border: none;
+    border-radius: 16px;
+    color: #04140e;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.3);
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 0.22s ease;
+}
+.room-start-btn-v2:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(var(--emerald-rgb), 0.45);
+}
+.room-start-btn-v2:active { transform: scale(0.97); }
+.room-start-btn-v2:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.room-icon-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    gap: 10px;
+}
+
+.room-icon-btn {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(var(--emerald-rgb), 0.06);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 8px;
+    position: relative;
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                background 0.22s ease,
+                border-color 0.22s ease;
+}
+.room-icon-btn:active {
+    transform: scale(0.94);
+    background: rgba(var(--emerald-rgb), 0.12);
+    border-color: var(--border-strong);
+}
+.room-icon-btn.danger {
+    color: var(--red);
+    background: rgba(255, 84, 112, 0.06);
+    border-color: rgba(255, 84, 112, 0.25);
+}
+.rib-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+.rib-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.rib-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg);
+    animation: bounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.room-icon-btn.has-unread {
+    animation: notifPulse 1.6s ease-in-out infinite;
+    color: var(--red);
+    border-color: rgba(255, 84, 112, 0.4);
+    background: rgba(255, 84, 112, 0.08);
+}
+
+    /* ============ NAV BADGE ============ */
+.nav-item, .menu-drawer-btn {
+    position: relative;
+}
+.nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 50%;
+    transform: translateX(18px);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg);
+    animation: bounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    z-index: 2;
+}
+.menu-drawer-btn .nav-badge {
+    right: 14px;
+    transform: none;
+}
+.nav-item.has-unread .nav-icon,
+.menu-drawer-btn.has-unread {
+    animation: notifPulse 1.6s ease-in-out infinite;
+    color: var(--red);
+}
     
 </style>
 </head>
@@ -2199,6 +2341,12 @@ body::after {
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 
+        <div class="sheet" id="roomInviteSheet">
+        <div class="sheet-title">👥 Пригласить друга в комнату</div>
+        <div id="roomInviteList"><div class="empty">Загрузка...</div></div>
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    </div>
+
     <!-- ============ PARTY INVITE ============ -->
     <div class="sheet-overlay" id="partyInviteOverlay" onclick="declinePartyInvite()"></div>
     <div class="sheet" id="partyInviteSheet" style="z-index: 700;">
@@ -2247,6 +2395,11 @@ body::after {
     <button class="menu-drawer-btn" onclick="menuDrawerGo('friends')">
         <span class="menu-drawer-icon">👥</span> Друзья
     </button>
+
+    <button class="menu-drawer-btn" data-menu="chat" onclick="menuDrawerGo('chat')">
+        <span class="menu-drawer-icon">💬</span> Чаты
+    </button>
+
     <button class="menu-drawer-btn" onclick="menuDrawerGo('settings')">
         <span class="menu-drawer-icon">⚙️</span> Настройки
     </button>
@@ -2438,6 +2591,8 @@ body::after {
                 subscribeNotificationsRealtime();
                 loadAllCovers();
                 subscribeCoversRealtime();
+                updateChatsBadge();
+                subscribeChatsRealtime();
             } catch (e) {
                 console.error('Init error:', e);
                 showToast('Ошибка: ' + (e?.message || e));
@@ -3947,7 +4102,11 @@ function openFriendSearchSheet() {
         // ============================================================
         // CHAT
         // ============================================================
-        function openChatPage() { switchPage('chat'); loadChatList(); }
+function openChatPage() {
+    switchPage('chat');
+    markChatsAsRead();
+    loadChatList();
+}
 
         async function openChatWithUser(userId) {
             if (String(userId) === String(currentUser?.telegram_id)) return;
@@ -4058,13 +4217,14 @@ function openFriendSearchSheet() {
             } catch (e) { console.error(e); showToast('Ошибка чата'); }
         }
 
-        function closeChatView() {
-            document.getElementById('chatView').classList.remove('active');
-            if (chatChannel) { sb.removeChannel(chatChannel); chatChannel = null; }
-            currentChat = null;
-            cancelReply();
-            openChatPage();
-        }
+function closeChatView() {
+    document.getElementById('chatView').classList.remove('active');
+    if (chatChannel) { sb.removeChannel(chatChannel); chatChannel = null; }
+    currentChat = null;
+    cancelReply();
+    markChatsAsRead();
+    openChatPage();
+}
 
         async function loadMessages() {
             if (!currentChat || !currentUser) return;
@@ -5991,19 +6151,34 @@ async function renderRoomContent(roomId) {
                 </div>
             `}
 
-<div class="room-view-actions">
+<div class="room-actions-v2">
     ${iAmLeader ? `
-<button class="room-start-btn btn-with-cover" data-cover="room_start" onclick="startMatch(${room.id})">
-    <span class="btn-cover-bg"></span>
-    ▶️ Начать матч
-</button>
+        <button class="room-start-btn-v2" onclick="startMatch(${room.id})" ${!canStart ? 'disabled' : ''}>
+            ▶️ ${canStart ? 'НАЧАТЬ МАТЧ' : `НУЖНО ПО ${needPerTeam} ИГРОКОВ`}
+        </button>
     ` : ''}
-<button class="room-chat-btn btn-with-cover" id="roomChatBtn" data-cover="room_chat" onclick="openRoomChat(${roomId})">
-    <span class="btn-cover-bg"></span>
-    💬 Чат комнаты
-</button>
-    <button class="room-leave-btn" onclick="leaveRoom(${roomId})">Покинуть комнату</button>
-    ${iAmLeader ? `<button class="room-close-btn" onclick="closeRoom(${roomId})">Закрыть комнату для всех</button>` : ''}
+
+    <div class="room-icon-actions">
+        <button class="room-icon-btn" onclick="openInviteFriendToRoom(${roomId})" title="Пригласить друга">
+            <span class="rib-icon">➕</span>
+            <span class="rib-label">Друг</span>
+        </button>
+        <button class="room-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
+            <span class="rib-icon">💬</span>
+            <span class="rib-label">Чат</span>
+            <span class="rib-badge" id="roomChatBadge" style="display:none;">0</span>
+        </button>
+        <button class="room-icon-btn" onclick="leaveRoom(${roomId})" title="Покинуть">
+            <span class="rib-icon">🚪</span>
+            <span class="rib-label">Выйти</span>
+        </button>
+        ${iAmLeader ? `
+            <button class="room-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть комнату">
+                <span class="rib-icon">⛔</span>
+                <span class="rib-label">Закрыть</span>
+            </button>
+        ` : ''}
+    </div>
 </div>
         `;
         setTimeout(() => updateRoomChatButton(room.id), 100);
@@ -7131,6 +7306,9 @@ function menuDrawerGo(dest) {
             case 'matches':
                 openMatchesHistory();
                 break;
+            case 'chat':                    
+                openChatPage();             
+                break;                      
             case 'settings':
                 openSettingsSheet();
                 break;
@@ -7403,21 +7581,27 @@ async function loadNotifications() {
             });
         });
 
-        (invites || []).forEach(i => {
-            const party = partyMap[i.party_id] || {};
-            const clubText = party.is_club_party ? ' (клановая)' : '';
-            list.push({
-                id: 'invite_' + i.id,
-                type: 'party_invite',
-                inviteId: i.id,
-                partyId: i.party_id,
-                userId: i.from_id,
-                user: userMap[i.from_id] || {},
-                text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> приглашает в матч ${party.mode || ''}${clubText}`,
-                time: i.created_at,
-                unread: true
-            });
-        });
+(invites || []).forEach(i => {
+    const party = partyMap[i.party_id] || {};
+    const isRoom = i.kind === 'room';
+    const clubText = party.is_club_party ? ' (клановая)' : '';
+    const label = isRoom
+        ? `приглашает в комнату`
+        : `приглашает в матч ${party.mode || ''}${clubText}`;
+
+    list.push({
+        id: 'invite_' + i.id,
+        type: 'party_invite',
+        kind: i.kind || 'party',
+        inviteId: i.id,
+        partyId: i.party_id,
+        userId: i.from_id,
+        user: userMap[i.from_id] || {},
+        text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> ${label}`,
+        time: i.created_at,
+        unread: true
+    });
+});
 
         // Сортировка по времени
         list.sort((a, b) => new Date(b.time) - new Date(a.time));
@@ -7530,37 +7714,85 @@ async function declineFriendNotif(relId) {
 
 async function acceptInviteNotif(inviteId, partyId) {
     try {
-        // Проверяем, что пати ещё существует
-        const { data: party } = await sb.from('parties').select('*').eq('id', partyId).maybeSingle();
-        if (!party) {
-            showToast('Приглашение устарело');
-            await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
-            await renderNotifList();
-            await updateNotifBadge();
-            return;
+        const { data: invite } = await sb.from('party_invites')
+            .select('*').eq('id', inviteId).single();
+        const isRoom = invite?.kind === 'room';
+
+        if (isRoom) {
+            // Присоединяемся к комнате
+            const { data: room } = await sb.from('rooms')
+                .select('*').eq('id', partyId).maybeSingle();
+            if (!room) {
+                showToast('Комната уже закрыта');
+                await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+                await renderNotifList();
+                await updateNotifBadge();
+                return;
+            }
+
+            // Проверяем, не в комнате ли уже
+            const { data: existing } = await sb.from('room_players')
+                .select('id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+            if (existing) {
+                await sb.from('room_players').delete().eq('telegram_id', currentUser.telegram_id);
+            }
+
+            // Проверяем заполненность
+            const { data: players } = await sb.from('room_players')
+                .select('id').eq('room_id', partyId);
+            if ((players || []).length >= room.max_players) {
+                showToast('Комната заполнена');
+                await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+                await renderNotifList();
+                await updateNotifBadge();
+                return;
+            }
+
+            await sb.from('room_players').insert({
+                room_id: partyId,
+                telegram_id: currentUser.telegram_id,
+                team: null
+            });
+            await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
+
+            showToast('✅ Ты в комнате');
+            closeAllSheets();
+            // Открываем комнату
+            const screen = document.getElementById('playScreen');
+            if (screen) screen.classList.add('active');
+            openRoomView(partyId);
+        } else {
+            // Старая логика с пати
+            const { data: party } = await sb.from('parties').select('*').eq('id', partyId).maybeSingle();
+            if (!party) {
+                showToast('Приглашение устарело');
+                await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+                await renderNotifList();
+                await updateNotifBadge();
+                return;
+            }
+
+            const { data: myMember } = await sb.from('party_members')
+                .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+            if (myMember) {
+                await sb.from('party_members').delete()
+                    .eq('party_id', myMember.party_id)
+                    .eq('telegram_id', currentUser.telegram_id);
+            }
+
+            await sb.from('party_members').insert({
+                party_id: partyId,
+                telegram_id: currentUser.telegram_id
+            });
+            await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
+            notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`);
+
+            showToast('✅ Ты в пати');
+            closeAllSheets();
+            switchPage('play');
+            await loadOrCreateParty();
         }
 
-        // Удаляем игрока из его текущей пати, если он там
-        const { data: myMember } = await sb.from('party_members')
-            .select('party_id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
-        if (myMember) {
-            await sb.from('party_members').delete()
-                .eq('party_id', myMember.party_id)
-                .eq('telegram_id', currentUser.telegram_id);
-        }
-
-        // Добавляем в новую пати
-        await sb.from('party_members').insert({
-            party_id: partyId,
-            telegram_id: currentUser.telegram_id
-        });
-        await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
-        notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`);
-
-        showToast('✅ Ты в пати');
-        closeAllSheets();
-        switchPage('play');
-        await loadOrCreateParty();
         await updateNotifBadge();
     } catch (e) { showToast('Ошибка: ' + e.message); }
 }
@@ -7781,13 +8013,265 @@ function openSupportTelegram() {
     closeAllSheets();
 }
 
+            // ============================================================
+// INVITE FRIEND TO ROOM
+// ============================================================
+async function openInviteFriendToRoom(roomId) {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('roomInviteSheet').classList.add('active');
+    await renderRoomInviteList(roomId);
+}
+
+async function renderRoomInviteList(roomId) {
+    const el = document.getElementById('roomInviteList');
+    el.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    try {
+        const me = currentUser.telegram_id;
+
+        // Список друзей
+        const { data: rels } = await sb.from('friendships')
+            .select('requester_id, addressee_id')
+            .or(`requester_id.eq.${me},addressee_id.eq.${me}`)
+            .eq('status', 'accepted');
+
+        const friendIds = (rels || []).map(r =>
+            r.requester_id === me ? r.addressee_id : r.requester_id
+        );
+
+        if (!friendIds.length) {
+            el.innerHTML = '<div class="empty">У вас пока нет друзей</div>';
+            return;
+        }
+
+        // Кто уже в комнате
+        const { data: roomPlayers } = await sb.from('room_players')
+            .select('telegram_id').eq('room_id', roomId);
+        const inRoom = new Set((roomPlayers || []).map(p => p.telegram_id));
+
+        // Кто уже приглашён в эту комнату
+        const { data: invites } = await sb.from('party_invites')
+            .select('to_id').eq('party_id', roomId).eq('kind', 'room');
+        const invited = new Set((invites || []).map(i => i.to_id));
+
+        // Данные друзей
+        const { data: users } = await sb.from('users')
+            .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+            .in('telegram_id', friendIds);
+
+        const available = (users || []).filter(u => !inRoom.has(u.telegram_id));
+
+        if (!available.length) {
+            el.innerHTML = '<div class="empty">Все друзья уже в комнате</div>';
+            return;
+        }
+
+        el.innerHTML = available.map(u => {
+            const src = u.custom_avatar || u.photo_url;
+            const initial = (u.display_name || 'U')[0].toUpperCase();
+            const av = src ? `<img src="${src}" alt="">` : initial;
+            const alreadyInvited = invited.has(u.telegram_id);
+            const btn = alreadyInvited
+                ? `<button class="friend-action pending" disabled>⏳</button>`
+                : `<button class="friend-action add" onclick="sendRoomInvite(${roomId}, ${u.telegram_id}, this)">Пригласить</button>`;
+            return `
+                <div class="leaderboard-item">
+                    <div class="lb-avatar">${av}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
+                        <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                    </div>
+                    ${btn}
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error(e);
+        el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>';
+    }
+}
+
+async function sendRoomInvite(roomId, userId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+        // Получаем данные комнаты для уведомления
+        const { data: room } = await sb.from('rooms')
+            .select('name, mode, leader_id').eq('id', roomId).single();
+
+        await sb.from('party_invites').upsert({
+            party_id: roomId,
+            from_id: currentUser.telegram_id,
+            to_id: userId,
+            kind: 'room',
+            status: 'pending'
+        }, { onConflict: 'party_id,to_id' });
+
+        await notify(userId,
+            `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в комнату ${room?.mode || ''}. Открой приложение!`
+        );
+
+        showToast('✅ Приглашение отправлено');
+        if (btn) { btn.className = 'friend-action pending'; btn.textContent = '⏳'; }
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Пригласить'; }
+    }
+}
+
+            // ============================================================
+// UNREAD CHATS BADGE
+// ============================================================
+let lastChatsReadAt = localStorage.getItem('lastChatsReadAt')
+    ? new Date(localStorage.getItem('lastChatsReadAt'))
+    : new Date(0);
+let chatUnreadChannel = null;
+let chatBadgeInterval = null;
+
+async function countUnreadChats() {
+    if (!currentUser) return 0;
+    try {
+        const me = currentUser.telegram_id;
+
+        // Личные непрочитанные
+        const { count: dmCount } = await sb.from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('recipient_id', me)
+            .gt('created_at', lastChatsReadAt.toISOString());
+
+        // Клубные непрочитанные (если в клубе)
+        let clubCount = 0;
+        const { data: membership } = await sb.from('club_members')
+            .select('club_id').eq('telegram_id', me).maybeSingle();
+        if (membership) {
+            const { count } = await sb.from('messages')
+                .select('id', { count: 'exact', head: true })
+                .eq('club_id', membership.club_id)
+                .neq('sender_id', me)
+                .gt('created_at', lastChatsReadAt.toISOString());
+            clubCount = count || 0;
+        }
+
+        return (dmCount || 0) + clubCount;
+    } catch (e) {
+        return 0;
+    }
+}
+
+async function updateChatsBadge() {
+    const count = await countUnreadChats();
+    const navBtn = document.querySelector('.bottom-nav .nav-item[data-page="chat"]');
+    const menuBtn = document.querySelector('.menu-drawer-btn[data-menu="chat"]');
+    [navBtn, menuBtn].forEach(btn => {
+        if (!btn) return;
+        let badge = btn.querySelector('.nav-badge');
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'nav-badge';
+                btn.appendChild(badge);
+            }
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+            btn.classList.add('has-unread');
+        } else {
+            if (badge) badge.style.display = 'none';
+            btn.classList.remove('has-unread');
+        }
+    });
+}
+
+function markChatsAsRead() {
+    lastChatsReadAt = new Date();
+    localStorage.setItem('lastChatsReadAt', lastChatsReadAt.toISOString());
+    updateChatsBadge();
+}
+
+function subscribeChatsRealtime() {
+    if (chatUnreadChannel) sb.removeChannel(chatUnreadChannel);
+    if (!currentUser) return;
+
+    chatUnreadChannel = sb.channel('chats_badge_' + currentUser.telegram_id)
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'messages',
+            filter: `recipient_id=eq.${currentUser.telegram_id}`
+        }, () => {
+            updateChatsBadge();
+            haptic('light');
+        })
+        .subscribe();
+
+    // Раз в 30 сек обновляем на всякий случай (fallback)
+    if (chatBadgeInterval) clearInterval(chatBadgeInterval);
+    chatBadgeInterval = setInterval(() => {
+        if (!document.hidden) updateChatsBadge();
+    }, 30000);
+}
+
+            // ============================================================
+// APP LIFECYCLE / OPTIMIZATION
+// ============================================================
+const CHANNELS = new Map(); // name -> channel
+const INTERVALS = new Map(); // name -> intervalId
+
+function registerChannel(name, channel) {
+    if (CHANNELS.has(name)) sb.removeChannel(CHANNELS.get(name));
+    CHANNELS.set(name, channel);
+}
+
+function unregisterChannel(name) {
+    if (CHANNELS.has(name)) {
+        sb.removeChannel(CHANNELS.get(name));
+        CHANNELS.delete(name);
+    }
+}
+
+function registerInterval(name, id) {
+    if (INTERVALS.has(name)) clearInterval(INTERVALS.get(name));
+    INTERVALS.set(name, id);
+}
+
+function clearAllIntervals() {
+    INTERVALS.forEach(id => clearInterval(id));
+    INTERVALS.clear();
+}
+
+// При сворачивании — пауза, при разворачивании — резюм
+let isAppVisible = true;
+document.addEventListener('visibilitychange', () => {
+    isAppVisible = !document.hidden;
+    if (!isAppVisible) {
+        // Останавливаем polling'и
+        INTERVALS.forEach(id => clearInterval(id));
+    } else {
+        // При возврате — обновляем данные и переподписываемся
+        if (currentUser) {
+            updateNotifBadge();
+            updateChatsBadge();
+            checkActiveRoom();
+        }
+    }
+});
+
+function throttle(fn, delay = 300) {
+    let timer = null;
+    return function(...args) {
+        if (timer) return;
+        timer = setTimeout(() => {
+            fn.apply(this, args);
+            timer = null;
+        }, delay);
+    };
+}  
+
 // ============================================================
 // BOOT
 // ============================================================
 init();
 
 // Периодическое обновление бейджа уведомлений
-setInterval(() => { if (currentUser) updateNotifBadge(); }, 30000);
+registerInterval('notifBadge', setInterval(() => {
+    if (isAppVisible && currentUser) updateNotifBadge();
+}, 30000));
     </script>
 </body>
 </html>
