@@ -2058,6 +2058,83 @@ body::after {
 }
 .room-chat-send:active { transform: scale(0.92); }
 
+    /* ============ ROOM CHAT HEADER ============ */
+.room-chat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    margin: -8px -16px 14px;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.3) 100%);
+    border-bottom: 1px solid var(--border-strong);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+.room-chat-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.65;
+}
+
+.room-chat-back-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 0;
+    clip-path: polygon(
+        6px 0, 100% 0, 100% calc(100% - 6px),
+        calc(100% - 6px) 100%, 0 100%, 0 6px
+    );
+    background: rgba(var(--emerald-rgb), 0.10);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 20px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: inherit;
+    padding-bottom: 3px;
+    transition: transform 0.2s ease, background 0.22s ease, border-color 0.22s ease;
+}
+.room-chat-back-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.20);
+    border-color: var(--emerald);
+    transform: translateX(-2px);
+}
+.room-chat-back-btn:active { transform: scale(0.9); }
+
+.room-chat-header-info {
+    flex: 1;
+    min-width: 0;
+}
+.room-chat-header-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.room-chat-header-sub {
+    font-size: 10px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
 /* ============ THEME SWITCHER ============ */
 .theme-option {
     width: 100%;
@@ -9120,6 +9197,12 @@ function openPlayScreen() {
 }
 
 async function closePlayScreen() {
+    // Если открыт чат комнаты — сначала закрываем его, не выходя из комнаты
+    if (roomChatOpen && currentPlayRoomId) {
+        await closeRoomChat(currentPlayRoomId);
+        return;
+    }
+
     const screen = document.getElementById('playScreen');
     if (!screen) return;
     screen.classList.remove('active');
@@ -10745,18 +10828,22 @@ async function openRoomChat(roomId) {
 
     const { data: room } = await sb.from('rooms').select('name, mode, final_map').eq('id', roomId).single();
 
-    content.innerHTML = `
-        <div style="text-align: center; font-size: 12px; color: var(--hint); margin-bottom: 12px;">
-            ${escapeHtml(room?.name || '')} · ${room?.mode || ''}
+content.innerHTML = `
+    <div class="room-chat-header">
+        <button class="room-chat-back-btn" onclick="closeRoomChat(${roomId})">←</button>
+        <div class="room-chat-header-info">
+            <div class="room-chat-header-title">${escapeHtml(room?.name || 'Чат комнаты')}</div>
+            <div class="room-chat-header-sub">${room?.mode || ''} · Чат комнаты</div>
         </div>
-        <div class="room-chat-messages" id="roomChatMessages">
-            <div class="empty-rooms">Загрузка...</div>
-        </div>
-        <div class="room-chat-input-bar">
-            <input type="text" id="roomChatInput" placeholder="Сообщение..." autocomplete="off">
-            <button class="room-chat-send" onclick="sendRoomMessage(${roomId})">➤</button>
-        </div>
-    `;
+    </div>
+    <div class="room-chat-messages" id="roomChatMessages">
+        <div class="empty-rooms">Загрузка...</div>
+    </div>
+    <div class="room-chat-input-bar">
+        <input type="text" id="roomChatInput" placeholder="Сообщение..." autocomplete="off">
+        <button class="room-chat-send" onclick="sendRoomMessage(${roomId})">➤</button>
+    </div>
+`;
 
     await loadRoomMessages(roomId);
     subscribeRoomChat(roomId);
@@ -10781,14 +10868,30 @@ async function closeRoomChat(roomId) {
         sb.removeChannel(roomChatChannel);
         roomChatChannel = null;
     }
-    // Возвращаемся в комнату
-    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
-    if (room) {
-        if (room.status === 'veto') openVetoView(roomId);
-        else if (room.status === 'side_pick') showSidePick(roomId);
-        else if (room.status === 'waiting_link' || room.status === 'in_game') showLobbyScreen(roomId, room);
-        else renderRoomContent(roomId);
+
+    // Проверяем, что комната ещё существует
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).maybeSingle();
+
+    if (!room) {
+        // Комната исчезла — закрываем весь play-screen
+        showToast('Комната больше не существует');
+        closePlayScreen();
+        return;
     }
+
+    // Возвращаемся в актуальный экран комнаты
+    if (room.status === 'veto') { openVetoView(roomId); return; }
+    if (room.status === 'side_pick') { showSidePick(roomId); return; }
+    if (room.status === 'waiting_link' || room.status === 'in_game') {
+        showLobbyScreen(roomId, room);
+        return;
+    }
+    if (room.status === 'cancelled') {
+        showToast('Матч отменён');
+        closePlayScreen();
+        return;
+    }
+    renderRoomContent(roomId);
 }
 
 async function loadRoomMessages(roomId) {
