@@ -1961,6 +1961,57 @@ body::after {
     background: rgba(255, 84, 112, 0.08);
 }
 
+    /* ============ MODERATOR PANEL ============ */
+.moderator-panel {
+    background: linear-gradient(140deg, rgba(217,171,90,0.12), rgba(217,171,90,0.02) 45%, rgba(5,10,8,0.6));
+    border: 1px solid rgba(217,171,90,0.4);
+    border-radius: 22px;
+    padding: 22px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+}
+.moderator-panel::before {
+    content: '⚖️';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 80px;
+    opacity: 0.06;
+    transform: rotate(-15deg);
+}
+.moderator-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--gold);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+.moderator-sub {
+    font-size: 12px;
+    color: var(--hint);
+    margin-bottom: 16px;
+}
+.moderator-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(217,171,90,0.15);
+    border: 1px solid rgba(217,171,90,0.35);
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--gold);
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+.menu-drawer-btn.moderator {
+    background: linear-gradient(135deg, rgba(217,171,90,0.18), rgba(217,171,90,0.06));
+    border-color: rgba(217,171,90,0.4);
+    color: var(--gold);
+}
+
     /* ============ NAV BADGE ============ */
 .nav-item, .menu-drawer-btn {
     position: relative;
@@ -2218,6 +2269,50 @@ body::after {
         </div>
     </div>
 
+    <!-- ============ ONBOARDING MODAL ============ -->
+<div class="player-modal" id="onboardingModal">
+    <div class="player-modal-inner" style="max-width: 460px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 56px; margin-bottom: 10px;">🎮</div>
+            <div style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">Добро пожаловать!</div>
+            <div style="font-size: 13px; color: var(--hint); line-height: 1.5;">
+                Заполни профиль, чтобы играть на De1mos Faceit
+            </div>
+        </div>
+
+        <div class="profile-fields">
+            <div>
+                <label class="field-label">Ник в Standoff 2 *</label>
+                <input type="text" class="field-input" id="onboardNickname"
+                       placeholder="Например: De1mos" maxlength="32" autocomplete="off">
+            </div>
+            <div>
+                <label class="field-label">ID в Standoff 2 (7-9 цифр) *</label>
+                <input type="text" class="field-input" id="onboardStandoff"
+                       placeholder="1234567" maxlength="9" autocomplete="off">
+            </div>
+            <div>
+                <label class="field-label">Аватар (необязательно)</label>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">
+                    <div class="profile-avatar" id="onboardAvatarPreview"
+                         style="width: 56px; height: 56px; font-size: 22px; cursor: pointer;"
+                         onclick="document.getElementById('onboardAvatarInput').click()">?</div>
+                    <button class="profile-action-btn cancel" style="flex: 1; margin-top: 0;"
+                            onclick="document.getElementById('onboardAvatarInput').click()">
+                        📷 Загрузить фото
+                    </button>
+                </div>
+                <input type="file" id="onboardAvatarInput" accept="image/*" style="display: none;">
+            </div>
+        </div>
+
+        <button class="profile-action-btn save" id="onboardSaveBtn"
+                style="margin-top: 18px;" onclick="saveOnboarding()">
+            ✅ НАЧАТЬ ИГРАТЬ
+        </button>
+    </div>
+</div>
+
     <!-- ============ PLAYER MODAL ============ -->
     <div class="player-modal" id="playerModal" onclick="if(event.target===this)closePlayerModal()">
         <div class="player-modal-inner">
@@ -2404,6 +2499,9 @@ body::after {
     <button class="menu-drawer-btn" onclick="menuDrawerSupport()">
         <span class="menu-drawer-icon">🆘</span> Тех-поддержка
     </button>
+    <button class="menu-drawer-btn moderator" id="moderatorMenuBtn" style="display: none;" onclick="menuDrawerGo('moderator')">
+        <span class="menu-drawer-icon">⚖️</span> Модератор-панель
+    </button>
 </div>
 
 <div class="menu-drawer-footer" id="menuDrawerFooter" style="display: none;">
@@ -2465,6 +2563,371 @@ body::after {
         let selectedWinner = null;
 
         let activePartyInvite = null;
+
+                    // ============================================================
+        // ONBOARDING
+        // ============================================================
+        let onboardAvatarBlob = null;
+
+        function needsOnboarding(user) {
+            return !user || !user.display_name || user.display_name === 'Игрок'
+                || !user.standoff_id || user.standoff_id.trim() === '';
+        }
+
+        function openOnboarding() {
+            const modal = document.getElementById('onboardingModal');
+            if (!modal) return;
+            modal.classList.add('active');
+
+            const tgUser = tg?.initDataUnsafe?.user;
+            if (tgUser?.first_name) {
+                document.getElementById('onboardNickname').value = tgUser.first_name;
+            }
+            if (currentUser?.standoff_id) {
+                document.getElementById('onboardStandoff').value = currentUser.standoff_id;
+            }
+
+            const src = currentUser?.custom_avatar || currentUser?.photo_url || tgUser?.photo_url;
+            if (src) {
+                document.getElementById('onboardAvatarPreview').innerHTML = `<img src="${src}" alt="">`;
+            }
+
+            document.getElementById('onboardAvatarInput').onchange = async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file) return;
+                try {
+                    onboardAvatarBlob = await compressImage(file, 512, 0.85);
+                    const url = URL.createObjectURL(onboardAvatarBlob);
+                    document.getElementById('onboardAvatarPreview').innerHTML = `<img src="${url}" alt="">`;
+                } catch (err) { showToast('Ошибка загрузки фото'); }
+            };
+        }
+
+        async function saveOnboarding() {
+            const nickname = document.getElementById('onboardNickname').value.trim();
+            const standoffId = document.getElementById('onboardStandoff').value.trim();
+            const btn = document.getElementById('onboardSaveBtn');
+
+            if (!nickname || nickname.length < 2) {
+                showToast('Введите ник (мин. 2 символа)');
+                return;
+            }
+            if (!standoffId || standoffId.length < 7 || standoffId.length > 9) {
+                showToast('ID должен быть 7-9 символов');
+                return;
+            }
+            if (!/^\d+$/.test(standoffId)) {
+                showToast('ID должен содержать только цифры');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'СОХРАНЕНИЕ...';
+
+            try {
+                let avatarUrl = currentUser.custom_avatar;
+
+                if (onboardAvatarBlob) {
+                    const path = `${currentUser.telegram_id}/${Date.now()}.jpg`;
+                    const { error: upErr } = await sb.storage.from(BUCKETS.avatars)
+                        .upload(path, onboardAvatarBlob, { contentType: 'image/jpeg', upsert: true });
+                    if (upErr) throw upErr;
+                    const { data: urlData } = sb.storage.from(BUCKETS.avatars).getPublicUrl(path);
+                    avatarUrl = urlData.publicUrl;
+                }
+
+                const { data, error } = await sb.from('users')
+                    .update({
+                        display_name: nickname,
+                        standoff_id: standoffId,
+                        custom_avatar: avatarUrl
+                    })
+                    .eq('telegram_id', currentUser.telegram_id)
+                    .select().single();
+                if (error) throw error;
+
+                currentUser = data;
+                applyHeaderAvatar(currentUser);
+                renderDashboard(currentUser);
+                renderProfileView(currentUser);
+                document.getElementById('onboardingModal').classList.remove('active');
+                onboardAvatarBlob = null;
+                showToast('✅ Профиль готов!');
+                haptic('medium');
+            } catch (e) {
+                showToast('Ошибка: ' + e.message);
+                btn.disabled = false;
+                btn.textContent = '✅ НАЧАТЬ ИГРАТЬ';
+            }
+        }
+
+        // ============================================================
+        // AUTO-CLEANUP ROOMS (15 минут неактивности)
+        // ============================================================
+        const ROOM_TIMEOUT_MS = 15 * 60 * 1000;
+
+        async function cleanupStaleRooms() {
+            if (!currentUser) return;
+            try {
+                const cutoff = new Date(Date.now() - ROOM_TIMEOUT_MS).toISOString();
+
+                const { data: stale } = await sb.from('rooms')
+                    .select('id, name')
+                    .eq('status', 'open')
+                    .lt('last_activity_at', cutoff);
+
+                if (!stale?.length) return;
+
+                for (const room of stale) {
+                    const { data: players } = await sb.from('room_players')
+                        .select('telegram_id').eq('room_id', room.id);
+
+                    for (const p of players || []) {
+                        notify(p.telegram_id,
+                            `⏰ Комната <b>${escapeHtml(room.name)}</b> закрыта из-за неактивности (15 мин).`
+                        );
+                    }
+
+                    await sb.from('room_players').delete().eq('room_id', room.id);
+                    await sb.from('room_messages').delete().eq('room_id', room.id);
+                    await sb.from('rooms').delete().eq('id', room.id);
+                }
+
+                if (activeRoomId && stale.some(r => r.id === activeRoomId)) {
+                    activeRoomId = null;
+                    hideActiveRoomBanner();
+                    const indicator = document.getElementById('headerRoomIndicator');
+                    if (indicator) indicator.style.display = 'none';
+                }
+            } catch (e) {
+                console.warn('cleanupStaleRooms:', e);
+            }
+        }
+
+        async function touchRoom(roomId) {
+            if (!roomId) return;
+            try {
+                await sb.from('rooms')
+                    .update({ last_activity_at: new Date().toISOString() })
+                    .eq('id', roomId);
+            } catch (e) {}
+        }
+
+        // ============================================================
+        // MODERATOR / ADMIN
+        // ============================================================
+        function isModerator(user) {
+            return user?.is_mod === true || user?.is_admin === true
+                || (user?.username || '').toLowerCase() === 'mark1zell';
+        }
+
+        function openModeratorPanel() {
+            if (!isModerator(currentUser)) {
+                showToast('Только для модераторов');
+                return;
+            }
+            switchPage('admin');
+            renderModeratorPanel();
+        }
+
+        async function renderModeratorPanel() {
+            const container = document.getElementById('adminContent');
+            if (!container) return;
+            container.innerHTML = '<div class="empty">Загрузка панели...</div>';
+
+            const [disputedRes, reportsRes, modsRes] = await Promise.all([
+                sb.from('game_matches').select('*').eq('result_status', 'disputed').eq('status', 'result'),
+                sb.from('match_reports').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(30),
+                sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo')
+                    .eq('is_mod', true).order('display_name')
+            ]);
+
+            const disputed = disputedRes.data || [];
+            const reports = reportsRes.data || [];
+            const mods = modsRes.data || [];
+
+            let html = `
+                <div class="moderator-panel">
+                    <div class="moderator-title">⚖️ МОДЕРАТОР-ПАНЕЛЬ</div>
+                    <div class="moderator-sub">Спорные матчи, апелляции, жалобы</div>
+                    <div>
+                        <span class="moderator-stat">🎯 Спорных: ${disputed.length}</span>
+                        <span class="moderator-stat">📨 Апелляций: ${reports.length}</span>
+                        <span class="moderator-stat">⭐ Модеров: ${mods.length}</span>
+                    </div>
+                </div>
+
+                <div class="section-title">🚨 Спорные матчи (${disputed.length})</div>
+            `;
+
+            if (!disputed.length) {
+                html += '<div class="empty">Спорных матчей нет</div>';
+            } else {
+                const allIds = new Set();
+                disputed.forEach(m => {
+                    [...(m.team_a_players || []), ...(m.team_b_players || [])]
+                        .forEach(p => allIds.add(p.telegram_id));
+                });
+                const { data: users } = await sb.from('users')
+                    .select('telegram_id, display_name')
+                    .in('telegram_id', [...allIds]);
+                const userMap = {};
+                (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+                html += disputed.map(m => {
+                    const teamA = (m.team_a_players || []).map(p => userMap[p.telegram_id]?.display_name || '—').join(', ');
+                    const teamB = (m.team_b_players || []).map(p => userMap[p.telegram_id]?.display_name || '—').join(', ');
+                    return `
+                        <div class="leaderboard-item" style="border-color: rgba(217,171,90,0.4);">
+                            <div style="flex:1; min-width: 0;">
+                                <div style="font-weight: 800; color: var(--gold);">Матч #${m.id}</div>
+                                <div style="font-size: 12px; color: var(--hint); margin-top: 4px;">
+                                    🗺 ${escapeHtml(m.final_map || '—')} · ${new Date(m.created_at).toLocaleString('ru-RU')}
+                                </div>
+                                <div style="font-size: 11px; color: var(--hint); margin-top: 4px;">
+                                    A: ${escapeHtml(teamA)}<br>B: ${escapeHtml(teamB)}
+                                </div>
+                            </div>
+                            <button class="friend-action add" style="background: var(--gold); color: #04140e;"
+                                    onclick="resolveDispute(${m.id})">Решить</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            html += `<div class="section-title" style="margin-top: 20px;">📨 Апелляции (${reports.length})</div>`;
+
+            if (!reports.length) {
+                html += '<div class="empty">Апелляций нет</div>';
+            } else {
+                const reporterIds = [...new Set(reports.map(r => r.reporter_id))];
+                const { data: rUsers } = await sb.from('users')
+                    .select('telegram_id, display_name, custom_avatar, photo_url')
+                    .in('telegram_id', reporterIds.length ? reporterIds : [0]);
+                const rMap = {};
+                (rUsers || []).forEach(u => rMap[u.telegram_id] = u);
+
+                html += reports.map(r => {
+                    const u = rMap[r.reporter_id] || {};
+                    const src = u.custom_avatar || u.photo_url;
+                    const initial = (u.display_name || 'U')[0].toUpperCase();
+                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    return `
+                        <div class="leaderboard-item" style="border-color: rgba(217,171,90,0.3);">
+                            <div class="lb-avatar">${av}</div>
+                            <div style="flex:1; min-width: 0;">
+                                <div style="font-weight: 700; font-size: 13px;">
+                                    ${escapeHtml(u.display_name || 'Игрок')}
+                                    <span style="font-size: 11px; color: var(--hint);"> · Матч #${r.match_id}</span>
+                                </div>
+                                <div style="font-size: 12px; color: var(--text); margin-top: 6px; line-height: 1.4;">
+                                    ${escapeHtml(r.text || '')}
+                                </div>
+                                <div style="font-size: 11px; color: var(--hint); margin-top: 4px;">
+                                    ${new Date(r.created_at).toLocaleString('ru-RU')}
+                                </div>
+                            </div>
+                            <button class="friend-action add" style="background: var(--gold); color: #04140e;"
+                                    onclick="closeReport(${r.id})">Закрыть</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (currentUser.is_admin) {
+                html += `<div class="section-title" style="margin-top: 20px;">👑 Управление модераторами</div>`;
+                if (!mods.length) {
+                    html += '<div class="empty">Модераторов пока нет</div>';
+                } else {
+                    html += mods.map(m => {
+                        const src = m.custom_avatar || m.photo_url;
+                        const initial = (m.display_name || 'U')[0].toUpperCase();
+                        const av = src ? `<img src="${src}" alt="">` : initial;
+                        return `
+                            <div class="leaderboard-item" style="border-color: rgba(217,171,90,0.3);">
+                                <div class="lb-avatar" onclick="openPlayerProfile(${m.telegram_id})">${av}</div>
+                                <div style="flex:1; min-width: 0;" onclick="openPlayerProfile(${m.telegram_id})">
+                                    <div class="leaderboard-name">${escapeHtml(m.display_name || 'Игрок')}</div>
+                                    <div style="font-size: 11px; color: var(--hint);">
+                                        ${m.username ? '@' + escapeHtml(m.username) : ''}
+                                    </div>
+                                </div>
+                                <button class="friend-action decline" onclick="revokeModerator(${m.telegram_id})">Снять</button>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                html += `
+                    <input type="text" class="field-input" id="modInput"
+                           placeholder="@username или ID" style="margin-top: 10px; margin-bottom: 10px;">
+                    <button class="profile-action-btn save" onclick="makeModerator()">⭐ Назначить модератора</button>
+                `;
+            }
+
+            html += `<button class="profile-action-btn cancel" style="margin-top: 20px;"
+                     onclick="switchPage('dashboard')">◀ Назад</button>`;
+
+            container.innerHTML = html;
+        }
+
+        async function resolveDispute(matchId) {
+            const winner = prompt('Кто победил? A или B:', 'A');
+            if (!winner || !['A', 'B', 'a', 'b'].includes(winner)) return;
+            const scoreA = parseInt(prompt('Счёт команды A:', '13')) || 0;
+            const scoreB = parseInt(prompt('Счёт команды B:', '0')) || 0;
+            if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
+
+            try {
+                await mmCall('resolve_dispute', {
+                    match_id: matchId,
+                    moderator_id: currentUser.telegram_id,
+                    winner: winner.toUpperCase(),
+                    score_a: scoreA,
+                    score_b: scoreB
+                });
+                showToast('✅ Матч решён');
+                renderModeratorPanel();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
+
+        async function closeReport(reportId) {
+            if (!confirm('Закрыть апелляцию?')) return;
+            try {
+                await sb.from('match_reports')
+                    .update({ status: 'closed', closed_at: new Date().toISOString() })
+                    .eq('id', reportId);
+                showToast('✅ Закрыто');
+                renderModeratorPanel();
+            } catch (e) { showToast('Ошибка'); }
+        }
+
+        async function makeModerator() {
+            const val = document.getElementById('modInput').value.trim();
+            if (!val) { showToast('Введи @username или ID'); return; }
+            const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
+            const query = field === 'username' ? val.replace('@', '') : Number(val);
+
+            try {
+                const { data, error } = await sb.from('users')
+                    .update({ is_mod: true }).eq(field, query).select();
+                if (error) throw error;
+                if (!data?.length) { showToast('Игрок не найден'); return; }
+                showToast('✅ Модератор назначен');
+                await notify(data[0].telegram_id, `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`);
+                await renderModeratorPanel();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
+
+        async function revokeModerator(userId) {
+            if (!confirm('Снять модератора?')) return;
+            try {
+                await sb.from('users').update({ is_mod: false }).eq('telegram_id', userId);
+                showToast('✅ Снят');
+                await renderModeratorPanel();
+            } catch (e) { showToast('Ошибка: ' + e.message); }
+        }
 
         // ============================================================
         // HELPERS
@@ -2591,6 +3054,21 @@ body::after {
                 subscribeCoversRealtime();
                 updateChatsBadge();
                 subscribeChatsRealtime();
+
+                // === ОНБОРДИНГ ===
+                if (needsOnboarding(currentUser)) {
+                    openOnboarding();
+                }
+
+                // === АВТООЧИСТКА КОМНАТ ===
+                cleanupStaleRooms();
+                setInterval(cleanupStaleRooms, 60000);
+
+                // === ПОКАЗ МОДЕРАТОР-КНОПКИ ===
+                if (isModerator(currentUser)) {
+                    const modBtn = document.getElementById('moderatorMenuBtn');
+                    if (modBtn) modBtn.style.display = 'flex';
+                }
             } catch (e) {
                 console.error('Init error:', e);
                 showToast('Ошибка: ' + (e?.message || e));
@@ -6029,8 +6507,10 @@ async function createRoomInline() {
         room_id: created.id,
         telegram_id: currentUser.telegram_id,
         team: null,
+        is_ready: false                    // ← ДОБАВЛЕНО (не в команде)
     });
 
+    await touchRoom(created.id);          // ← ДОБАВЛЕНО
     showToast('✅ Комната создана');
     openRoomView(created.id);
 }
@@ -6079,7 +6559,8 @@ async function joinRoom(roomId) {
     });
     if (error) { showToast('Ошибка входа: ' + error.message); return; }
 
-    showToast('✅ Ты вошёл в комнату');
+    await touchRoom(roomId);              // ← ДОБАВЛЕНО
+    showToast('✅ Ты вошёл в комнату. Выбери команду!');
     openRoomView(roomId);
 }
 
@@ -6122,8 +6603,9 @@ async function renderRoomContent(roomId) {
         const userById = {};
         users.forEach(u => userById[u.telegram_id] = u);
 
-        const teamA = (players || []).filter(p => p.team === 'A');
-        const teamB = (players || []).filter(p => p.team === 'B');
+        const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
+        const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready);
+        const spectators = (players || []).filter(p => !p.is_ready);
         const iAmLeader = String(room.leader_id) === String(currentUser.telegram_id);
         const me = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
         const myTeam = me?.team;
@@ -6300,6 +6782,9 @@ function subscribeRoomRealtime(roomId) {
             const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
             if (!room) return;
 
+            // ✅ НОВОЕ: проверяем, все ли игроки собрались
+            await checkTeamsReady(roomId, room);
+
             if (room.status === 'open') {
                 await renderRoomContent(roomId);
             } else if (room.status === 'veto') {
@@ -6322,14 +6807,55 @@ function unsubscribeRoomRealtime() {
     }
 }
 
-async function chooseTeam(roomId, team) {
-    haptic('heavy');
-    const { error } = await sb
-        .from('room_players')
-        .update({ team })
-        .eq('room_id', roomId)
-        .eq('telegram_id', currentUser.telegram_id);
-    if (error) { showToast('Ошибка: ' + error.message); return; }
+    async function checkTeamsReady(roomId, room) {
+            if (room.status !== 'open') return;
+            if (room.teams_notified_at) return;
+
+            const { data: players } = await sb.from('room_players')
+                .select('telegram_id, team, is_ready').eq('room_id', roomId);
+
+            const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
+            const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
+            const needPerTeam = room.mode === '2x2' ? 2 : 5;
+
+            if (teamA < needPerTeam || teamB < needPerTeam) return;
+
+            const allPlayers = players || [];
+            const { data: roomData } = await sb.from('rooms')
+                .select('leader_id, name').eq('id', roomId).single();
+
+            for (const p of allPlayers) {
+                if (String(p.telegram_id) === String(roomData.leader_id)) {
+                    await notify(p.telegram_id,
+                        `✅ <b>Ваша комната заполнена!</b>\n` +
+                        `Все игроки собрались. <b>Запускайте матч!</b>\n\n` +
+                        `🎮 ${escapeHtml(roomData.name)}`
+                    );
+                } else {
+                    await notify(p.telegram_id,
+                        `🎮 <b>Заходи в приложение, игра вот-вот начнётся!</b>\n` +
+                        `Все игроки собрались в комнате <b>${escapeHtml(roomData.name)}</b>.`
+                    );
+                }
+            }
+
+            await sb.from('rooms').update({
+                teams_notified_at: new Date().toISOString()
+            }).eq('id', roomId);
+
+            showToast('✅ Все игроки собрались!');
+            haptic('heavy');
+        }
+
+        async function chooseTeam(roomId, team) {
+            haptic('heavy');
+            const { error } = await sb
+                .from('room_players')
+                .update({ team, is_ready: true })
+                .eq('room_id', roomId)
+                .eq('telegram_id', currentUser.telegram_id);
+            if (error) { showToast('Ошибка: ' + error.message); return; }
+            await touchRoom(roomId);
 
     // Вспышка на карточке команды
     const card = document.querySelector(`.team-card.team-${team.toLowerCase()}`);
@@ -6408,34 +6934,36 @@ async function closeRoom(roomId) {
     renderPlayList();
 }
 
-async function startMatch(roomId) {
-    haptic('heavy');
-    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
-    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
-    
-    const teamA = (players || []).filter(p => p.team === 'A');
-    const teamB = (players || []).filter(p => p.team === 'B');
-    const needPerTeam = room.mode === '2x2' ? 2 : 5;
-    
-    if (teamA.length < needPerTeam || teamB.length < needPerTeam) {
-        showToast(`Нужно по ${needPerTeam} игрока в каждой команде`);
-        return;
-    }
-    if (!confirm('Начать матч? Команды будут заблокированы.')) return;
-    
-    await sb.from('rooms').update({ 
+        async function startMatch(roomId) {
+            haptic('heavy');
+            const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+            const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+
+            const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
+            const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready);
+            const needPerTeam = room.mode === '2x2' ? 2 : 5;
+
+            if (teamA.length < needPerTeam || teamB.length < needPerTeam) {
+                showToast(`Нужно по ${needPerTeam} игроков в каждой команде`);
+                return;
+            }
+            if (!confirm('Начать матч? Команды будут заблокированы.')) return;
+
+    await sb.from('rooms').update({
         status: 'veto',
         current_turn: 'A',
-        started_at: new Date().toISOString()
+        started_at: new Date().toISOString(),
+        teams_notified_at: null
     }).eq('id', roomId);
-    
+    await touchRoom(roomId);              // ← ДОБАВЛЕНО
+
     showToast('🎯 Пики карт начались!');
 }
 
             // ============================================================
 // VETO (пики/баны карт)
 // ============================================================
-const STANDOFF_MAPS = ['Sandstone', 'Rust', 'Province', 'Zone 9', 'Breeze', 'Dune', 'Hanami'];
+const STANDOFF_MAPS = ['Sandstone', 'Rust', 'Province', 'Zone 9', 'Breeze', 'Dune', 'Hanami', 'Prison', 'Plaza', 'Favela'];
 
 async function openVetoView(roomId) {
     const content = document.getElementById('playScreenContent');
@@ -6559,6 +7087,7 @@ async function banMap(roomId, map) {
     }
     
     await sb.from('rooms').update(update).eq('id', roomId);
+    await touchRoom(roomId);              // ← ДОБАВЛЕНО
     haptic('medium');
     
     const { data: updatedRoom } = await sb.from('rooms').select('*').eq('id', roomId).single();
@@ -6593,12 +7122,12 @@ async function showSidePick(roomId) {
             <button class="side-card ${room.side_a === 'Спецназ' ? 'active' : ''}" 
                     onclick="pickSide(${roomId}, 'Спецназ')" ${!iAmCapA || alreadyPicked ? 'disabled' : ''}>
                 <div class="side-icon">🛡️</div>
-                <div class="side-name">Спецназ</div>
+                <div class="side-name">Спецназ (CT)</div>
             </button>
             <button class="side-card ${room.side_a === 'Террорист' ? 'active' : ''}"
                     onclick="pickSide(${roomId}, 'Террорист')" ${!iAmCapA || alreadyPicked ? 'disabled' : ''}>
                 <div class="side-icon">💣</div>
-                <div class="side-name">Террорист</div>
+                <div class="side-name">Террорист (T)</div>
             </button>
         </div>
         <div style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--hint);">
@@ -6626,6 +7155,7 @@ async function pickSide(roomId, side) {
         side_b: opposite,
         status: 'waiting_link'
     }).eq('id', roomId);
+    await touchRoom(roomId);              // ← ДОБАВЛЕНО
     
     haptic('medium');
     showToast(`✅ Сторона A: ${side}`);
@@ -6736,6 +7266,7 @@ async function submitHostLink(roomId) {
         link_added_at: new Date().toISOString(),
         status: 'in_game'
     }).eq('id', roomId);
+    await touchRoom(roomId);              // ← ДОБАВЛЕНО
     
     showToast('✅ Ссылка отправлена игрокам');
     haptic('medium');
@@ -7175,6 +7706,7 @@ async function sendRoomMessage(roomId) {
             sender_id: currentUser.telegram_id,
             text
         });
+        await touchRoom(roomId);          // ← ДОБАВЛЕНО
         await markRoomChatRead(roomId);
     } catch (e) {
         showToast('Ошибка отправки: ' + e.message);
@@ -7335,17 +7867,20 @@ function fillMenuDrawerUser() {
         ? '@' + currentUser.username : '@—';
 }
 
-function menuDrawerGo(dest) {
-    closeMenuDrawer();
-    haptic();
-    setTimeout(() => {
-        switch (dest) {
-            case 'profile':
-                switchPage('profile');
-                break;
-            case 'admin':
-                openAdminPanel();
-                break;
+        function menuDrawerGo(dest) {
+            closeMenuDrawer();
+            haptic();
+            setTimeout(() => {
+                switch (dest) {
+                    case 'profile':
+                        switchPage('profile');
+                        break;
+                    case 'admin':
+                        openModeratorPanel();
+                        break;
+                    case 'moderator':
+                        openModeratorPanel();
+                        break;
             case 'friends':
                 openFriendsPage();
                 break;
