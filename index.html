@@ -3177,6 +3177,364 @@ body::after {
     .pbc-icon,
     .pbc-arrow { transition: none; }
 }
+
+    /* ============ CHOOSE TEAM HINT (cyber) ============ */
+.choose-team-hint {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    background:
+        linear-gradient(180deg,
+            rgba(var(--emerald-rgb), 0.08) 0%,
+            rgba(var(--emerald-rgb), 0.02) 50%,
+            rgba(0, 0, 0, 0.35) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    overflow: hidden;
+    isolation: isolate;
+    clip-path: polygon(
+        12px 0, 100% 0, 100% calc(100% - 12px),
+        calc(100% - 12px) 100%, 0 100%, 0 12px
+    );
+    animation: cthIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes cthIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Верхняя неоновая линия */
+.choose-team-hint::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent,
+        var(--emerald) 50%,
+        transparent);
+    opacity: 0.7;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Внутренний сетчатый паттерн */
+.choose-team-hint::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(var(--emerald-rgb), 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--emerald-rgb), 0.05) 1px, transparent 1px);
+    background-size: 16px 16px;
+    mask-image: radial-gradient(circle at 20% 50%, #000 0%, transparent 70%);
+    -webkit-mask-image: radial-gradient(circle at 20% 50%, #000 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Мягкий пульс */
+.cth-glow {
+    position: absolute;
+    top: -50%;
+    left: -20%;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle,
+        rgba(var(--emerald-rgb), 0.22),
+        transparent 65%);
+    border-radius: 50%;
+    filter: blur(28px);
+    pointer-events: none;
+    z-index: 0;
+    animation: cthGlow 4s ease-in-out infinite alternate;
+}
+
+@keyframes cthGlow {
+    0%   { transform: translate(0, 0); opacity: 0.6; }
+    100% { transform: translate(20px, 10px); opacity: 1; }
+}
+
+/* Углы-скобки */
+.cth-corner {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: var(--emerald);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0.85;
+    z-index: 3;
+    pointer-events: none;
+}
+.cth-tl { top: 6px; left: 6px; border-top-width: 2px; border-left-width: 2px; }
+.cth-tr { top: 6px; right: 6px; border-top-width: 2px; border-right-width: 2px; }
+.cth-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
+.cth-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Иконка */
+.cth-icon {
+    position: relative;
+    z-index: 2;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: rgba(var(--emerald-rgb), 0.10);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 12px rgba(var(--emerald-rgb), 0.15);
+    animation: cthIconPulse 2.6s ease-in-out infinite;
+}
+
+@keyframes cthIconPulse {
+    0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 12px rgba(var(--emerald-rgb), 0.15); }
+    50%      { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 20px rgba(var(--emerald-rgb), 0.35); }
+}
+
+/* Текст */
+.cth-body {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    min-width: 0;
+}
+
+.cth-title {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin-bottom: 4px;
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.3);
+}
+
+.cth-sub {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--hint);
+    letter-spacing: 0.3px;
+    line-height: 1.35;
+}
+
+    /* ============ CYBER QUICK ACTIONS ============ */
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.menu-item {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 14px;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(var(--emerald-rgb), 0.015) 50%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    clip-path: polygon(
+        10px 0, 100% 0, 100% calc(100% - 10px),
+        calc(100% - 10px) 100%, 0 100%, 0 10px
+    );
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 4px 16px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.22s ease,
+                box-shadow 0.25s ease;
+}
+
+/* Верхняя тонкая неоновая линия */
+.menu-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 50%,
+        transparent 100%);
+    opacity: 0.6;
+    z-index: 3;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+
+/* Уголок в правом нижнем углу */
+.menu-item::after {
+    content: '';
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--emerald);
+    border-bottom: 2px solid var(--emerald);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 3;
+    transition: opacity 0.22s ease;
+}
+
+.menu-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--emerald);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 8px 24px rgba(var(--emerald-rgb), 0.2),
+        0 0 0 1px rgba(var(--emerald-rgb), 0.3);
+}
+
+.menu-item:hover::before { opacity: 1; }
+.menu-item:hover::after  { opacity: 1; }
+
+.menu-item:active {
+    transform: scale(0.98);
+}
+
+/* Мягкое свечение-пятно */
+.menu-item-glow {
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle,
+        rgba(var(--emerald-rgb), 0.28),
+        transparent 65%);
+    border-radius: 50%;
+    filter: blur(24px);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 0;
+}
+.menu-item:hover .menu-item-glow { opacity: 1; }
+
+/* === ИКОНКА === */
+.menu-item-icon {
+    position: relative;
+    z-index: 2;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+    border-radius: 4px;
+    /* 🔥 Тёмная подложка, чтобы эмодзи не сливались */
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid var(--border-strong);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+    /* 🔥 Тонкая неоновая подсветка иконки */
+    text-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.5);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.25s ease,
+                text-shadow 0.25s ease;
+}
+
+.menu-item:hover .menu-item-icon {
+    transform: scale(1.06);
+    background: rgba(0, 0, 0, 0.6);
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.85);
+}
+
+/* === ТЕКСТ === */
+.menu-item-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.menu-item-title {
+    font-size: 13.5px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: 1.5px;
+    line-height: 1.1;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.2);
+}
+
+.menu-item-sub {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--hint);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* === Акценты для двух кнопок === */
+.menu-item-friends .menu-item-icon {
+    border-color: rgba(var(--emerald-rgb), 0.35);
+    color: var(--emerald);
+}
+.menu-item-friends::after {
+    border-color: var(--emerald);
+}
+
+.menu-item-matches .menu-item-icon {
+    border-color: rgba(217, 171, 90, 0.4);
+    color: var(--gold);
+    text-shadow: 0 0 6px rgba(217, 171, 90, 0.6);
+}
+.menu-item-matches:hover .menu-item-icon {
+    text-shadow: 0 0 10px rgba(217, 171, 90, 0.9);
+}
+.menu-item-matches::before {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--gold) 50%,
+        transparent 100%);
+}
+.menu-item-matches::after {
+    border-color: var(--gold);
+}
+.menu-item-matches:hover {
+    border-color: rgba(217, 171, 90, 0.7);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 8px 24px rgba(217, 171, 90, 0.18),
+        0 0 0 1px rgba(217, 171, 90, 0.3);
+}
+.menu-item-matches .menu-item-glow {
+    background: radial-gradient(circle,
+        rgba(217, 171, 90, 0.25),
+        transparent 65%);
+}
     
 </style>
 </head>
@@ -8403,11 +8761,19 @@ async function renderRoomContent(roomId) {
             </div>
 
             ${!iAmReady ? `
-                <div class="choose-team-hint">
-                    <div class="cth-title">🎯 Выбор команды</div>
-                    <div class="cth-sub">Нажми на зону любой команды, чтобы присоединиться</div>
-                </div>
-            ` : ''}
+    <div class="choose-team-hint">
+        <span class="cth-corner cth-tl"></span>
+        <span class="cth-corner cth-tr"></span>
+        <span class="cth-corner cth-bl"></span>
+        <span class="cth-corner cth-br"></span>
+        <span class="cth-glow"></span>
+        <div class="cth-icon">🎯</div>
+        <div class="cth-body">
+            <div class="cth-title">Выбор команды</div>
+            <div class="cth-sub">Нажми на зону любой команды, чтобы присоединиться</div>
+        </div>
+    </div>
+` : ''}
 
             <div class="team-zones">
                 ${renderTeamZone('A', teamA, teamAFull)}
