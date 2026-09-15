@@ -3963,6 +3963,39 @@ body::after {
     letter-spacing: 1px;
     text-transform: uppercase;
 }
+
+    /* Баннер лидерборда — срезанные углы */
+#leaderboardHeroWrap .leaderboard-hero {
+    position: relative;
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    overflow: hidden;
+    clip-path: polygon(
+        16px 0, 100% 0, 100% calc(100% - 16px),
+        calc(100% - 16px) 100%, 0 100%, 0 16px
+    );
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+    transition: transform 0.22s ease, box-shadow 0.25s ease;
+}
+#leaderboardHeroWrap .leaderboard-hero:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(var(--emerald-rgb), 0.25);
+}
+
+/* Тонкая неоновая полоска сверху баннера */
+#leaderboardHeroWrap .leaderboard-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.7;
+    z-index: 2;
+    pointer-events: none;
+}
     
 </style>
 </head>
@@ -4057,8 +4090,9 @@ body::after {
         </span>
     </button>
 </div>
-        <div id="leaderboardHeroWrap" style="margin-bottom: 14px;"></div>
-        <div id="leaderboard" style="display: none;"><div class="empty">Загрузка...</div></div>
+<div id="leaderboardHeroWrap" style="margin-bottom: 14px;"></div>
+<div class="section-title" id="leaderboardTitle" style="display: none;">🏆 Топ-10 игроков</div>
+<div id="leaderboard"><div class="empty">Загрузка...</div></div>
     </div>
 
         <!-- ============ LEADERBOARD FULL ============ -->
@@ -5867,44 +5901,45 @@ const LEADERBOARD_BANNER_URL = 'https://ksmuopoasgzyromdjtnt.supabase.co/storage
 async function loadLeaderboard() {
     const wrap = document.getElementById('leaderboardHeroWrap');
     const container = document.getElementById('leaderboard');
+    const titleEl = document.getElementById('leaderboardTitle');
     if (!wrap || !container) return;
 
-    // Рисуем картинку-баннер
-   wrap.innerHTML = `
-    <div class="leaderboard-hero" onclick="openFullLeaderboard()">
-        <img src="${LEADERBOARD_BANNER_URL}"
+    // 1. Рисуем баннер-картинку (кликабельный)
+    wrap.innerHTML = `
+        <div class="leaderboard-hero" onclick="openFullLeaderboard()">
+            <img src="${LEADERBOARD_BANNER_URL}"
                  alt="Лидерборд"
-                 style="width: 100%; height: auto; display: block; border-radius: 18px; cursor: pointer;">
+                 style="width: 100%; height: auto; display: block; border-radius: 0; cursor: pointer;">
         </div>
     `;
 
-    // Всё равно грузим данные (для полного лидерборда)
-    container.style.display = 'none';
+    // 2. Грузим данные
+    container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
+    if (titleEl) titleEl.style.display = 'none';
+
     try {
         const { data, error } = await sb.from('users')
             .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
-            .order('elo', { ascending: false }).limit(50);
+            .order('elo', { ascending: false })
+            .limit(50);
         if (error) throw error;
 
         const others = (data || []).filter(u => u.is_admin !== true);
-        if (!others.length) return;
+        if (!others.length) {
+            container.innerHTML = '<div class="empty">Пока никого нет</div>';
+            return;
+        }
 
         await loadClubTagsForUsers(others.map(u => u.telegram_id));
 
+        // 3. Показываем ровно 10 игроков под баннером
         const top10 = others.slice(0, 10);
-        let html = top10.map((user, i) => renderLbItem(user, i + 1)).join('');
+        container.innerHTML = top10.map((user, i) => renderLbItem(user, i + 1)).join('');
 
-        if (others.length > 10) {
-            html += `
-                <button class="profile-action-btn cancel" style="margin-top: 12px;" onclick="openFullLeaderboard()">
-                    👥 Показать всех (${others.length})
-                </button>
-            `;
-        }
-
-        container.innerHTML = html;
+        if (titleEl) titleEl.style.display = 'flex';
     } catch (e) {
         console.error('loadLeaderboard:', e);
+        container.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка загрузки</div>';
     }
 }
 
@@ -5930,17 +5965,23 @@ async function openFullLeaderboard() {
     try {
         const { data, error } = await sb.from('users')
             .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
-            .order('elo', { ascending: false }).limit(500);
+            .order('elo', { ascending: false })
+            .limit(500);
         if (error) throw error;
 
         const others = (data || []).filter(u => u.is_admin !== true);
-        if (!others.length) { c.innerHTML = '<div class="empty">Пока никого нет</div>'; return; }
+        if (!others.length) {
+            c.innerHTML = '<div class="empty">Пока никого нет</div>';
+            return;
+        }
 
         await loadClubTagsForUsers(others.map(u => u.telegram_id));
 
+        // Показываем ВСЕХ
         c.innerHTML = others.map((user, i) => renderLbItem(user, i + 1)).join('');
     } catch (e) {
-        c.innerHTML = '<div class="empty">Ошибка</div>';
+        console.error(e);
+        c.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка</div>';
     }
 }
                     // ============================================================
