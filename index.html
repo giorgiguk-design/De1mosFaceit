@@ -7917,7 +7917,7 @@ async function renderRoomContent(roomId) {
         const teamBFull = teamB.length >= needPerTeam;
 
         // Рендер игрока в team-zone
-                const renderTZPlayer = (p, teamSide) => {
+        const renderTZPlayer = (p, teamSide) => {
             const u = userById[p.telegram_id] || {};
             const av = renderAvatar(u);
             const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
@@ -7973,7 +7973,6 @@ async function renderRoomContent(roomId) {
                 `;
             }
 
-            // Клик по всей зоне, если она не full и я не в команде
             const clickable = !full && !isMyTeam;
             const clickAttr = clickable
                 ? `onclick="chooseTeam(${room.id}, '${team}')"`
@@ -7994,7 +7993,7 @@ async function renderRoomContent(roomId) {
         };
 
         content.innerHTML = `
-                        <div class="rv-header">
+            <div class="rv-header">
                 <div class="rv-title">${escapeHtml(room.name)}</div>
                 <div class="rv-meta">
                     <span class="rv-meta-badge">${room.mode}</span>
@@ -8020,7 +8019,9 @@ async function renderRoomContent(roomId) {
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
                     ${spectators.map(s => {
                         const u = userById[s.telegram_id] || {};
-                        const av = renderAvatar(u);
+                        const src = u.custom_avatar || u.photo_url;
+                        const initial = (u.display_name || 'U')[0].toUpperCase();
+                        const av = src
                             ? `<img src="${src}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
                             : `<span style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #04140e;">${initial}</span>`;
                         return `
@@ -8068,7 +8069,7 @@ async function renderRoomContent(roomId) {
                     </button>
                 ` : ''}
             ` : ''}
-        `;   // ← ДОБАВЬ ЭТУ СТРОКУ (закрывает content.innerHTML)
+        `;
 
         setTimeout(() => updateRoomChatButton(room.id), 100);
         subscribeRoomChatCounter(roomId);
@@ -8076,7 +8077,7 @@ async function renderRoomContent(roomId) {
         console.error('Room view error:', e);
         content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
     }
-} 
+}
 
 async function openChangeTeamSheet(roomId) {
             const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
