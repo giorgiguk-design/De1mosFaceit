@@ -5342,19 +5342,19 @@ body::after {
         // ============================================================
         // HELPERS
         // ============================================================
-        function eloToLevel(elo) {
-            DXP= DXP?? 1000;
-            if (DXP<= 1100) return 1;
-            if (DXP<= 1200) return 2;
-            if (DXP<= 1350) return 3;
-            if (DXP<= 1500) return 4;
-            if (DXP<= 1650) return 5;
-            if (DXP<= 1800) return 6;
-            if (DXP<= 1950) return 7;
-            if (DXP<= 2100) return 8;
-            if (DXP<= 2300) return 9;
-            return 10;
-        }
+function eloToLevel(elo) {
+    elo = elo ?? 1000;
+    if (elo <= 1100) return 1;
+    if (elo <= 1200) return 2;
+    if (elo <= 1350) return 3;
+    if (elo <= 1500) return 4;
+    if (elo <= 1650) return 5;
+    if (elo <= 1800) return 6;
+    if (elo <= 1950) return 7;
+    if (elo <= 2100) return 8;
+    if (elo <= 2300) return 9;
+    return 10;
+}
 
         function haptic(style = 'light') { try { tg?.HapticFeedback?.impactOccurred(style); } catch (e) {} }
         function escapeHtml(str) {
@@ -5557,29 +5557,31 @@ async function notify(telegramId, text, type = null) {
         // ============================================================
         // DASHBOARD
         // ============================================================
-        function renderDashboard(user) {
-            const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
-            animateNumber(document.getElementById('eloValue'), user.DXP?? 1000, 1000);
-            document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
-function bumpStat(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const oldVal = el.textContent;
-    el.textContent = value;
-    if (oldVal !== String(value)) {
-        el.classList.remove('bump');
-        void el.offsetWidth; // reflow для перезапуска анимации
-        el.classList.add('bump');
-        setTimeout(() => el.classList.remove('bump'), 600);
-    }
-}
+function renderDashboard(user) {
+    const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
+    animateNumber(document.getElementById('eloValue'), user.elo ?? 1000, 1000);
+    document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
 
-bumpStat('statMatches', user.matches_played ?? 0);
-bumpStat('statWins', user.wins ?? 0);
-bumpStat('statWinrate', winrate + '%');
-            const progress = ((user.DXP?? 1000) % 250) / 250 * 100;
-            setTimeout(() => { document.getElementById('eloProgress').style.width = progress + '%'; }, 200);
+    function bumpStat(id, value) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const oldVal = el.textContent;
+        el.textContent = value;
+        if (oldVal !== String(value)) {
+            el.classList.remove('bump');
+            void el.offsetWidth;
+            el.classList.add('bump');
+            setTimeout(() => el.classList.remove('bump'), 600);
         }
+    }
+
+    bumpStat('statMatches', user.matches_played ?? 0);
+    bumpStat('statWins', user.wins ?? 0);
+    bumpStat('statWinrate', winrate + '%');
+
+    const progress = ((user.elo ?? 1000) % 250) / 250 * 100;
+    setTimeout(() => { document.getElementById('eloProgress').style.width = progress + '%'; }, 200);
+}
 
         // ============================================================
         // PROFILE
@@ -7767,7 +7769,7 @@ function closeChatView() {
         function renderEmptyParty() {
             myParty = null;
             document.getElementById('partyCount').textContent = `1 / ${selectedMode === '5x5' ? 5 : 2}`;
-            document.getElementById('partyElo').textContent = currentUser.DXP?? 1000;
+            document.getElementById('partyElo').textContent = currentUser.elo ?? 1000;
             document.getElementById('partyMembers').innerHTML = `
                 <div class="party-member">
                     <span>${escapeHtml(currentUser.display_name)}</span>
@@ -7775,13 +7777,15 @@ function closeChatView() {
             `;
         }
 
-        function renderParty() {
-            if (!myParty) return renderEmptyParty();
-            const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
-            const avgDXP= myParty.members.length ? Math.round(myParty.members.reduce((s, m) => s + (m.DXP|| 1000), 0) / myParty.members.length) : 1000;
+function renderParty() {
+    if (!myParty) return renderEmptyParty();
+    const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
+    const avgElo = myParty.members.length
+        ? Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length)
+        : 1000;
 
-            document.getElementById('partyCount').textContent = `${myParty.members.length} / ${maxSize}`;
-            document.getElementById('partyElo').textContent = avgElo;
+    document.getElementById('partyCount').textContent = `${myParty.members.length} / ${maxSize}`;
+    document.getElementById('partyElo').textContent = avgElo;
 
             document.getElementById('partyMembers').innerHTML = myParty.members.map(m => {
                 const isLeader = m.telegram_id === myParty.party.leader_id;
@@ -8254,7 +8258,7 @@ async function inviteToParty(userId) {
             const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
             if (myParty.members.length > maxSize) { showToast('Слишком много игроков'); return; }
 
-            const avgDXP= Math.round(myParty.members.reduce((s, m) => s + (m.DXP|| 1000), 0) / myParty.members.length);
+            const avgElo = Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length);
 
             try {
                 await sb.from('mm_queue').upsert({
@@ -8855,7 +8859,7 @@ async function submitWinner() {
                 .find(p => p.telegram_id === me)?.elo_before || 1000;
 
             const { data: meData } = await sb.from('users').select('elo').eq('telegram_id', me).single();
-            const myAfter = meData?.DXP|| 1000;
+            const myAfter = meData?.elo ?? 1000;
             const delta = myAfter - myBefore;
 
             container.innerHTML = `
@@ -12558,7 +12562,7 @@ async function renderEloChart(userId) {
 
         const points = recent.map((h, i) => {
             const x = padL + i * stepX;
-            const y = padT + innerH - ((h.DXP- yMin) / (yMax - yMin)) * innerH;
+            const y = padT + innerH - ((h.elo - yMin) / (yMax - yMin)) * innerH;
             return { x, y, ...h };
         });
 
@@ -12584,7 +12588,7 @@ async function renderEloChart(userId) {
         // 8. Delta
         const firstDXP= recent[0].elo;
         const lastDXP= recent[recent.length - 1].elo;
-        const delta = lastDXP- firstElo;
+        const delta = lastElo - firstElo;
         deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
         deltaEl.classList.toggle('negative', delta < 0);
 
