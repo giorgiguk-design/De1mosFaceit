@@ -244,6 +244,20 @@ body::after {
             overflow: hidden; flex-shrink: 0;
         }
         .lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .leaderboard-hero {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 0.25s ease;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(var(--emerald-rgb), 0.15);
+}
+.leaderboard-hero:active { transform: scale(0.98); }
+.leaderboard-hero:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 36px rgba(var(--emerald-rgb), 0.3);
+}
         .leaderboard-rank { font-size: 14px; font-weight: 900; color: var(--emerald); width: 26px; text-align: center; }
         .leaderboard-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .leaderboard-elo { font-size: 14px; font-weight: 800; color: var(--emerald); }
@@ -2830,8 +2844,8 @@ body::after {
     <button class="menu-item" onclick="openFriendsPage()"><span class="menu-icon">👥</span> Друзья</button>
     <button class="menu-item" onclick="openMatchesHistory()"><span class="menu-icon">🎯</span> Последние матчи</button>
 </div>
-        <div class="section-title">Лидерборд</div>
-        <div id="leaderboard"><div class="empty">Загрузка...</div></div>
+        <div id="leaderboardHeroWrap" style="margin-bottom: 14px;"></div>
+        <div id="leaderboard" style="display: none;"><div class="empty">Загрузка...</div></div>
     </div>
 
         <!-- ============ LEADERBOARD FULL ============ -->
@@ -3745,9 +3759,7 @@ body::after {
 
                 html += reports.map(r => {
                     const u = rMap[r.reporter_id] || {};
-                    const src = u.custom_avatar || u.photo_url;
-                    const initial = (u.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    const av = renderAvatar(u);
                     return `
                         <div class="leaderboard-item" style="border-color: rgba(217,171,90,0.3);">
                             <div class="lb-avatar">${av}</div>
@@ -3901,6 +3913,15 @@ body::after {
             }, 2500);
         }
 
+            function renderAvatar(user, size = 34, borderRadius = '50%') {
+    const src = user?.custom_avatar || user?.photo_url;
+    const initial = (user?.display_name || user?.username || 'U')[0].toUpperCase();
+    if (src) {
+        return `<img src="${src}" alt="" onerror="this.style.display='none'; this.parentElement.textContent='${initial}';">`;
+    }
+    return initial;
+}
+
 async function notify(telegramId, text, type = null) {
     if (!telegramId || !text) return;
     if (String(telegramId) === String(currentUser?.telegram_id)) return;
@@ -3976,10 +3997,11 @@ async function notify(telegramId, text, type = null) {
                     .select('*').eq('telegram_id', user.id).maybeSingle();
 
                 let data, error;
-                if (existing) {
+                                if (existing) {
                     const upd = {
                         username: user.username || existing.username,
-                        photo_url: user.photo_url || existing.photo_url
+                        // НЕ перезаписываем photo_url пустым значением
+                        photo_url: user.photo_url || existing.photo_url || null
                     };
                     ({ data, error } = await sb.from('users')
                         .update(upd).eq('telegram_id', user.id).select().single());
@@ -4573,31 +4595,39 @@ function closeAllSheets() {
         // ============================================================
         // LEADERBOARD
         // ============================================================
+const LEADERBOARD_BANNER_URL = 'https://ksmuopoasgzyromdjtnt.supabase.co/storage/v1/object/public/branding/leaderboard.png';
+// ⬆️ замени на свой URL, который получил в Supabase
+
 async function loadLeaderboard() {
-    const c = document.getElementById('leaderboard');
-    if (c && (!c.innerHTML || c.innerHTML.includes('Загрузка'))) {
-        c.innerHTML = Array(5).fill('<div class="loading-shimmer"></div>').join('');
-    }
+    const wrap = document.getElementById('leaderboardHeroWrap');
+    const container = document.getElementById('leaderboard');
+    if (!wrap || !container) return;
+
+    // Рисуем картинку-баннер
+    wrap.innerHTML = ksmuopoasgzyromdjtnt.supabase.co/storage/v1/object/public/branding/leaderboard.png`
+        <div class="leaderboard-hero" onclick="openFullLeaderboard()">
+            <img src="${LEADERBOARD_BANNER_URL}"
+                 alt="Лидерборд"
+                 style="width: 100%; height: auto; display: block; border-radius: 18px; cursor: pointer;">
+        </div>
+    `;
+
+    // Всё равно грузим данные (для полного лидерборда)
+    container.style.display = 'none';
     try {
         const { data, error } = await sb.from('users')
             .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
             .order('elo', { ascending: false }).limit(50);
         if (error) throw error;
 
-        // Убираем админа из списка
-        const admins = (data || []).filter(u => u.is_admin === true);
         const others = (data || []).filter(u => u.is_admin !== true);
-
-        const container = document.getElementById('leaderboard');
-        if (!others.length) { container.innerHTML = '<div class="empty">Пока никого нет</div>'; return; }
+        if (!others.length) return;
 
         await loadClubTagsForUsers(others.map(u => u.telegram_id));
 
-        // Топ-10
         const top10 = others.slice(0, 10);
         let html = top10.map((user, i) => renderLbItem(user, i + 1)).join('');
 
-        // Кнопка "Показать всех"
         if (others.length > 10) {
             html += `
                 <button class="profile-action-btn cancel" style="margin-top: 12px;" onclick="openFullLeaderboard()">
@@ -4609,7 +4639,6 @@ async function loadLeaderboard() {
         container.innerHTML = html;
     } catch (e) {
         console.error('loadLeaderboard:', e);
-        document.getElementById('leaderboard').innerHTML = '<div class="empty">Ошибка</div>';
     }
 }
 
@@ -4702,9 +4731,7 @@ function openFriendSearchSheet() {
                 });
 
                 container.innerHTML = data.map(u => {
-                    const src = u.custom_avatar || u.photo_url;
-                    const initial = (u.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    const av = renderAvatar(u);
                     const rel = relMap[u.telegram_id];
                     let action;
                     if (rel === 'accepted') action = `<button class="friend-action pending" disabled>✓ Друг</button>`;
@@ -4782,9 +4809,7 @@ function openFriendSearchSheet() {
 
         function renderFriendItem(item, mode) {
             const u = item.other;
-            const src = u.custom_avatar || u.photo_url;
-            const initial = (u.display_name || 'U')[0].toUpperCase();
-            const av = src ? `<img src="${src}" alt="">` : initial;
+            const av = renderAvatar(u);
             let actions = '';
             if (mode === 'friend') actions = `<button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">✕</button>`;
             else if (mode === 'outgoing') actions = `<button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">Отмена</button>`;
@@ -4917,9 +4942,7 @@ function openFriendSearchSheet() {
 
             let membersHTML = sorted.map(m => {
                 const u = m.user || {};
-                const src = u.custom_avatar || u.photo_url;
-                const initial = (u.display_name || 'U')[0].toUpperCase();
-                const av = src ? `<img src="${src}" alt="">` : initial;
+                const av = renderAvatar(u);
 
                 let roleTag = '';
                 if (m.role === 'owner') roleTag = '<span class="role-tag owner">👑 OWNER</span>';
@@ -5111,9 +5134,7 @@ function openFriendSearchSheet() {
 
                 el.innerHTML = reqs.map(r => {
                     const u = userMap[r.telegram_id] || {};
-                    const src = u.custom_avatar || u.photo_url;
-                    const initial = (u.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    const av = renderAvatar(u);
                     return `
                         <div class="leaderboard-item">
                             <div class="lb-avatar">${av}</div>
@@ -5173,9 +5194,7 @@ function openFriendSearchSheet() {
 
                 el.innerHTML = bans.map(b => {
                     const u = userMap[b.telegram_id] || {};
-                    const src = u.custom_avatar || u.photo_url;
-                    const initial = (u.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    const av = renderAvatar(u);
                     return `
                         <div class="leaderboard-item">
                             <div class="lb-avatar">${av}</div>
@@ -5487,9 +5506,7 @@ function openFriendSearchSheet() {
                     <div class="section-title">Состав</div>
                     ${sorted.map(m => {
                         const u = userMap[m.telegram_id] || {};
-                        const src = u.custom_avatar || u.photo_url;
-                        const initial = (u.display_name || 'U')[0].toUpperCase();
-                        const av = src ? `<img src="${src}" alt="">` : initial;
+                        const av = renderAvatar(u);
                         let roleTag = '';
                         if (m.role === 'owner') roleTag = '<span class="role-tag owner">👑 OWNER</span>';
                         else if (m.role === 'elder') roleTag = '<span class="role-tag elder">⭐ ELDER</span>';
@@ -5539,14 +5556,57 @@ function openFriendSearchSheet() {
             if (!currentUser) return;
             if (clubChannel) sb.removeChannel(clubChannel);
             clubChannel = sb.channel('club_rt_' + currentUser.telegram_id)
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'club_members' }, () => {
-                    if (document.getElementById('page-club').classList.contains('active')) loadClub();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'club_requests' }, () => {
-                    if (document.getElementById('page-club').classList.contains('active')) loadClub();
-                })
-                .subscribe();
-        }
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'rooms',
+            filter: 'id=eq.' + roomId
+        }, async (payload) => {
+            const room = payload.new;
+            if (!room) return;
+
+            // Проверка кика
+            const kicked = room.kicked_users || [];
+            if (kicked.includes(Number(currentUser.telegram_id))) {
+                showToast('🚪 Тебя исключили из комнаты');
+                haptic('heavy');
+                unsubscribeRoomRealtime();
+                closePlayScreen();
+                checkActiveRoom();
+                const newKicked = kicked.filter(id => id !== Number(currentUser.telegram_id));
+                await sb.from('rooms').update({ kicked_users: newKicked }).eq('id', roomId);
+                return;
+            }
+
+            // Обновляем баннер
+            if (activeRoomId === roomId) {
+                showActiveRoomBanner(room);
+            }
+
+            // ⬇️ ВАЖНО: если чат открыт — НЕ перерисовываем
+            if (roomChatOpen) {
+                // Только обновляем баннер, но не трогаем экран
+                return;
+            }
+
+            // Роутинг по статусу
+            if (room.status === 'veto') { openVetoView(roomId); return; }
+            if (room.status === 'side_pick') { showSidePick(roomId); return; }
+            if (room.status === 'waiting_link' || room.status === 'in_game') {
+                showLobbyScreen(roomId, room);
+                return;
+            }
+            if (room.status === 'cancelled') {
+                showToast('❌ Матч отменён');
+                unsubscribeRoomRealtime();
+                closePlayScreen();
+                checkActiveRoom();
+                return;
+            }
+            if (room.status === 'open') {
+                await renderRoomContent(roomId);
+            }
+        })
 
         // ============================================================
         // START CLUB PARTY (клановая битва)
@@ -6283,9 +6343,7 @@ function closeChatView() {
                     <div class="section-title">Состав</div>
                     ${ids.map(id => {
                         const u = userMap[id] || {};
-                        const src = u.custom_avatar || u.photo_url;
-                        const initial = (u.display_name || 'U')[0].toUpperCase();
-                        const av = src ? `<img src="${src}" alt="">` : initial;
+                        const av = renderAvatar(u);
                         const isLeader = id === party.leader_id;
                         return `
                             <div class="leaderboard-item">
@@ -6555,9 +6613,7 @@ async function askJoinRoom(partyId) {
                 }
 
                 container.innerHTML = filtered.map(u => {
-                    const src = u.custom_avatar || u.photo_url;
-                    const initial = (u.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
+                    const av = renderAvatar(u);
                     return `
                         <div class="leaderboard-item">
                             <div class="lb-avatar">${av}</div>
@@ -6743,9 +6799,7 @@ async function inviteToParty(userId) {
                     <div class="confirm-team-players">
                         ${players.map(p => {
                             const u = userMap[p.telegram_id] || {};
-                            const src = u.custom_avatar || u.photo_url;
-                            const initial = (u.display_name || 'U')[0].toUpperCase();
-                            const av = src ? `<img src="${src}" alt="">` : initial;
+                            const av = renderAvatar(u);
                             return `
                                 <div class="confirm-player ${p.captain ? 'captain' : ''}">
                                     <div class="cp-avatar">${av}</div>
@@ -6957,9 +7011,7 @@ async function renderResultScreen() {
 
     const renderTeamPlayers = (players) => players.map(p => {
         const u = userMap[p.telegram_id] || {};
-        const src = u.custom_avatar || u.photo_url;
-        const initial = (u.display_name || 'U')[0].toUpperCase();
-        const av = src ? `<img src="${src}" alt="">` : initial;
+        const av = renderAvatar(u);
         return `
             <div class="confirm-player ${p.captain ? 'captain' : ''}">
                 <div class="cp-avatar">${av}</div>
@@ -7844,9 +7896,7 @@ async function renderRoomContent(roomId) {
         // Рендер игрока в team-zone
                 const renderTZPlayer = (p, teamSide) => {
             const u = userById[p.telegram_id] || {};
-            const src = u.custom_avatar || u.photo_url;
-            const initial = (u.display_name || 'U')[0].toUpperCase();
-            const av = src ? `<img src="${src}" alt="">` : initial;
+            const av = renderAvatar(u);
             const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
             const isHost = String(p.telegram_id) === String(room.leader_id);
             const lvl = eloToLevel(u.elo || 1000);
@@ -7947,9 +7997,7 @@ async function renderRoomContent(roomId) {
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
                     ${spectators.map(s => {
                         const u = userById[s.telegram_id] || {};
-                        const src = u.custom_avatar || u.photo_url;
-                        const initial = (u.display_name || 'U')[0].toUpperCase();
-                        const av = src
+                        const av = renderAvatar(u);
                             ? `<img src="${src}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
                             : `<span style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #04140e;">${initial}</span>`;
                         return `
@@ -9147,7 +9195,7 @@ async function sendRoomMessage(roomId) {
             sender_id: currentUser.telegram_id,
             text
         });
-        await touchRoom(roomId);          // ← ДОБАВЛЕНО
+        // touchRoom убран — чтобы не триггерить realtime и не перерисовывать экран
         await markRoomChatRead(roomId);
     } catch (e) {
         showToast('Ошибка отправки: ' + e.message);
@@ -10394,9 +10442,7 @@ async function renderRoomInviteList(roomId) {
         }
 
         el.innerHTML = available.map(u => {
-            const src = u.custom_avatar || u.photo_url;
-            const initial = (u.display_name || 'U')[0].toUpperCase();
-            const av = src ? `<img src="${src}" alt="">` : initial;
+            const av = renderAvatar(u);
             const alreadyInvited = invited.has(u.telegram_id);
             const btn = alreadyInvited
                 ? `<button class="friend-action pending" disabled>⏳</button>`
