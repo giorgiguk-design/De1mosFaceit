@@ -1590,48 +1590,75 @@ body::after {
 }
 .team-b .tz-you-badge { background: #ff5470; color: #fff; }
 
-/* Нижняя панель кнопок в комнате (компактная) */
+/* Нижняя панель кнопок в комнате (киберспорт) */
 .rv-actions {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
     gap: 8px;
     margin-top: 14px;
 }
 .rv-icon-btn {
+    position: relative;
     aspect-ratio: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    background: rgba(var(--emerald-rgb), 0.06);
-    border: 1px solid var(--border);
+    gap: 4px;
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.10), rgba(var(--emerald-rgb),0.02));
+    border: 1.5px solid var(--border-strong);
     border-radius: 14px;
     color: var(--text);
     font-family: inherit;
-    font-size: 9px;
-    font-weight: 700;
     cursor: pointer;
-    padding: 6px;
-    position: relative;
-    transition: transform 0.18s, background 0.22s, border-color 0.22s;
+    padding: 8px 6px;
+    overflow: hidden;
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+                background 0.22s ease,
+                border-color 0.22s ease,
+                box-shadow 0.22s ease;
+}
+.rv-icon-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.6;
 }
 .rv-icon-btn:active {
-    transform: scale(0.94);
-    background: rgba(var(--emerald-rgb), 0.12);
-    border-color: var(--border-strong);
+    transform: scale(0.93);
+    background: rgba(var(--emerald-rgb), 0.18);
+    border-color: var(--emerald);
+    box-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.35);
 }
 .rv-icon-btn.danger {
     color: var(--red);
-    background: rgba(255, 84, 112, 0.06);
-    border-color: rgba(255, 84, 112, 0.25);
+    background: linear-gradient(160deg, rgba(255,84,112,0.10), rgba(255,84,112,0.02));
+    border-color: rgba(255,84,112,0.35);
 }
-.rv-icon-btn .rv-ico { font-size: 20px; line-height: 1; }
+.rv-icon-btn.danger::before {
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+}
+.rv-icon-btn.danger:active {
+    background: rgba(255,84,112,0.2);
+    border-color: var(--red);
+    box-shadow: 0 0 20px rgba(255,84,112,0.4);
+}
+.rv-icon-btn .rv-ico {
+    font-size: 22px;
+    line-height: 1;
+    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.4));
+}
+.rv-icon-btn.danger .rv-ico {
+    filter: drop-shadow(0 0 8px rgba(255,84,112, 0.5));
+}
 .rv-icon-btn .rv-lbl {
     font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
+    opacity: 0.85;
 }
 .rv-icon-btn .rv-badge {
     position: absolute;
@@ -1645,6 +1672,88 @@ body::after {
     font-weight: 800;
     display: flex; align-items: center; justify-content: center;
     border: 2px solid var(--bg);
+}
+
+/* Кнопка запуска матча */
+.room-launch-btn {
+    position: relative;
+    width: 100%;
+    padding: 18px 16px;
+    border-radius: 18px;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    overflow: hidden;
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                box-shadow 0.3s ease;
+}
+.room-launch-btn.ready {
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 50%, var(--emerald-3));
+    color: #04140e;
+    box-shadow: 0 8px 32px rgba(var(--emerald-rgb), 0.45),
+                inset 0 1px 0 rgba(255,255,255,0.35);
+    animation: launchPulse 2.2s ease-in-out infinite;
+}
+.room-launch-btn.ready:active { transform: scale(0.97); }
+.room-launch-btn.waiting {
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.10), rgba(var(--emerald-rgb),0.03));
+    color: var(--emerald);
+    border: 1.5px solid var(--border-strong);
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+.room-launch-btn .rlb-icon {
+    font-size: 26px;
+    line-height: 1;
+    filter: drop-shadow(0 0 12px currentColor);
+}
+.room-launch-btn .rlb-text {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+}
+.room-launch-btn .rlb-sub {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.75;
+    letter-spacing: 0.5px;
+}
+@keyframes launchPulse {
+    0%, 100% {
+        box-shadow: 0 8px 32px rgba(var(--emerald-rgb), 0.45),
+                    inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+    50% {
+        box-shadow: 0 8px 40px rgba(var(--emerald-rgb), 0.65),
+                    0 0 60px rgba(var(--emerald-rgb), 0.3),
+                    inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+}
+
+/* Подсказка зрителю */
+.spectator-hint {
+    text-align: center;
+    padding: 20px 16px;
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.06), transparent);
+    border: 1px dashed var(--border-strong);
+    border-radius: 16px;
+    margin-top: 14px;
+}
+.spectator-hint .sh-icon {
+    font-size: 32px;
+    margin-bottom: 6px;
+    opacity: 0.6;
+}
+.spectator-hint .sh-text {
+    font-size: 12px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
     
 .room-join-btn {
@@ -2153,6 +2262,29 @@ body::after {
     width: 22px;
     text-align: center;
     flex-shrink: 0;
+}
+
+    .menu-drawer-legal {
+    padding: 10px 20px 14px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+}
+.menu-drawer-legal button {
+    background: none;
+    border: none;
+    color: var(--hint);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    letter-spacing: 0.3px;
+    opacity: 0.7;
+}
+.menu-drawer-legal button:active {
+    color: var(--emerald);
 }
 
 .menu-drawer-footer {
@@ -3272,6 +3404,7 @@ body::after {
             <div class="menu-drawer-name" id="menuDrawerName">Игрок</div>
             <div class="menu-drawer-username" id="menuDrawerUsername">@—</div>
         </div>
+                <button class="menu-drawer-settings" onclick="openFaqSheet()" title="FAQ" style="font-size: 16px;">❓</button>
         <button class="menu-drawer-settings" onclick="menuDrawerGo('settings')" title="Настройки">⚙️</button>
     </div>
 
@@ -3296,18 +3429,13 @@ body::after {
     <button class="menu-drawer-btn moderator" id="moderatorMenuBtn" style="display: none;" onclick="menuDrawerGo('moderator')">
         <span class="menu-drawer-icon">⚖️</span> Модератор-панель
     </button>
-    <button class="menu-drawer-btn" onclick="openFaqSheet()">
-        <span class="menu-drawer-icon">❓</span> FAQ
-    </button>
-    <button class="menu-drawer-btn" onclick="openPrivacyPolicySheet()">
-        <span class="menu-drawer-icon">📜</span> Политика конфиденциальности
-    </button>
+</div>
+
+    <div class="menu-drawer-legal">
+    <button onclick="openPrivacyPolicySheet()">Политика конфиденциальности</button>
 </div>
 
 <div class="menu-drawer-footer" id="menuDrawerFooter" style="display: none;">
-<button class="menu-drawer-btn cover-btn" onclick="closeMenuDrawer(); setTimeout(() => openCoverPickerSheet(), 260);">
-    <span class="menu-drawer-icon">🎨</span> Обложки кнопок
-</button>
     <button class="menu-drawer-btn admin" onclick="menuDrawerGo('admin')">
         <span class="menu-drawer-icon">👑</span> Админ-панель
     </button>
@@ -3549,13 +3677,20 @@ body::after {
 
             let html = `
                 <div class="moderator-panel">
-                    <div class="moderator-title">⚖️ МОДЕРАТОР-ПАНЕЛЬ</div>
+                    <div class="moderator-title">👑 АДМИН-ПАНЕЛЬ</div>
                     <div class="moderator-sub">Спорные матчи, апелляции, жалобы</div>
                     <div>
                         <span class="moderator-stat">🎯 Спорных: ${disputed.length}</span>
                         <span class="moderator-stat">📨 Апелляций: ${reports.length}</span>
                         <span class="moderator-stat">⭐ Модеров: ${mods.length}</span>
                     </div>
+                    ${currentUser.is_admin ? `
+                        <div style="margin-top: 16px;">
+                            <button class="club-full-btn club-btn-edit" onclick="openCoverPickerSheet()" style="margin-bottom: 0;">
+                                🎨 Обложки кнопок
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div class="section-title">🚨 Спорные матчи (${disputed.length})</div>
@@ -7707,7 +7842,7 @@ async function renderRoomContent(roomId) {
         const teamBFull = teamB.length >= needPerTeam;
 
         // Рендер игрока в team-zone
-        const renderTZPlayer = (p, teamSide) => {
+                const renderTZPlayer = (p, teamSide) => {
             const u = userById[p.telegram_id] || {};
             const src = u.custom_avatar || u.photo_url;
             const initial = (u.display_name || 'U')[0].toUpperCase();
@@ -7716,7 +7851,8 @@ async function renderRoomContent(roomId) {
             const isHost = String(p.telegram_id) === String(room.leader_id);
             const lvl = eloToLevel(u.elo || 1000);
             return `
-                <div class="tz-player ${isMe ? 'you' : ''}">
+                <div class="tz-player ${isMe ? 'you' : ''}"
+                     onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
                     <div class="tz-avatar">${av}</div>
                     <div class="tz-info">
                         <div class="tz-name">
@@ -7744,7 +7880,7 @@ async function renderRoomContent(roomId) {
             }
 
             let plusHTML = '';
-            if (!full && !isMyTeam) {
+            if (!full && !isMyTeam && !iAmReady) {
                 plusHTML = `
                     <button class="tz-plus team-${team.toLowerCase()}" onclick="event.stopPropagation(); chooseTeam(${room.id}, '${team}')">
                         ➕ Войти в ${team}
@@ -7785,7 +7921,7 @@ async function renderRoomContent(roomId) {
         };
 
         content.innerHTML = `
-            <div class="rv-header">
+                        <div class="rv-header">
                 <div class="rv-title">${escapeHtml(room.name)}</div>
                 <div class="rv-meta">
                     <span class="rv-meta-badge">${room.mode}</span>
@@ -7793,6 +7929,13 @@ async function renderRoomContent(roomId) {
                     ${iAmLeader ? '<span class="rv-meta-badge gold">👑 ХОСТ</span>' : ''}
                 </div>
             </div>
+
+            ${!iAmReady ? `
+                <div class="choose-team-hint">
+                    <div class="cth-title">🎯 Выбор команды</div>
+                    <div class="cth-sub">Нажми на зону любой команды, чтобы присоединиться</div>
+                </div>
+            ` : ''}
 
             <div class="team-zones">
                 ${renderTeamZone('A', teamA, teamAFull)}
@@ -7819,34 +7962,41 @@ async function renderRoomContent(roomId) {
                 </div>
             ` : ''}
 
-            <div class="rv-actions">
-                <button class="rv-icon-btn" onclick="openInviteFriendToRoom(${roomId})" title="Пригласить друга">
-                    <span class="rv-ico">➕</span>
-                    <span class="rv-lbl">Друг</span>
-                </button>
-                <button class="rv-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
-                    <span class="rv-ico">💬</span>
-                    <span class="rv-lbl">Чат</span>
-                    <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
-                </button>
-                <button class="rv-icon-btn danger" onclick="leaveRoomFromRoomView(${roomId})" title="Покинуть">
-                    <span class="rv-ico">🚪</span>
-                    <span class="rv-lbl">Выйти</span>
-                </button>
+            ${iAmReady ? `
+                <div class="rv-actions">
+                    <button class="rv-icon-btn" onclick="openInviteFriendToRoom(${roomId})" title="Пригласить друга">
+                        <span class="rv-ico">➕</span>
+                        <span class="rv-lbl">Друг</span>
+                    </button>
+                    <button class="rv-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
+                        <span class="rv-ico">💬</span>
+                        <span class="rv-lbl">Чат</span>
+                        <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
+                    </button>
+                    <button class="rv-icon-btn" onclick="openChangeTeamSheet(${roomId})" title="Сменить команду">
+                        <span class="rv-ico">🔄</span>
+                        <span class="rv-lbl">Сменить</span>
+                    </button>
+                    <button class="rv-icon-btn danger" onclick="leaveRoomFromRoomView(${roomId})" title="Покинуть">
+                        <span class="rv-ico">🚪</span>
+                        <span class="rv-lbl">Выйти</span>
+                    </button>
+                    ${iAmLeader ? `
+                        <button class="rv-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть">
+                            <span class="rv-ico">⛔</span>
+                            <span class="rv-lbl">Закрыть</span>
+                        </button>
+                    ` : ''}
+                </div>
+
                 ${iAmLeader ? `
-                    <button class="rv-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть">
-                        <span class="rv-ico">⛔</span>
-                        <span class="rv-lbl">Закрыть</span>
+                    <button class="room-launch-btn ${canStart ? 'ready' : 'waiting'}" onclick="startMatch(${room.id})" ${!canStart ? 'disabled' : ''} style="margin-top: 14px;">
+                        <span class="rlb-icon">${canStart ? '🚀' : '⏳'}</span>
+                        <span class="rlb-text">${canStart ? 'ЗАПУСТИТЬ МАТЧ' : 'ОЖИДАНИЕ ИГРОКОВ'}</span>
+                        <span class="rlb-sub">${teamA.length}/${needPerTeam} vs ${teamB.length}/${needPerTeam}</span>
                     </button>
                 ` : ''}
-            </div>
-
-            ${iAmLeader ? `
-                <button class="room-start-btn-v2" onclick="startMatch(${room.id})" ${!canStart ? 'disabled' : ''} style="margin-top: 12px;">
-                    ▶️ ${canStart ? 'НАЧАТЬ МАТЧ' : `НУЖНО ПО ${needPerTeam} ИГРОКОВ`}
-                </button>
             ` : ''}
-        `;
 
         setTimeout(() => updateRoomChatButton(room.id), 100);
         subscribeRoomChatCounter(roomId);
@@ -7855,6 +8005,58 @@ async function renderRoomContent(roomId) {
         content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
     }
 }
+
+                    async function openChangeTeamSheet(roomId) {
+            const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+            const { data: players } = await sb.from('room_players').select('team, is_ready').eq('room_id', roomId);
+            const { data: me } = await sb.from('room_players')
+                .select('team').eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
+
+            const needPerTeam = room.mode === '2x2' ? 2 : 5;
+            const teamACount = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
+            const teamBCount = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
+
+            const aDisabled = me?.team === 'A' || teamACount >= needPerTeam;
+            const bDisabled = me?.team === 'B' || teamBCount >= needPerTeam;
+
+            const sheet = document.createElement('div');
+            sheet.className = 'sheet-overlay active';
+            sheet.id = 'changeTeamOverlay';
+            sheet.onclick = (e) => { if (e.target === sheet) closeChangeTeamSheet(); };
+            sheet.innerHTML = `
+                <div class="sheet active" id="changeTeamSheet" style="z-index: 802;">
+                    <div class="sheet-title">🔄 Сменить команду</div>
+                    <button class="sheet-option" ${aDisabled ? 'disabled' : ''}
+                            onclick="doChangeTeam(${roomId}, 'A')">
+                        <span style="font-size: 18px;">🛡️</span>
+                        Команда A · ${teamACount}/${needPerTeam}${me?.team === 'A' ? ' (ты здесь)' : ''}
+                    </button>
+                    <button class="sheet-option" ${bDisabled ? 'disabled' : ''}
+                            onclick="doChangeTeam(${roomId}, 'B')">
+                        <span style="font-size: 18px;">💣</span>
+                        Команда B · ${teamBCount}/${needPerTeam}${me?.team === 'B' ? ' (ты здесь)' : ''}
+                    </button>
+                    <button class="sheet-cancel" onclick="closeChangeTeamSheet()">ОТМЕНА</button>
+                </div>
+            `;
+            document.body.appendChild(sheet);
+        }
+
+        function closeChangeTeamSheet() {
+            const el = document.getElementById('changeTeamOverlay');
+            if (el) el.remove();
+        }
+
+        async function doChangeTeam(roomId, team) {
+            closeChangeTeamSheet();
+            allowTeamSwitch = true;
+            await chooseTeam(roomId, team);
+        }
+
+        // Обёртка над leaveRoom (для кнопки в новой разметке)
+        async function leaveRoomFromRoomView(roomId) {
+            await leaveRoom(roomId);
+        }
 
 // Обёртка над leaveRoom (для кнопки в новой разметке)
 async function leaveRoomFromRoomView(roomId) {
@@ -7993,7 +8195,20 @@ async function checkTeamsReady(roomId, room) {
             haptic('heavy');
         }
 
+        let allowTeamSwitch = false;
+
         async function chooseTeam(roomId, team) {
+            // Проверяем, уже ли я в команде
+            const { data: me } = await sb.from('room_players')
+                .select('team, is_ready').eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
+
+            if (me?.is_ready && !allowTeamSwitch) {
+                if (me.team === team) return;
+                showToast('Ты уже в команде ' + me.team + '. Используй кнопку "Сменить"');
+                return;
+            }
+
+            allowTeamSwitch = false;
             haptic('heavy');
             const { error } = await sb
                 .from('room_players')
@@ -8679,14 +8894,15 @@ async function checkActiveRoom() {
     if (!currentUser) return;
     try {
         const { data: players } = await sb.from('room_players')
-            .select('room_id')
+            .select('room_id, is_ready')
             .eq('telegram_id', currentUser.telegram_id)
             .limit(1);
         const player = players?.[0];
 
         const indicator = document.getElementById('headerRoomIndicator');
 
-        if (player) {
+        // Показываем баннер и геймпад только если игрок в команде (is_ready)
+        if (player && player.is_ready) {
             activeRoomId = player.room_id;
             const { data: room } = await sb
                 .from('rooms')
