@@ -985,33 +985,86 @@ body::after {
 /* ============ PLAY SCREEN ============ */
 .play-screen {
     position: fixed; inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(6px);
+    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
     z-index: 400;
     opacity: 0; pointer-events: none;
-    transition: opacity 0.3s;
-    display: flex; align-items: flex-end; justify-content: center;
+    transition: opacity 0.35s ease;
+    display: flex; align-items: stretch; justify-content: center;
 }
 .play-screen.active { opacity: 1; pointer-events: auto; }
 .play-screen-content {
-    width: 100%; max-width: 560px; max-height: 92vh;
+    width: 100%; max-width: 640px;
+    height: 100%;
     overflow-y: auto;
-    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
-    border-top-left-radius: 24px; border-top-right-radius: 24px;
-    border-top: 1px solid var(--border-strong);
-    padding: 20px 18px 28px;
+    padding: 70px 18px 40px;
     transform: translateY(100%);
-    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
 }
 .play-screen.active .play-screen-content { transform: translateY(0); }
-.play-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.play-title { font-size: 20px; font-weight: 800; color: var(--text); }
-.play-close {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-    color: var(--hint); font-size: 20px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+
+/* Плавающий крестик, следует за скроллом */
+.play-close-float {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(10, 20, 16, 0.85);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 22px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 405;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.25s ease,
+                box-shadow 0.25s ease;
 }
+.play-close-float:active { transform: scale(0.88); }
+.play-close-float:hover {
+    background: rgba(var(--emerald-rgb), 0.15);
+    box-shadow: 0 8px 30px rgba(var(--emerald-rgb), 0.35);
+}
+
+/* Плавающая кнопка "Войти в игру" после матча */
+.play-enter-float {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    right: 72px;
+    height: 44px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
+    color: #04140e;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.6px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    z-index: 405;
+    box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.35);
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.25s ease;
+    animation: bannerPulse 2.5s ease-in-out infinite;
+}
+.play-enter-float.active { display: flex; }
+.play-enter-float:active { transform: scale(0.96); }
+
+.play-title { font-size: 20px; font-weight: 800; color: var(--text); }
 .play-section-label {
     font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
     color: var(--hint); font-weight: 700; margin: 4px 0 10px;
@@ -1490,6 +1543,27 @@ body::after {
     min-width: 0;
     flex: 1;
 }
+
+.menu-drawer-settings {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: inherit;
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.22s ease;
+}
+.menu-drawer-settings:active { transform: scale(0.88); }
+.menu-drawer-settings:hover { background: rgba(var(--emerald-rgb), 0.16); }
+    
 .menu-drawer-name {
     font-size: 16px;
     font-weight: 800;
@@ -2326,8 +2400,10 @@ body::after {
         <div class="msg-menu" id="msgMenuContent"></div>
     </div>
 
-    <!-- ============ PLAY SCREEN ============ -->
+<!-- ============ PLAY SCREEN ============ -->
 <div class="play-screen" id="playScreen">
+    <button class="play-close-float" id="playCloseFloat" onclick="closePlayScreen()">×</button>
+    <button class="play-enter-float" id="playEnterFloat" onclick="enterGameFromFloat()">🎮 ВОЙТИ В ИГРУ</button>
     <div class="play-screen-content" id="playScreenContent"></div>
 </div>
 
@@ -2397,6 +2473,32 @@ body::after {
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
 
+    <!-- SHEET: Уведомления приложения -->
+<div class="sheet" id="appNotifSheet">
+    <div class="sheet-title">🔔 Уведомления приложения</div>
+    <div id="appNotifOptions"></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
+<!-- SHEET: Уведомления бота -->
+<div class="sheet" id="botNotifSheet">
+    <div class="sheet-title">✈️ Уведомления бота</div>
+    <div id="botNotifOptions"></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
+<!-- SHEET: Уведомления (хаб) -->
+<div class="sheet" id="notifSettingsSheet">
+    <div class="sheet-title">🔔 Уведомления</div>
+    <button class="sheet-option" onclick="closeAllSheets(); setTimeout(() => openAppNotifSheet(), 260);">
+        <span style="font-size: 18px;">📱</span> Уведомления приложения
+    </button>
+    <button class="sheet-option" onclick="closeAllSheets(); setTimeout(() => openBotNotifSheet(), 260);">
+        <span style="font-size: 18px;">✈️</span> Уведомления бота
+    </button>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
     <!-- ============ NOTIFICATIONS SHEET ============ -->
 <div class="sheet" id="notifSheet" style="max-height: 88vh;">
     <div class="sheet-title">🔔 Уведомления</div>
@@ -2425,13 +2527,57 @@ body::after {
     <button class="sheet-option" onclick="closeAllSheets(); setTimeout(() => openPrivacySheet(), 260);">
         <span style="font-size: 18px;">🔒</span> Приватность
     </button>
-    <button class="sheet-option" onclick="openNotificationsSettingsInfo()">
+    <button class="sheet-option" onclick="closeAllSheets(); setTimeout(() => openNotificationsSettings(), 260);">
         <span style="font-size: 18px;">🔔</span> Уведомления
     </button>
     <button class="sheet-option" onclick="menuDrawerSupport()">
         <span style="font-size: 18px;">🆘</span> Тех-поддержка
     </button>
+    <button class="sheet-option danger" onclick="closeAllSheets(); setTimeout(() => openDeleteAccountSheet(), 260);">
+        <span style="font-size: 18px;">🗑️</span> Удалить аккаунт
+    </button>
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
+    <!-- SHEET: Удаление аккаунта -->
+<div class="sheet" id="deleteAccountSheet">
+    <div class="sheet-title">🗑️ Удаление аккаунта</div>
+    <div style="text-align: center; padding: 14px 0;">
+        <div style="font-size: 48px; margin-bottom: 12px;">⚠️</div>
+        <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--red);">
+            Это действие необратимо
+        </div>
+        <div style="font-size: 12px; color: var(--hint); line-height: 1.5; margin-bottom: 18px;">
+            Будут удалены:<br>
+            • Профиль и ELO<br>
+            • Клан (если ты владелец)<br>
+            • Выход из клубов<br><br>
+            Повторная регистрация — через 24 часа.
+        </div>
+    </div>
+    <button class="sheet-option danger" onclick="requestAccountDeletion()">
+        <span style="font-size: 18px;">📨</span> Получить код подтверждения
+    </button>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ОТМЕНА</button>
+</div>
+
+<!-- SHEET: Ввод кода удаления -->
+<div class="sheet" id="deleteCodeSheet">
+    <div class="sheet-title">🔐 Подтверждение удаления</div>
+    <div style="text-align: center; padding: 10px 0 16px;">
+        <div style="font-size: 12px; color: var(--hint); margin-bottom: 14px;">
+            Код отправлен в Telegram-бот.<br>Введи его ниже:
+        </div>
+    </div>
+    <input type="text" class="field-input" id="deleteCodeInput"
+           placeholder="6-значный код" maxlength="6" inputmode="numeric"
+           style="text-align: center; font-size: 22px; letter-spacing: 8px; font-weight: 800; margin-bottom: 14px;">
+    <button class="profile-action-btn save" id="deleteConfirmBtn"
+            style="background: rgba(255,84,112,0.9); color: #fff;"
+            onclick="confirmAccountDeletion()">
+        🗑️ УДАЛИТЬ НАВСЕГДА
+    </button>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ОТМЕНА</button>
 </div>
 
         <div class="sheet" id="roomInviteSheet">
@@ -2476,6 +2622,7 @@ body::after {
             <div class="menu-drawer-name" id="menuDrawerName">Игрок</div>
             <div class="menu-drawer-username" id="menuDrawerUsername">@—</div>
         </div>
+        <button class="menu-drawer-settings" onclick="menuDrawerGo('settings')" title="Настройки">⚙️</button>
     </div>
 
 <div class="menu-drawer-list">
@@ -2493,9 +2640,6 @@ body::after {
         <span class="menu-drawer-icon">💬</span> Чаты
     </button>
 
-    <button class="menu-drawer-btn" onclick="menuDrawerGo('settings')">
-        <span class="menu-drawer-icon">⚙️</span> Настройки
-    </button>
     <button class="menu-drawer-btn" onclick="menuDrawerSupport()">
         <span class="menu-drawer-icon">🆘</span> Тех-поддержка
     </button>
@@ -2966,21 +3110,51 @@ body::after {
             }, 2500);
         }
 
-        async function notify(telegramId, text) {
-            if (!telegramId || !text) return;
-            if (String(telegramId) === String(currentUser?.telegram_id)) return;
-            try {
-                await fetch(NOTIFY_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                        'apikey': SUPABASE_ANON_KEY
-                    },
-                    body: JSON.stringify({ telegram_id: telegramId, text })
-                });
-            } catch (e) {}
-        }
+async function notify(telegramId, text, type = null) {
+    if (!telegramId || !text) return;
+    if (String(telegramId) === String(currentUser?.telegram_id)) return;
+
+    // Проверяем флаг bot_notify_* у получателя
+    if (type) {
+        try {
+            const { data: u } = await sb.from('users')
+                .select('notify_off, bot_notify_friend_requests, bot_notify_club_requests, bot_notify_party_invites, bot_notify_messages')
+                .eq('telegram_id', telegramId).maybeSingle();
+            if (u) {
+                if (u.notify_off === true) return;
+                if (type === 'friend' && u.bot_notify_friend_requests === false) return;
+                if (type === 'club' && u.bot_notify_club_requests === false) return;
+                if (type === 'party' && u.bot_notify_party_invites === false) return;
+                if (type === 'message' && u.bot_notify_messages === false) return;
+            }
+        } catch (e) {}
+    }
+
+    try {
+        await fetch(NOTIFY_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'apikey': SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify({ telegram_id: telegramId, text })
+        });
+    } catch (e) {}
+}
+
+    try {
+        await fetch(NOTIFY_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'apikey': SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify({ telegram_id: telegramId, text })
+        });
+    } catch (e) {}
+}
 
         async function mmCall(action, body = {}) {
             try {
@@ -3156,7 +3330,11 @@ body::after {
                             <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
                         </div>
                         <div class="profile-name">${escapeHtml(user.display_name || 'Без имени')}</div>
-                        <div class="profile-username">${user.username ? '@<span>' + escapeHtml(user.username) + '</span>' : '@—'}</div>
+                        <div class="profile-username">${
+    user.username && !user.hide_telegram_tag
+        ? '@<span>' + escapeHtml(user.username) + '</span>'
+        : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
+}</div>
                         <div class="profile-level-badge">⚡ Уровень ${level} · Faceit</div>
                     </div>
                 </div>
@@ -3257,34 +3435,41 @@ body::after {
         // ============================================================
         // PRIVACY
         // ============================================================
-        function openPrivacySheet() {
-            document.getElementById('sheetOverlay').classList.add('active');
-            document.getElementById('privacySheet').classList.add('active');
-            const el = document.getElementById('privacyOptions');
-            el.innerHTML = `
-                <div class="privacy-row">
-                    <div>
-                        <div class="privacy-row-label">⏱ Скрывать часы на Faceit</div>
-                        <div class="privacy-row-desc">Другие не увидят ваше время в приложении</div>
-                    </div>
-                    <button class="toggle-switch ${currentUser.hide_hours ? 'on' : ''}" onclick="togglePrivacy('hide_hours', this)"></button>
-                </div>
-                <div class="privacy-row">
-                    <div>
-                        <div class="privacy-row-label">📊 Скрывать матчи</div>
-                        <div class="privacy-row-desc">Не показывать количество матчей и побед</div>
-                    </div>
-                    <button class="toggle-switch ${currentUser.hide_matches ? 'on' : ''}" onclick="togglePrivacy('hide_matches', this)"></button>
-                </div>
-                <div class="privacy-row">
-                    <div>
-                        <div class="privacy-row-label">🔕 Не присылать уведомления</div>
-                        <div class="privacy-row-desc">Отключить уведомления от бота</div>
-                    </div>
-                    <button class="toggle-switch ${currentUser.notify_off ? 'on' : ''}" onclick="togglePrivacy('notify_off', this)"></button>
-                </div>
-            `;
-        }
+function openPrivacySheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('privacySheet').classList.add('active');
+    const el = document.getElementById('privacyOptions');
+    el.innerHTML = `
+        <div class="privacy-row">
+            <div>
+                <div class="privacy-row-label">⏱ Скрывать часы на Faceit</div>
+                <div class="privacy-row-desc">Другие не увидят ваше время в приложении</div>
+            </div>
+            <button class="toggle-switch ${currentUser.hide_hours ? 'on' : ''}" onclick="togglePrivacy('hide_hours', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div>
+                <div class="privacy-row-label">📊 Скрывать матчи</div>
+                <div class="privacy-row-desc">Не показывать количество матчей и побед</div>
+            </div>
+            <button class="toggle-switch ${currentUser.hide_matches ? 'on' : ''}" onclick="togglePrivacy('hide_matches', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div>
+                <div class="privacy-row-label">🏷 Скрыть тег Telegram</div>
+                <div class="privacy-row-desc">Скрыть @username из профиля</div>
+            </div>
+            <button class="toggle-switch ${currentUser.hide_telegram_tag ? 'on' : ''}" onclick="togglePrivacy('hide_telegram_tag', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div>
+                <div class="privacy-row-label">🔕 Не присылать уведомления</div>
+                <div class="privacy-row-desc">Отключить все уведомления</div>
+            </div>
+            <button class="toggle-switch ${currentUser.notify_off ? 'on' : ''}" onclick="togglePrivacy('notify_off', this)"></button>
+        </div>
+    `;
+}
 
         async function togglePrivacy(field, btnEl) {
             const newVal = !currentUser[field];
@@ -3354,7 +3539,11 @@ async function openPlayerProfile(userId) {
             <div style="display: flex; flex-direction: column; align-items: center; padding: 4px 0 10px;">
                 <div class="profile-avatar" style="width: 90px; height: 90px; font-size: 34px; margin-bottom: 12px;">${avatarHTML}</div>
                 <div style="font-size: 20px; font-weight: 800; text-align: center;">${escapeHtml(user.display_name || 'Игрок')}</div>
-                <div style="font-size: 13px; color: var(--hint); margin-top: 4px;">${user.username ? '@' + escapeHtml(user.username) : '@—'}</div>
+                <div style="font-size: 13px; color: var(--hint); margin-top: 4px;">${
+    user.username && !user.hide_telegram_tag
+        ? '@' + escapeHtml(user.username)
+        : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
+}</div>
                 <div class="profile-level-badge" style="margin-top: 10px;">⚡ Уровень ${level}</div>
             </div>
             <div class="profile-stats-grid">
@@ -3392,7 +3581,7 @@ async function addFriendFromProfile(userId, btn) {
             addressee_id: userId,
             status: 'pending'
         });
-        await notify(userId, `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`);
+        await notify(userId, `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`, 'friend');
         showToast('✅ Запрос отправлен');
         openPlayerProfile(userId); // перерисуем
     } catch (e) {
@@ -3681,7 +3870,7 @@ function openFriendSearchSheet() {
                     addressee_id: addresseeId, status: 'pending'
                 });
                 if (error) throw error;
-                notify(addresseeId, `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`);
+                notify(addresseeId, `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`, 'friend');
                 showToast('✅ Запрос отправлен');
                 if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Запрос'; }
             } catch (e) {
@@ -4156,7 +4345,7 @@ function openFriendSearchSheet() {
                 await sb.from('club_members').insert({ club_id: myClub.club.id, telegram_id: userId, role: 'member' });
                 await sb.from('club_requests').update({ status: 'accepted' }).eq('id', requestId);
                 await logClubEvent('member_joined', currentUser.telegram_id, userId, {});
-                notify(userId, `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b>!`);
+                notify(userId, `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
                 showToast('✅ Принят');
                 closeAllSheets();
                 openClubPage();
@@ -4187,8 +4376,8 @@ function openFriendSearchSheet() {
                     await logClubEvent('member_kicked', currentUser.telegram_id, userId, {});
                 }
                 notify(userId, withBan
-                    ? `🚫 Тебя забанили в клубе <b>${escapeHtml(myClub.club.name)}</b>.`
-                    : `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>.`);
+                ? `🚫 Тебя забанили в клубе <b>${escapeHtml(myClub.club.name)}</b>.`
+                  : `🚪 Тебя исключили из клуба <b
                 showToast(withBan ? 'Забанен' : 'Кикнут');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -4202,7 +4391,7 @@ function openFriendSearchSheet() {
                 await sb.from('club_members').update({ role: 'elder' })
                     .eq('club_id', myClub.club.id).eq('telegram_id', userId);
                 await logClubEvent('elder_promoted', currentUser.telegram_id, userId, {});
-                notify(userId, `⭐ Тебя назначили <b>Elder</b> в клубе <b>${escapeHtml(myClub.club.name)}</b>.`);
+                notify(userId, `⭐ Тебя назначили <b>Elder</b> в клубе <b>${escapeHtml(myClub.club.name)}</b>.`, 'club');
                 showToast('✅ Назначен Elder');
                 openClubPage();
             } catch (e) { showToast('Ошибка'); }
@@ -4236,7 +4425,7 @@ function openFriendSearchSheet() {
                 await sb.from('club_members').update({ role: 'member' })
                     .eq('club_id', myClub.club.id).eq('telegram_id', currentUser.telegram_id);
                 await logClubEvent('owner_transferred', currentUser.telegram_id, userId, {});
-                notify(userId, `👑 Ты стал новым <b>OWNER</b> клуба <b>${escapeHtml(myClub.club.name)}</b>!`);
+                notify(userId, `👑 Ты стал новым <b>OWNER</b> клуба <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
                 showToast('✅ Клуб передан');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -4476,7 +4665,7 @@ function openFriendSearchSheet() {
                 }, { onConflict: 'club_id,telegram_id' });
 
                 if (club?.owner_id) {
-                    notify(club.owner_id, `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.`);
+                    notify(club.owner_id, `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.`, 'club');
                 }
                 showToast('✅ Заявка отправлена');
                 if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
@@ -4559,7 +4748,7 @@ function openFriendSearchSheet() {
 
                     notify(m.telegram_id,
                         `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> создал клановую битву в клубе <b>${escapeHtml(myClub.club.name)}</b>.\n` +
-                        `Вступи в игру! Открой De1mos Faceit → Клуб.`
+                    `Вступи в игру! Открой De1mos Faceit → Клуб.`, 'club'
                     );
                 }
 
@@ -4852,7 +5041,7 @@ function closeChatView() {
                 const { error } = await sb.from('messages').insert(payload);
                 if (error) throw error;
                 if (currentChat.type === 'dm') {
-                    notify(currentChat.id, `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`);
+                    notify(currentChat.id, `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`, 'message');
                 }
                 cancelReply();
             } catch (e) { console.error(e); showToast('Ошибка отправки'); }
@@ -5283,7 +5472,7 @@ async function askJoinRoom(partyId) {
         }, { onConflict: 'party_id,to_id' });
 
         await notify(party.leader_id,
-            `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет вступить в твою комнату ${party.mode}.`
+            `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет вступить в твою комнату ${party.mode}.`, 'party'
         );
 
         showToast('✅ Запрос отправлен лидеру');
@@ -5351,7 +5540,7 @@ async function askJoinRoom(partyId) {
                     await sb.from('party_invites').update({ status: 'accepted' })
                         .eq('party_id', party.id).eq('to_id', currentUser.telegram_id).eq('from_id', newMemberId);
 
-                    notify(newMemberId, `✅ Тебя приняли в комнату. Открой приложение!`);
+                    notify(newMemberId, `✅ Тебя приняли в комнату. Открой приложение!`, 'party');
                     showToast('✅ Игрок вступил');
                 } else {
                     const { data: myMember } = await sb.from('party_members')
@@ -5372,7 +5561,7 @@ async function askJoinRoom(partyId) {
                     await sb.from('party_invites').update({ status: 'accepted' })
                         .eq('party_id', party.id).eq('to_id', currentUser.telegram_id);
 
-                    notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> вступил в пати.`);
+                    notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> вступил в пати.`, 'party');
                     showToast('✅ Ты в пати!');
                 }
 
@@ -5531,7 +5720,7 @@ async function inviteToParty(userId) {
         }, { onConflict: 'party_id,to_id' });
 
         await notify(userId,
-            `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в пати ${myParty.party.mode}. Открой приложение!`
+            `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в пати ${myParty.party.mode}. Открой приложение!`, 'party'
         );
         showToast('✅ Приглашение отправлено');
     } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -5875,113 +6064,200 @@ async function inviteToParty(userId) {
             renderResultScreen();
         }
 
-        async function renderResultScreen() {
-            const container = document.getElementById('resultContent');
-            const me = currentUser.telegram_id;
-            const isCapA = currentMatch.captain_a_id === me;
-            const isCapB = currentMatch.captain_b_id === me;
-            const isCaptain = isCapA || isCapB;
+async function renderResultScreen() {
+    const container = document.getElementById('resultContent');
+    const me = currentUser.telegram_id;
+    const isCapA = currentMatch.captain_a_id === me;
+    const isCapB = currentMatch.captain_b_id === me;
+    const isCaptain = isCapA || isCapB;
+    const teamA = currentMatch.team_a_players || [];
+    const teamB = currentMatch.team_b_players || [];
 
-            const { data: screenshots } = await sb.from('match_screenshots')
-                .select('*').eq('match_id', currentMatch.id);
+    // Данные игроков
+    const allIds = [...teamA, ...teamB].map(p => p.telegram_id);
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url')
+        .in('telegram_id', allIds.length ? allIds : [0]);
+    const userMap = {};
+    (users || []).forEach(u => userMap[u.telegram_id] = u);
 
-            const myShot = (screenshots || []).find(s => s.uploader_id === me);
+    // Мои скрины
+    const { data: screenshots } = await sb.from('match_screenshots')
+        .select('*').eq('match_id', currentMatch.id);
+    const myShot = (screenshots || []).find(s => s.uploader_id === me);
 
-            const { data: votes } = await sb.from('match_votes')
-                .select('*').eq('match_id', currentMatch.id);
+    // Мои голоса
+    const { data: votes } = await sb.from('match_votes')
+        .select('*').eq('match_id', currentMatch.id);
+    const myVote = (votes || []).find(v => v.telegram_id === me);
 
-            const myVote = (votes || []).find(v => v.telegram_id === me);
+    const renderTeamPlayers = (players) => players.map(p => {
+        const u = userMap[p.telegram_id] || {};
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        const av = src ? `<img src="${src}" alt="">` : initial;
+        return `
+            <div class="confirm-player ${p.captain ? 'captain' : ''}">
+                <div class="cp-avatar">${av}</div>
+                <span class="cp-name">${escapeHtml(u.display_name || 'Игрок')}</span>
+                ${p.captain ? '<span class="cp-tag">👑</span>' : ''}
+            </div>
+        `;
+    }).join('');
 
-            let html = `
-                <div class="section-title" style="margin-top:0;">Результат матча</div>
-                <div style="text-align:center;margin-bottom:20px;">
-                    <div style="font-size:14px;color:var(--hint);">Карта: <b style="color:var(--emerald);">${escapeHtml(currentMatch.final_map || '—')}</b></div>
+    let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px;">
+            <div>
+                <div style="font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: 2px;">Результат</div>
+                <div style="font-size: 22px; font-weight: 900; color: var(--emerald);">${escapeHtml(currentMatch.final_map || '—')}</div>
+            </div>
+            ${currentMatch.host_link ? `
+                <div style="display: flex; gap: 6px;">
+                    <button class="copy-id-btn" onclick="openStandoffLink('${currentMatch.host_link}')" title="Войти в игру" style="width: auto; padding: 0 12px; height: 36px; border-radius: 12px; font-weight: 800; font-size: 12px;">🎮 Войти</button>
+                    <button class="copy-id-btn" onclick="copyToClipboard('${currentMatch.host_link}')" title="Скопировать ссылку">📋</button>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    // Сетка команд
+    html += `
+        <div class="confirm-teams">
+            <div class="confirm-team">
+                <div class="confirm-team-title">Команда A</div>
+                <div class="confirm-team-players">${renderTeamPlayers(teamA)}</div>
+            </div>
+            <div class="confirm-team">
+                <div class="confirm-team-title">Команда B</div>
+                <div class="confirm-team-players">${renderTeamPlayers(teamB)}</div>
+            </div>
+        </div>
+    `;
+
+    // Скриншот
+    html += `<div class="section-title">📸 Скриншот матча</div>`;
+    if (!myShot) {
+        html += `
+            <div class="profile-hero" style="text-align: center; padding: 20px;">
+                <div style="font-size: 42px; margin-bottom: 10px;">📸</div>
+                <div style="font-size: 13px; color: var(--hint); margin-bottom: 14px;">
+                    Загрузи скриншот результата матча
+                </div>
+                <button class="profile-action-btn save" onclick="document.getElementById('screenshotInput').click()">
+                    📤 Загрузить скриншот
+                </button>
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="profile-hero" style="padding: 14px;">
+                <div style="font-size: 12px; color: var(--emerald); margin-bottom: 8px; font-weight: 700;">✅ Скриншот загружен</div>
+                <img src="${myShot.url}" style="width: 100%; border-radius: 12px; cursor: pointer;"
+                     onclick="openImageView('${myShot.url}')">
+            </div>
+        `;
+    }
+
+    // Счёт и голосование капитанов
+    if (isCaptain) {
+        if (!myVote) {
+            html += `
+                <div class="section-title">🎯 Счёт и победитель</div>
+                <div class="score-input-row">
+                    <div class="score-input-col">
+                        <label>Счёт A</label>
+                        <input type="number" id="scoreA" min="0" max="30" value="0">
+                    </div>
+                    <div class="score-input-col">
+                        <label>Счёт B</label>
+                        <input type="number" id="scoreB" min="0" max="30" value="0">
+                    </div>
+                </div>
+                <div class="winner-choice">
+                    <button class="winner-btn" id="winBtnA" onclick="selectWinner('A')">🏆 Команда A</button>
+                    <button class="winner-btn" id="winBtnB" onclick="selectWinner('B')">🏆 Команда B</button>
+                </div>
+                <button class="profile-action-btn save" onclick="submitWinner()">📤 Отправить результат</button>
+            `;
+        } else {
+            html += `
+                <div class="profile-hero" style="text-align: center; padding: 18px;">
+                    <div style="font-size: 13px;">
+                        Твой голос: <b style="color: var(--emerald);">
+                            ${myVote.vote === 'A' ? 'Команда A' : 'Команда B'}
+                        </b>
+                    </div>
+                    <div style="font-size: 12px; color: var(--hint); margin-top: 8px;">
+                        Счёт: ${myVote.score_a} : ${myVote.score_b}
+                    </div>
+                    <div style="font-size: 11px; color: var(--hint); margin-top: 8px;">
+                        Ожидание второго капитана...
+                    </div>
                 </div>
             `;
-
-            if (!myShot) {
-                html += `
-                    <div class="profile-hero">
-                        <div style="font-size:48px;text-align:center;margin-bottom:12px;">📸</div>
-                        <div style="text-align:center;font-size:14px;margin-bottom:16px;">Загрузите скриншот матча</div>
-                        <button class="profile-action-btn save" onclick="document.getElementById('screenshotInput').click()">📤 Выбрать скриншот</button>
-                    </div>
-                `;
-            } else {
-                html += `
-                    <div class="profile-hero">
-                        <div style="text-align:center;font-size:14px;color:var(--emerald);margin-bottom:8px;">✅ Скриншот загружен</div>
-                        <img src="${myShot.url}" style="width:100%;border-radius:12px;" onclick="openImageView('${myShot.url}')">
-                    </div>
-                `;
-            }
-
-            if (isCaptain) {
-                if (!myVote) {
-                    html += `
-                        <div class="section-title">Кто победил?</div>
-                        <div class="score-input-row">
-                            <div class="score-input-col">
-                                <label>Счёт A</label>
-                                <input type="number" id="scoreA" min="0" max="30" value="${currentMatch.score_a ?? 0}">
-                            </div>
-                            <div class="score-input-col">
-                                <label>Счёт B</label>
-                                <input type="number" id="scoreB" min="0" max="30" value="${currentMatch.score_b ?? 0}">
-                            </div>
-                        </div>
-                        <div class="winner-choice">
-                            <button class="winner-btn" id="winBtnA" onclick="selectWinner('A')">🏆 Команда A</button>
-                            <button class="winner-btn" id="winBtnB" onclick="selectWinner('B')">🏆 Команда B</button>
-                        </div>
-                        <button class="profile-action-btn save" onclick="submitWinner()">📤 Отправить результат</button>
-                    `;
-                } else {
-                    html += `
-                        <div class="profile-hero" style="text-align:center;">
-                            <div style="font-size:14px;">Ваш голос: <b style="color:var(--emerald);">${myVote.vote === 'A' ? 'Команда A' : 'Команда B'}</b></div>
-                            <div style="font-size:12px;color:var(--hint);margin-top:8px;">Ожидание голоса второго капитана...</div>
-                        </div>
-                    `;
-                }
-            } else {
-                html += `
-                    <div class="profile-hero" style="text-align:center;">
-                        <div style="font-size:12px;color:var(--hint);">Ожидание результата от капитанов</div>
-                    </div>
-                `;
-            }
-
-            if (screenshots?.length) {
-                html += `
-                    <div class="section-title" style="margin-top:20px;">Скриншоты матча</div>
-                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-                        ${screenshots.map(s => `
-                            <img src="${s.url}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;cursor:pointer;" onclick="openImageView('${s.url}')">
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-            html += `
-                <button class="profile-action-btn cancel" style="margin-top:20px;" onclick="openAppealDialog()">⚖️ Подать апелляцию</button>
-            `;
-
-            container.innerHTML = html;
-
-            if (matchPollTimer) clearInterval(matchPollTimer);
-            matchPollTimer = setInterval(async () => {
-                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
-                if (data) {
-                    currentMatch = data;
-                    if (data.status === 'finished') { clearInterval(matchPollTimer); showFinishedScreen(); }
-                    else if (data.result_status === 'disputed') {
-                        clearInterval(matchPollTimer);
-                        showToast('⏳ Спорный результат — ожидание модератора');
-                    }
-                }
-            }, 5000);
         }
+    } else {
+        html += `
+            <div class="profile-hero" style="text-align: center; padding: 18px;">
+                <div style="font-size: 12px; color: var(--hint);">
+                    Ожидание результата от капитанов команд
+                </div>
+            </div>
+        `;
+    }
+
+    // Кнопка апелляции
+    html += `
+        <button class="profile-action-btn cancel" style="margin-top: 16px;"
+                onclick="openAppealDialog()">⚖️ Подать апелляцию</button>
+    `;
+
+    container.innerHTML = html;
+
+    // Поллинг статуса
+    if (matchPollTimer) clearInterval(matchPollTimer);
+    matchPollTimer = setInterval(async () => {
+        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        if (data) {
+            currentMatch = data;
+            if (data.status === 'finished') { clearInterval(matchPollTimer); showFinishedScreen(); }
+            else if (data.result_status === 'disputed') {
+                clearInterval(matchPollTimer);
+                showToast('⚖️ Результаты расходятся — матч отправлен модераторам');
+                // Перерисуем, чтобы показать "спорный"
+                renderDisputedInfo();
+            } else {
+                renderResultScreen();
+            }
+        }
+    }, 5000);
+}
+
+// Показать, что матч ушёл на проверку
+function renderDisputedInfo() {
+    const container = document.getElementById('resultContent');
+    if (!container) return;
+    const banner = document.createElement('div');
+    banner.className = 'moderator-panel';
+    banner.style.marginTop = '16px';
+    banner.innerHTML = `
+        <div class="moderator-title">⚖️ МАТЧ НА ПРОВЕРКЕ</div>
+        <div class="moderator-sub">
+            Капитаны указали разные результаты. Модератор рассмотрит скриншоты и счёт.
+        </div>
+    `;
+    container.prepend(banner);
+}
+
+// Копирование в буфер
+function copyToClipboard(text) {
+    if (!text) return;
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => showToast('📋 Скопировано'));
+    } else {
+        fallbackCopy(text);
+    }
+}
 
         function selectWinner(team) {
             selectedWinner = team;
@@ -5991,26 +6267,34 @@ async function inviteToParty(userId) {
 
         function syncScores() {}
 
-        async function submitWinner() {
-            if (!selectedWinner) { showToast('Выберите победителя'); return; }
-            const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
-            const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
+async function submitWinner() {
+    if (!selectedWinner) { showToast('Выберите победителя'); return; }
+    const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
+    const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
 
-            if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
+    if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
 
-            try {
-                const res = await mmCall('report_winner', {
-                    match_id: currentMatch.id,
-                    telegram_id: currentUser.telegram_id,
-                    winner: selectedWinner,
-                    score_a: scoreA,
-                    score_b: scoreB
-                });
-                showToast('✅ Отправлено');
-                selectedWinner = null;
-                renderResultScreen();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        }
+    // Проверяем, что капитан загрузил скриншот
+    const { data: shots } = await sb.from('match_screenshots')
+        .select('*').eq('match_id', currentMatch.id).eq('uploader_id', currentUser.telegram_id);
+    if (!shots?.length) {
+        showToast('⚠️ Сначала загрузите скриншот матча');
+        return;
+    }
+
+    try {
+        await mmCall('report_winner', {
+            match_id: currentMatch.id,
+            telegram_id: currentUser.telegram_id,
+            winner: selectedWinner,
+            score_a: scoreA,
+            score_b: scoreB
+        });
+        showToast('✅ Отправлено');
+        selectedWinner = null;
+        renderResultScreen();
+    } catch (e) { showToast('Ошибка: ' + e.message); }
+}
 
         // Скриншоты
         document.getElementById('screenshotInput').addEventListener('change', async (e) => {
@@ -6094,20 +6378,20 @@ async function inviteToParty(userId) {
             loadLeaderboard();
         }
 
-        async function openAppealDialog() {
-            if (!currentMatch) return;
-            const text = prompt('Опишите проблему (жалоба/апелляция):');
-            if (!text) return;
-            try {
-                await sb.from('match_reports').insert({
-                    match_id: currentMatch.id,
-                    reporter_id: currentUser.telegram_id,
-                    type: 'appeal',
-                    text
-                });
-                showToast('✅ Апелляция отправлена');
-            } catch (e) { showToast('Ошибка'); }
-        }
+async function openAppealDialog() {
+    if (!currentMatch) return;
+    const text = prompt('Опишите проблему (жалоба/апелляция):');
+    if (!text) return;
+    try {
+        await sb.from('match_reports').insert({
+            match_id: currentMatch.id,
+            reporter_id: currentUser.telegram_id,
+            type: 'appeal',
+            text
+        });
+        showToast('✅ Апелляция отправлена');
+    } catch (e) { showToast('Ошибка'); }
+}
 
         // ============================================================
         // CHECK ACTIVE MATCH (при входе)
@@ -6300,12 +6584,19 @@ async function removeModerator() {
 // ============================================================
 let selectedMap = 'Sandstone';
 
+let currentPlayRoomId = null;
+
 function openPlayScreen() {
     const screen = document.getElementById('playScreen');
     if (!screen) return;
     screen.classList.add('active');
-    hideActiveRoomBanner();  // ← добавь эту строку
+    hideActiveRoomBanner();
     haptic();
+
+    // Прячем "Войти в игру" пока не зашли в матч
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
+
     renderPlayList();
 }
 
@@ -6313,7 +6604,28 @@ function closePlayScreen() {
     const screen = document.getElementById('playScreen');
     if (!screen) return;
     screen.classList.remove('active');
-    checkActiveRoom();  // ← добавь эту строку — покажет баннер, если игрок в комнате
+    currentPlayRoomId = null;
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
+    checkActiveRoom();
+}
+
+// Открыть ссылку из "плавающей" кнопки
+async function enterGameFromFloat() {
+    if (!currentPlayRoomId) return;
+    const { data: room } = await sb.from('rooms').select('host_link').eq('id', currentPlayRoomId).single();
+    if (!room?.host_link) { showToast('Ссылка ещё не готова'); return; }
+    openStandoffLink(room.host_link);
+}
+
+function openStandoffLink(url) {
+    if (!url) { showToast('Ссылка отсутствует'); return; }
+    try {
+        if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank');
+    } catch (e) {
+        window.open(url, '_blank');
+    }
 }
 
 function renderPlayList() {
@@ -6567,6 +6879,7 @@ async function joinRoom(roomId) {
 async function openRoomView(roomId) {
     const content = document.getElementById('playScreenContent');
     if (!content) return;
+    currentPlayRoomId = roomId;
     content.innerHTML = '<div class="empty-rooms">Загрузка комнаты...</div>';
 
     await renderRoomContent(roomId);
@@ -6829,12 +7142,12 @@ function unsubscribeRoomRealtime() {
                     await notify(p.telegram_id,
                         `✅ <b>Ваша комната заполнена!</b>\n` +
                         `Все игроки собрались. <b>Запускайте матч!</b>\n\n` +
-                        `🎮 ${escapeHtml(roomData.name)}`
+                        `🎮 ${escapeHtml(roomData.name)}`, 'party'
                     );
                 } else {
                     await notify(p.telegram_id,
                         `🎮 <b>Заходи в приложение, игра вот-вот начнётся!</b>\n` +
-                        `Все игроки собрались в комнате <b>${escapeHtml(roomData.name)}</b>.`
+                        `Все игроки собрались в комнате <b>${escapeHtml(roomData.name)}</b>.`, 'party'
                     );
                 }
             }
@@ -7168,8 +7481,17 @@ async function showLobbyScreen(roomId, room) {
     const content = document.getElementById('playScreenContent');
     if (!content) return;
 
+    currentPlayRoomId = roomId;              // ← ДОБАВЛЕНО
+
     const iAmLeader = String(room.leader_id) === String(currentUser.telegram_id);
     const hasLink = !!room.host_link;
+
+    // Показываем "Войти в игру" плавающую кнопку, если ссылка есть
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) {
+        if (hasLink) enterFloat.classList.add('active');
+        else enterFloat.classList.remove('active');
+    }
 
     if (!hasLink && iAmLeader) {
         content.innerHTML = `
@@ -7910,8 +8232,78 @@ function openSettingsSheet() {
     document.getElementById('settingsSheet').classList.add('active');
 }
 
-function openNotificationsSettingsInfo() {
-    showToast('Настройки уведомлений в разработке');
+function openNotificationsSettings() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('notifSettingsSheet').classList.add('active');
+}
+
+function openAppNotifSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('appNotifSheet').classList.add('active');
+    const el = document.getElementById('appNotifOptions');
+    el.innerHTML = `
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">👥 Заявки в друзья</div></div>
+            <button class="toggle-switch ${currentUser.notify_friend_requests !== false ? 'on' : ''}"
+                    onclick="toggleNotify('notify_friend_requests', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">🛡️ Заявки в клуб</div></div>
+            <button class="toggle-switch ${currentUser.notify_club_requests !== false ? 'on' : ''}"
+                    onclick="toggleNotify('notify_club_requests', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">🎮 Приглашения в команду</div></div>
+            <button class="toggle-switch ${currentUser.notify_party_invites !== false ? 'on' : ''}"
+                    onclick="toggleNotify('notify_party_invites', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">💬 Мессенджер</div></div>
+            <button class="toggle-switch ${currentUser.notify_messages !== false ? 'on' : ''}"
+                    onclick="toggleNotify('notify_messages', this)"></button>
+        </div>
+    `;
+}
+
+function openBotNotifSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('botNotifSheet').classList.add('active');
+    const el = document.getElementById('botNotifOptions');
+    el.innerHTML = `
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">👥 Заявки в друзья</div></div>
+            <button class="toggle-switch ${currentUser.bot_notify_friend_requests !== false ? 'on' : ''}"
+                    onclick="toggleNotify('bot_notify_friend_requests', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">🛡️ Заявки в клуб</div></div>
+            <button class="toggle-switch ${currentUser.bot_notify_club_requests !== false ? 'on' : ''}"
+                    onclick="toggleNotify('bot_notify_club_requests', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">🎮 Приглашения в команду</div></div>
+            <button class="toggle-switch ${currentUser.bot_notify_party_invites !== false ? 'on' : ''}"
+                    onclick="toggleNotify('bot_notify_party_invites', this)"></button>
+        </div>
+        <div class="privacy-row">
+            <div><div class="privacy-row-label">💬 Мессенджер</div></div>
+            <button class="toggle-switch ${currentUser.bot_notify_messages !== false ? 'on' : ''}"
+                    onclick="toggleNotify('bot_notify_messages', this)"></button>
+        </div>
+    `;
+}
+
+async function toggleNotify(field, btnEl) {
+    const newVal = !currentUser[field];
+    try {
+        const upd = {}; upd[field] = newVal;
+        const { data, error } = await sb.from('users')
+            .update(upd).eq('telegram_id', currentUser.telegram_id).select().single();
+        if (error) throw error;
+        currentUser = data;
+        btnEl.classList.toggle('on', newVal);
+        haptic();
+    } catch (e) { showToast('Ошибка'); }
 }
 
 // ============================================================
@@ -8283,7 +8675,7 @@ function formatTimeAgo(iso) {
 async function acceptFriendNotif(relId, userId) {
     try {
         await sb.from('friendships').update({ status: 'accepted' }).eq('id', relId);
-        notify(userId, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял твой запрос в друзья.`);
+        notify(userId, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял твой запрос в друзья.`, 'friend');
         showToast('✅ Теперь вы друзья');
         await renderNotifList();
         await updateNotifBadge();
@@ -8389,7 +8781,7 @@ async function acceptInviteNotif(inviteId, partyId) {
             });
             await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
 
-            await notify(requesterId, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял тебя в пати.`);
+            await notify(requesterId, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял тебя в пати.`, 'party');
             showToast('✅ Игрок принят');
             await loadOrCreateParty();
 
@@ -8417,7 +8809,7 @@ async function acceptInviteNotif(inviteId, partyId) {
                 telegram_id: currentUser.telegram_id
             });
             await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
-            await notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`);
+            await notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`, 'party');
 
             showToast('✅ Ты в пати');
             closeAllSheets();
@@ -8629,6 +9021,152 @@ function openSupportSheet() {
     requestAnimationFrame(() => sheet.classList.add('active'));
 }
 
+        // ============================================================
+// DELETE ACCOUNT
+// ============================================================
+function openDeleteAccountSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('deleteAccountSheet').classList.add('active');
+}
+
+async function requestAccountDeletion() {
+    try {
+        // Проверяем кулдаун (если уже удалялся)
+        const { data: deleted } = await sb.from('deleted_accounts')
+            .select('deleted_at').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+        if (deleted) {
+            const diff = Date.now() - new Date(deleted.deleted_at).getTime();
+            const hours = Math.floor(diff / 3600000);
+            if (hours < 24) {
+                showToast(`Уже удалялся. Повторно — через ${24 - hours} ч.`);
+                return;
+            }
+        }
+
+        // Генерируем код
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 минут
+
+        await sb.from('account_deletion_codes').insert({
+            telegram_id: currentUser.telegram_id,
+            code,
+            expires_at: expiresAt
+        });
+
+        // Отправляем через бота
+        await notify(currentUser.telegram_id,
+            `🗑️ <b>Код подтверждения удаления аккаунта:</b>\n\n` +
+            `<code>${code}</code>\n\n` +
+            `⏰ Действует 10 минут.\n` +
+            `Если ты не запрашивал удаление — проигнорируй.`
+        );
+
+        showToast('📨 Код отправлен в бот');
+        closeAllSheets();
+        setTimeout(() => {
+            document.getElementById('sheetOverlay').classList.add('active');
+            document.getElementById('deleteCodeSheet').classList.add('active');
+            document.getElementById('deleteCodeInput').value = '';
+            setTimeout(() => document.getElementById('deleteCodeInput')?.focus(), 250);
+        }, 300);
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
+}
+
+async function confirmAccountDeletion() {
+    const code = document.getElementById('deleteCodeInput').value.trim();
+    if (!code || code.length !== 6) { showToast('Введи 6-значный код'); return; }
+
+    const btn = document.getElementById('deleteConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'УДАЛЕНИЕ...';
+
+    try {
+        // Проверяем код
+        const { data: rec } = await sb.from('account_deletion_codes')
+            .select('*')
+            .eq('telegram_id', currentUser.telegram_id)
+            .eq('code', code)
+            .eq('used', false)
+            .gte('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1).maybeSingle();
+
+        if (!rec) {
+            showToast('❌ Неверный или истёкший код');
+            btn.disabled = false;
+            btn.textContent = '🗑️ УДАЛИТЬ НАВСЕГДА';
+            return;
+        }
+
+        // Помечаем код использованным
+        await sb.from('account_deletion_codes').update({ used: true }).eq('id', rec.id);
+
+        // Удаляем из клуба
+        const { data: membership } = await sb.from('club_members')
+            .select('club_id, role').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+        if (membership) {
+            if (membership.role === 'owner') {
+                // Удаляем весь клуб
+                await sb.from('club_members').delete().eq('club_id', membership.club_id);
+                await sb.from('club_requests').delete().eq('club_id', membership.club_id);
+                await sb.from('club_events').delete().eq('club_id', membership.club_id);
+                await sb.from('club_bans').delete().eq('club_id', membership.club_id);
+                await sb.from('clubs').delete().eq('id', membership.club_id);
+            } else {
+                await sb.from('club_members').delete().eq('telegram_id', currentUser.telegram_id);
+            }
+        }
+
+        // Чистим связи
+        await sb.from('friendships').delete()
+            .or(`requester_id.eq.${currentUser.telegram_id},addressee_id.eq.${currentUser.telegram_id}`);
+        await sb.from('party_members').delete().eq('telegram_id', currentUser.telegram_id);
+        await sb.from('party_invites').delete()
+            .or(`from_id.eq.${currentUser.telegram_id},to_id.eq.${currentUser.telegram_id}`);
+        await sb.from('room_players').delete().eq('telegram_id', currentUser.telegram_id);
+        await sb.from('messages').delete()
+            .or(`sender_id.eq.${currentUser.telegram_id},recipient_id.eq.${currentUser.telegram_id}`);
+
+        // Фиксируем удаление (для кулдауна)
+        await sb.from('deleted_accounts').upsert({
+            telegram_id: currentUser.telegram_id,
+            deleted_at: new Date().toISOString()
+        }, { onConflict: 'telegram_id' });
+
+        // Удаляем юзера
+        await sb.from('users').delete().eq('telegram_id', currentUser.telegram_id);
+
+        await notify(currentUser.telegram_id,
+            `🗑️ Аккаунт удалён. Повторная регистрация — через 24 часа.`
+        );
+
+        showToast('🗑️ Аккаунт удалён');
+        closeAllSheets();
+
+        // Прощаемся
+        setTimeout(() => {
+            document.body.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;
+                            min-height: 100vh; text-align: center; padding: 30px; background: #050807; color: #e6f5ee;">
+                    <div style="font-size: 72px; margin-bottom: 20px;">👋</div>
+                    <div style="font-size: 22px; font-weight: 800; margin-bottom: 10px;">Аккаунт удалён</div>
+                    <div style="font-size: 14px; color: #6d8a80; line-height: 1.6;">
+                        Спасибо, что был с нами.<br>
+                        Повторная регистрация — через 24 часа.
+                    </div>
+                </div>
+            `;
+        }, 500);
+
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '🗑️ УДАЛИТЬ НАВСЕГДА';
+    }
+}    
+
 function copySupportUsername() {
     fallbackCopy('@' + SUPPORT_USERNAME);
 }
@@ -8739,8 +9277,8 @@ async function sendRoomInvite(roomId, userId, btn) {
         }, { onConflict: 'party_id,to_id' });
 
         await notify(userId,
-            `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в комнату ${room?.mode || ''}. Открой приложение!`
-        );
+    `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в комнату ${room?.mode || ''}. Открой приложение!`, 'party'
+);
 
         showToast('✅ Приглашение отправлено');
         if (btn) { btn.className = 'friend-action pending'; btn.textContent = '⏳'; }
