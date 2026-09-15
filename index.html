@@ -281,6 +281,25 @@ body::after {
         .profile-name { font-size: 22px; font-weight: 800; margin-bottom: 4px; text-align: center; }
         .profile-username { font-size: 13px; color: var(--hint); margin-bottom: 14px; text-align: center; }
         .profile-username span { color: var(--emerald); }
+
+    .profile-chief-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(217,171,90,0.25), rgba(217,171,90,0.10));
+    border: 1px solid rgba(217,171,90,0.5);
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    box-shadow: 0 0 20px rgba(217,171,90,0.15);
+    animation: bounceIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+    
         .profile-level-badge {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 6px 14px; border-radius: 20px;
@@ -2683,6 +2702,15 @@ body::after {
         <div id="leaderboard"><div class="empty">Загрузка...</div></div>
     </div>
 
+        <!-- ============ LEADERBOARD FULL ============ -->
+    <div class="container page" id="page-leaderboard">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 12px;">
+            <div class="section-title" style="margin: 0; flex: 1;">🏆 Лидерборд</div>
+            <button class="friends-search-btn" onclick="switchPage('dashboard')">← Назад</button>
+        </div>
+        <div id="leaderboardFull"><div class="empty">Загрузка...</div></div>
+    </div>
+
     <!-- ============ PROFILE ============ -->
     <div class="container page" id="page-profile">
         <div id="profileContent"></div>
@@ -3036,6 +3064,110 @@ body::after {
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 
+    <!-- SHEET: FAQ -->
+<div class="sheet" id="faqSheet" style="max-height: 88vh;">
+    <div class="sheet-title">❓ FAQ</div>
+    <div style="color: var(--text); font-size: 13px; line-height: 1.6; padding-bottom: 10px;">
+        <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Как играть?</summary>
+            <div style="margin-top: 10px; color: var(--hint);">
+                Нажми <b style="color: var(--emerald);">🎮 Играть</b> → выбери режим → создай комнату или зайди в открытую. Когда соберутся все игроки, хост запускает матч.
+            </div>
+        </details>
+
+        <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Как считается ELO?</summary>
+            <div style="margin-top: 10px; color: var(--hint);">
+                Победа: +300...400 ELO в зависимости от уровня.<br>
+                Поражение: −200...300 ELO.<br>
+                Чем выше уровень — тем сложнее получить больше.
+            </div>
+        </details>
+
+        <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Что такое уровни?</summary>
+            <div style="margin-top: 10px; color: var(--hint);">
+                Уровень 1: 1000-1100 ELO<br>
+                Уровень 2: 1100-1200<br>
+                Уровень 3: 1200-1350<br>
+                Уровень 4: 1350-1500<br>
+                Уровень 5: 1500-1650<br>
+                Уровень 6: 1650-1800<br>
+                Уровень 7: 1800-1950<br>
+                Уровень 8: 1950-2100<br>
+                Уровень 9: 2100-2300<br>
+                Уровень 10: 2300+
+            </div>
+        </details>
+
+        <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Как создать клуб?</summary>
+            <div style="margin-top: 10px; color: var(--hint);">
+                Вкладка <b style="color: var(--emerald);">🛡️ Клуб</b> → если ты не в клубе, будет кнопка "Создать клуб". Введи название (2-30 символов), тег (2-5 символов) и описание.
+            </div>
+        </details>
+
+        <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Что делать, если капитан не подтверждает результат?</summary>
+            <div style="margin-top: 10px; color: var(--hint);">
+                Если капитаны указали разные результаты — матч уходит на проверку модераторам. Приложите скриншот в апелляции.
+            </div>
+        </details>
+
+        <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Как связаться с поддержкой?</summary>
+            <div style="margin-top: 10px; color: var(--hint);">
+                Меню → <b>🆘 Тех-поддержка</b>. Там будет ссылка на @Mark1zell.
+            </div>
+        </details>
+    </div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
+<!-- SHEET: PRIVACY POLICY -->
+<div class="sheet" id="privacyPolicySheet" style="max-height: 88vh;">
+    <div class="sheet-title">📜 Политика конфиденциальности</div>
+    <div style="color: var(--text); font-size: 12.5px; line-height: 1.6; padding-bottom: 10px;">
+        <p style="margin-bottom: 14px; color: var(--hint);">
+            <b style="color: var(--emerald);">1. Какие данные мы собираем</b><br>
+            • Telegram ID, username, фото профиля<br>
+            • Ник и Standoff 2 ID<br>
+            • Игровая статистика (ELO, матчи, победы)<br>
+            • История чатов внутри приложения
+        </p>
+
+        <p style="margin-bottom: 14px; color: var(--hint);">
+            <b style="color: var(--emerald);">2. Как мы используем данные</b><br>
+            • Для организации матчей и подбора игроков<br>
+            • Для отображения профиля и статистики<br>
+            • Для отправки уведомлений о матчах
+        </p>
+
+        <p style="margin-bottom: 14px; color: var(--hint);">
+            <b style="color: var(--emerald);">3. Передача данных третьим лицам</b><br>
+            Мы не передаём ваши данные третьим лицам. Все данные хранятся в защищённой базе Supabase.
+        </p>
+
+        <p style="margin-bottom: 14px; color: var(--hint);">
+            <b style="color: var(--emerald);">4. Хранение данных</b><br>
+            Данные хранятся, пока вы используете приложение. При удалении аккаунта все данные удаляются безвозвратно.
+        </p>
+
+        <p style="margin-bottom: 14px; color: var(--hint);">
+            <b style="color: var(--emerald);">5. Ваши права</b><br>
+            • Изменить профиль в любой момент<br>
+            • Скрыть тег Telegram и статистику<br>
+            • Удалить аккаунт через настройки
+        </p>
+
+        <p style="margin-bottom: 14px; color: var(--hint);">
+            <b style="color: var(--emerald);">6. Контакты</b><br>
+            По всем вопросам: @Mark1zell
+        </p>
+    </div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
     <!-- ============ SETTINGS SHEET ============ -->
 <div class="sheet" id="settingsSheet">
     <div class="sheet-title">⚙️ Настройки</div>
@@ -3163,6 +3295,12 @@ body::after {
     </button>
     <button class="menu-drawer-btn moderator" id="moderatorMenuBtn" style="display: none;" onclick="menuDrawerGo('moderator')">
         <span class="menu-drawer-icon">⚖️</span> Модератор-панель
+    </button>
+    <button class="menu-drawer-btn" onclick="openFaqSheet()">
+        <span class="menu-drawer-icon">❓</span> FAQ
+    </button>
+    <button class="menu-drawer-btn" onclick="openPrivacyPolicySheet()">
+        <span class="menu-drawer-icon">📜</span> Политика конфиденциальности
     </button>
 </div>
 
@@ -3743,8 +3881,8 @@ async function notify(telegramId, text, type = null) {
                 cleanupStaleRooms();
                 setInterval(cleanupStaleRooms, 60000);
 
-                // === ПОКАЗ МОДЕРАТОР-КНОПКИ ===
-                if (isModerator(currentUser)) {
+                // === ПОКАЗ МОДЕРАТОР-КНОПКИ (только если НЕ админ) ===
+                if (isModerator(currentUser) && !currentUser.is_admin) {
                     const modBtn = document.getElementById('moderatorMenuBtn');
                     if (modBtn) modBtn.style.display = 'flex';
                 }
@@ -3818,8 +3956,41 @@ async function notify(telegramId, text, type = null) {
             renderProfileView(user);
         }
 
-        function renderProfileView(user) {
+            let clubTagCache = {}; // { telegram_id: { tag, name } }
+
+async function loadClubTagsForUsers(userIds) {
+    if (!userIds?.length) return;
+    try {
+        const { data: memberships } = await sb.from('club_members')
+            .select('telegram_id, club_id')
+            .in('telegram_id', userIds);
+        if (!memberships?.length) return;
+
+        const clubIds = [...new Set(memberships.map(m => m.club_id))];
+        const { data: clubs } = await sb.from('clubs').select('id, tag, name').in('id', clubIds);
+        const clubMap = {};
+        (clubs || []).forEach(c => clubMap[c.id] = c);
+
+        memberships.forEach(m => {
+            const club = clubMap[m.club_id];
+            if (club) clubTagCache[m.telegram_id] = { tag: club.tag, name: club.name };
+        });
+    } catch (e) { console.warn('loadClubTags:', e); }
+}
+
+function myClubTagHTML(telegramId) {
+    const club = clubTagCache[telegramId];
+    if (!club) return '';
+    return `<span style="color: var(--hint); font-size: 0.7em; opacity: 0.7; font-weight: 700; margin-right: 4px;">[${escapeHtml(club.tag)}]</span>`;
+}
+
+                async function renderProfileView(user) {
             const container = document.getElementById('profileContent');
+
+            // Загружаем тег клуба, если ещё нет
+            if (!clubTagCache[user.telegram_id]) {
+                await loadClubTagsForUsers([user.telegram_id]);
+            }
             const avatarSrc = user.custom_avatar || user.photo_url;
             const initial = (user.display_name || 'U')[0].toUpperCase();
             const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
@@ -3834,10 +4005,11 @@ async function notify(telegramId, text, type = null) {
                             <div class="profile-avatar">${avatarHTML}</div>
                             <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
                         </div>
-                        <div class="profile-name">${escapeHtml(user.display_name || 'Без имени')}</div>
-                        <div class="profile-username">${
+                        ${user.is_admin ? `<div class="profile-chief-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+                        <div class="profile-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}</div>
+<div class="profile-username">${
     user.username && !user.hide_telegram_tag
-        ? '@<span>' + escapeHtml(user.username) + '</span>'
+        ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')" style="color: var(--emerald); text-decoration: none; cursor: pointer;">@${escapeHtml(user.username)}</a>`
         : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
 }</div>
                         <div class="profile-level-badge">⚡ Уровень ${level} · Faceit</div>
@@ -4040,13 +4212,19 @@ async function openPlayerProfile(userId) {
             friendBtn = `<button class="profile-action-btn cancel" style="margin-top: 14px;" onclick="removeFriendFromProfile(${rel.id}, this)">✓ В ДРУЗЬЯХ · УДАЛИТЬ</button>`;
         }
 
+                // Загружаем тег клуба игрока
+        if (!clubTagCache[userId]) {
+            await loadClubTagsForUsers([userId]);
+        }
+
         content.innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; padding: 4px 0 10px;">
                 <div class="profile-avatar" style="width: 90px; height: 90px; font-size: 34px; margin-bottom: 12px;">${avatarHTML}</div>
-                <div style="font-size: 20px; font-weight: 800; text-align: center;">${escapeHtml(user.display_name || 'Игрок')}</div>
+                ${user.is_admin ? `<div class="profile-chief-badge" style="margin-top: 0;">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+                <div style="font-size: 20px; font-weight: 800; text-align: center;">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}</div>
                 <div style="font-size: 13px; color: var(--hint); margin-top: 4px;">${
     user.username && !user.hide_telegram_tag
-        ? '@' + escapeHtml(user.username)
+        ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')" style="color: var(--emerald); text-decoration: none; cursor: pointer;">@${escapeHtml(user.username)}</a>`
         : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
 }</div>
                 <div class="profile-level-badge" style="margin-top: 10px;">⚡ Уровень ${level}</div>
@@ -4261,35 +4439,80 @@ function closeAllSheets() {
         // LEADERBOARD
         // ============================================================
 async function loadLeaderboard() {
-    // Скелетон
     const c = document.getElementById('leaderboard');
     if (c && (!c.innerHTML || c.innerHTML.includes('Загрузка'))) {
         c.innerHTML = Array(5).fill('<div class="loading-shimmer"></div>').join('');
     }
     try {
-                const { data, error } = await sb.from('users')
-                    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo')
-                    .order('elo', { ascending: false }).limit(50);
-                if (error) throw error;
-                const c = document.getElementById('leaderboard');
-                if (!data?.length) { c.innerHTML = '<div class="empty">Пока никого нет</div>'; return; }
-                c.innerHTML = data.map((user, i) => {
-                    const src = user.custom_avatar || user.photo_url;
-                    const initial = (user.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
-                    const lvl = eloToLevel(user.elo);
-                    return `
-                        <div class="leaderboard-item" onclick="openPlayerProfile(${user.telegram_id})">
-                            <span class="leaderboard-rank">#${i + 1}</span>
-                            <div class="lb-avatar">${av}</div>
-                            <span class="leaderboard-name">${escapeHtml(user.display_name || 'Игрок')} <span style="color:var(--hint);font-size:11px;">· ${lvl} ур.</span></span>
-                            <span class="leaderboard-elo">${user.elo}</span>
-                        </div>`;
-                }).join('');
-            } catch (e) {
-                document.getElementById('leaderboard').innerHTML = '<div class="empty">Ошибка</div>';
-            }
+        const { data, error } = await sb.from('users')
+            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
+            .order('elo', { ascending: false }).limit(50);
+        if (error) throw error;
+
+        // Убираем админа из списка
+        const admins = (data || []).filter(u => u.is_admin === true);
+        const others = (data || []).filter(u => u.is_admin !== true);
+
+        const container = document.getElementById('leaderboard');
+        if (!others.length) { container.innerHTML = '<div class="empty">Пока никого нет</div>'; return; }
+
+        await loadClubTagsForUsers(others.map(u => u.telegram_id));
+
+        // Топ-10
+        const top10 = others.slice(0, 10);
+        let html = top10.map((user, i) => renderLbItem(user, i + 1)).join('');
+
+        // Кнопка "Показать всех"
+        if (others.length > 10) {
+            html += `
+                <button class="profile-action-btn cancel" style="margin-top: 12px;" onclick="openFullLeaderboard()">
+                    👥 Показать всех (${others.length})
+                </button>
+            `;
         }
+
+        container.innerHTML = html;
+    } catch (e) {
+        console.error('loadLeaderboard:', e);
+        document.getElementById('leaderboard').innerHTML = '<div class="empty">Ошибка</div>';
+    }
+}
+
+function renderLbItem(user, rank) {
+    const src = user.custom_avatar || user.photo_url;
+    const initial = (user.display_name || 'U')[0].toUpperCase();
+    const av = src ? `<img src="${src}" alt="">` : initial;
+    const lvl = eloToLevel(user.elo);
+    return `
+        <div class="leaderboard-item" onclick="openPlayerProfile(${user.telegram_id})">
+            <span class="leaderboard-rank">#${rank}</span>
+            <div class="lb-avatar">${av}</div>
+            <span class="leaderboard-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')} <span style="color:var(--hint);font-size:11px;">· ${lvl} ур.</span></span>
+            <span class="leaderboard-elo">${user.elo}</span>
+        </div>`;
+}
+
+async function openFullLeaderboard() {
+    switchPage('leaderboard');
+    const c = document.getElementById('leaderboardFull');
+    c.innerHTML = Array(8).fill('<div class="loading-shimmer"></div>').join('');
+
+    try {
+        const { data, error } = await sb.from('users')
+            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
+            .order('elo', { ascending: false }).limit(500);
+        if (error) throw error;
+
+        const others = (data || []).filter(u => u.is_admin !== true);
+        if (!others.length) { c.innerHTML = '<div class="empty">Пока никого нет</div>'; return; }
+
+        await loadClubTagsForUsers(others.map(u => u.telegram_id));
+
+        c.innerHTML = others.map((user, i) => renderLbItem(user, i + 1)).join('');
+    } catch (e) {
+        c.innerHTML = '<div class="empty">Ошибка</div>';
+    }
+}
                     // ============================================================
         // FRIENDS
         // ============================================================
@@ -8848,6 +9071,12 @@ function toggleMenuDrawer() {
         const footer = document.getElementById('menuDrawerFooter');
         if (footer) footer.style.display = isAdmin ? 'block' : 'none';
 
+        // Скрываем кнопку модератора, если ты админ
+        const modBtn = document.getElementById('moderatorMenuBtn');
+        if (modBtn) {
+            modBtn.style.display = (isModerator(currentUser) && !currentUser.is_admin) ? 'flex' : 'none';
+        }
+
         drawer.classList.add('active');
         overlay.classList.add('active');
         haptic('light');
@@ -9549,6 +9778,22 @@ function subscribeNotificationsRealtime() {
     }
 }
 
+            function openTelegramUser(username) {
+    if (!username) return;
+    const url = 'https://t.me/' + username;
+    try {
+        if (tg?.openTelegramLink) {
+            tg.openTelegramLink(url);
+        } else if (tg?.openLink) {
+            tg.openLink(url);
+        } else {
+            window.open(url, '_blank');
+        }
+    } catch (e) {
+        window.open(url, '_blank');
+    }
+}
+
 function fallbackCopy(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -9670,6 +9915,22 @@ function menuDrawerSupport() {
     closeMenuDrawer();
     setTimeout(() => openSupportSheet(), 260);
 }
+
+         function openFaqSheet() {
+    closeMenuDrawer();
+    setTimeout(() => {
+        document.getElementById('sheetOverlay').classList.add('active');
+        document.getElementById('faqSheet').classList.add('active');
+    }, 260);
+}
+
+function openPrivacyPolicySheet() {
+    closeMenuDrawer();
+    setTimeout(() => {
+        document.getElementById('sheetOverlay').classList.add('active');
+        document.getElementById('privacyPolicySheet').classList.add('active');
+    }, 260);
+}   
 
 function openSupportSheet() {
     // Убираем старый, если есть
