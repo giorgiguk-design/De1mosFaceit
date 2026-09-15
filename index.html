@@ -996,7 +996,7 @@ body::after {
     width: 100%; max-width: 640px;
     height: 100%;
     overflow-y: auto;
-    padding: 70px 18px 40px;
+    padding: 56px 16px 40px;
     transform: translateY(100%);
     transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
     scroll-behavior: smooth;
@@ -1004,161 +1004,108 @@ body::after {
 }
 .play-screen.active .play-screen-content { transform: translateY(0); }
 
-/* Плавающий крестик, следует за скроллом */
+/* Плавающий крестик */
 .play-close-float {
     position: fixed;
-    top: 16px;
-    right: 16px;
-    width: 44px;
-    height: 44px;
+    top: 12px; right: 12px;
+    width: 40px; height: 40px;
     border-radius: 50%;
     background: rgba(10, 20, 16, 0.85);
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid var(--border-strong);
     color: var(--emerald);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 900;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     z-index: 405;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
     transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
-                background 0.25s ease,
-                box-shadow 0.25s ease;
+                background 0.25s ease;
 }
 .play-close-float:active { transform: scale(0.88); }
 .play-close-float:hover {
     background: rgba(var(--emerald-rgb), 0.15);
-    box-shadow: 0 8px 30px rgba(var(--emerald-rgb), 0.35);
 }
 
-/* Плавающая кнопка "Войти в игру" после матча */
+/* Плавающая "Войти в игру" */
 .play-enter-float {
     position: fixed;
-    top: 16px;
-    left: 16px;
-    right: 72px;
-    height: 44px;
-    border-radius: 22px;
+    top: 12px; left: 12px; right: 60px;
+    height: 40px;
+    border-radius: 20px;
     background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
     color: #04140e;
     border: none;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 900;
     letter-spacing: 0.6px;
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     z-index: 405;
     box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.35);
-    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
-                box-shadow 0.25s ease;
     animation: bannerPulse 2.5s ease-in-out infinite;
 }
 .play-enter-float.active { display: flex; }
 .play-enter-float:active { transform: scale(0.96); }
 
-.play-title { font-size: 20px; font-weight: 800; color: var(--text); }
-.play-section-label {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
-    color: var(--hint); font-weight: 700; margin: 4px 0 10px;
+/* ============ COMPACT HERO ============ */
+.play-hero-compact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0 16px;
+    animation: playHeroIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-.map-selector { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; }
-.map-chip {
-    flex-shrink: 0; padding: 8px 16px; border-radius: 20px;
-    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-    color: var(--hint); font-size: 12px; font-weight: 700;
-    cursor: pointer; transition: all 0.2s; white-space: nowrap;
-}
-.map-chip.active {
-    background: rgba(var(--emerald-rgb),0.15);
-    border-color: var(--emerald); color: var(--emerald);
-}
-.map-chip:active { transform: scale(0.95); }
-.play-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
-.play-btn-find, .play-btn-create {
-    padding: 14px; border-radius: 14px;
-    font-size: 13px; font-weight: 800;
-    letter-spacing: 0.5px; cursor: pointer; transition: transform 0.15s;
-}
-.play-btn-find {
-    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-    border: none; color: #04140e;
-    box-shadow: 0 4px 16px rgba(var(--emerald-rgb),0.3);
-}
-.play-btn-create {
-    background: rgba(var(--emerald-rgb),0.10);
-    border: 1.5px solid var(--emerald);
-    color: var(--emerald);
-}
-.play-btn-find:active, .play-btn-create:active { transform: scale(0.96); }
-.play-rooms-list { display: flex; flex-direction: column; gap: 10px; }
-.play-room-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 16px; padding: 14px;
-}
-.play-room-card .room-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-.play-room-card .room-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-.play-room-card .room-meta { font-size: 11px; color: var(--hint); }
-.play-room-card .room-count { font-size: 16px; font-weight: 800; color: var(--emerald); text-align: right; }
-.play-room-card .room-count small { display: block; font-size: 10px; color: var(--hint); font-weight: 500; margin-top: 2px; }
-.play-room-card .room-actions { margin-top: 10px; }
-
-    /* ============ PLAY HERO ============ */
-.play-hero {
-    text-align: center;
-    padding: 20px 0 28px;
-    animation: playHeroIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.play-hero-icon {
-    font-size: 64px;
+.play-hero-compact .phc-icon {
+    font-size: 34px;
     line-height: 1;
-    margin-bottom: 12px;
-    display: inline-block;
-    animation: floatY 3s ease-in-out infinite;
-    filter: drop-shadow(0 8px 24px rgba(var(--emerald-rgb), 0.45));
+    filter: drop-shadow(0 4px 12px rgba(var(--emerald-rgb), 0.5));
 }
-.play-hero-title {
-    font-size: 30px;
+.play-hero-compact .phc-text { flex: 1; min-width: 0; }
+.play-hero-compact .phc-title {
+    font-size: 22px;
     font-weight: 900;
-    letter-spacing: -0.5px;
-    background: linear-gradient(180deg, #fff 0%, var(--emerald-3) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
-    margin-bottom: 6px;
+    color: var(--text);
+    letter-spacing: -0.3px;
 }
-.play-hero-sub {
-    font-size: 13px;
+.play-hero-compact .phc-sub {
+    font-size: 11px;
     color: var(--hint);
     font-weight: 600;
-    letter-spacing: 0.3px;
+    margin-top: 2px;
 }
-
 @keyframes playHeroIn {
-    from { opacity: 0; transform: translateY(-12px) scale(0.95); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ============ MODE CARDS V2 (для play-screen) ============ */
+/* ============ MODE SELECTOR (compact) ============ */
+.mode-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+}
 .mode-selector .mode-card {
     position: relative;
     overflow: hidden;
     background: var(--card);
-    border: 2px solid var(--border);
-    border-radius: 20px;
-    padding: 22px 14px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 12px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: inherit;
 }
 .mode-selector .mode-card::before {
     content: '';
@@ -1173,52 +1120,48 @@ body::after {
     border-color: var(--emerald);
     background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.14), rgba(var(--emerald-dark-rgb),0.04));
     box-shadow: 0 0 0 1px rgba(var(--emerald-rgb),0.25),
-                0 12px 40px rgba(var(--emerald-rgb),0.25);
-    transform: translateY(-2px);
+                0 8px 28px rgba(var(--emerald-rgb),0.2);
 }
 .mode-selector .mode-card.active::before { opacity: 1; }
-.mode-selector .mode-card:hover:not(.active) {
-    transform: translateY(-2px);
-    border-color: var(--border-strong);
-}
+.mode-selector .mode-card:active { transform: scale(0.97); }
 .mode-selector .mode-card .mode-icon {
-    font-size: 40px;
-    margin-bottom: 8px;
-    display: inline-block;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
 }
-.mode-selector .mode-card.active .mode-icon {
-    animation: floatY 2.4s ease-in-out infinite;
-    transform: scale(1.1);
+.mode-selector .mode-card .mode-info {
+    flex: 1;
+    text-align: left;
+    min-width: 0;
 }
 .mode-selector .mode-card .mode-name {
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 900;
     color: var(--text);
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
+    letter-spacing: 0.3px;
 }
 .mode-selector .mode-card.active .mode-name { color: var(--emerald); }
 .mode-selector .mode-card .mode-capacity {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--hint);
     font-weight: 600;
+    margin-top: 2px;
 }
 
-/* ============ PLAY ACTIONS V2 ============ */
+/* ============ PLAY ACTIONS ============ */
 .play-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
 }
 .play-btn-find,
 .play-btn-create {
-    padding: 16px 14px;
-    border-radius: 16px;
-    font-size: 13px;
+    padding: 14px 12px;
+    border-radius: 14px;
+    font-size: 12px;
     font-weight: 900;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.5px;
     cursor: pointer;
     font-family: inherit;
     transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -1232,7 +1175,7 @@ body::after {
     background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
     border: none;
     color: #04140e;
-    box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.35);
+    box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.3);
 }
 .play-btn-create {
     background: rgba(var(--emerald-rgb), 0.08);
@@ -1244,34 +1187,7 @@ body::after {
 .play-btn-find:active,
 .play-btn-create:active { transform: scale(0.97); }
 
-/* ============ ROOMS LIST — улучшение ============ */
-.play-room-card {
-    position: relative;
-    overflow: hidden;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 16px;
-    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
-                border-color 0.22s ease,
-                box-shadow 0.22s ease;
-    animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.play-room-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--emerald), var(--emerald-2), var(--emerald-3));
-    opacity: 0.7;
-}
-.play-room-card:hover {
-    transform: translateY(-2px);
-    border-color: var(--border-strong);
-    box-shadow: 0 8px 28px rgba(var(--emerald-rgb), 0.15);
-}
-
-/* ============ PLAY SECTION LABEL ============ */
+/* ============ SECTION LABEL ============ */
 .play-section-label {
     font-size: 11px;
     text-transform: uppercase;
@@ -1288,6 +1204,428 @@ body::after {
     flex: 1;
     height: 1px;
     background: linear-gradient(90deg, var(--border-strong), transparent);
+}
+
+/* ============ ROOM CARDS (NEW) ============ */
+.play-rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 20px;
+}
+.play-room-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.22s ease,
+                box-shadow 0.22s ease;
+    animation: slideUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    cursor: pointer;
+}
+.play-room-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--emerald), var(--emerald-2), var(--emerald-3));
+    opacity: 0.75;
+}
+.play-room-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: 0 10px 32px rgba(var(--emerald-rgb), 0.18);
+}
+.play-room-card:active { transform: scale(0.99); }
+
+.prc-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.prc-avatar {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 16px; color: #04140e;
+    overflow: hidden; flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(var(--emerald-rgb), 0.2);
+}
+.prc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.prc-info { flex: 1; min-width: 0; }
+.prc-name {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.prc-meta {
+    font-size: 11px;
+    color: var(--hint);
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.prc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    background: rgba(var(--emerald-rgb), 0.12);
+    color: var(--emerald);
+}
+.prc-badge.gold { background: rgba(217,171,90,0.15); color: var(--gold); }
+.prc-count {
+    text-align: right;
+    flex-shrink: 0;
+}
+.prc-count-num {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--emerald);
+    line-height: 1;
+}
+.prc-count-num small {
+    font-size: 12px;
+    color: var(--hint);
+    font-weight: 700;
+}
+.prc-count-label {
+    font-size: 9px;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-top: 3px;
+}
+.prc-bar {
+    height: 4px;
+    background: rgba(var(--emerald-rgb), 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.prc-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--emerald-2), var(--emerald), var(--emerald-3));
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.prc-action {
+    width: 100%;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    color: #04140e;
+    transition: transform 0.18s;
+}
+.prc-action:active { transform: scale(0.97); }
+.prc-action.open {
+    background: rgba(var(--emerald-rgb), 0.12);
+    color: var(--emerald);
+    border: 1.5px solid var(--emerald);
+}
+.prc-action:disabled {
+    background: rgba(255,255,255,0.05);
+    color: var(--hint);
+    cursor: not-allowed;
+}
+
+.empty-rooms {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--hint);
+    font-size: 13px;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 18px;
+}
+.empty-rooms .er-icon {
+    font-size: 42px;
+    opacity: 0.4;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* ============ ROOM VIEW — TEAM ZONES (NEW) ============ */
+.rv-header {
+    text-align: center;
+    margin-bottom: 14px;
+    animation: slideDown 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.rv-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.3px;
+}
+.rv-meta {
+    font-size: 11px;
+    color: var(--hint);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.rv-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 800;
+    background: rgba(var(--emerald-rgb), 0.10);
+    color: var(--emerald);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.rv-meta-badge.gold { background: rgba(217,171,90,0.15); color: var(--gold); }
+
+/* Team zones */
+.team-zones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.team-zone {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    padding: 14px 12px;
+    min-height: 220px;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.25s ease,
+                background 0.25s ease,
+                box-shadow 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.team-zone.team-a {
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.10), rgba(var(--emerald-dark-rgb),0.02));
+    border: 2px solid rgba(var(--emerald-rgb), 0.25);
+}
+.team-zone.team-b {
+    background: linear-gradient(160deg, rgba(255,84,112,0.10), rgba(255,84,112,0.02));
+    border: 2px solid rgba(255,84,112,0.25);
+}
+.team-zone.active.team-a {
+    border-color: var(--emerald);
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.20), rgba(var(--emerald-dark-rgb),0.05));
+    box-shadow: 0 0 0 1px var(--emerald), 0 10px 32px rgba(var(--emerald-rgb), 0.3);
+}
+.team-zone.active.team-b {
+    border-color: #ff5470;
+    background: linear-gradient(160deg, rgba(255,84,112,0.20), rgba(255,84,112,0.05));
+    box-shadow: 0 0 0 1px #ff5470, 0 10px 32px rgba(255,84,112,0.3);
+}
+.team-zone.full {
+    cursor: default;
+}
+.team-zone.full.team-a { border-color: rgba(var(--emerald-rgb), 0.5); }
+.team-zone.full.team-b { border-color: rgba(255,84,112,0.5); }
+.team-zone:active:not(.full) {
+    transform: scale(0.985);
+}
+
+.tz-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.tz-title {
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+}
+.team-a .tz-title { color: var(--emerald); }
+.team-b .tz-title { color: #ff5470; }
+.tz-count {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+}
+.team-a .tz-count { background: rgba(var(--emerald-rgb), 0.18); color: var(--emerald); }
+.team-b .tz-count { background: rgba(255,84,112,0.18); color: #ff5470; }
+
+.tz-players {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+.tz-player {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    font-size: 11px;
+    transition: background 0.2s ease;
+}
+.tz-player.you {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+}
+.tz-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 900; color: #04140e;
+    overflow: hidden; flex-shrink: 0;
+}
+.tz-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.tz-info { flex: 1; min-width: 0; }
+.tz-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tz-stats {
+    font-size: 9px;
+    color: var(--hint);
+    margin-top: 1px;
+    font-weight: 600;
+}
+.tz-empty {
+    text-align: center;
+    padding: 20px 8px;
+    color: var(--hint);
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.6;
+}
+
+/* Кнопка + внизу зоны */
+.tz-plus {
+    margin-top: 10px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: transform 0.18s, background 0.22s;
+    letter-spacing: 0.5px;
+}
+.tz-plus.team-a {
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    color: #04140e;
+    box-shadow: 0 4px 16px rgba(var(--emerald-rgb), 0.35);
+}
+.tz-plus.team-b {
+    background: linear-gradient(135deg, #ff5470, #cc1e38);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(255,84,112,0.35);
+}
+.tz-plus:active { transform: scale(0.96); }
+
+.tz-you-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 900;
+    background: var(--emerald);
+    color: #04140e;
+    margin-left: 4px;
+}
+.team-b .tz-you-badge { background: #ff5470; color: #fff; }
+
+/* Нижняя панель кнопок в комнате (компактная) */
+.rv-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+.rv-icon-btn {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: rgba(var(--emerald-rgb), 0.06);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 6px;
+    position: relative;
+    transition: transform 0.18s, background 0.22s, border-color 0.22s;
+}
+.rv-icon-btn:active {
+    transform: scale(0.94);
+    background: rgba(var(--emerald-rgb), 0.12);
+    border-color: var(--border-strong);
+}
+.rv-icon-btn.danger {
+    color: var(--red);
+    background: rgba(255, 84, 112, 0.06);
+    border-color: rgba(255, 84, 112, 0.25);
+}
+.rv-icon-btn .rv-ico { font-size: 20px; line-height: 1; }
+.rv-icon-btn .rv-lbl {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.rv-icon-btn .rv-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    min-width: 18px; height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--bg);
 }
     
 .room-join-btn {
@@ -6799,29 +7137,35 @@ function openStandoffLink(url) {
 function renderPlayList() {
     const content = document.getElementById('playScreenContent');
     content.innerHTML = `
-        <div class="play-hero">
-            <div class="play-hero-icon">🎮</div>
-            <div class="play-hero-title">Играть</div>
-            <div class="play-hero-sub">Выбери режим и найди соперников</div>
+        <div class="play-hero-compact">
+            <div class="phc-icon">🎮</div>
+            <div class="phc-text">
+                <div class="phc-title">Играть</div>
+                <div class="phc-sub">Найди матч или создай свою комнату</div>
+            </div>
         </div>
 
-        <div class="play-section-label">Режим игры</div>
+        <div class="play-section-label">Режим</div>
         <div class="mode-selector">
             <div class="mode-card ${selectedMode === '2x2' ? 'active' : ''}" onclick="selectMode('2x2')">
                 <div class="mode-icon">⚔️</div>
-                <div class="mode-name">2×2</div>
-                <div class="mode-capacity">до 4 игроков</div>
+                <div class="mode-info">
+                    <div class="mode-name">2×2</div>
+                    <div class="mode-capacity">до 4 игроков</div>
+                </div>
             </div>
             <div class="mode-card ${selectedMode === '5x5' ? 'active' : ''}" onclick="selectMode('5x5')">
                 <div class="mode-icon">🛡️</div>
-                <div class="mode-name">5×5</div>
-                <div class="mode-capacity">до 10 игроков</div>
+                <div class="mode-info">
+                    <div class="mode-name">5×5</div>
+                    <div class="mode-capacity">до 10 игроков</div>
+                </div>
             </div>
         </div>
 
         <div class="play-actions">
-            <button class="play-btn-find" onclick="findOrCreateRoom()">🔍 Найти матч</button>
-            <button class="play-btn-create" onclick="createRoomInline()">➕ Создать комнату</button>
+            <button class="play-btn-find" onclick="findOrCreateRoom()">🔍 Найти</button>
+            <button class="play-btn-create" onclick="createRoomInline()">➕ Создать</button>
         </div>
 
         <div class="play-section-label">Открытые комнаты</div>
@@ -6859,13 +7203,20 @@ async function loadPlayRooms() {
         if (error) throw error;
 
         if (!rooms || rooms.length === 0) {
-            container.innerHTML = '<div class="empty-rooms">Открытых комнат нет. Создай свою!</div>';
+            container.innerHTML = `
+                <div class="empty-rooms">
+                    <span class="er-icon">🎯</span>
+                    Открытых комнат нет.<br>
+                    <span style="color: var(--emerald); font-weight: 700;">Создай свою!</span>
+                </div>
+            `;
             return;
         }
 
+        // Загружаем всех игроков этих комнат
         const { data: players } = await sb
             .from('room_players')
-            .select('room_id, telegram_id, team')
+            .select('room_id, telegram_id, team, is_ready')
             .in('room_id', rooms.map(r => r.id));
 
         const byRoom = {};
@@ -6874,42 +7225,64 @@ async function loadPlayRooms() {
             byRoom[p.room_id].push(p);
         });
 
+        // Загружаем лидеров комнат
+        const leaderIds = [...new Set(rooms.map(r => r.leader_id))];
+        const { data: leaders } = await sb
+            .from('users')
+            .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+            .in('telegram_id', leaderIds);
+        const leaderMap = {};
+        (leaders || []).forEach(u => leaderMap[u.telegram_id] = u);
+
         const myRoom = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
         const amInSomeRoom = !!myRoom;
 
         container.innerHTML = rooms.map(room => {
             const inRoom = byRoom[room.id] || [];
-            const count = inRoom.length;
+            const readyCount = inRoom.filter(p => p.is_ready).length;
+            const count = readyCount;
             const isFull = count >= room.max_players;
             const alreadyInThis = inRoom.some(p => String(p.telegram_id) === String(currentUser.telegram_id));
             const isLeader = String(room.leader_id) === String(currentUser.telegram_id);
 
+            const leader = leaderMap[room.leader_id] || {};
+            const src = leader.custom_avatar || leader.photo_url;
+            const initial = (leader.display_name || 'U')[0].toUpperCase();
+            const av = src ? `<img src="${src}" alt="">` : initial;
+            const lvl = eloToLevel(leader.elo || 1000);
+            const progress = Math.min(100, Math.round((count / room.max_players) * 100));
+
             let actionHTML;
             if (alreadyInThis) {
-                actionHTML = `<button class="room-open-btn" onclick="openRoomView(${room.id})">Открыть комнату</button>`;
+                actionHTML = `<button class="prc-action open" onclick="event.stopPropagation(); openRoomView(${room.id})">← Вернуться в комнату</button>`;
             } else if (isFull) {
-                actionHTML = `<button class="room-join-btn" disabled>Комната заполнена</button>`;
+                actionHTML = `<button class="prc-action" disabled>Комната заполнена</button>`;
             } else if (amInSomeRoom) {
-                actionHTML = `<button class="room-join-btn" disabled>Ты уже в комнате</button>`;
+                actionHTML = `<button class="prc-action" disabled>Ты уже в другой комнате</button>`;
             } else {
-                actionHTML = `<button class="room-join-btn" onclick="joinRoom(${room.id})">Войти</button>`;
+                actionHTML = `<button class="prc-action" onclick="event.stopPropagation(); joinRoom(${room.id})">Войти в комнату</button>`;
             }
 
             return `
-                <div class="play-room-card">
-                    <div class="room-head">
-                        <div>
-                            <div class="room-name">${room.name}</div>
-                            <div class="room-meta">
-                                ${room.mode} · ${room.map || 'любая'} ${isLeader ? '· 👑 лидер' : ''}
+                <div class="play-room-card" onclick="openRoomInfoPreview(${room.id})">
+                    <div class="prc-row">
+                        <div class="prc-avatar">${av}</div>
+                        <div class="prc-info">
+                            <div class="prc-name">${escapeHtml(leader.display_name || 'Игрок')}${isLeader ? ' <span style="color:var(--gold);">👑</span>' : ''}</div>
+                            <div class="prc-meta">
+                                <span class="prc-badge">⚡ ${lvl} ур.</span>
+                                <span class="prc-badge gold">${leader.elo || 1000} ELO</span>
                             </div>
                         </div>
-                        <div class="room-count">
-                            ${count}/${room.max_players}
-                            <small>игроков</small>
+                        <div class="prc-count">
+                            <div class="prc-count-num">${count}<small>/${room.max_players}</small></div>
+                            <div class="prc-count-label">Игроков</div>
                         </div>
                     </div>
-                    <div class="room-actions">${actionHTML}</div>
+                    <div class="prc-bar"><div class="prc-bar-fill" style="width: ${progress}%;"></div></div>
+                    <div style="margin-top: 10px;">
+                        ${actionHTML}
+                    </div>
                 </div>
             `;
         }).join('');
@@ -6917,6 +7290,17 @@ async function loadPlayRooms() {
         console.error('Load rooms error:', e);
         container.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
     }
+}
+
+// Превью комнаты по клику на карточку (без входа)
+async function openRoomInfoPreview(roomId) {
+    // Просто открываем комнату, если не полная
+    const { data: room } = await sb.from('rooms').select('max_players, status').eq('id', roomId).single();
+    if (!room || room.status !== 'open') { showToast('Комната недоступна'); return; }
+    const { data: players } = await sb.from('room_players').select('is_ready').eq('room_id', roomId);
+    const readyCount = (players || []).filter(p => p.is_ready).length;
+    if (readyCount >= room.max_players) { showToast('Комната заполнена'); return; }
+    await joinRoom(roomId);
 }
 
 async function findOrCreateRoom() {
@@ -7063,9 +7447,9 @@ async function renderRoomContent(roomId) {
         const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
         const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
 
-        if (!room) { content.innerHTML = 'Комната не найдена'; return; }
+        if (!room) { content.innerHTML = '<div class="empty-rooms">Комната не найдена</div>'; return; }
 
-        // Роутинг по статусу (Realtime позовёт нужный экран)
+        // Роутинг по статусу
         if (room.status === 'veto') { openVetoView(roomId); return; }
         if (room.status === 'side_pick') { showSidePick(roomId); return; }
         if (room.status === 'waiting_link' || room.status === 'in_game') {
@@ -7078,7 +7462,7 @@ async function renderRoomContent(roomId) {
         if (playerIds.length > 0) {
             const { data: u } = await sb
                 .from('users')
-                .select('telegram_id, display_name, elo, custom_avatar, photo_url')
+                .select('telegram_id, display_name, elo, level, custom_avatar, photo_url')
                 .in('telegram_id', playerIds);
             users = u || [];
         }
@@ -7091,108 +7475,167 @@ async function renderRoomContent(roomId) {
         const iAmLeader = String(room.leader_id) === String(currentUser.telegram_id);
         const me = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
         const myTeam = me?.team;
+        const iAmReady = me?.is_ready;
 
         const needPerTeam = room.mode === '2x2' ? 2 : 5;
+        const totalReady = teamA.length + teamB.length;
         const canStart = teamA.length >= needPerTeam && teamB.length >= needPerTeam;
+        const teamAFull = teamA.length >= needPerTeam;
+        const teamBFull = teamB.length >= needPerTeam;
 
-        // ---------- Карточка игрока с меткой «Хост» ----------
-        const renderPlayer = (p) => {
+        // Рендер игрока в team-zone
+        const renderTZPlayer = (p, teamSide) => {
             const u = userById[p.telegram_id] || {};
-            const avatarSrc = u.custom_avatar || u.photo_url;
+            const src = u.custom_avatar || u.photo_url;
             const initial = (u.display_name || 'U')[0].toUpperCase();
-            const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
-            const isHost = String(p.telegram_id) === String(room.leader_id);
+            const av = src ? `<img src="${src}" alt="">` : initial;
             const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
+            const isHost = String(p.telegram_id) === String(room.leader_id);
+            const lvl = eloToLevel(u.elo || 1000);
+            return `
+                <div class="tz-player ${isMe ? 'you' : ''}">
+                    <div class="tz-avatar">${av}</div>
+                    <div class="tz-info">
+                        <div class="tz-name">
+                            ${escapeHtml(u.display_name || 'Игрок')}
+                            ${isHost ? '👑' : ''}
+                            ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
+                        </div>
+                        <div class="tz-stats">⚡ ${lvl} ур. · ${u.elo || 1000} ELO</div>
+                    </div>
+                </div>
+            `;
+        };
 
-            // Кнопка меню: только хост может открыть меню передачи/кика, и только на других
-            const showMenu = iAmLeader && !isMe;
-            const menuBtn = showMenu
-                ? `<button class="player-menu-btn" onclick="event.stopPropagation();openPlayerActions(${p.telegram_id}, ${roomId})" title="Меню">⋯</button>`
+        const renderTeamZone = (team, list, full) => {
+            const isMyTeam = myTeam === team;
+            const cls = `team-zone team-${team.toLowerCase()} ${isMyTeam ? 'active' : ''} ${full ? 'full' : ''}`;
+            const title = `Команда ${team}`;
+            const count = `${list.length}/${needPerTeam}`;
+
+            let playersHTML;
+            if (list.length === 0) {
+                playersHTML = `<div class="tz-empty">Пусто — нажми, чтобы войти</div>`;
+            } else {
+                playersHTML = list.map(p => renderTZPlayer(p, team)).join('');
+            }
+
+            let plusHTML = '';
+            if (!full && !isMyTeam) {
+                plusHTML = `
+                    <button class="tz-plus team-${team.toLowerCase()}" onclick="event.stopPropagation(); chooseTeam(${room.id}, '${team}')">
+                        ➕ Войти в ${team}
+                    </button>
+                `;
+            } else if (isMyTeam && iAmReady) {
+                plusHTML = `
+                    <div style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--emerald); font-weight: 800; letter-spacing: 0.5px;">
+                        ✓ ТЫ В ЭТОЙ КОМАНДЕ
+                    </div>
+                `;
+            } else if (full) {
+                plusHTML = `
+                    <div style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--hint); font-weight: 700; letter-spacing: 0.5px;">
+                        КОМАНДА ЗАПОЛНЕНА
+                    </div>
+                `;
+            }
+
+            // Клик по всей зоне, если она не full и я не в команде
+            const clickable = !full && !isMyTeam;
+            const clickAttr = clickable
+                ? `onclick="chooseTeam(${room.id}, '${team}')"`
                 : '';
 
             return `
-                <div class="team-player ${isHost ? 'is-host' : ''}" onclick="${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
-                    <div class="tp-avatar">${avatarHTML}</div>
-                    <div class="tp-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                    ${isHost ? '<span class="host-tag">ХОСТ</span>' : ''}
-                    ${menuBtn}
+                <div class="${cls}" ${clickAttr}>
+                    <div class="tz-header">
+                        <div class="tz-title">${title}</div>
+                        <div class="tz-count">${count}</div>
+                    </div>
+                    <div class="tz-players">
+                        ${playersHTML}
+                    </div>
+                    ${plusHTML}
                 </div>
             `;
         };
 
         content.innerHTML = `
-
-            <div class="room-view-header">
-                <div class="room-view-title">${escapeHtml(room.name)}</div>
-                <div class="room-view-meta">${room.mode}</div>
-                <div class="room-view-count">${(players || []).length}/${room.max_players} игроков</div>
-                ${iAmLeader ? `<div style="font-size: 11px; color: var(--gold); margin-top: 6px; font-weight: 700;">👑 Ты хост этой комнаты</div>` : ''}
-            </div>
-
-            <div class="teams-grid">
-                <div class="team-card team-a ${myTeam === 'A' ? 'active' : ''}">
-                    <div class="team-card-title">Команда A</div>
-                    <div class="team-card-count">${teamA.length}/${needPerTeam}</div>
-                    <div class="team-card-players">
-                        ${teamA.length === 0 ? '<div class="team-empty">Пусто</div>' : teamA.map(renderPlayer).join('')}
-                    </div>
-                </div>
-                <div class="team-card team-b ${myTeam === 'B' ? 'active' : ''}">
-                    <div class="team-card-title">Команда B</div>
-                    <div class="team-card-count">${teamB.length}/${needPerTeam}</div>
-                    <div class="team-card-players">
-                        ${teamB.length === 0 ? '<div class="team-empty">Пусто</div>' : teamB.map(renderPlayer).join('')}
-                    </div>
+            <div class="rv-header">
+                <div class="rv-title">${escapeHtml(room.name)}</div>
+                <div class="rv-meta">
+                    <span class="rv-meta-badge">${room.mode}</span>
+                    <span>${totalReady}/${room.max_players} игроков</span>
+                    ${iAmLeader ? '<span class="rv-meta-badge gold">👑 ХОСТ</span>' : ''}
                 </div>
             </div>
 
-            ${!myTeam ? `
-                <div class="team-buttons">
-                    <button class="team-pick-btn team-a" onclick="chooseTeam(${room.id}, 'A')">В команду A</button>
-                    <button class="team-pick-btn team-b" onclick="chooseTeam(${room.id}, 'B')">В команду B</button>
-                </div>
-            ` : `
-                <div style="text-align: center; margin-bottom: 14px; font-size: 13px; color: var(--hint);">
-                    Ты в команде <b style="color: ${myTeam === 'A' ? 'var(--emerald)' : '#ff5470'};">${myTeam}</b>
-                </div>
-            `}
+            <div class="team-zones">
+                ${renderTeamZone('A', teamA, teamAFull)}
+                ${renderTeamZone('B', teamB, teamBFull)}
+            </div>
 
-<div class="room-actions-v2">
-    ${iAmLeader ? `
-        <button class="room-start-btn-v2" onclick="startMatch(${room.id})" ${!canStart ? 'disabled' : ''}>
-            ▶️ ${canStart ? 'НАЧАТЬ МАТЧ' : `НУЖНО ПО ${needPerTeam} ИГРОКОВ`}
-        </button>
-    ` : ''}
+            ${spectators.length > 0 ? `
+                <div class="play-section-label">Зрители (${spectators.length})</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
+                    ${spectators.map(s => {
+                        const u = userById[s.telegram_id] || {};
+                        const src = u.custom_avatar || u.photo_url;
+                        const initial = (u.display_name || 'U')[0].toUpperCase();
+                        const av = src
+                            ? `<img src="${src}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
+                            : `<span style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #04140e;">${initial}</span>`;
+                        return `
+                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; font-weight: 600;">
+                                ${av}
+                                <span>${escapeHtml(u.display_name || 'Игрок')}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : ''}
 
-    <div class="room-icon-actions">
-        <button class="room-icon-btn" onclick="openInviteFriendToRoom(${roomId})" title="Пригласить друга">
-            <span class="rib-icon">➕</span>
-            <span class="rib-label">Друг</span>
-        </button>
-        <button class="room-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
-            <span class="rib-icon">💬</span>
-            <span class="rib-label">Чат</span>
-            <span class="rib-badge" id="roomChatBadge" style="display:none;">0</span>
-        </button>
-        <button class="room-icon-btn" onclick="leaveRoom(${roomId})" title="Покинуть">
-            <span class="rib-icon">🚪</span>
-            <span class="rib-label">Выйти</span>
-        </button>
-        ${iAmLeader ? `
-            <button class="room-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть комнату">
-                <span class="rib-icon">⛔</span>
-                <span class="rib-label">Удалить</span>
-            </button>
-        ` : ''}
-    </div>
-</div>
+            <div class="rv-actions">
+                <button class="rv-icon-btn" onclick="openInviteFriendToRoom(${roomId})" title="Пригласить друга">
+                    <span class="rv-ico">➕</span>
+                    <span class="rv-lbl">Друг</span>
+                </button>
+                <button class="rv-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
+                    <span class="rv-ico">💬</span>
+                    <span class="rv-lbl">Чат</span>
+                    <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
+                </button>
+                <button class="rv-icon-btn danger" onclick="leaveRoomFromRoomView(${roomId})" title="Покинуть">
+                    <span class="rv-ico">🚪</span>
+                    <span class="rv-lbl">Выйти</span>
+                </button>
+                ${iAmLeader ? `
+                    <button class="rv-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть">
+                        <span class="rv-ico">⛔</span>
+                        <span class="rv-lbl">Закрыть</span>
+                    </button>
+                ` : ''}
+            </div>
+
+            ${iAmLeader ? `
+                <button class="room-start-btn-v2" onclick="startMatch(${room.id})" ${!canStart ? 'disabled' : ''} style="margin-top: 12px;">
+                    ▶️ ${canStart ? 'НАЧАТЬ МАТЧ' : `НУЖНО ПО ${needPerTeam} ИГРОКОВ`}
+                </button>
+            ` : ''}
         `;
+
         setTimeout(() => updateRoomChatButton(room.id), 100);
         subscribeRoomChatCounter(roomId);
     } catch (e) {
         console.error('Room view error:', e);
         content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
     }
+}
+
+// Обёртка над leaveRoom (для кнопки в новой разметке)
+async function leaveRoomFromRoomView(roomId) {
+    await leaveRoom(roomId);
 }
 
 // ============================================================
@@ -7823,9 +8266,107 @@ function subscribeSidePickRealtime(roomId) {
         .subscribe();
 }
 
-            async function closeRoomAndExit(roomId) {
-    unsubscribeRoomRealtime();
-    closePlayScreen();
+async function closeRoomAndExit(roomId) {
+    if (!roomId || !currentUser) {
+        unsubscribeRoomRealtime();
+        closePlayScreen();
+        return;
+    }
+
+    try {
+        // Загружаем комнату и моё участие
+        const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).maybeSingle();
+        const { data: me } = await sb.from('room_players')
+            .select('*').eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
+
+        if (!room) {
+            unsubscribeRoomRealtime();
+            closePlayScreen();
+            return;
+        }
+
+        const isHost = String(room.leader_id) === String(currentUser.telegram_id);
+        const iAmReady = !!me?.is_ready;
+
+        // Загружаем всех игроков комнаты
+        const { data: allPlayers } = await sb.from('room_players')
+            .select('*').eq('room_id', roomId);
+
+        const others = (allPlayers || []).filter(p =>
+            String(p.telegram_id) !== String(currentUser.telegram_id)
+        );
+
+        // === СЛУЧАЙ 1: Хост без выбранной команды → удаляем комнату целиком ===
+        if (isHost && !iAmReady) {
+            // Уведомляем остальных, если они есть
+            for (const p of others) {
+                await notify(p.telegram_id,
+                    `❌ Хост закрыл комнату. Попробуй найти другую.`, 'party'
+                );
+            }
+
+            await sb.from('room_players').delete().eq('room_id', roomId);
+            await sb.from('room_messages').delete().eq('room_id', roomId);
+            await sb.from('rooms').delete().eq('id', roomId);
+
+            showToast('Комната закрыта');
+            unsubscribeRoomRealtime();
+            closePlayScreen();
+            checkActiveRoom();
+            return;
+        }
+
+        // === СЛУЧАЙ 2: Хост с выбранной командой → передаём хоста или закрываем ===
+        if (isHost && iAmReady) {
+            if (others.length === 0) {
+                // Он был один — удаляем комнату
+                await sb.from('room_players').delete().eq('room_id', roomId);
+                await sb.from('room_messages').delete().eq('room_id', roomId);
+                await sb.from('rooms').delete().eq('id', roomId);
+                showToast('Комната закрыта');
+            } else {
+                // Передаём хоста следующему по времени входа
+                const sorted = [...others].sort((a, b) =>
+                    new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
+                );
+                await sb.from('rooms').update({ leader_id: sorted[0].telegram_id }).eq('id', roomId);
+                await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id);
+                showToast('Ты покинул комнату');
+            }
+            unsubscribeRoomRealtime();
+            closePlayScreen();
+            checkActiveRoom();
+            return;
+        }
+
+        // === СЛУЧАЙ 3: Не-хост, без выбранной команды → просто удаляем себя ===
+        if (!isHost && !iAmReady) {
+            await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id);
+            showToast('Ты вышел из комнаты');
+            unsubscribeRoomRealtime();
+            closePlayScreen();
+            checkActiveRoom();
+            return;
+        }
+
+        // === СЛУЧАЙ 4: Не-хост, с выбранной командой → удаляем себя и передаём хоста при необходимости ===
+        if (!isHost && iAmReady) {
+            await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id);
+            showToast('Ты покинул команду');
+            unsubscribeRoomRealtime();
+            closePlayScreen();
+            checkActiveRoom();
+            return;
+        }
+
+        // Fallback
+        unsubscribeRoomRealtime();
+        closePlayScreen();
+    } catch (e) {
+        console.error('closeRoomAndExit:', e);
+        unsubscribeRoomRealtime();
+        closePlayScreen();
+    }
 }
 
             // ============================================================
