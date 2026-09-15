@@ -2977,7 +2977,7 @@ body::after {
     width: 100%;
     padding: 0;
     border: 1px solid var(--border-strong);
-    border-radius: 6px;
+    border-radius: 0px;
     cursor: pointer;
     font-family: inherit;
     overflow: hidden;
@@ -3349,7 +3349,7 @@ body::after {
         rgba(var(--emerald-rgb), 0.015) 50%,
         rgba(0, 0, 0, 0.4) 100%);
     border: 1px solid var(--border-strong);
-    border-radius: 6px;
+    border-radius: 0px;
     color: var(--text);
     font-family: inherit;
     text-align: left;
@@ -3445,7 +3445,7 @@ body::after {
     justify-content: center;
     font-size: 20px;
     line-height: 1;
-    border-radius: 4px;
+    border-radius: 0px;
     /* 🔥 Тёмная подложка, чтобы эмодзи не сливались */
     background: rgba(0, 0, 0, 0.45);
     border: 1px solid var(--border-strong);
@@ -3535,6 +3535,434 @@ body::after {
         rgba(217, 171, 90, 0.25),
         transparent 65%);
 }
+
+    /* ============ CYBER STAT CARDS ============ */
+.stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 16px 8px 14px;
+    text-align: center;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.07) 0%,
+        rgba(var(--emerald-rgb), 0.015) 50%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 0; /* ← без скруглений */
+    clip-path: polygon(
+        10px 0, 100% 0, 100% calc(100% - 10px),
+        calc(100% - 10px) 100%, 0 100%, 0 10px
+    );
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.25s ease,
+                box-shadow 0.25s ease;
+}
+
+/* Верхняя неоновая линия */
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 50%,
+        transparent 100%);
+    opacity: 0.65;
+    z-index: 3;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+
+/* Уголок-скобка снизу справа */
+.stat-card::after {
+    content: '';
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 9px;
+    height: 9px;
+    border-right: 2px solid var(--emerald);
+    border-bottom: 2px solid var(--emerald);
+    opacity: 0.55;
+    z-index: 3;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+
+/* Углы-скобки */
+.sc-corner {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-color: var(--emerald);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0.75;
+    z-index: 3;
+    pointer-events: none;
+}
+.sc-tl { top: 5px; left: 5px; border-top-width: 2px; border-left-width: 2px; }
+.sc-tr { top: 5px; right: 5px; border-top-width: 2px; border-right-width: 2px; }
+.sc-bl { bottom: 5px; left: 5px; border-bottom-width: 2px; border-left-width: 2px; }
+.sc-br { bottom: 5px; right: 5px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Мягкое свечение */
+.sc-glow {
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle,
+        rgba(var(--emerald-rgb), 0.28),
+        transparent 65%);
+    border-radius: 50%;
+    filter: blur(20px);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Иконка-эмблема */
+.sc-icon {
+    position: relative;
+    z-index: 2;
+    font-size: 18px;
+    line-height: 1;
+    margin-bottom: 6px;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+    display: inline-block;
+    animation: scIconFloat 3s ease-in-out infinite;
+}
+@keyframes scIconFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+
+/* Значение */
+.stat-value {
+    position: relative;
+    z-index: 2;
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 1px;
+    line-height: 1;
+    text-shadow:
+        0 0 10px rgba(var(--emerald-rgb), 0.45),
+        0 2px 4px rgba(0, 0, 0, 0.4);
+    transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+/* Заголовок */
+.stat-label {
+    position: relative;
+    z-index: 2;
+    font-size: 9.5px;
+    color: var(--hint);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 800;
+}
+
+/* Hover */
+.stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--emerald);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 8px 22px rgba(var(--emerald-rgb), 0.22),
+        0 0 0 1px rgba(var(--emerald-rgb), 0.35);
+}
+.stat-card:hover::before { opacity: 1; }
+.stat-card:hover::after  { opacity: 1; }
+.stat-card:hover .sc-glow { opacity: 1; }
+
+/* === Разные акценты для трёх карточек === */
+
+/* Матчи — изумруд */
+.stat-card-matches .stat-value { color: var(--emerald); }
+
+/* Победы — золото */
+.stat-card-wins .sc-corner,
+.stat-card-wins::after { border-color: var(--gold); }
+.stat-card-wins::before {
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.stat-card-wins .sc-glow {
+    background: radial-gradient(circle, rgba(217, 171, 90, 0.28), transparent 65%);
+}
+.stat-card-wins .sc-icon { text-shadow: 0 0 8px rgba(217, 171, 90, 0.6); }
+.stat-card-wins .stat-value {
+    color: var(--gold);
+    text-shadow: 0 0 10px rgba(217, 171, 90, 0.5), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.stat-card-wins:hover {
+    border-color: var(--gold);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 8px 22px rgba(217, 171, 90, 0.22),
+        0 0 0 1px rgba(217, 171, 90, 0.35);
+}
+
+/* Winrate — фиолетовый/пурпур (акцент темы) */
+.stat-card-winrate .stat-value {
+    color: var(--emerald-3);
+    text-shadow: 0 0 12px rgba(var(--emerald-light-rgb), 0.55), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Микро-вспышка при обновлении значения */
+.stat-value.bump {
+    animation: statBump 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes statBump {
+    0%   { transform: scale(1); filter: brightness(1); }
+    40%  { transform: scale(1.15); filter: brightness(1.6); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+
+    /* ============ ELO CHART CARD ============ */
+.elo-chart-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    margin: 14px 0 12px;
+    padding: 16px 16px 14px;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.05) 0%,
+        rgba(var(--emerald-rgb), 0.01) 55%,
+        rgba(0, 0, 0, 0.45) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    clip-path: polygon(
+        14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px
+    );
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 6px 20px rgba(0, 0, 0, 0.4);
+    animation: echIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes echIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.elo-chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.7;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.ech-corner {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    border-color: var(--emerald);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0.75;
+    z-index: 3;
+    pointer-events: none;
+}
+.ech-tl { top: 6px; left: 6px; border-top-width: 2px; border-left-width: 2px; }
+.ech-tr { top: 6px; right: 6px; border-top-width: 2px; border-right-width: 2px; }
+.ech-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
+.ech-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Header */
+.ech-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.ech-eyebrow {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--hint);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+.ech-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: 0.3px;
+    line-height: 1;
+}
+.ech-delta {
+    padding: 6px 12px;
+    border: 1px solid rgba(var(--emerald-rgb), 0.35);
+    background: rgba(var(--emerald-rgb), 0.10);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.4);
+}
+.ech-delta.negative {
+    border-color: rgba(255, 84, 112, 0.4);
+    background: rgba(255, 84, 112, 0.10);
+    color: var(--red);
+    text-shadow: 0 0 8px rgba(255, 84, 112, 0.4);
+}
+
+/* Body: ось Y + SVG */
+.ech-body {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    gap: 6px;
+    align-items: stretch;
+    margin-bottom: 10px;
+}
+.ech-y-axis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 6px 0;
+    text-align: right;
+}
+.ech-y-axis span { opacity: 0.85; }
+
+.ech-svg-wrap {
+    position: relative;
+    background-image:
+        linear-gradient(rgba(var(--emerald-rgb), 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--emerald-rgb), 0.06) 1px, transparent 1px);
+    background-size: 100% 33.33%, 40px 100%;
+    background-position: 0 0, 0 0;
+    border-left: 1px solid rgba(var(--emerald-rgb), 0.10);
+    border-bottom: 1px solid rgba(var(--emerald-rgb), 0.10);
+}
+.ech-svg {
+    display: block;
+    width: 100%;
+    height: 140px;
+}
+
+#eloLinePath {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.65));
+    animation: echLineDraw 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes echLineDraw {
+    to { stroke-dashoffset: 0; }
+}
+#eloAreaPath {
+    opacity: 0;
+    animation: echAreaFade 0.9s 0.5s ease forwards;
+}
+@keyframes echAreaFade {
+    to { opacity: 1; }
+}
+#eloLastDot {
+    filter: drop-shadow(0 0 6px var(--emerald-3));
+    animation: echDotPulse 2s ease-in-out infinite;
+}
+@keyframes echDotPulse {
+    0%, 100% { r: 3; opacity: 1; }
+    50%      { r: 5; opacity: 0.6; }
+}
+
+/* Полоски-«streak» (W/L) под графиком */
+.ech-streak {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin: 8px 0 10px;
+    min-height: 12px;
+    justify-content: center;
+}
+.ech-streak .sr {
+    height: 8px;
+    width: 22px;
+    border-radius: 2px;
+    background: rgba(var(--emerald-rgb), 0.9);
+    box-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.35);
+}
+.ech-streak .sr.loss {
+    background: rgba(255, 84, 112, 0.9);
+    box-shadow: 0 0 6px rgba(255, 84, 112, 0.35);
+}
+.ech-streak .sr.win {
+    background: rgba(140, 230, 90, 0.9);
+    box-shadow: 0 0 6px rgba(140, 230, 90, 0.35);
+}
+.ech-streak:empty { display: none; }
+
+/* W/L футер */
+.ech-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+.ech-wl {
+    display: flex;
+    gap: 10px;
+}
+.ech-w, .ech-l {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+.ech-w {
+    background: rgba(140, 230, 90, 0.15);
+    color: #8ce65a;
+    border: 1px solid rgba(140, 230, 90, 0.35);
+}
+.ech-l {
+    background: rgba(255, 84, 112, 0.15);
+    color: var(--red);
+    border: 1px solid rgba(255, 84, 112, 0.35);
+}
+.ech-w b, .ech-l b { font-weight: 900; margin-left: 2px; }
+
+/* Пустое состояние */
+.elo-chart-card.empty .ech-body { opacity: 0.35; }
+.elo-chart-card.empty .ech-empty-msg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
     
 </style>
 </head>
@@ -3562,11 +3990,38 @@ body::after {
             <div class="elo-level" id="eloLevel">Уровень —</div>
             <div class="elo-progress"><div class="elo-progress-bar" id="eloProgress"></div></div>
         </div>
-        <div class="stats-row">
-            <div class="stat-card"><div class="stat-value" id="statMatches">—</div><div class="stat-label">Матчей</div></div>
-            <div class="stat-card"><div class="stat-value" id="statWins">—</div><div class="stat-label">Побед</div></div>
-            <div class="stat-card"><div class="stat-value" id="statWinrate">—</div><div class="stat-label">Winrate</div></div>
-        </div>
+       <div class="stats-row">
+    <div class="stat-card stat-card-matches" data-id="statMatches">
+        <span class="sc-corner sc-tl"></span>
+        <span class="sc-corner sc-tr"></span>
+        <span class="sc-corner sc-bl"></span>
+        <span class="sc-corner sc-br"></span>
+        <span class="sc-glow"></span>
+        <div class="sc-icon">🎯</div>
+        <div class="stat-value" id="statMatches">0</div>
+        <div class="stat-label">Матчей</div>
+    </div>
+    <div class="stat-card stat-card-wins" data-id="statWins">
+        <span class="sc-corner sc-tl"></span>
+        <span class="sc-corner sc-tr"></span>
+        <span class="sc-corner sc-bl"></span>
+        <span class="sc-corner sc-br"></span>
+        <span class="sc-glow"></span>
+        <div class="sc-icon">🏆</div>
+        <div class="stat-value" id="statWins">0</div>
+        <div class="stat-label">Побед</div>
+    </div>
+    <div class="stat-card stat-card-winrate" data-id="statWinrate">
+        <span class="sc-corner sc-tl"></span>
+        <span class="sc-corner sc-tr"></span>
+        <span class="sc-corner sc-bl"></span>
+        <span class="sc-corner sc-br"></span>
+        <span class="sc-glow"></span>
+        <div class="sc-icon">⚡</div>
+        <div class="stat-value" id="statWinrate">0%</div>
+        <div class="stat-label">Winrate</div>
+    </div>
+</div>
 <button class="play-btn-cyber" id="playBtnMain" onclick="openPlayScreen()">
     <span class="btn-cover-bg"></span>
     <span class="pbc-corner pbc-corner-tl"></span>
@@ -4856,9 +5311,22 @@ async function notify(telegramId, text, type = null) {
             const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
             animateNumber(document.getElementById('eloValue'), user.elo ?? 1000, 1000);
             document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
-            document.getElementById('statMatches').textContent = user.matches_played ?? 0;
-            document.getElementById('statWins').textContent = user.wins ?? 0;
-            document.getElementById('statWinrate').textContent = winrate + '%';
+function bumpStat(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const oldVal = el.textContent;
+    el.textContent = value;
+    if (oldVal !== String(value)) {
+        el.classList.remove('bump');
+        void el.offsetWidth; // reflow для перезапуска анимации
+        el.classList.add('bump');
+        setTimeout(() => el.classList.remove('bump'), 600);
+    }
+}
+
+bumpStat('statMatches', user.matches_played ?? 0);
+bumpStat('statWins', user.wins ?? 0);
+bumpStat('statWinrate', winrate + '%');
             const progress = ((user.elo ?? 1000) % 250) / 250 * 100;
             setTimeout(() => { document.getElementById('eloProgress').style.width = progress + '%'; }, 200);
         }
@@ -4952,15 +5420,17 @@ function myClubTagHTML(telegramId) {
     ✏️ РЕДАКТИРОВАТЬ
 </button>
 
-                <div class="section-title" style="margin-top: 24px;">История матчей</div>
-                <div id="profileMatchHistory"><div class="empty">Матчей пока нет</div></div>
-            `;
-        }
+        <div class="section-title" style="margin-top: 24px;">История матчей</div>
+        <div id="profileMatchHistory"><div class="empty">Матчей пока нет</div></div>
+    `;
 
-        function enterProfileEditMode() {
-            profileEditMode = true;
-            renderProfileEdit(currentUser);
-        }
+    renderEloChart(user.telegram_id);
+}
+
+function enterProfileEditMode() {
+    profileEditMode = true;
+    renderProfileEdit(currentUser);
+}
 
         function renderProfileEdit(user) {
             const container = document.getElementById('profileContent');
@@ -5149,6 +5619,44 @@ async function openPlayerProfile(userId) {
                 <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
                 <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
             </div>
+            <div class="elo-chart-card" id="eloChartCard" data-user-id="${user.telegram_id}">
+    <span class="ech-corner ech-tl"></span>
+    <span class="ech-corner ech-tr"></span>
+    <span class="ech-corner ech-bl"></span>
+    <span class="ech-corner ech-br"></span>
+    <div class="ech-header">
+        <div>
+            <div class="ech-eyebrow">PREMIUM INSIGHT</div>
+            <div class="ech-title">Динамика Elo</div>
+        </div>
+        <div class="ech-delta" id="eloChartDelta">—</div>
+    </div>
+    <div class="ech-body">
+        <div class="ech-y-axis" id="eloChartYAxis">
+            <span>—</span><span>—</span><span>—</span><span>—</span>
+        </div>
+        <div class="ech-svg-wrap">
+            <svg class="ech-svg" id="eloChartSvg" viewBox="0 0 320 140" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="eloGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%"  stop-color="var(--emerald)" stop-opacity="0.45"/>
+                        <stop offset="100%" stop-color="var(--emerald)" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <path id="eloAreaPath" fill="url(#eloGradient)" d=""/>
+                <path id="eloLinePath" fill="none" stroke="var(--emerald)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d=""/>
+                <circle id="eloLastDot" r="3" fill="var(--emerald-3)" cx="0" cy="0"/>
+            </svg>
+        </div>
+    </div>
+    <div class="ech-streak" id="eloChartStreak"></div>
+    <div class="ech-footer">
+        <div class="ech-wl">
+            <span class="ech-w">W <b id="eloChartWins">0</b></span>
+            <span class="ech-l">L <b id="eloChartLosses">0</b></span>
+        </div>
+    </div>
+</div>
             <div class="profile-view-row">
     <span class="profile-view-label">Standoff 2 ID</span>
     <span class="profile-view-value" style="display: flex; align-items: center; gap: 8px;">
@@ -11425,6 +11933,160 @@ function throttle(fn, delay = 300) {
         }, delay);
     };
 }  
+
+         // ============================================================
+// ELO CHART — рисует график ELO по последним матчам
+// ============================================================
+async function renderEloChart(userId) {
+    const card = document.getElementById('eloChartCard');
+    if (!card) return;
+
+    const svgEl = document.getElementById('eloChartSvg');
+    const areaEl = document.getElementById('eloAreaPath');
+    const lineEl = document.getElementById('eloLinePath');
+    const dotEl = document.getElementById('eloLastDot');
+    const yAxisEl = document.getElementById('eloChartYAxis');
+    const deltaEl = document.getElementById('eloChartDelta');
+    const streakEl = document.getElementById('eloChartStreak');
+    const winsEl = document.getElementById('eloChartWins');
+    const lossesEl = document.getElementById('eloChartLosses');
+
+    try {
+        // 1. Тянем последние 15 матчей пользователя
+        const { data: matches, error } = await sb
+            .from('game_matches')
+            .select('id, created_at, team_a_players, team_b_players, winner_team, status')
+            .eq('status', 'finished')
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+        if (error) throw error;
+
+        const uid = String(userId);
+        const history = [];
+
+        (matches || []).forEach(m => {
+            const inA = (m.team_a_players || []).some(p => String(p.telegram_id) === uid);
+            const inB = (m.team_b_players || []).some(p => String(p.telegram_id) === uid);
+            if (!inA && !inB) return;
+
+            const me = inA
+                ? (m.team_a_players || []).find(p => String(p.telegram_id) === uid)
+                : (m.team_b_players || []).find(p => String(p.telegram_id) === uid);
+
+            const myTeam = inA ? 'A' : 'B';
+            const isWin = m.winner_team === myTeam;
+
+            const eloAfter = me?.elo_after;
+            const eloBefore = me?.elo_before;
+
+            if (typeof eloAfter === 'number') {
+                history.push({
+                    elo: eloAfter,
+                    win: isWin,
+                    date: m.created_at,
+                });
+            } else if (typeof eloBefore === 'number') {
+                history.push({
+                    elo: eloBefore,
+                    win: isWin,
+                    date: m.created_at,
+                });
+            }
+        });
+
+        // Хронологический порядок
+        history.reverse();
+        const recent = history.slice(-15);
+
+        // 2. Если данных нет — рисуем «пустую» плашку
+        if (recent.length < 2) {
+            card.classList.add('empty');
+            areaEl.setAttribute('d', '');
+            lineEl.setAttribute('d', '');
+            dotEl.setAttribute('cx', '-10');
+            dotEl.setAttribute('cy', '-10');
+            yAxisEl.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
+            deltaEl.textContent = '—';
+            deltaEl.classList.remove('negative');
+            streakEl.innerHTML = '';
+            winsEl.textContent = '0';
+            lossesEl.textContent = '0';
+            if (!card.querySelector('.ech-empty-msg')) {
+                const msg = document.createElement('div');
+                msg.className = 'ech-empty-msg';
+                msg.textContent = 'Пока нет данных';
+                card.appendChild(msg);
+            }
+            return;
+        }
+
+        card.classList.remove('empty');
+        const emptyMsg = card.querySelector('.ech-empty-msg');
+        if (emptyMsg) emptyMsg.remove();
+
+        // 3. Расчёт осей
+        const elos = recent.map(h => h.elo);
+        const min = Math.min(...elos);
+        const max = Math.max(...elos);
+        const range = Math.max(50, max - min);
+        const pad = Math.round(range * 0.15);
+        const yMin = min - pad;
+        const yMax = max + pad;
+
+        // 4. Геометрия SVG
+        const W = 320, H = 140;
+        const padL = 6, padR = 6, padT = 10, padB = 12;
+        const innerW = W - padL - padR;
+        const innerH = H - padT - padB;
+        const stepX = recent.length > 1 ? innerW / (recent.length - 1) : 0;
+
+        const points = recent.map((h, i) => {
+            const x = padL + i * stepX;
+            const y = padT + innerH - ((h.elo - yMin) / (yMax - yMin)) * innerH;
+            return { x, y, ...h };
+        });
+
+        // 5. Path линии и области
+        const dLine = points.map((p, i) =>
+            (i === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+        ).join(' ');
+
+        const dArea = `${dLine} L ${points[points.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`;
+
+        lineEl.setAttribute('d', dLine);
+        areaEl.setAttribute('d', dArea);
+
+        // 6. Последняя точка
+        const last = points[points.length - 1];
+        dotEl.setAttribute('cx', last.x.toFixed(1));
+        dotEl.setAttribute('cy', last.y.toFixed(1));
+
+        // 7. Ось Y — 4 значения
+        const labels = [yMax, yMax - (yMax - yMin) / 3, yMax - 2 * (yMax - yMin) / 3, yMin];
+        yAxisEl.innerHTML = labels.map(v => `<span>${Math.round(v)}</span>`).join('');
+
+        // 8. Delta
+        const firstElo = recent[0].elo;
+        const lastElo = recent[recent.length - 1].elo;
+        const delta = lastElo - firstElo;
+        deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
+        deltaEl.classList.toggle('negative', delta < 0);
+
+        // 9. Streak — полоски по 15 последним матчам
+        const wins = recent.filter(h => h.win).length;
+        const losses = recent.length - wins;
+        winsEl.textContent = wins;
+        lossesEl.textContent = losses;
+
+        streakEl.innerHTML = recent.map(h =>
+            `<span class="sr ${h.win ? 'win' : 'loss'}"></span>`
+        ).join('');
+
+    } catch (e) {
+        console.warn('renderEloChart:', e);
+    }
+}   
 
 // ============================================================
 // BOOT
