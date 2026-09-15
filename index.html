@@ -260,7 +260,7 @@ body::after {
 }
         .leaderboard-rank { font-size: 14px; font-weight: 900; color: var(--emerald); width: 26px; text-align: center; }
         .leaderboard-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .leaderboard-elo { font-size: 14px; font-weight: 800; color: var(--emerald); }
+        .leaderboard-DXP{ font-size: 14px; font-weight: 800; color: var(--emerald); }
 
         .profile-hero {
             position: relative;
@@ -3735,7 +3735,7 @@ body::after {
     100% { transform: scale(1); filter: brightness(1); }
 }
 
-    /* ============ ELO CHART CARD ============ */
+    /* ============ DXPCHART CARD ============ */
 .elo-chart-card {
     position: relative;
     overflow: hidden;
@@ -3996,6 +3996,222 @@ body::after {
     z-index: 2;
     pointer-events: none;
 }
+
+    /* ============ COMPACT PROFILE ============ */
+.profile-hero-compact {
+    padding: 18px 16px;
+    margin-bottom: 12px;
+}
+
+.phc-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.phc-avatar {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+.phc-avatar .profile-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 28px;
+}
+.phc-avatar .avatar-edit-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+}
+
+.phc-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.phc-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.phc-username {
+    font-size: 12px;
+    color: var(--hint);
+    line-height: 1;
+}
+.phc-username a {
+    color: var(--emerald);
+    text-decoration: none;
+}
+
+.phc-badges {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+.phc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-radius: 6px;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+}
+.phc-badge-dxp {
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.18),
+        rgba(var(--emerald-rgb), 0.05));
+    color: var(--emerald-3);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+}
+
+.phc-settings {
+    width: 44px;
+    height: 44px;
+    border-radius: 0;
+    clip-path: polygon(
+        8px 0, 100% 0, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 0 100%, 0 8px
+    );
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: inherit;
+    transition: transform 0.2s ease, background 0.22s ease, border-color 0.22s ease;
+}
+.phc-settings:hover {
+    background: rgba(var(--emerald-rgb), 0.18);
+    border-color: var(--emerald);
+    transform: rotate(45deg);
+}
+.phc-settings:active { transform: scale(0.9) rotate(45deg); }
+
+/* ============ MINI STATS ROW (3 квадрата) ============ */
+.mini-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.mini-stat {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    aspect-ratio: 1 / 1;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.07) 0%,
+        rgba(var(--emerald-rgb), 0.015) 50%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    clip-path: polygon(
+        8px 0, 100% 0, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 0 100%, 0 8px
+    );
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 4px 14px rgba(0, 0, 0, 0.35);
+    transition: transform 0.22s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.mini-stat::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.6;
+    z-index: 3;
+    pointer-events: none;
+}
+.mini-stat:hover {
+    transform: translateY(-2px);
+    border-color: var(--emerald);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 8px 22px rgba(var(--emerald-rgb), 0.22);
+}
+.mini-stat:active { transform: scale(0.97); }
+
+.mini-stat-icon {
+    font-size: 16px;
+    margin-bottom: 4px;
+    opacity: 0.85;
+    line-height: 1;
+}
+.mini-stat-value {
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: 0.3px;
+    text-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.3);
+    word-break: break-all;
+}
+.mini-stat-label {
+    font-size: 8.5px;
+    font-weight: 800;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-top: 5px;
+    line-height: 1.1;
+}
+.mini-stat-copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-family: inherit;
+    z-index: 4;
+}
+.mini-stat-copy:active { transform: scale(0.88); }
+
+/* DXP-график — оставляем стили что выше, добавляем winrate */
+.ech-winrate {
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
     
 </style>
 </head>
@@ -4164,7 +4380,7 @@ body::after {
         <div class="party-box">
             <div class="party-header">
                 <span class="party-count" id="partyCount">1 / 5</span>
-                <span style="font-size:11px;color:var(--hint);">Средний ELO: <span id="partyElo">—</span></span>
+                <span style="font-size:11px;color:var(--hint);">Средний ELO: <span id="partyDXP">—</span></span>
             </div>
             <div id="partyMembers"></div>
             <button class="party-add-btn" id="partyAddBtn" onclick="openInviteSheet()">➕ Пригласить игрока</button>
@@ -4469,9 +4685,9 @@ body::after {
         </details>
 
         <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
-            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Как считается ELO?</summary>
+            <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Как считается DXP?</summary>
             <div style="margin-top: 10px; color: var(--hint);">
-                Победа: +300...400 ELO в зависимости от уровня.<br>
+                Победа: +300...400 DXPв зависимости от уровня.<br>
                 Поражение: −200...300 ELO.<br>
                 Чем выше уровень — тем сложнее получить больше.
             </div>
@@ -4480,7 +4696,7 @@ body::after {
         <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
             <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">Что такое уровни?</summary>
             <div style="margin-top: 10px; color: var(--hint);">
-                Уровень 1: 1000-1100 ELO<br>
+                Уровень 1: 1000-1100 DXP<br>
                 Уровень 2: 1100-1200<br>
                 Уровень 3: 1200-1350<br>
                 Уровень 4: 1350-1500<br>
@@ -4592,7 +4808,7 @@ body::after {
         </div>
         <div style="font-size: 12px; color: var(--hint); line-height: 1.5; margin-bottom: 18px;">
             Будут удалены:<br>
-            • Профиль и ELO<br>
+            • Профиль и DXP<br>
             • Клан (если ты владелец)<br>
             • Выход из клубов<br><br>
             Повторная регистрация — через 24 часа.
@@ -5127,16 +5343,16 @@ body::after {
         // HELPERS
         // ============================================================
         function eloToLevel(elo) {
-            elo = elo ?? 1000;
-            if (elo <= 1100) return 1;
-            if (elo <= 1200) return 2;
-            if (elo <= 1350) return 3;
-            if (elo <= 1500) return 4;
-            if (elo <= 1650) return 5;
-            if (elo <= 1800) return 6;
-            if (elo <= 1950) return 7;
-            if (elo <= 2100) return 8;
-            if (elo <= 2300) return 9;
+            DXP= DXP?? 1000;
+            if (DXP<= 1100) return 1;
+            if (DXP<= 1200) return 2;
+            if (DXP<= 1350) return 3;
+            if (DXP<= 1500) return 4;
+            if (DXP<= 1650) return 5;
+            if (DXP<= 1800) return 6;
+            if (DXP<= 1950) return 7;
+            if (DXP<= 2100) return 8;
+            if (DXP<= 2300) return 9;
             return 10;
         }
 
@@ -5343,7 +5559,7 @@ async function notify(telegramId, text, type = null) {
         // ============================================================
         function renderDashboard(user) {
             const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
-            animateNumber(document.getElementById('eloValue'), user.elo ?? 1000, 1000);
+            animateNumber(document.getElementById('eloValue'), user.DXP?? 1000, 1000);
             document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
 function bumpStat(id, value) {
     const el = document.getElementById(id);
@@ -5361,7 +5577,7 @@ function bumpStat(id, value) {
 bumpStat('statMatches', user.matches_played ?? 0);
 bumpStat('statWins', user.wins ?? 0);
 bumpStat('statWinrate', winrate + '%');
-            const progress = ((user.elo ?? 1000) % 250) / 250 * 100;
+            const progress = ((user.DXP?? 1000) % 250) / 250 * 100;
             setTimeout(() => { document.getElementById('eloProgress').style.width = progress + '%'; }, 200);
         }
 
@@ -5401,60 +5617,102 @@ function myClubTagHTML(telegramId) {
     return `<span style="color: var(--hint); font-size: 0.7em; opacity: 0.7; font-weight: 700; margin-right: 4px;">[${escapeHtml(club.tag)}]</span>`;
 }
 
-                async function renderProfileView(user) {
-            const container = document.getElementById('profileContent');
+async function renderProfileView(user) {
+    const container = document.getElementById('profileContent');
 
-            // Загружаем тег клуба, если ещё нет
-            if (!clubTagCache[user.telegram_id]) {
-                await loadClubTagsForUsers([user.telegram_id]);
-            }
-            const avatarSrc = user.custom_avatar || user.photo_url;
-            const initial = (user.display_name || 'U')[0].toUpperCase();
-            const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
-            const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
-            const hours = Math.round(((user.matches_played || 0) * 45) / 60);
-            const level = eloToLevel(user.elo);
+    if (!clubTagCache[user.telegram_id]) {
+        await loadClubTagsForUsers([user.telegram_id]);
+    }
+    const avatarSrc = user.custom_avatar || user.photo_url;
+    const initial = (user.display_name || 'U')[0].toUpperCase();
+    const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
+    const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
+    const level = eloToLevel(user.elo);
 
-            container.innerHTML = `
-                <div class="profile-hero">
-                    <div class="profile-hero-inner">
-                        <div class="profile-avatar-wrap">
-                            <div class="profile-avatar">${avatarHTML}</div>
-                            <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
-                        </div>
-                        ${user.is_admin ? `<div class="profile-chief-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
-                        <div class="profile-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}</div>
-<div class="profile-username">${
-    user.username && !user.hide_telegram_tag
-        ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')" style="color: var(--emerald); text-decoration: none; cursor: pointer;">@${escapeHtml(user.username)}</a>`
-        : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
-}</div>
-                        <div class="profile-level-badge">⚡ Уровень ${level} · Faceit</div>
+    container.innerHTML = `
+        <div class="profile-hero profile-hero-compact">
+            <div class="phc-row">
+                <div class="profile-avatar-wrap phc-avatar">
+                    <div class="profile-avatar">${avatarHTML}</div>
+                    <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
+                </div>
+                <div class="phc-info">
+                    ${user.is_admin ? `<div class="profile-chief-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+                    <div class="phc-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}</div>
+                    <div class="phc-username">${
+                        user.username && !user.hide_telegram_tag
+                            ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
+                            : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
+                    }</div>
+                    <div class="phc-badges">
+                        <span class="phc-badge">⚡ Ур. ${level}</span>
+                        <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
                     </div>
                 </div>
+                <button class="phc-settings" onclick="enterProfileEditMode()" title="Настройки">⚙️</button>
+            </div>
+        </div>
 
-                <div class="profile-stats-grid">
-                    <div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">ELO</div></div>
-                    <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
-                    <div class="profile-stat"><div class="profile-stat-value">${hours}ч</div><div class="profile-stat-label">На Faceit</div></div>
+        <div class="mini-stats-row">
+            <div class="mini-stat">
+                <div class="mini-stat-icon">🆔</div>
+                <div class="mini-stat-value" id="myStandoffId">${escapeHtml(user.standoff_id || '—')}</div>
+                <div class="mini-stat-label">Standoff 2 ID</div>
+                ${user.standoff_id ? `<button class="mini-stat-copy" onclick="copyStandoffId('myStandoffId')">📋</button>` : ''}
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon">🎯</div>
+                <div class="mini-stat-value">${user.matches_played ?? 0}</div>
+                <div class="mini-stat-label">Матчей</div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon">🏆</div>
+                <div class="mini-stat-value">${user.wins ?? 0}</div>
+                <div class="mini-stat-label">Побед</div>
+            </div>
+        </div>
+
+        <div class="elo-chart-card" id="eloChartCard" data-user-id="${user.telegram_id}">
+            <span class="ech-corner ech-tl"></span>
+            <span class="ech-corner ech-tr"></span>
+            <span class="ech-corner ech-bl"></span>
+            <span class="ech-corner ech-br"></span>
+            <div class="ech-header">
+                <div>
+                    <div class="ech-eyebrow">PREMIUM INSIGHT</div>
+                    <div class="ech-title">Динамика DXP</div>
                 </div>
+                <div class="ech-delta" id="eloChartDelta">—</div>
+            </div>
+            <div class="ech-body">
+                <div class="ech-y-axis" id="eloChartYAxis">
+                    <span>—</span><span>—</span><span>—</span><span>—</span>
+                </div>
+                <div class="ech-svg-wrap">
+                    <svg class="ech-svg" id="eloChartSvg" viewBox="0 0 320 140" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="eloGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%"  stop-color="var(--emerald)" stop-opacity="0.45"/>
+                                <stop offset="100%" stop-color="var(--emerald)" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path id="eloAreaPath" fill="url(#eloGradient)" d=""/>
+                        <path id="eloLinePath" fill="none" stroke="var(--emerald)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d=""/>
+                        <circle id="eloLastDot" r="3" fill="var(--emerald-3)" cx="0" cy="0"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="ech-streak" id="eloChartStreak"></div>
+            <div class="ech-footer">
+                <div class="ech-wl">
+                    <span class="ech-w">W <b id="eloChartWins">0</b></span>
+                    <span class="ech-l">L <b id="eloChartLosses">0</b></span>
+                </div>
+                <div class="ech-winrate">${winrate}% WR</div>
+            </div>
+        </div>
 
-                <div class="profile-view-row">
-    <span class="profile-view-label">Standoff 2 ID</span>
-    <span class="profile-view-value" style="display: flex; align-items: center; gap: 8px;">
-        <span id="myStandoffId">${escapeHtml(user.standoff_id || '—')}</span>
-        ${user.standoff_id ? `<button class="copy-id-btn" onclick="copyStandoffId('myStandoffId')" title="Скопировать">📋</button>` : ''}
-    </span>
-</div>
-                <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
-                <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
-
-                <button class="profile-action-btn edit btn-with-cover" data-cover="profile_edit" onclick="enterProfileEditMode()">
-    <span class="btn-cover-bg"></span>
-    ✏️ РЕДАКТИРОВАТЬ
-</button>
-
-        <div class="section-title" style="margin-top: 24px;">История матчей</div>
+        <div class="section-title" style="margin-top: 20px;">История матчей</div>
         <div id="profileMatchHistory"><div class="empty">Матчей пока нет</div></div>
     `;
 
@@ -5649,7 +5907,7 @@ async function openPlayerProfile(userId) {
                 <div class="profile-level-badge" style="margin-top: 10px;">⚡ Уровень ${level}</div>
             </div>
             <div class="profile-stats-grid">
-                <div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">ELO</div></div>
+                <div class="profile-stat"><div class="profile-stat-value">${user.DXP?? 1000}</div><div class="profile-stat-label">DXP</div></div>
                 <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
                 <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
             </div>
@@ -5661,7 +5919,7 @@ async function openPlayerProfile(userId) {
     <div class="ech-header">
         <div>
             <div class="ech-eyebrow">PREMIUM INSIGHT</div>
-            <div class="ech-title">Динамика Elo</div>
+            <div class="ech-title">Динамика DXP</div>
         </div>
         <div class="ech-delta" id="eloChartDelta">—</div>
     </div>
@@ -5953,7 +6211,7 @@ function renderLbItem(user, rank) {
             <span class="leaderboard-rank">#${rank}</span>
             <div class="lb-avatar">${av}</div>
             <span class="leaderboard-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')} <span style="color:var(--hint);font-size:11px;">· ${lvl} ур.</span></span>
-            <span class="leaderboard-elo">${user.elo}</span>
+            <span class="leaderboard-DXP">${user.elo}</span>
         </div>`;
 }
 
@@ -6049,7 +6307,7 @@ function openFriendSearchSheet() {
                             <div class="lb-avatar">${av}</div>
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                                <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}ELO ${u.elo}</div>
+                                <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}DXP${u.elo}</div>
                             </div>
                             ${action}
                         </div>`;
@@ -6088,11 +6346,14 @@ function openFriendSearchSheet() {
                 if (error) throw error;
                 if (!rels?.length) { container.innerHTML = '<div class="empty">Пока нет друзей</div>'; return; }
 
-                const otherIds = rels.map(r => r.requester_id === me ? r.addressee_id : r.requester_id);
-                const { data: users } = await sb.from('users')
-                    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, standoff_id')
-                    .in('telegram_id', otherIds);
-                const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+const otherIds = rels.map(r => r.requester_id === me ? r.addressee_id : r.requester_id);
+const { data: users } = await sb.from('users')
+    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, standoff_id')
+    .in('telegram_id', otherIds);
+const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+// ⬇️ Загружаем теги клубов
+await loadClubTagsForUsers(otherIds);
 
                 const accepted = [], incoming = [], outgoing = [];
                 rels.forEach(r => {
@@ -6114,25 +6375,25 @@ function openFriendSearchSheet() {
             }
         }
 
-        function renderFriendItem(item, mode) {
-            const u = item.other;
-            const av = renderAvatar(u);
-            let actions = '';
-            if (mode === 'friend') actions = `<button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">✕</button>`;
-            else if (mode === 'outgoing') actions = `<button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">Отмена</button>`;
-            else actions = `
-                <button class="friend-action accept" onclick="event.stopPropagation();acceptFriend(${item.id})">✓</button>
-                <button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">✕</button>`;
-            return `
-                <div class="leaderboard-item" onclick="openPlayerProfile(${u.telegram_id})">
-                    <div class="lb-avatar">${av}</div>
-                    <div style="flex:1;min-width:0;">
-                        <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                        <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}ELO ${u.elo}</div>
-                    </div>
-                    <div style="display:flex;gap:6px;">${actions}</div>
-                </div>`;
-        }
+function renderFriendItem(item, mode) {
+    const u = item.other;
+    const av = renderAvatar(u);
+    let actions = '';
+    if (mode === 'friend') actions = `<button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">✕</button>`;
+    else if (mode === 'outgoing') actions = `<button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">Отмена</button>`;
+    else actions = `
+        <button class="friend-action accept" onclick="event.stopPropagation();acceptFriend(${item.id})">✓</button>
+        <button class="friend-action decline" onclick="event.stopPropagation();removeFriend(${item.id})">✕</button>`;
+    return `
+        <div class="leaderboard-item" onclick="openPlayerProfile(${u.telegram_id})">
+            <div class="lb-avatar">${av}</div>
+            <div style="flex:1;min-width:0;">
+                <div class="leaderboard-name">${myClubTagHTML(u.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}</div>
+                <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}DXP ${u.elo}</div>
+            </div>
+            <div style="display:flex;gap:6px;">${actions}</div>
+        </div>`;
+}
 
         async function acceptFriend(id) {
             try { await sb.from('friendships').update({ status: 'accepted' }).eq('id', id); showToast('✅'); loadFriends(); }
@@ -6263,7 +6524,7 @@ function openFriendSearchSheet() {
                         <div class="lb-avatar">${av}</div>
                         <div style="flex:1;min-width:0;">
                             <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
-                            <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}ELO ${u.elo || 1000}</div>
+                            <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}DXP${u.DXP|| 1000}</div>
                         </div>
                         ${dotsBtn}
                     </div>`;
@@ -6275,6 +6536,7 @@ function openFriendSearchSheet() {
                 actionBtns = `
                     <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
                         ${isOwner ? `<button class="club-full-btn club-btn-requests" id="requestsBtn" onclick="openRequestsSheet()">📥 Заявки</button>` : ''}
+                        ${(isOwner || isElder) ? `<button class="club-full-btn club-btn-invite" onclick="openClubInviteSheet()">➕ Пригласить в клуб</button>` : ''}
                         ${isOwner ? `<button class="club-full-btn club-btn-bans" onclick="openBansSheet()">🚫 Заблокированные</button>` : ''}
                         <button class="club-full-btn club-btn-edit" onclick="openEditClubSheet()">✏️ Редактировать клуб</button>
                         ${isOwner ? `<button class="club-full-btn club-btn-danger" onclick="deleteClubConfirm()">✕ Удалить клуб</button>` : ''}
@@ -6447,7 +6709,7 @@ function openFriendSearchSheet() {
                             <div class="lb-avatar">${av}</div>
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                                <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                                <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
                             </div>
                             <button class="friend-action accept" onclick="acceptClubRequest(${r.id}, ${r.telegram_id})">✓</button>
                             <button class="friend-action decline" onclick="declineClubRequest(${r.id})">✕</button>
@@ -6822,7 +7084,7 @@ function openFriendSearchSheet() {
                                 <div class="lb-avatar">${av}</div>
                                 <div style="flex:1;min-width:0;">
                                     <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
-                                    <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                                    <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
                                 </div>
                             </div>`;
                     }).join('')}
@@ -7068,13 +7330,16 @@ function openChatPage() {
                     if (!lastByPartner[partner]) lastByPartner[partner] = m;
                 });
 
-                const partnerIds = Object.keys(lastByPartner).map(Number);
-                let userMap = {};
-                if (partnerIds.length) {
-                    const { data: users } = await sb.from('users')
-                        .select('telegram_id, display_name, custom_avatar, photo_url').in('telegram_id', partnerIds);
-                    (users || []).forEach(u => { userMap[u.telegram_id] = u; });
-                }
+const partnerIds = Object.keys(lastByPartner).map(Number);
+let userMap = {};
+if (partnerIds.length) {
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url').in('telegram_id', partnerIds);
+    (users || []).forEach(u => { userMap[u.telegram_id] = u; });
+
+    // ⬇️ Загружаем теги клубов для всех партнёров
+    await loadClubTagsForUsers(partnerIds);
+}
 
                 partnerIds.forEach(pid => {
                     const m = lastByPartner[pid];
@@ -7095,18 +7360,22 @@ function openChatPage() {
                     return;
                 }
 
-                container.innerHTML = items.map(it => {
-                    const av = it.avatar ? `<img src="${it.avatar}" alt="">` : (it.name[0] || '?').toUpperCase();
-                    const square = it.square ? ' square' : '';
-                    return `
-                        <div class="chat-list-item" onclick="openChat('${it.type}', ${it.id})">
-                            <div class="chat-list-avatar${square}">${av}</div>
-                            <div class="chat-list-info">
-                                <div class="chat-list-name">${escapeHtml(it.name)}</div>
-                                <div class="chat-list-preview">${escapeHtml(it.preview)}</div>
-                            </div>
-                        </div>`;
-                }).join('');
+container.innerHTML = items.map(it => {
+    const av = it.avatar ? `<img src="${it.avatar}" alt="">` : (it.name[0] || '?').toUpperCase();
+    const square = it.square ? ' square' : '';
+    // Для DM — добавляем тег клуба, для club — оставляем как есть
+    const nameHTML = it.type === 'dm'
+        ? `${myClubTagHTML(it.id)}${escapeHtml(it.name)}`
+        : escapeHtml(it.name);
+    return `
+        <div class="chat-list-item" onclick="openChat('${it.type}', ${it.id})">
+            <div class="chat-list-avatar${square}">${av}</div>
+            <div class="chat-list-info">
+                <div class="chat-list-name">${nameHTML}</div>
+                <div class="chat-list-preview">${escapeHtml(it.preview)}</div>
+            </div>
+        </div>`;
+}).join('');
             } catch (e) { console.error(e); container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>'; }
         }
 
@@ -7498,7 +7767,7 @@ function closeChatView() {
         function renderEmptyParty() {
             myParty = null;
             document.getElementById('partyCount').textContent = `1 / ${selectedMode === '5x5' ? 5 : 2}`;
-            document.getElementById('partyElo').textContent = currentUser.elo ?? 1000;
+            document.getElementById('partyElo').textContent = currentUser.DXP?? 1000;
             document.getElementById('partyMembers').innerHTML = `
                 <div class="party-member">
                     <span>${escapeHtml(currentUser.display_name)}</span>
@@ -7509,7 +7778,7 @@ function closeChatView() {
         function renderParty() {
             if (!myParty) return renderEmptyParty();
             const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
-            const avgElo = myParty.members.length ? Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length) : 1000;
+            const avgDXP= myParty.members.length ? Math.round(myParty.members.reduce((s, m) => s + (m.DXP|| 1000), 0) / myParty.members.length) : 1000;
 
             document.getElementById('partyCount').textContent = `${myParty.members.length} / ${maxSize}`;
             document.getElementById('partyElo').textContent = avgElo;
@@ -7521,7 +7790,7 @@ function closeChatView() {
                 return `
                     <div class="party-member">
                         <span>${escapeHtml(m.display_name || 'Игрок')}${isLeader ? ' 👑' : ''}</span>
-                        <span style="color:var(--hint);font-size:11px;">${m.elo || 1000}</span>
+                        <span style="color:var(--hint);font-size:11px;">${m.DXP|| 1000}</span>
                         ${removeBtn}
                     </div>`;
             }).join('');
@@ -7633,7 +7902,7 @@ function closeChatView() {
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(leader.display_name || 'Игрок')}${clubBadge}</div>
                                 <div style="font-size:11px;color:var(--hint);">
-                                    ${q.mode} · ${count}/${maxSize} · ELO ${q.elo_avg}
+                                    ${q.mode} · ${count}/${maxSize} · DXP${q.elo_avg}
                                 </div>
                             </div>
                             <button class="friend-action add" onclick="event.stopPropagation();askJoinRoom(${q.party_id})">Войти</button>
@@ -7680,7 +7949,7 @@ function closeChatView() {
                                 <div class="lb-avatar">${av}</div>
                                 <div style="flex:1;">
                                     <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${isLeader ? ' 👑' : ''}</div>
-                                    <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                                    <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
                                 </div>
                             </div>
                         `;
@@ -7949,7 +8218,7 @@ async function askJoinRoom(partyId) {
                             <div class="lb-avatar">${av}</div>
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                                <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                                <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
                             </div>
                             <button class="friend-action add" onclick="inviteToParty(${u.telegram_id})">Пригласить</button>
                         </div>`;
@@ -7985,7 +8254,7 @@ async function inviteToParty(userId) {
             const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
             if (myParty.members.length > maxSize) { showToast('Слишком много игроков'); return; }
 
-            const avgElo = Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length);
+            const avgDXP= Math.round(myParty.members.reduce((s, m) => s + (m.DXP|| 1000), 0) / myParty.members.length);
 
             try {
                 await sb.from('mm_queue').upsert({
@@ -8586,7 +8855,7 @@ async function submitWinner() {
                 .find(p => p.telegram_id === me)?.elo_before || 1000;
 
             const { data: meData } = await sb.from('users').select('elo').eq('telegram_id', me).single();
-            const myAfter = meData?.elo || 1000;
+            const myAfter = meData?.DXP|| 1000;
             const delta = myAfter - myBefore;
 
             container.innerHTML = `
@@ -8746,7 +9015,7 @@ async function renderAdminPanel() {
                                 <span class="role-tag owner" style="background: rgba(167,139,250,0.18); color: var(--purple); border-color: rgba(167,139,250,0.3);">⭐ MOD</span>
                             </div>
                             <div style="font-size:11px;color:var(--hint);">
-                                ${m.username ? '@' + escapeHtml(m.username) + ' · ' : ''}ELO ${m.elo || 1000}
+                                ${m.username ? '@' + escapeHtml(m.username) + ' · ' : ''}DXP${m.DXP|| 1000}
                             </div>
                         </div>
                         <button class="friend-action decline" onclick="event.stopPropagation();revokeModerator(${m.telegram_id})">Снять</button>
@@ -8846,14 +9115,61 @@ function openPlayScreen() {
     renderPlayList();
 }
 
-function closePlayScreen() {
+async function closePlayScreen() {
     const screen = document.getElementById('playScreen');
     if (!screen) return;
     screen.classList.remove('active');
-    currentPlayRoomId = null;
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
+
+    // Если игрок — зритель (не в команде) и комната открыта, выходим автоматически
+    if (currentPlayRoomId && currentUser) {
+        try {
+            const { data: me } = await sb.from('room_players')
+                .select('is_ready, team')
+                .eq('room_id', currentPlayRoomId)
+                .eq('telegram_id', currentUser.telegram_id)
+                .maybeSingle();
+
+            if (me && !me.is_ready) {
+                await leaveRoomSilently(currentPlayRoomId, currentUser.telegram_id);
+            }
+        } catch (e) {
+            console.warn('closePlayScreen leave:', e);
+        }
+    }
+
+    currentPlayRoomId = null;
+    unsubscribeRoomRealtime();
     checkActiveRoom();
+}
+
+// Тихий выход без confirm
+async function leaveRoomSilently(roomId, myId) {
+    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).maybeSingle();
+    if (!room) return;
+
+    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+    const others = (players || []).filter(p => String(p.telegram_id) !== String(myId));
+
+    await sb.from('room_players').delete().eq('room_id', roomId).eq('telegram_id', myId);
+
+    if (room.kicked_users) {
+        const clean = room.kicked_users.filter(id => id !== Number(myId));
+        await sb.from('rooms').update({ kicked_users: clean }).eq('id', roomId);
+    }
+
+    if (String(room.leader_id) === String(myId) && others.length > 0) {
+        const sorted = [...others].sort((a, b) =>
+            new Date(a.joined_at || 0).getTime() - new Date(b.joined_at || 0).getTime()
+        );
+        await sb.from('rooms').update({ leader_id: sorted[0].telegram_id }).eq('id', roomId);
+    }
+
+    if (others.length === 0) {
+        await sb.from('room_messages').delete().eq('room_id', roomId);
+        await sb.from('rooms').delete().eq('id', roomId);
+    }
 }
 
 // Открыть ссылку из "плавающей" кнопки
@@ -8989,7 +9305,7 @@ async function loadPlayRooms() {
             const src = leader.custom_avatar || leader.photo_url;
             const initial = (leader.display_name || 'U')[0].toUpperCase();
             const av = src ? `<img src="${src}" alt="">` : initial;
-            const lvl = eloToLevel(leader.elo || 1000);
+            const lvl = eloToLevel(leader.DXP|| 1000);
             const progress = Math.min(100, Math.round((count / room.max_players) * 100));
 
             let actionHTML;
@@ -9011,7 +9327,7 @@ async function loadPlayRooms() {
                             <div class="prc-name">${escapeHtml(leader.display_name || 'Игрок')}${isLeader ? ' <span style="color:var(--gold);">👑</span>' : ''}</div>
                             <div class="prc-meta">
                                 <span class="prc-badge">⚡ ${lvl} ур.</span>
-                                <span class="prc-badge gold">${leader.elo || 1000} ELO</span>
+                                <span class="prc-badge gold">${leader.DXP|| 1000} DXP</span>
                             </div>
                         </div>
                         <div class="prc-count">
@@ -9229,18 +9545,18 @@ async function renderRoomContent(roomId) {
             const av = renderAvatar(u);
             const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
             const isHost = String(p.telegram_id) === String(room.leader_id);
-            const lvl = eloToLevel(u.elo || 1000);
+            const lvl = eloToLevel(u.DXP|| 1000);
             return `
                 <div class="tz-player ${isMe ? 'you' : ''}"
                      onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
                     <div class="tz-avatar">${av}</div>
                     <div class="tz-info">
                         <div class="tz-name">
-                            ${escapeHtml(u.display_name || 'Игрок')}
-                            ${isHost ? '👑' : ''}
+                    ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
+                    ${isHost ? '👑' : ''}
                             ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
                         </div>
-                        <div class="tz-stats">⚡ ${lvl} ур. · ${u.elo || 1000} ELO</div>
+                        <div class="tz-stats">⚡ ${lvl} ур. · ${u.DXP|| 1000} DXP</div>
                     </div>
                 </div>
             `;
@@ -11013,16 +11329,23 @@ let notifCache = [];
 async function loadNotifications() {
     if (!currentUser) return [];
     try {
-        // Дружбы: входящие pending
+        // 1. Заявки в друзья
         const { data: friendships } = await sb.from('friendships')
             .select('id, requester_id, status, created_at')
             .eq('addressee_id', currentUser.telegram_id)
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
 
-        // Приглашения в пати
+        // 2. Приглашения в пати / комнату
         const { data: invites } = await sb.from('party_invites')
-            .select('id, party_id, from_id, status, created_at')
+            .select('id, party_id, from_id, kind, status, created_at')
+            .eq('to_id', currentUser.telegram_id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        // 3. Приглашения в клуб
+        const { data: clubInvites } = await sb.from('club_invites')
+            .select('id, club_id, from_id, created_at')
             .eq('to_id', currentUser.telegram_id)
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
@@ -11031,6 +11354,7 @@ async function loadNotifications() {
         const ids = new Set();
         (friendships || []).forEach(f => ids.add(f.requester_id));
         (invites || []).forEach(i => ids.add(i.from_id));
+        (clubInvites || []).forEach(i => ids.add(i.from_id));
 
         let userMap = {};
         if (ids.size) {
@@ -11040,7 +11364,12 @@ async function loadNotifications() {
             (users || []).forEach(u => userMap[u.telegram_id] = u);
         }
 
-        // Получаем инфу о пати
+        // Подгружаем теги клубов для всех, кто фигурирует
+        if (ids.size) {
+            await loadClubTagsForUsers([...ids]);
+        }
+
+        // Инфа о пати
         const partyIds = (invites || []).map(i => i.party_id);
         let partyMap = {};
         if (partyIds.length) {
@@ -11050,9 +11379,20 @@ async function loadNotifications() {
             (parties || []).forEach(p => partyMap[p.id] = p);
         }
 
+        // Инфа о клубах (для приглашений в клуб)
+        const clubIds = (clubInvites || []).map(i => i.club_id);
+        let clubMap = {};
+        if (clubIds.length) {
+            const { data: clubs } = await sb.from('clubs')
+                .select('id, name, tag')
+                .in('id', clubIds);
+            (clubs || []).forEach(c => clubMap[c.id] = c);
+        }
+
         // Собираем список
         const list = [];
 
+        // --- Дружба ---
         (friendships || []).forEach(f => {
             list.push({
                 id: 'friend_' + f.id,
@@ -11066,33 +11406,50 @@ async function loadNotifications() {
             });
         });
 
-(invites || []).forEach(i => {
-    const party = partyMap[i.party_id] || {};
-    const kind = i.kind || 'party';
-    const clubText = party.is_club_party ? ' (клановая)' : '';
+        // --- Пати / комната ---
+        (invites || []).forEach(i => {
+            const party = partyMap[i.party_id] || {};
+            const kind = i.kind || 'party';
+            const clubText = party.is_club_party ? ' (клановая)' : '';
 
-    let label;
-    if (kind === 'room') {
-        label = `приглашает в комнату`;
-    } else if (kind === 'join_request') {
-        label = `хочет вступить в твою комнату ${party.mode || ''}`;
-    } else {
-        label = `приглашает в пати ${party.mode || ''}${clubText}`;
-    }
+            let label;
+            if (kind === 'room') {
+                label = `приглашает в комнату`;
+            } else if (kind === 'join_request') {
+                label = `хочет вступить в твою комнату ${party.mode || ''}`;
+            } else {
+                label = `приглашает в пати ${party.mode || ''}${clubText}`;
+            }
 
-    list.push({
-        id: 'invite_' + i.id,
-        type: 'party_invite',
-        kind,
-        inviteId: i.id,
-        partyId: i.party_id,
-        userId: i.from_id,
-        user: userMap[i.from_id] || {},
-        text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> ${label}`,
-        time: i.created_at,
-        unread: true
-    });
-});
+            list.push({
+                id: 'invite_' + i.id,
+                type: 'party_invite',
+                kind,
+                inviteId: i.id,
+                partyId: i.party_id,
+                userId: i.from_id,
+                user: userMap[i.from_id] || {},
+                text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> ${label}`,
+                time: i.created_at,
+                unread: true
+            });
+        });
+
+        // --- Клуб ---
+        (clubInvites || []).forEach(i => {
+            const club = clubMap[i.club_id] || {};
+            list.push({
+                id: 'clubin_' + i.id,
+                type: 'club_invite',
+                inviteId: i.id,
+                clubId: i.club_id,
+                userId: i.from_id,
+                user: userMap[i.from_id] || {},
+                text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> приглашает тебя в клуб <b>${escapeHtml(club.name || '')}</b> [${escapeHtml(club.tag || '')}]`,
+                time: i.created_at,
+                unread: true
+            });
+        });
 
         // Сортировка по времени
         list.sort((a, b) => new Date(b.time) - new Date(a.time));
@@ -11160,6 +11517,13 @@ async function renderNotifList() {
                     <button class="notif-btn-decline" onclick="declineInviteNotif(${n.inviteId})">✕ Отклонить</button>
                 </div>
             `;
+        } else if (n.type === 'club_invite') {
+            actionsHTML = `
+                <div class="notif-actions">
+                    <button class="notif-btn-accept" onclick="acceptClubInviteNotif(${n.inviteId}, ${n.clubId}, ${n.userId})">✅ Принять</button>
+                    <button class="notif-btn-decline" onclick="declineClubInviteNotif(${n.inviteId})">✕ Отклонить</button>
+                </div>
+            `;
         }
 
         return `
@@ -11211,50 +11575,80 @@ async function acceptInviteNotif(inviteId, partyId) {
 
         const kind = invite.kind || 'party';
 
+        // ============================================================
+        // 1) ПРИГЛАШЕНИЕ В КОМНАТУ
+        // ============================================================
         if (kind === 'room') {
-            // ---- Присоединяемся к комнате ----
+            // Комната существует?
             const { data: room } = await sb.from('rooms')
                 .select('*').eq('id', partyId).maybeSingle();
+
             if (!room) {
-                showToast('Комната уже закрыта');
+                showToast('❌ Комнаты больше не существует');
                 await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
                 await renderNotifList();
                 await updateNotifBadge();
                 return;
             }
 
-            const { data: existing } = await sb.from('room_players')
-                .select('id').eq('telegram_id', currentUser.telegram_id).maybeSingle();
-            if (existing) {
-                await sb.from('room_players').delete().eq('telegram_id', currentUser.telegram_id);
+            // Матч уже начался?
+            if (room.status !== 'open') {
+                showToast('❌ Матч уже начался — вход закрыт');
+                await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
+                await renderNotifList();
+                await updateNotifBadge();
+                return;
             }
 
+            // Есть места?
             const { data: players } = await sb.from('room_players')
                 .select('id').eq('room_id', partyId);
             if ((players || []).length >= room.max_players) {
-                showToast('Комната заполнена');
+                showToast('❌ Комната заполнена');
                 await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
                 await renderNotifList();
                 await updateNotifBadge();
                 return;
             }
 
+            // Убираем из старой комнаты, если игрок там был
+            const { data: existing } = await sb.from('room_players')
+                .select('id, room_id')
+                .eq('telegram_id', currentUser.telegram_id)
+                .maybeSingle();
+            if (existing) {
+                await sb.from('room_players').delete()
+                    .eq('telegram_id', currentUser.telegram_id);
+                // Чистим, если старая комната опустела
+                const { data: stillThere } = await sb.from('room_players')
+                    .select('id').eq('room_id', existing.room_id);
+                if (!stillThere?.length) {
+                    await sb.from('rooms').delete().eq('id', existing.room_id);
+                }
+            }
+
+            // Входим
             await sb.from('room_players').insert({
                 room_id: partyId,
                 telegram_id: currentUser.telegram_id,
-                team: null
+                team: null,
+                is_ready: false
             });
             await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
 
             showToast('✅ Ты в комнате');
             closeAllSheets();
+
             const screen = document.getElementById('playScreen');
             if (screen) screen.classList.add('active');
+            currentPlayRoomId = partyId;
             openRoomView(partyId);
+        }
 
-        } else if (kind === 'join_request') {
-            // ---- КТО-ТО ПРОСИТСЯ В МОЮ КОМНАТУ ----
-            // Я (лидер) принимаю его
+        // ============================================================
+        // 2) ЗАПРОС НА ВСТУПЛЕНИЕ В МОЮ КОМНАТУ (я лидер)
+        // ============================================================
+        else if (kind === 'join_request') {
             const requesterId = invite.from_id;
 
             const { data: party } = await sb.from('parties')
@@ -11271,14 +11665,13 @@ async function acceptInviteNotif(inviteId, partyId) {
                 .select('telegram_id').eq('party_id', partyId);
             const maxSize = party.mode === '5x5' ? 5 : 2;
             if ((members || []).length >= maxSize) {
-                showToast('Пати заполнено');
+                showToast('❌ Пати заполнено');
                 await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
                 await renderNotifList();
                 await updateNotifBadge();
                 return;
             }
 
-            // Убедимся, что requester не в другой пати
             const { data: myMember } = await sb.from('party_members')
                 .select('party_id').eq('telegram_id', requesterId).maybeSingle();
             if (myMember) {
@@ -11293,15 +11686,22 @@ async function acceptInviteNotif(inviteId, partyId) {
             });
             await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
 
-            await notify(requesterId, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял тебя в пати.`, 'party');
+            await notify(requesterId,
+                `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял тебя в пати.`,
+                'party'
+            );
             showToast('✅ Игрок принят');
             await loadOrCreateParty();
+        }
 
-        } else {
-            // ---- ОБЫЧНОЕ ПРИГЛАШЕНИЕ В ПАТИ ----
-            const { data: party } = await sb.from('parties').select('*').eq('id', partyId).maybeSingle();
+        // ============================================================
+        // 3) ОБЫЧНОЕ ПРИГЛАШЕНИЕ В ПАТИ
+        // ============================================================
+        else {
+            const { data: party } = await sb.from('parties')
+                .select('*').eq('id', partyId).maybeSingle();
             if (!party) {
-                showToast('Приглашение устарело');
+                showToast('❌ Приглашение устарело');
                 await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
                 await renderNotifList();
                 await updateNotifBadge();
@@ -11321,7 +11721,10 @@ async function acceptInviteNotif(inviteId, partyId) {
                 telegram_id: currentUser.telegram_id
             });
             await sb.from('party_invites').update({ status: 'accepted' }).eq('id', inviteId);
-            await notify(party.leader_id, `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`, 'party');
+            await notify(party.leader_id,
+                `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение.`,
+                'party'
+            );
 
             showToast('✅ Ты в пати');
             closeAllSheets();
@@ -11330,9 +11733,10 @@ async function acceptInviteNotif(inviteId, partyId) {
         }
 
         await updateNotifBadge();
-    } catch (e) { showToast('Ошибка: ' + e.message); }
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
 }
-
 async function declineInviteNotif(inviteId) {
     try {
         await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
@@ -11340,6 +11744,76 @@ async function declineInviteNotif(inviteId) {
         await renderNotifList();
         await updateNotifBadge();
     } catch (e) { showToast('Ошибка'); }
+}
+
+            async function acceptClubInviteNotif(inviteId, clubId, fromId) {
+    try {
+        // Уже в клубе?
+        const { data: membership } = await sb.from('club_members')
+            .select('club_id')
+            .eq('telegram_id', currentUser.telegram_id)
+            .maybeSingle();
+        if (membership) {
+            showToast('Ты уже в клубе');
+            await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
+            await renderNotifList();
+            await updateNotifBadge();
+            return;
+        }
+
+        // Клуб существует?
+        const { data: club } = await sb.from('clubs')
+            .select('name, tag, max_members')
+            .eq('id', clubId)
+            .maybeSingle();
+        if (!club) {
+            showToast('❌ Клуб больше не существует');
+            await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
+            await renderNotifList();
+            await updateNotifBadge();
+            return;
+        }
+
+        // Есть места?
+        const { data: members } = await sb.from('club_members')
+            .select('telegram_id')
+            .eq('club_id', clubId);
+        if ((members || []).length >= club.max_members) {
+            showToast('❌ Клуб заполнен');
+            await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
+            await renderNotifList();
+            await updateNotifBadge();
+            return;
+        }
+
+        // Принимаем
+        await sb.from('club_members').insert({
+            club_id: clubId,
+            telegram_id: currentUser.telegram_id,
+            role: 'member'
+        });
+        await sb.from('club_invites').update({ status: 'accepted' }).eq('id', inviteId);
+
+        // Событие в клуб
+        await sb.from('club_events').insert({
+            club_id: clubId,
+            actor_id: fromId,
+            target_id: currentUser.telegram_id,
+            event_type: 'member_joined',
+            meta: {}
+        });
+
+        await notify(fromId,
+            `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение в клуб <b>${escapeHtml(club.name)}</b>.`,
+            'club'
+        );
+
+        showToast('✅ Ты в клубе!');
+        await renderNotifList();
+        await updateNotifBadge();
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
 }
 
 // --- Realtime-подписка на уведомления ---
@@ -11791,7 +12265,7 @@ async function renderRoomInviteList(roomId) {
                     <div class="lb-avatar">${av}</div>
                     <div style="flex:1;min-width:0;">
                         <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                        <div style="font-size:11px;color:var(--hint);">ELO ${u.elo || 1000}</div>
+                        <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
                     </div>
                     ${btn}
                 </div>
@@ -11976,7 +12450,7 @@ function throttle(fn, delay = 300) {
 }  
 
          // ============================================================
-// ELO CHART — рисует график ELO по последним матчам
+// DXPCHART — рисует график DXPпо последним матчам
 // ============================================================
 async function renderEloChart(userId) {
     const card = document.getElementById('eloChartCard');
@@ -12084,7 +12558,7 @@ async function renderEloChart(userId) {
 
         const points = recent.map((h, i) => {
             const x = padL + i * stepX;
-            const y = padT + innerH - ((h.elo - yMin) / (yMax - yMin)) * innerH;
+            const y = padT + innerH - ((h.DXP- yMin) / (yMax - yMin)) * innerH;
             return { x, y, ...h };
         });
 
@@ -12108,9 +12582,9 @@ async function renderEloChart(userId) {
         yAxisEl.innerHTML = labels.map(v => `<span>${Math.round(v)}</span>`).join('');
 
         // 8. Delta
-        const firstElo = recent[0].elo;
-        const lastElo = recent[recent.length - 1].elo;
-        const delta = lastElo - firstElo;
+        const firstDXP= recent[0].elo;
+        const lastDXP= recent[recent.length - 1].elo;
+        const delta = lastDXP- firstElo;
         deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
         deltaEl.classList.toggle('negative', delta < 0);
 
@@ -12129,6 +12603,152 @@ async function renderEloChart(userId) {
     }
 }   
 
+    // ============================================================
+// CLUB INVITES (Owner / Elder)
+// ============================================================
+async function openClubInviteSheet() {
+    if (!myClub?.club) return;
+    const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+    const canInvite = myRole === 'owner' || myRole === 'elder'
+        || myClub.club.owner_id === currentUser.telegram_id;
+    if (!canInvite) { showToast('Только OWNER / ELDER'); return; }
+
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('clubInviteSheet').classList.add('active');
+    document.getElementById('clubInviteSearch').value = '';
+    await loadClubInviteList('');
+}
+
+let _clubInviteTimer = null;
+function debouncedClubInviteSearch() {
+    clearTimeout(_clubInviteTimer);
+    _clubInviteTimer = setTimeout(() => {
+        const q = document.getElementById('clubInviteSearch')?.value.trim() || '';
+        loadClubInviteList(q);
+    }, 300);
+}
+
+async function loadClubInviteList(q) {
+    const el = document.getElementById('clubInviteList');
+    el.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    try {
+        const me = currentUser.telegram_id;
+
+        // Друзья
+        const { data: rels } = await sb.from('friendships')
+            .select('requester_id, addressee_id')
+            .or(`requester_id.eq.${me},addressee_id.eq.${me}`)
+            .eq('status', 'accepted');
+
+        const friendIds = (rels || []).map(r =>
+            r.requester_id === me ? r.addressee_id : r.requester_id
+        );
+
+        // Уже в клубе
+        const memberIds = new Set(myClub.members.map(m => m.telegram_id));
+
+        // Уже приглашены
+        const { data: invites } = await sb.from('club_invites')
+            .select('to_id')
+            .eq('club_id', myClub.club.id)
+            .eq('status', 'pending');
+        const invitedIds = new Set((invites || []).map(i => i.to_id));
+
+        // Фильтр: только друзья ИЛИ поиск
+        let query = sb.from('users')
+            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, standoff_id')
+            .neq('telegram_id', me)
+            .limit(40);
+
+        if (q.length >= 2) {
+            const safe = q.replace(/[%_]/g, '');
+            query = query.or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%,standoff_id.ilike.%${safe}%`);
+        } else if (friendIds.length) {
+            query = query.in('telegram_id', friendIds);
+        } else {
+            el.innerHTML = '<div class="empty">У вас нет друзей для приглашения</div>';
+            return;
+        }
+
+        const { data: users, error } = await query;
+        if (error) throw error;
+
+        const candidates = (users || []).filter(u =>
+            !memberIds.has(u.telegram_id)
+        );
+
+        if (!candidates.length) {
+            el.innerHTML = '<div class="empty">Нет игроков для приглашения</div>';
+            return;
+        }
+
+        el.innerHTML = candidates.map(u => {
+            const av = renderAvatar(u);
+            const isInvited = invitedIds.has(u.telegram_id);
+            const btn = isInvited
+                ? `<button class="friend-action pending" disabled>⏳ Приглашён</button>`
+                : `<button class="friend-action add" onclick="sendClubInvite(${u.telegram_id}, this)">Пригласить</button>`;
+            return `
+                <div class="leaderboard-item">
+                    <div class="lb-avatar">${av}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="leaderboard-name">${myClubTagHTML(u.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}</div>
+                        <div style="font-size:11px;color:var(--hint);">${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}DXP ${u.elo || 1000}</div>
+                    </div>
+                    ${btn}
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error(e);
+        el.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка</div>';
+    }
+}
+
+async function sendClubInvite(userId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+        // Проверим, не в клубе ли уже
+        const { data: membership } = await sb.from('club_members')
+            .select('club_id').eq('telegram_id', userId).maybeSingle();
+        if (membership) {
+            showToast('Игрок уже в клубе');
+            if (btn) { btn.disabled = false; btn.textContent = 'Пригласить'; }
+            return;
+        }
+
+        await sb.from('club_invites').upsert({
+            club_id: myClub.club.id,
+            from_id: currentUser.telegram_id,
+            to_id: userId,
+            status: 'pending'
+        }, { onConflict: 'club_id,to_id' });
+
+        await notify(userId,
+            `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в клуб <b>${escapeHtml(myClub.club.name)}</b> [${escapeHtml(myClub.club.tag)}]. Открой приложение!`,
+            'club'
+        );
+
+        showToast('✅ Приглашение отправлено');
+        if (btn) { btn.className = 'friend-action pending'; btn.textContent = '⏳ Приглашён'; }
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Пригласить'; }
+    }
+}
+
+// Realtime-обработчик входящих приглашений в клуб
+function subscribeClubInvitesRealtime() {
+    if (window._clubInvitesChannel) sb.removeChannel(window._clubInvitesChannel);
+    window._clubInvitesChannel = sb.channel('club_invites_' + currentUser.telegram_id)
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'club_invites',
+            filter: `to_id=eq.${currentUser.telegram_id}`
+        }, () => { updateNotifBadge(); haptic('medium'); })
+        .subscribe();
+}        
+
 // ============================================================
 // BOOT
 // ============================================================
@@ -12139,5 +12759,16 @@ registerInterval('notifBadge', setInterval(() => {
     if (isAppVisible && currentUser) updateNotifBadge();
 }, 30000));
     </script>
+
+    <div class="sheet" id="clubInviteSheet" style="max-height: 88vh;">
+    <div class="sheet-title">➕ Пригласить в клуб</div>
+    <input type="text" class="field-input" id="clubInviteSearch"
+           placeholder="🔍 Ник, @username или ID"
+           autocomplete="off"
+           oninput="debouncedClubInviteSearch()"
+           style="margin-bottom: 12px;">
+    <div id="clubInviteList"><div class="empty">Загрузка...</div></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
 </body>
 </html>
