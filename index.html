@@ -8004,9 +8004,9 @@ async function renderRoomContent(roomId) {
         console.error('Room view error:', e);
         content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
     }
-}
+} 
 
-                    async function openChangeTeamSheet(roomId) {
+async function openChangeTeamSheet(roomId) {
             const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
             const { data: players } = await sb.from('room_players').select('team, is_ready').eq('room_id', roomId);
             const { data: me } = await sb.from('room_players')
@@ -8057,11 +8057,6 @@ async function renderRoomContent(roomId) {
         async function leaveRoomFromRoomView(roomId) {
             await leaveRoom(roomId);
         }
-
-// Обёртка над leaveRoom (для кнопки в новой разметке)
-async function leaveRoomFromRoomView(roomId) {
-    await leaveRoom(roomId);
-}
 
 // ============================================================
 // REALTIME ПОДПИСКА НА КОМНАТУ
