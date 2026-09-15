@@ -2971,183 +2971,211 @@ body::after {
         transparent 65%);
 }
 
-    /* ============ PREMIUM PLAY BUTTON ============ */
-.play-btn-premium {
+/* ============ CYBER PLAY BUTTON ============ */
+.play-btn-cyber {
     position: relative;
     width: 100%;
     padding: 0;
-    border: none;
-    border-radius: 20px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
     overflow: hidden;
     isolation: isolate;
     margin-bottom: 20px;
-    background: linear-gradient(135deg,
-        var(--emerald) 0%,
-        var(--emerald-2) 45%,
-        var(--emerald-3) 100%);
-    background-size: 200% 200%;
+    background:
+        linear-gradient(180deg,
+            rgba(var(--emerald-rgb), 0.10) 0%,
+            rgba(var(--emerald-rgb), 0.02) 45%,
+            rgba(0, 0, 0, 0.5) 100%);
     box-shadow:
-        0 10px 32px rgba(var(--emerald-rgb), 0.35),
-        0 0 0 1px rgba(var(--emerald-rgb), 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.15);
-    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
-                box-shadow 0.3s ease,
-                background-position 0.6s ease;
-    animation: pbpPulse 3s ease-in-out infinite;
+        inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 4px 18px rgba(0, 0, 0, 0.45);
+    transition: transform 0.18s ease,
+                border-color 0.25s ease,
+                box-shadow 0.3s ease;
+    clip-path: polygon(
+        14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px
+    );
 }
 
-@keyframes pbpPulse {
-    0%, 100% {
-        box-shadow:
-            0 10px 32px rgba(var(--emerald-rgb), 0.35),
-            0 0 0 1px rgba(var(--emerald-rgb), 0.4),
-            0 0 40px rgba(var(--emerald-rgb), 0.25),
-            inset 0 1px 0 rgba(255, 255, 255, 0.35),
-            inset 0 -2px 0 rgba(0, 0, 0, 0.15);
-    }
-    50% {
-        box-shadow:
-            0 14px 40px rgba(var(--emerald-rgb), 0.5),
-            0 0 0 1px rgba(var(--emerald-rgb), 0.6),
-            0 0 60px rgba(var(--emerald-rgb), 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.4),
-            inset 0 -2px 0 rgba(0, 0, 0, 0.15);
-    }
-}
-
-.pbp-glow {
+/* Верхняя неоновая полоска */
+.play-btn-cyber::before {
+    content: '';
     position: absolute;
-    top: -50%;
-    left: -20%;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle,
-        rgba(255, 255, 255, 0.5),
-        transparent 65%);
-    border-radius: 50%;
-    filter: blur(30px);
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 20%,
+        var(--emerald-3) 50%,
+        var(--emerald) 80%,
+        transparent 100%);
+    opacity: 0.55;
+    z-index: 2;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+/* Нижняя тонкая подложка */
+.play-btn-cyber::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(var(--emerald-rgb), 0.35) 50%,
+        transparent 100%);
+    opacity: 0.6;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Углы-«скобки» */
+.pbc-corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: var(--emerald);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0.75;
+    z-index: 2;
+    pointer-events: none;
+    transition: opacity 0.25s ease, border-color 0.25s ease;
+}
+.pbc-corner-tl { top: 6px; left: 6px; border-top-width: 2px; border-left-width: 2px; }
+.pbc-corner-tr { top: 6px; right: 6px; border-top-width: 2px; border-right-width: 2px; }
+.pbc-corner-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
+.pbc-corner-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Бегущая тонкая линия «сканирования» */
+.pbc-scan {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(var(--emerald-rgb), 0.7) 50%,
+        transparent 100%);
+    z-index: 3;
     opacity: 0.6;
     pointer-events: none;
-    z-index: 0;
-    animation: pbpGlow 4s ease-in-out infinite alternate;
+    animation: pbcScan 5s linear infinite;
 }
 
-@keyframes pbpGlow {
-    0%   { transform: translate(0, 0) scale(1); opacity: 0.5; }
-    100% { transform: translate(30px, 20px) scale(1.15); opacity: 0.8; }
+@keyframes pbcScan {
+    0%   { transform: translateY(0); opacity: 0; }
+    10%  { opacity: 0.6; }
+    50%  { opacity: 0.6; }
+    90%  { opacity: 0.6; }
+    100% { transform: translateY(calc(100% - 1px)); opacity: 0; }
 }
 
-.pbp-shine {
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 60%;
-    height: 100%;
-    background: linear-gradient(120deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.5) 50%,
-        transparent 100%);
-    transform: skewX(-25deg);
-    pointer-events: none;
-    z-index: 2;
-    animation: pbpShine 3.5s ease-in-out infinite;
-}
-
-@keyframes pbpShine {
-    0%   { left: -100%; }
-    60%  { left: 130%; }
-    100% { left: 130%; }
-}
-
-.pbp-content {
+/* Содержимое */
+.pbc-content {
     position: relative;
-    z-index: 3;
+    z-index: 4;
     display: flex;
     align-items: center;
     gap: 14px;
     padding: 18px 22px;
-    color: #04140e;
+    color: var(--text);
+    background:
+        repeating-linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.012) 0px,
+            rgba(255, 255, 255, 0.012) 1px,
+            transparent 1px,
+            transparent 8px
+        );
 }
 
-.pbp-icon {
-    font-size: 30px;
+.pbc-icon {
+    font-size: 26px;
     line-height: 1;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    animation: pbpIconFloat 2.5s ease-in-out infinite;
     flex-shrink: 0;
+    filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.5));
+    transition: transform 0.25s ease;
 }
 
-@keyframes pbpIconFloat {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50%      { transform: translateY(-3px) rotate(-6deg); }
-}
-
-.pbp-text {
+.pbc-text {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
     text-align: left;
 }
 
-.pbp-title {
-    font-size: 20px;
+.pbc-title {
+    font-size: 18px;
     font-weight: 900;
-    letter-spacing: 3px;
+    letter-spacing: 5px;
     line-height: 1;
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+    color: var(--text);
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.35);
 }
 
-.pbp-sub {
-    font-size: 10px;
+.pbc-sub {
+    font-size: 9.5px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 1.6px;
     text-transform: uppercase;
-    opacity: 0.7;
+    color: var(--hint);
     line-height: 1.1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.pbp-arrow {
-    font-size: 26px;
+.pbc-arrow {
+    font-size: 24px;
     font-weight: 900;
     line-height: 1;
+    color: var(--emerald);
     flex-shrink: 0;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
+    transition: transform 0.25s ease, color 0.25s ease;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
 }
 
-.play-btn-premium:hover {
-    transform: translateY(-3px);
-    background-position: 100% 0;
-}
-
-.play-btn-premium:hover .pbp-arrow {
-    transform: translateX(6px);
-}
-
-.play-btn-premium:active {
-    transform: scale(0.97);
+/* Hover — сдержанный */
+.play-btn-cyber:hover {
+    border-color: var(--emerald);
     box-shadow:
-        0 4px 14px rgba(var(--emerald-rgb), 0.5),
-        0 0 0 1px rgba(var(--emerald-rgb), 0.7),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 6px 24px rgba(var(--emerald-rgb), 0.15),
+        0 0 0 1px rgba(var(--emerald-rgb), 0.25);
+    transform: translateY(-1px);
 }
 
+.play-btn-cyber:hover::before { opacity: 1; }
+.play-btn-cyber:hover .pbc-corner { opacity: 1; }
+.play-btn-cyber:hover .pbc-arrow { transform: translateX(4px); color: var(--emerald-3); }
+.play-btn-cyber:hover .pbc-icon  { transform: scale(1.06); }
+
+/* Active */
+.play-btn-cyber:active {
+    transform: scale(0.985);
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+        inset 0 2px 8px rgba(0, 0, 0, 0.4),
+        0 2px 10px rgba(var(--emerald-rgb), 0.15);
+}
+
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-    .play-btn-premium,
-    .pbp-glow,
-    .pbp-shine,
-    .pbp-icon {
-        animation: none !important;
-    }
+    .pbc-scan { animation: none; opacity: 0; }
+    .play-btn-cyber,
+    .pbc-icon,
+    .pbc-arrow { transition: none; }
 }
     
 </style>
@@ -3181,16 +3209,19 @@ body::after {
             <div class="stat-card"><div class="stat-value" id="statWins">—</div><div class="stat-label">Побед</div></div>
             <div class="stat-card"><div class="stat-value" id="statWinrate">—</div><div class="stat-label">Winrate</div></div>
         </div>
-<button class="play-btn-premium" id="playBtnMain" onclick="openPlayScreen()">
-    <span class="pbp-glow"></span>
-    <span class="pbp-shine"></span>
-    <span class="pbp-content">
-        <span class="pbp-icon">🎮</span>
-        <span class="pbp-text">
-            <span class="pbp-title">ИГРАТЬ</span>
-            <span class="pbp-sub">Найти матч · Создать комнату</span>
+<button class="play-btn-cyber" onclick="openPlayScreen()">
+    <span class="pbc-corner pbc-corner-tl"></span>
+    <span class="pbc-corner pbc-corner-tr"></span>
+    <span class="pbc-corner pbc-corner-bl"></span>
+    <span class="pbc-corner pbc-corner-br"></span>
+    <span class="pbc-scan"></span>
+    <span class="pbc-content">
+        <span class="pbc-icon">🎮</span>
+        <span class="pbc-text">
+            <span class="pbc-title">ИГРАТЬ</span>
+            <span class="pbc-sub">Найти матч · Создать комнату</span>
         </span>
-        <span class="pbp-arrow">→</span>
+        <span class="pbc-arrow">›</span>
     </span>
 </button>
 <div class="section-title">Быстрые действия</div>
