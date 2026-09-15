@@ -2804,82 +2804,171 @@ body::after {
     color: var(--red);
 }
 
-    /* ============ HERO MINI BUTTONS (картинки 1:1) ============ */
-.hero-mini-btn {
-    width: 100%;
-    aspect-ratio: 1 / 1;          /* квадратные, как старые menu-item */
-    border-radius: 16px;
-    overflow: hidden;
-    cursor: pointer;
-    background: var(--card);
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 16px rgba(var(--emerald-rgb), 0.18);
-    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
-                box-shadow 0.28s ease,
-                border-color 0.22s ease;
-    line-height: 0;
+/* ============ IMPROVED MENU ITEMS ============ */
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.menu-item {
     position: relative;
-}
-
-.hero-mini-btn img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;            /* картинка заполняет квадрат без искажений */
-    display: block;
-    user-select: none;
-    -webkit-user-drag: none;
-    pointer-events: none;
-}
-
-.hero-mini-btn:hover {
-    transform: translateY(-2px);
-    border-color: var(--border-strong);
-    box-shadow: 0 8px 24px rgba(var(--emerald-rgb), 0.35);
-}
-
-.hero-mini-btn:active {
-    transform: scale(0.97);
-}
-
-    /* ============ HERO BUTTONS (картинки) ============ */
-.hero-btn {
-    width: 100%;
-    border-radius: 18px;
     overflow: hidden;
-    cursor: pointer;
-    box-shadow: 0 6px 24px rgba(var(--emerald-rgb), 0.25),
-                0 0 0 1px rgba(var(--emerald-rgb), 0.15);
-    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
-                box-shadow 0.28s ease;
-    margin-bottom: 14px;
-    background: var(--card);
-    line-height: 0;
-}
-
-.hero-btn img {
-    width: 100%;
-    height: auto;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 14px;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.08) 0%,
+        rgba(var(--emerald-rgb), 0.02) 60%,
+        rgba(0, 0, 0, 0.15) 100%);
+    border: 1px solid var(--border-strong);
     border-radius: 18px;
-    user-select: none;
-    -webkit-user-drag: none;
+    cursor: pointer;
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+    isolation: isolate;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.25s ease,
+                box-shadow 0.3s ease;
+    box-shadow: 0 4px 18px rgba(var(--emerald-rgb), 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.hero-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 32px rgba(var(--emerald-rgb), 0.4),
-                0 0 0 1px rgba(var(--emerald-rgb), 0.3);
+/* Верхняя светящаяся полоска */
+.menu-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent,
+        var(--emerald) 50%,
+        transparent);
+    opacity: 0.8;
 }
 
-.hero-btn:active {
-    transform: scale(0.98);
+/* Мягкое свечение внутри */
+.menu-item-glow {
+    position: absolute;
+    top: -40%;
+    right: -30%;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle,
+        rgba(var(--emerald-rgb), 0.35),
+        transparent 65%);
+    border-radius: 50%;
+    filter: blur(20px);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 0;
 }
 
-.hero-grid {
+.menu-item:hover .menu-item-glow {
+    opacity: 1;
+}
+
+.menu-item:hover {
+    transform: translateY(-3px);
+    border-color: var(--emerald);
+    box-shadow: 0 10px 28px rgba(var(--emerald-rgb), 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.menu-item:active {
+    transform: scale(0.97);
+    box-shadow: 0 4px 14px rgba(var(--emerald-rgb), 0.35);
+}
+
+.menu-item-icon {
+    position: relative;
+    z-index: 1;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    border-radius: 12px;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                0 2px 8px rgba(var(--emerald-rgb), 0.15);
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.25s ease;
+}
+
+.menu-item:hover .menu-item-icon {
+    transform: scale(1.08) rotate(-4deg);
+    background: rgba(var(--emerald-rgb), 0.2);
+}
+
+.menu-item-content {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: 3px;
+    min-width: 0;
+}
+
+.menu-item-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: 0.3px;
+    line-height: 1.1;
+}
+
+.menu-item-sub {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--hint);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Разные акценты для двух кнопок */
+.menu-item-friends .menu-item-icon {
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.25),
+        rgba(var(--emerald-light-rgb), 0.1));
+}
+
+.menu-item-matches .menu-item-icon {
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.25),
+        rgba(217, 171, 90, 0.08));
+    border-color: rgba(217, 171, 90, 0.4);
+    color: var(--gold);
+}
+
+.menu-item-matches::before {
+    background: linear-gradient(90deg,
+        transparent,
+        var(--gold) 50%,
+        transparent);
+}
+
+.menu-item-matches:hover {
+    border-color: rgba(217, 171, 90, 0.6);
+    box-shadow: 0 10px 28px rgba(217, 171, 90, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.menu-item-matches .menu-item-glow {
+    background: radial-gradient(circle,
+        rgba(217, 171, 90, 0.3),
+        transparent 65%);
 }
     
 </style>
@@ -2917,13 +3006,23 @@ body::after {
     <img src="https://ksmuopoasgzyromdjtnt.supabase.co/storage/v1/object/public/branding/play_main.png" alt="Играть">
 </div>
 <div class="section-title">Быстрые действия</div>
-<div class="hero-grid">
-    <div class="hero-btn" onclick="openFriendsPage()">
-        <img src="https://ksmuopoasgzyromdjtnt.supabase.co/storage/v1/object/public/branding/friends_main.png" alt="Друзья">
-    </div>
-    <div class="hero-btn" onclick="openMatchesHistory()">
-        <img src="https://ksmuopoasgzyromdjtnt.supabase.co/storage/v1/object/public/branding/matches_main.png" alt="Последние матчи">
-    </div>
+<div class="menu-grid">
+    <button class="menu-item menu-item-friends" onclick="openFriendsPage()">
+        <span class="menu-item-glow"></span>
+        <span class="menu-item-icon">👥</span>
+        <span class="menu-item-content">
+            <span class="menu-item-title">Друзья</span>
+            <span class="menu-item-sub">Найди тиммейтов</span>
+        </span>
+    </button>
+    <button class="menu-item menu-item-matches" onclick="openMatchesHistory()">
+        <span class="menu-item-glow"></span>
+        <span class="menu-item-icon">🎯</span>
+        <span class="menu-item-content">
+            <span class="menu-item-title">Матчи</span>
+            <span class="menu-item-sub">История игр</span>
+        </span>
+    </button>
 </div>
         <div id="leaderboardHeroWrap" style="margin-bottom: 14px;"></div>
         <div id="leaderboard" style="display: none;"><div class="empty">Загрузка...</div></div>
