@@ -6052,6 +6052,7 @@ async function inviteToParty(userId) {
         }
 
 async function renderResultScreen() {
+    if (matchPollTimer) clearInterval(matchPollTimer);  // ← ДОБАВЬ ПЕРВОЙ СТРОКОЙ
     const container = document.getElementById('resultContent');
     const me = currentUser.telegram_id;
     const isCapA = currentMatch.captain_a_id === me;
@@ -6618,9 +6619,10 @@ function openStandoffLink(url) {
 function renderPlayList() {
     const content = document.getElementById('playScreenContent');
     content.innerHTML = `
-        <div class="play-header">
-            <div class="play-title">🎮 Играть</div>
-            <button class="play-close" onclick="closePlayScreen()">×</button>
+        <div class="play-hero">
+            <div class="play-hero-icon">🎮</div>
+            <div class="play-hero-title">Играть</div>
+            <div class="play-hero-sub">Выбери режим и найди соперников</div>
         </div>
 
         <div class="play-section-label">Режим игры</div>
@@ -6939,10 +6941,6 @@ async function renderRoomContent(roomId) {
         };
 
         content.innerHTML = `
-            <div class="play-header">
-                <div class="play-title">Комната</div>
-                <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
-            </div>
 
             <div class="room-view-header">
                 <div class="room-view-title">${escapeHtml(room.name)}</div>
@@ -7107,8 +7105,10 @@ function unsubscribeRoomRealtime() {
     }
 }
 
-    async function checkTeamsReady(roomId, room) {
+async function checkTeamsReady(roomId, room) {
+            if (!room) return;
             if (room.status !== 'open') return;
+            if (room.teams_notified_at) return;
             if (room.teams_notified_at) return;
 
             const { data: players } = await sb.from('room_players')
@@ -7282,10 +7282,6 @@ async function openVetoView(roomId) {
     const bannedMaps = vetoLog.map(v => v.map);
 
     content.innerHTML = `
-        <div class="play-header">
-            <div class="play-title">🚫 Пики карт</div>
-            <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
-        </div>
         <div class="room-view-header">
             <div class="room-view-title">Ход команды ${room.current_turn}</div>
             <div class="room-view-meta">Осталось карт: ${STANDOFF_MAPS.length - bannedMaps.length}</div>
@@ -7411,10 +7407,6 @@ async function showSidePick(roomId) {
     const alreadyPicked = !!room.side_a;
 
     content.innerHTML = `
-        <div class="play-header">
-            <div class="play-title">⚔️ Выбор стороны</div>
-            <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
-        </div>
         <div class="room-view-header">
             <div class="room-view-title">Карта: ${escapeHtml(room.final_map || '—')}</div>
         </div>
@@ -7482,10 +7474,6 @@ async function showLobbyScreen(roomId, room) {
 
     if (!hasLink && iAmLeader) {
         content.innerHTML = `
-            <div class="play-header">
-                <div class="play-title">🔗 Создание лобби</div>
-                <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
-            </div>
             <div class="profile-hero">
                 <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Ты хост матча</div>
                 <div style="font-size: 12px; color: var(--hint); margin-bottom: 14px; line-height: 1.5;">
@@ -7506,10 +7494,6 @@ async function showLobbyScreen(roomId, room) {
 
     if (!hasLink && !iAmLeader) {
         content.innerHTML = `
-            <div class="play-header">
-                <div class="play-title">⏳ Ожидание</div>
-                <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
-            </div>
             <div class="profile-hero" style="text-align: center;">
                 <div style="font-size: 40px; margin-bottom: 12px;">⏳</div>
                 <div style="font-size: 15px; font-weight: 700; margin-bottom: 8px;">Ожидайте ссылку на вход</div>
@@ -7533,10 +7517,6 @@ async function showLobbyScreen(roomId, room) {
 
     // Есть ссылка
     content.innerHTML = `
-        <div class="play-header">
-            <div class="play-title">🎮 Лобби готово</div>
-            <button class="play-close" onclick="closeRoomAndExit(${roomId})">×</button>
-        </div>
         <div class="profile-hero" style="text-align: center;">
             <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
             <div style="font-size: 15px; font-weight: 700; margin-bottom: 6px;">Ссылка на лобби получена</div>
@@ -7754,11 +7734,11 @@ let lastRoomReadAt = localStorage.getItem('roomLastReadAt') ? new Date(localStor
 async function checkActiveRoom() {
     if (!currentUser) return;
     try {
-        const { data: player } = await sb
-            .from('room_players')
+        const { data: players } = await sb.from('room_players')
             .select('room_id')
             .eq('telegram_id', currentUser.telegram_id)
-            .maybeSingle();
+            .limit(1);
+        const player = players?.[0];
 
         const indicator = document.getElementById('headerRoomIndicator');
 
@@ -7903,10 +7883,6 @@ async function openRoomChat(roomId) {
     const { data: room } = await sb.from('rooms').select('name, mode, final_map').eq('id', roomId).single();
 
     content.innerHTML = `
-        <div class="play-header">
-            <div class="play-title">💬 Чат комнаты</div>
-            <button class="play-close" onclick="closeRoomChat(${roomId})">×</button>
-        </div>
         <div style="text-align: center; font-size: 12px; color: var(--hint); margin-bottom: 12px;">
             ${escapeHtml(room?.name || '')} · ${room?.mode || ''}
         </div>
