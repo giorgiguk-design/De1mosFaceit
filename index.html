@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>De1mos Faceit</title>
-    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" async></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
         /* ============================================================
    ТЕМЫ
@@ -5060,289 +5060,79 @@ body::after {
     transform: scale(1.03);
 }
 
-    /* ============================================================
-   CYBER ICONS (SVG)
-   ============================================================ */
-.ci {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    /* ============ CYBER SVG ICONS ============ */
+.cy-icon {
     width: 1em;
     height: 1em;
+    display: inline-block;
+    vertical-align: -0.15em;
     flex-shrink: 0;
-    color: currentColor;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-                filter 0.25s ease;
-    filter: drop-shadow(0 0 6px currentColor);
-    opacity: 0.95;
-    vertical-align: -0.125em;
-}
-.ci svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-    overflow: visible;
-}
-.ci svg * { vector-effect: non-scaling-stroke; }
-.ci svg [stroke] {
-    stroke-width: 1.6;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.45));
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                filter 0.25s ease;
 }
-.ci-xs  { font-size: 12px; }
-.ci-sm  { font-size: 14px; }
-.ci-md  { font-size: 18px; }
-.ci-lg  { font-size: 22px; }
-.ci-xl  { font-size: 28px; }
-.ci-2xl { font-size: 36px; }
-.ci-3xl { font-size: 48px; }
-.ci-4xl { font-size: 64px; }
-
-.ci-glow-strong {
-    filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 20px currentColor);
-}
-.ci-muted { opacity: 0.55; filter: none; }
-.ci-emerald { color: var(--emerald); }
-.ci-gold    { color: var(--gold); }
-.ci-red     { color: var(--red); }
-.ci-purple  { color: var(--purple); }
-.ci-hint    { color: var(--hint); }
-.ci-text    { color: var(--text); }
-
-.ci-pulse { animation: ciPulse 2.4s ease-in-out infinite; }
-@keyframes ciPulse {
-    0%, 100% { opacity: 0.95; transform: scale(1); }
-    50%      { opacity: 0.7;  transform: scale(1.06); }
-}
-.ci-float { animation: ciFloat 3s ease-in-out infinite; }
-@keyframes ciFloat {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-3px); }
+.cy-icon * {
+    vector-effect: non-scaling-stroke;
 }
 
-    /* Авто-акценты для SVG-иконок в конкретных местах */
+/* Размеры */
+.cy-xs { width: 14px; height: 14px; }
+.cy-sm { width: 18px; height: 18px; }
+.cy-md { width: 22px; height: 22px; }
+.cy-lg { width: 28px; height: 28px; }
+.cy-xl { width: 36px; height: 36px; }
+.cy-2xl { width: 48px; height: 48px; }
 
-/* Главная — статы */
-.stat-card-matches  .ci { color: var(--emerald); }
-.stat-card-wins     .ci { color: var(--gold); }
-.stat-card-winrate  .ci { color: var(--emerald-3); }
+/* Акценты */
+.cy-gold   { color: var(--gold);   filter: drop-shadow(0 0 6px rgba(217,171,90,0.55)); }
+.cy-red    { color: var(--red);    filter: drop-shadow(0 0 6px rgba(255,84,112,0.55)); }
+.cy-purple { color: var(--purple); filter: drop-shadow(0 0 6px rgba(167,139,250,0.55)); }
+.cy-emerald{ color: var(--emerald);}
+.cy-hint   { color: var(--hint);   filter: none; opacity: 0.85; }
+.cy-white  { color: var(--text);   filter: none; }
 
-/* Play button */
-.pbc-icon.ci   { color: var(--emerald); filter: drop-shadow(0 0 10px var(--emerald)); }
-.cpm-icon.ci   { color: #04140e; filter: none; }
+/* Наведение */
+.menu-item:hover .cy-icon,
+.nav-item:hover .cy-icon,
+.leaderboard-item:hover .cy-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.85));
+}
+.menu-item:active .cy-icon,
+.nav-item:active .cy-icon {
+    transform: scale(0.92);
+}
 
-/* Mode selector */
-.mode-selector .mode-card.active .ci { color: var(--emerald); }
+/* Навигация — активное состояние */
+.nav-item.active .cy-icon {
+    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.95));
+    animation: navPulse 2s ease-in-out infinite;
+}
 
-/* Room actions */
-.rv-icon-btn .ci         { color: var(--emerald); }
-.rv-icon-btn.danger .ci  { color: var(--red); }
+/* Анимация пульса SVG */
+@keyframes cyPulse {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.45)); }
+    50%      { filter: drop-shadow(0 0 14px rgba(var(--emerald-rgb), 0.95)); }
+}
+.cy-pulse { animation: cyPulse 2.4s ease-in-out infinite; }
 
-/* Club mini buttons */
-.club-mini-btn .ci          { color: var(--emerald); }
-.club-mini-btn.danger .ci   { color: var(--red); }
-
-/* Menu item icons */
-.menu-item-friends .menu-item-icon .ci { color: var(--emerald); }
-.menu-item-matches .menu-item-icon .ci { color: var(--gold); }
-
-/* Nav active */
-.nav-item.active .nav-icon.ci { color: var(--emerald); }
-
-/* Kicked / danger rows */
-.menu-item-matches .menu-item-icon .ci { filter: drop-shadow(0 0 6px rgba(217,171,90,0.6)); }
-
-/* Notif button */
-.notif-btn .ci { color: var(--emerald); }
-.notif-btn.has-notif .ci { color: var(--red); }
-
-/* Header room indicator */
-.header-room-indicator .ci { color: var(--emerald); }
-
-/* Bottom nav иконки — побольше */
-.nav-icon.ci { font-size: 22px; }
-
-/* Крупные декоративные — убираем лишний glow */
-.profile-hero .ci-3xl,
-.profile-hero .ci-4xl { filter: drop-shadow(0 0 12px currentColor); }
+/* Иконки в круглых кнопках */
+.notif-btn .cy-icon,
+.play-close-float .cy-icon,
+.player-modal-close .cy-icon,
+.chat-back-btn .cy-icon {
+    width: 22px;
+    height: 22px;
+}
     
 </style>
 </head>
 <body>
-
-    <!-- ============================================================
-     CYBER ICON SPRITE
-     ============================================================ -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-        <symbol id="i-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M6 10h4M8 8v4M15 9h.01M18 11h.01M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258a4 4 0 0 0-3.995-3.742Z"/>
-        </symbol>
-        <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/>
-            <path d="M17 5h3a3 3 0 0 1-3 3M7 5H4a3 3 0 0 0 3 3"/>
-            <path d="M8.5 8.5h2M13.5 8.5h2"/>
-        </symbol>
-        <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="9"/>
-            <circle cx="12" cy="12" r="5"/>
-            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
-            <path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>
-        </symbol>
-        <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/>
-        </symbol>
-        <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3Z"/>
-            <path d="m9 12 2 2 4-4"/>
-        </symbol>
-        <symbol id="i-swords" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>
-            <path d="M13 19l6-6M16 16l4 4M19 21l2-2"/>
-            <path d="M9.5 17.5 21 6V3h-3L6.5 14.5"/>
-            <path d="M11 19l-6-6M8 16l-4 4M5 21l-2-2"/>
-        </symbol>
-        <symbol id="i-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 8l3.5 3L12 5l5.5 6L21 8l-2 11H5L3 8Z"/>
-            <path d="M5 19h14" stroke-width="2"/>
-            <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
-        </symbol>
-        <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9Z"/>
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-        </symbol>
-        <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z"/>
-            <path d="M8 9h8M8 13h5"/>
-        </symbol>
-        <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-        </symbol>
-        <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1V9.5Z"/>
-        </symbol>
-        <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 6h18M3 12h18M3 18h18"/>
-        </symbol>
-        <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="8" r="4"/>
-            <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>
-        </symbol>
-        <symbol id="i-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <path d="M16 17l5-5-5-5M21 12H9"/>
-        </symbol>
-        <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 5v14M5 12h14"/>
-        </symbol>
-        <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="11" cy="11" r="7"/>
-            <path d="m21 21-4.35-4.35"/>
-        </symbol>
-        <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
-        </symbol>
-        <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10"/>
-            <circle cx="8" cy="10" r="1.2" fill="currentColor" stroke="none"/>
-            <circle cx="12" cy="7" r="1.2" fill="currentColor" stroke="none"/>
-            <circle cx="16" cy="10" r="1.2" fill="currentColor" stroke="none"/>
-            <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/>
-        </symbol>
-        <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="4" y="11" width="16" height="10" rx="2"/>
-            <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-            <circle cx="12" cy="16" r="1.2" fill="currentColor" stroke="none"/>
-        </symbol>
-        <symbol id="i-scroll" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 0 2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 1-2Z"/>
-            <path d="M9 8h6M9 12h6M9 16h4"/>
-        </symbol>
-        <symbol id="i-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="m5.6 5.6 12.8 12.8"/>
-        </symbol>
-        <symbol id="i-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M22 12h-6l-2 3h-4l-2-3H2"/>
-            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/>
-        </symbol>
-        <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6M14 11v6"/>
-        </symbol>
-        <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="8" y="2" width="8" height="4" rx="1"/>
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-        </symbol>
-        <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="m22 2-7 20-4-9-9-4 20-7Z"/>
-            <path d="M22 2 11 13"/>
-        </symbol>
-        <symbol id="i-paperclip" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-        </symbol>
-        <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="m5 13 4 4L19 7"/>
-        </symbol>
-        <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M6 6 18 18M18 6 6 18"/>
-        </symbol>
-        <symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09Z"/>
-            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2Z"/>
-            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
-        </symbol>
-        <symbol id="i-hourglass" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M6 2h12M6 22h12M6 2v4a6 6 0 0 0 6 6 6 6 0 0 0 6-6V2M6 22v-4a6 6 0 0 1 6-6 6 6 0 0 1 6 6v4"/>
-        </symbol>
-        <symbol id="i-controller" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="2" y="7" width="20" height="12" rx="3"/>
-            <path d="M7 11v2M6 12h2M16 11h.01M18 13h.01"/>
-        </symbol>
-        <symbol id="i-crossed" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 3l7 7M21 21l-7-7"/>
-            <path d="M3 3h4v4M21 21h-4v-4"/>
-        </symbol>
-        <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2v11Z"/>
-            <circle cx="12" cy="13" r="4"/>
-        </symbol>
-        <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="9" cy="9" r="2"/>
-            <path d="m21 15-5-5L5 21"/>
-        </symbol>
-        <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-            <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>
-        </symbol>
-        <symbol id="i-telegram" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="m22 2-7 20-4-9-9-4 20-7Z"/>
-        </symbol>
-        <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M4 22V4a1 1 0 0 1 1-1h13l-3 4 3 4H5"/>
-        </symbol>
-        <symbol id="i-skull" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 2a9 9 0 0 0-9 9v3a3 3 0 0 0 3 3v3h2v-3h2v3h2v-3h2v3h2v-3a3 3 0 0 0 3-3v-3a9 9 0 0 0-9-9Z"/>
-            <circle cx="9" cy="11" r="1.2" fill="currentColor" stroke="none"/>
-            <circle cx="15" cy="11" r="1.2" fill="currentColor" stroke="none"/>
-            <path d="M10 16h4"/>
-        </symbol>
-        <symbol id="i-scales" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 3v18M6 21h12M12 3l-6 6M12 3l6 6"/>
-            <path d="M6 9l-3 6h6l-3-6ZM18 9l-3 6h6l-3-6Z"/>
-        </symbol>
-        <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z"/>
-        </symbol>
-    </defs>
-</svg>
-    
     <div class="bg-particles"></div>
     <div class="bg-rays"></div>
 
@@ -5351,11 +5141,18 @@ body::after {
 <div class="header-title">De1mos <span>Faceit</span></div>
         <div style="display: flex; gap: 8px; align-items: center;">
             <div class="header-room-indicator" id="headerRoomIndicator" onclick="reopenActiveRoom()" style="display: none;">
-                <div class="hri-dot"></div>
-                🎮
-            </div>
-            <button class="notif-btn" id="notifBtn" onclick="openNotificationsSheet()">
-    🔔
+    <div class="hri-dot"></div>
+    <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+        <path d="M6 11h4M8 9v4"/>
+        <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
+        <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
+    </svg>
+</div>
+<button class="notif-btn" id="notifBtn" onclick="openNotificationsSheet()">
+    <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+    </svg>
     <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
 </button>
         </div>
@@ -5412,7 +5209,13 @@ body::after {
     <span class="pbc-corner pbc-corner-br"></span>
     <span class="pbc-scan"></span>
     <span class="pbc-content">
-        <span class="pbc-icon">🎮</span>
+        <span class="pbc-icon">
+    <svg class="cy-icon cy-xl" viewBox="0 0 24 24">
+        <path d="M6 11h4M8 9v4"/>
+        <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
+        <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
+    </svg>
+</span>
         <span class="pbc-text">
             <span class="pbc-title">ИГРАТЬ</span>
             <span class="pbc-sub">Найти матч · Создать комнату</span>
@@ -5425,13 +5228,13 @@ body::after {
     <button class="menu-item menu-item-friends" onclick="openFriendsPage()">
     <span class="menu-item-glow"></span>
     <span class="menu-item-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-    </span>
+    <svg class="cy-icon cy-md cy-white" viewBox="0 0 24 24">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+</span>
         <span class="menu-item-content">
             <span class="menu-item-title">Друзья</span>
             <span class="menu-item-sub">Найди тиммейтов</span>
@@ -5439,22 +5242,43 @@ body::after {
     </button>
     <button class="menu-item menu-item-matches" onclick="openMatchesHistory()">
         <span class="menu-item-glow"></span>
-        <span class="menu-item-icon">🎯</span>
-        <span class="menu-item-content">
-            <span class="menu-item-title">Матчи</span>
-            <span class="menu-item-sub">История игр</span>
-        </span>
+        <span class="menu-item-icon">
+    <svg class="cy-icon cy-md cy-gold" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="5"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        <path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>
+    </svg>
+</span>
+<span class="menu-item-content">
+    <span class="menu-item-title">Матчи</span>
+    <span class="menu-item-sub">История игр</span>
+</span>
     </button>
 </div>
 <div id="leaderboardHeroWrap" style="margin-bottom: 14px;"></div>
-<div class="section-title" id="leaderboardTitle" style="display: none;">🏆 Топ-10 игроков</div>
+<div class="section-title" id="leaderboardTitle" style="display: none;">
+    <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/>
+        <path d="M7 5H4v2a4 4 0 0 0 4 4M17 5h3v2a4 4 0 0 1-4 4"/>
+        <path d="M9 20h6M12 13v7"/>
+    </svg>
+    Топ-10 игроков
+</div>
 <div id="leaderboard"><div class="empty">Загрузка...</div></div>
     </div>
 
         <!-- ============ LEADERBOARD FULL ============ -->
     <div class="container page" id="page-leaderboard">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 12px;">
-            <div class="section-title" style="margin: 0; flex: 1;">🏆 Лидерборд</div>
+            <div class="section-title">
+    <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/>
+        <path d="M7 5H4v2a4 4 0 0 0 4 4M17 5h3v2a4 4 0 0 1-4 4"/>
+        <path d="M9 20h6M12 13v7"/>
+    </svg>
+    Лидерборд
+</div>
             <button class="friends-search-btn" onclick="switchPage('dashboard')">← Назад</button>
         </div>
         <div id="leaderboardFull"><div class="empty">Загрузка...</div></div>
@@ -5491,7 +5315,14 @@ body::after {
 
         <!-- ============ MATCHES HISTORY ============ -->
     <div class="container page" id="page-matches">
-        <div class="section-title" style="margin-top: 0;">🎯 Последние матчи</div>
+        <div class="section-title" style="margin-top: 0;">
+    <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="5"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+    Последние матчи
+</div>
         <div id="matchesHistoryList"><div class="empty">Загрузка...</div></div>
     </div>
 
@@ -5528,7 +5359,12 @@ body::after {
 
         <button class="play-btn btn-with-cover" id="startSearchBtn" data-cover="start_search" onclick="startSearch()">
     <span class="btn-cover-bg"></span>
-    🎯 НАЙТИ МАТЧ
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24" style="margin-right: 6px; vertical-align: -3px;">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="5"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+    НАЙТИ МАТЧ
 </button>
         <button class="profile-action-btn cancel" onclick="leavePartyAndGoBack()">◀ Назад</button>
     </div>
@@ -5602,23 +5438,47 @@ body::after {
     <!-- ============ NAV ============ -->
 <nav class="bottom-nav">
     <button class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
-        <span class="nav-icon">🏠</span><span>Главная</span>
+        <span class="nav-icon">
+            <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+                <path d="M3 10.5 12 3l9 7.5"/>
+                <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/>
+            </svg>
+        </span><span>Главная</span>
     </button>
     <button class="nav-item" data-page="chat" onclick="openChatPage()">
-        <span class="nav-icon">💬</span><span>Чат</span>
+        <span class="nav-icon">
+            <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+                <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+                <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>
+            </svg>
+        </span><span>Чат</span>
     </button>
     <button class="nav-item" data-page="club" onclick="openClubPage()">
-        <span class="nav-icon">🛡️</span><span>Клуб</span>
+        <span class="nav-icon">
+            <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+                <path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z"/>
+                <path d="M12 8v4M10 10h4"/>
+            </svg>
+        </span><span>Клуб</span>
     </button>
     <button class="nav-item" id="menuNavBtn" onclick="toggleMenuDrawer()">
-        <span class="nav-icon">☰</span><span>Меню</span>
+        <span class="nav-icon">
+            <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </span><span>Меню</span>
     </button>
 </nav>
 
     <!-- ============ CHAT VIEW ============ -->
     <div class="chat-view" id="chatView">
         <div class="chat-view-header">
-            <button class="chat-back-btn" onclick="closeChatView()">←</button>
+            <button class="chat-back-btn" onclick="closeChatView()">
+    <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+        <path d="M15 6l-6 6 6 6"/>
+        <path d="M9 12h11"/>
+    </svg>
+</button>
             <div class="chat-list-avatar" id="chatViewAvatar">?</div>
             <div class="chat-view-title" id="chatViewTitle">—</div>
         </div>
@@ -5628,13 +5488,26 @@ body::after {
                 <div class="chat-reply-bar-author" id="chatReplyAuthor">—</div>
                 <div class="chat-reply-bar-text" id="chatReplyText">—</div>
             </div>
-            <button class="chat-reply-bar-close" onclick="cancelReply()">×</button>
+            <button class="chat-reply-bar-close" onclick="cancelReply()">
+    <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6 6 18"/>
+    </svg>
+</button>
         </div>
         <div class="chat-input-bar">
             <input type="file" id="chatImageInput" accept="image/*">
-            <button class="chat-attach-btn" onclick="document.getElementById('chatImageInput').click()">📎</button>
+            <button class="chat-attach-btn" onclick="document.getElementById('chatImageInput').click()">
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+        <path d="M21 12.5 12.5 21a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L16 7"/>
+    </svg>
+</button>
             <input type="text" id="chatInput" placeholder="Сообщение..." autocomplete="off">
-            <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+            <button class="chat-send-btn" onclick="sendMessage()">
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+        <path d="M22 2 11 13"/>
+        <path d="M22 2l-7 20-4-9-9-4 20-7Z"/>
+    </svg>
+</button>
         </div>
     </div>
 
@@ -5642,7 +5515,13 @@ body::after {
 <div class="player-modal" id="onboardingModal">
     <div class="player-modal-inner" style="max-width: 460px;">
         <div style="text-align: center; margin-bottom: 20px;">
-            <div style="font-size: 56px; margin-bottom: 10px;">🎮</div>
+    <div style="margin-bottom: 14px; display: inline-block;">
+        <svg class="cy-icon cy-2xl cy-pulse" viewBox="0 0 24 24">
+            <path d="M6 11h4M8 9v4"/>
+            <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
+            <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
+        </svg>
+    </div>
             <div style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">Добро пожаловать!</div>
             <div style="font-size: 13px; color: var(--hint); line-height: 1.5;">
                 Заполни профиль, чтобы играть на De1mos Faceit
@@ -5703,7 +5582,11 @@ body::after {
     <!-- ============ PLAYER MODAL ============ -->
     <div class="player-modal" id="playerModal" onclick="if(event.target===this)closePlayerModal()">
         <div class="player-modal-inner">
-            <button class="player-modal-close" onclick="closePlayerModal()">×</button>
+            <button class="player-modal-close" onclick="closePlayerModal()">
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6 6 18"/>
+    </svg>
+</button>
             <div id="playerModalContent"><div class="empty">Загрузка...</div></div>
         </div>
     </div>
@@ -5715,8 +5598,17 @@ body::after {
 
 <!-- ============ PLAY SCREEN ============ -->
 <div class="play-screen" id="playScreen">
-    <button class="play-close-float" id="playCloseFloat" onclick="closePlayScreen()">×</button>
-    <button class="play-enter-float" id="playEnterFloat" onclick="enterGameFromFloat()">🎮 ВОЙТИ В ИГРУ</button>
+    <button class="play-close-float" id="playCloseFloat" onclick="closePlayScreen()">
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6 6 18"/>
+    </svg>
+</button>
+<button class="play-enter-float" id="playEnterFloat" onclick="enterGameFromFloat()">
+    <svg class="cy-icon cy-xs" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M5 3l14 9-14 9V3Z"/>
+    </svg>
+    ВОЙТИ В ИГРУ
+</button>
     <div class="play-screen-content" id="playScreenContent"></div>
 </div>
 
@@ -6039,32 +5931,78 @@ body::after {
             <div class="menu-drawer-name" id="menuDrawerName">Игрок</div>
             <div class="menu-drawer-username" id="menuDrawerUsername">@—</div>
         </div>
-                <button class="menu-drawer-settings" onclick="openFaqSheet()" title="FAQ" style="font-size: 16px;">❓</button>
-        <button class="menu-drawer-settings" onclick="menuDrawerGo('settings')" title="Настройки">⚙️</button>
+                <button class="menu-drawer-settings" onclick="openFaqSheet()" title="FAQ">
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.7v.5"/>
+        <path d="M12 17h.01"/>
+    </svg>
+</button>
+<button class="menu-drawer-settings" onclick="menuDrawerGo('settings')" title="Настройки">
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+    </svg>
+</button>
     </div>
 
 <div class="menu-drawer-list">
     <button class="menu-drawer-btn" onclick="menuDrawerGo('profile')">
-        <span class="menu-drawer-icon">👤</span> Профиль
-    </button>
-    <button class="menu-drawer-btn" onclick="menuDrawerGo('matches')">
-        <span class="menu-drawer-icon">🎯</span> Последние матчи
-    </button>
-    <button class="menu-drawer-btn" onclick="menuDrawerGo('friends')">
-        <span class="menu-drawer-icon">👥</span> Друзья
-    </button>
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 21a8 8 0 0 1 16 0"/>
+        </svg>
+    </span> Профиль
+</button>
+<button class="menu-drawer-btn" onclick="menuDrawerGo('matches')">
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md cy-gold" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"/>
+            <circle cx="12" cy="12" r="5"/>
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+            <path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>
+        </svg>
+    </span> Последние матчи
+</button>
+<button class="menu-drawer-btn" onclick="menuDrawerGo('friends')">
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+            <circle cx="9" cy="8" r="3.5"/>
+            <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+            <circle cx="17.5" cy="9" r="2.5"/>
+            <path d="M16 20a5 5 0 0 1 6-3.5"/>
+        </svg>
+    </span> Друзья
+</button>
 
-    <button class="menu-drawer-btn" data-menu="chat" onclick="menuDrawerGo('chat')">
-        <span class="menu-drawer-icon">💬</span> Чаты
-    </button>
+<button class="menu-drawer-btn" data-menu="chat" onclick="menuDrawerGo('chat')">
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+            <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+            <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>
+        </svg>
+    </span> Чаты
+</button>
 
-    <button class="menu-drawer-btn" onclick="menuDrawerSupport()">
-        <span class="menu-drawer-icon">🆘</span> Тех-поддержка
-    </button>
-    <button class="menu-drawer-btn moderator" id="moderatorMenuBtn" style="display: none;" onclick="menuDrawerGo('moderator')">
-        <span class="menu-drawer-icon">⚖️</span> Модератор-панель
-    </button>
-</div>
+<button class="menu-drawer-btn" onclick="menuDrawerSupport()">
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md cy-red" viewBox="0 0 24 24">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Z"/>
+            <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.7v.5"/>
+            <path d="M12 17h.01"/>
+        </svg>
+    </span> Тех-поддержка
+</button>
+<button class="menu-drawer-btn moderator" id="moderatorMenuBtn" style="display: none;" onclick="menuDrawerGo('moderator')">
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md cy-gold" viewBox="0 0 24 24">
+            <path d="M12 3v18M5 8h14"/>
+            <path d="M5 8 3 13a3 3 0 0 0 6 0Z"/>
+            <path d="M19 8l2 5a3 3 0 0 1-6 0Z"/>
+        </svg>
+    </span> Модератор-панель
+</button>
 
     <div class="menu-drawer-legal">
     <button onclick="openPrivacyPolicySheet()">Политика конфиденциальности</button>
@@ -6072,8 +6010,13 @@ body::after {
 
 <div class="menu-drawer-footer" id="menuDrawerFooter" style="display: none;">
     <button class="menu-drawer-btn admin" onclick="menuDrawerGo('admin')">
-        <span class="menu-drawer-icon">👑</span> Админ-панель
-    </button>
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md cy-gold" viewBox="0 0 24 24">
+            <path d="M3 8l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/>
+            <path d="M5 20h14"/>
+        </svg>
+    </span> Админ-панель
+</button>
 </div>
 </div>
     <div class="toast" id="toast"></div>
@@ -6096,17 +6039,11 @@ body::after {
 
         const MAP_POOL = ["Sandstone", "Province", "Breeze", "Dune", "Rust", "Hanami", "Prison"];
 
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let tg = null;
-
-function refreshTg() {
-    tg = window.Telegram?.WebApp || null;
-    if (tg) {
-        try { tg.ready(); tg.expand(); } catch(e) { console.warn(e); }
-    }
-    return tg;
-}
+        const tg = window.Telegram?.WebApp;
+        let currentUser = null;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) { console.warn(e); } }
 
         // ============================================================
         // STATE
@@ -6341,7 +6278,13 @@ function refreshTg() {
                     ` : ''}
                 </div>
 
-                <div class="section-title">🚨 Спорные матчи (${disputed.length})</div>
+                <div class="section-title">
+    <svg class="cy-icon cy-xs cy-red" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/>
+        <path d="M12 9v4M12 17h.01"/>
+    </svg>
+    Спорные матчи (${disputed.length})
+</div>
             `;
 
             if (!disputed.length) {
@@ -6379,7 +6322,13 @@ function refreshTg() {
                 }).join('');
             }
 
-            html += `<div class="section-title" style="margin-top: 20px;">📨 Апелляции (${reports.length})</div>`;
+            html += `<div class="section-title" style="margin-top: 20px;">
+    <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M3 6h18v12H3z"/>
+        <path d="m3 6 9 7 9-7"/>
+    </svg>
+    Апелляции (${reports.length})
+</div>`;
 
             if (!reports.length) {
                 html += '<div class="empty">Апелляций нет</div>';
@@ -6618,19 +6567,18 @@ async function notify(telegramId, text, type = null) {
         // ============================================================
         // INIT
         // ============================================================
-async function init() {
-    refreshTg();                     // ← перечитываем window.Telegram.WebApp
-    let user = tg?.initDataUnsafe?.user;
+        async function init() {
+            if (!tg && !location.search.includes('dev=1')) { showToast('Откройте через Telegram'); return; }
 
-    // Fallback: если Telegram SDK не загрузился — используем dev-режим
-    if (!user) {
-        const params = new URLSearchParams(location.search);
-        const devId = Number(params.get('id')) || 999999999;
-        const devName = params.get('name') || ('DevUser' + devId);
-        user = { id: devId, first_name: devName, username: 'dev' + devId, photo_url: null };
-        console.warn('⚠️ Telegram WebApp недоступен — DEV MODE', user);
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
-    }
+            let user = tg?.initDataUnsafe?.user;
+            if (!user && (location.hostname === 'localhost' || location.search.includes('dev=1'))) {
+                const params = new URLSearchParams(location.search);
+                const devId = Number(params.get('id')) || 999999999;
+                const devName = params.get('name') || ('DevUser' + devId);
+                user = { id: devId, first_name: devName, username: 'dev' + devId, photo_url: null };
+                console.warn('⚠️ DEV MODE', user);
+            }
+            if (!user) { showToast('Не удалось получить данные Telegram'); return; }
 
             try {
                 const { data: existing } = await sb.from('users')
@@ -10348,7 +10296,12 @@ async function renderAdminPanel() {
 
         const modsCount = (mods || []).length;
 
-        html += `<div class="section-title" style="margin-top:20px;">👑 Модераторы (${modsCount})</div>`;
+        html += `<div class="section-title" style="margin-top:20px;">
+    <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M3 8l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/>
+    </svg>
+    Модераторы (${modsCount})
+</div>`;
 
         if (!mods || mods.length === 0) {
             html += '<div class="empty">Модераторов пока нет</div>';
@@ -10551,7 +10504,13 @@ function renderPlayList() {
     const content = document.getElementById('playScreenContent');
     content.innerHTML = `
         <div class="play-hero-compact">
-            <div class="phc-icon">🎮</div>
+            <div class="phc-icon">
+    <svg class="cy-icon cy-xl cy-pulse" viewBox="0 0 24 24">
+        <path d="M6 11h4M8 9v4"/>
+        <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
+        <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
+    </svg>
+</div>
             <div class="phc-text">
                 <div class="phc-title">Играть</div>
                 <div class="phc-sub">Найди матч или создай свою комнату</div>
@@ -10577,9 +10536,20 @@ function renderPlayList() {
         </div>
 
         <div class="play-actions">
-            <button class="play-btn-find" onclick="findOrCreateRoom()">🔍 Найти</button>
-            <button class="play-btn-create" onclick="createRoomInline()">➕ Создать</button>
-        </div>
+    <button class="play-btn-find" onclick="findOrCreateRoom()">
+        <svg class="cy-icon cy-sm" viewBox="0 0 24 24" style="margin-right: 4px;">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m20 20-3.5-3.5"/>
+        </svg>
+        Найти
+    </button>
+    <button class="play-btn-create" onclick="createRoomInline()">
+        <svg class="cy-icon cy-sm" viewBox="0 0 24 24" style="margin-right: 4px;">
+            <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Создать
+    </button>
+</div>
 
         <div class="play-section-label">Открытые комнаты</div>
         <div id="playRoomsList" class="play-rooms-list">
@@ -11024,37 +10994,66 @@ async function renderRoomContent(roomId) {
 
             ${iAmReady ? `
                 <div class="rv-actions">
-                    <button class="rv-icon-btn" onclick="openInviteFriendToRoom(${roomId})" title="Пригласить друга">
-                        <span class="rv-ico">➕</span>
-                        <span class="rv-lbl">Друг</span>
-                    </button>
-                    <button class="rv-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
-                        <span class="rv-ico">💬</span>
-                        <span class="rv-lbl">Чат</span>
-                        <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
-                    </button>
-                    <button class="rv-icon-btn" onclick="openChangeTeamSheet(${roomId})" title="Сменить команду">
-                        <span class="rv-ico">🔄</span>
-                        <span class="rv-lbl">Сменить</span>
-                    </button>
-                    <button class="rv-icon-btn danger" onclick="leaveRoomFromRoomView(${roomId})" title="Покинуть">
-                        <span class="rv-ico">🚪</span>
-                        <span class="rv-lbl">Выйти</span>
-                    </button>
-                    ${iAmLeader ? `
-                        <button class="rv-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть">
-                            <span class="rv-ico">⛔</span>
-                            <span class="rv-lbl">Закрыть</span>
-                        </button>
-                    ` : ''}
-                </div>
+    <button class="rv-icon-btn" onclick="openInviteFriendToRoom(${roomId})" title="Пригласить друга">
+        <span class="rv-ico">
+            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5"/>
+                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+                <path d="M19 8v6M16 11h6"/>
+            </svg>
+        </span>
+        <span class="rv-lbl">Друг</span>
+    </button>
+    <button class="rv-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
+        <span class="rv-ico">
+            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+                <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>
+            </svg>
+        </span>
+        <span class="rv-lbl">Чат</span>
+        <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
+    </button>
+    <button class="rv-icon-btn" onclick="openChangeTeamSheet(${roomId})" title="Сменить команду">
+        <span class="rv-ico">
+            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                <path d="M3 8h14l-4-4M21 16H7l4 4"/>
+            </svg>
+        </span>
+        <span class="rv-lbl">Сменить</span>
+    </button>
+    <button class="rv-icon-btn danger" onclick="leaveRoomFromRoomView(${roomId})" title="Покинуть">
+        <span class="rv-ico">
+            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                <path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9"/>
+                <path d="M10 12h11M18 9l3 3-3 3"/>
+            </svg>
+        </span>
+        <span class="rv-lbl">Выйти</span>
+    </button>
+    ${iAmLeader ? `
+        <button class="rv-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть">
+            <span class="rv-ico">
+                <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M6 6l12 12"/>
+                </svg>
+            </span>
+            <span class="rv-lbl">Закрыть</span>
+        </button>
+    ` : ''}
+</div>
 
                 ${iAmLeader ? `
                     <button class="room-launch-btn ${canStart ? 'ready' : 'waiting'}" onclick="startMatch(${room.id})" ${!canStart ? 'disabled' : ''} style="margin-top: 14px;">
-                        <span class="rlb-icon">${canStart ? '🚀' : '⏳'}</span>
-                        <span class="rlb-text">${canStart ? 'ЗАПУСТИТЬ МАТЧ' : 'ОЖИДАНИЕ ИГРОКОВ'}</span>
-                        <span class="rlb-sub">${teamA.length}/${needPerTeam} vs ${teamB.length}/${needPerTeam}</span>
-                    </button>
+    <span class="rlb-icon">
+        ${canStart
+            ? `<svg class="cy-icon cy-xl" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3Z"/></svg>`
+            : `<svg class="cy-icon cy-xl" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`}
+    </span>
+    <span class="rlb-text">${canStart ? 'ЗАПУСТИТЬ МАТЧ' : 'ОЖИДАНИЕ ИГРОКОВ'}</span>
+    <span class="rlb-sub">${teamA.length}/${needPerTeam} vs ${teamB.length}/${needPerTeam}</span>
+</button>
                 ` : ''}
             ` : ''}
         `;
@@ -11435,8 +11434,11 @@ async function openVetoView(roomId) {
             </div>
         `}
         <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
-            💬 Чат комнаты
-        </button>
+    <svg class="cy-icon cy-xs" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+    </svg>
+    Чат комнаты
+</button>
     `;
 
     setTimeout(() => updateRoomChatButton(roomId), 100);
@@ -11645,9 +11647,12 @@ async function showLobbyScreen(roomId, room) {
                style="display: block; padding: 16px; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); color: #04140e; font-size: 16px; font-weight: 900; text-decoration: none; border-radius: 14px;">
                 🎮 ВСТУПИТЬ В ЛОББИ
             </a>
-            <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 12px;">
-                💬 Чат комнаты
-            </button>
+            <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
+    <svg class="cy-icon cy-xs" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+    </svg>
+    Чат комнаты
+</button>
         </div>
     `;
 
@@ -14205,40 +14210,10 @@ function devTagHTML(telegramId) {
     return `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>`;
 } 
 
-            function subscribeClubRealtime() {
-    if (!myClub?.club) return;
-    if (clubChannel) sb.removeChannel(clubChannel);
-    clubChannel = sb.channel('club_' + myClub.club.id)
-        .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'club_members',
-            filter: 'club_id=eq.' + myClub.club.id
-        }, () => { loadClub(); })
-        .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'club_requests',
-            filter: 'club_id=eq.' + myClub.club.id
-        }, () => { updateRequestsBadge(); })
-        .subscribe();
-}
-
 // ============================================================
 // BOOT
 // ============================================================
-function boot() {
-    // Даём async-SDK шанс загрузиться (макс. 1.5 сек)
-    if (!window.Telegram?.WebApp && !location.search.includes('dev=1')) {
-        let tries = 0;
-        const wait = setInterval(() => {
-            tries++;
-            if (window.Telegram?.WebApp || tries > 15) {
-                clearInterval(wait);
-                init();
-            }
-        }, 100);
-    } else {
-        init();
-    }
-}
-boot();
+init();
 
 // Периодическое обновление бейджа уведомлений
 registerInterval('notifBadge', setInterval(() => {
@@ -14271,267 +14246,14 @@ registerInterval('notifBadge', setInterval(() => {
         <div id="allClubsList"><div class="empty">Загрузка...</div></div>
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
-          <script>
-/* ============================================================
-   AUTO-REPLACE EMOJI → SVG ICONS
-   ============================================================ */
-(function() {
-    'use strict';
 
-    // Карта: эмодзи → id symbol
-    const EMOJI_MAP = {
-        // Header / nav
-        '🏠': 'i-home',
-        '💬': 'i-chat',
-        '🛡️': 'i-shield',
-        '☰': 'i-menu',
-        '🔔': 'i-bell',
-        '⚙️': 'i-settings',
-        '❓': 'i-help',
-        '🆘': 'i-help',
-        '⚖️': 'i-scales',
-
-        // Menu drawer
-        '👤': 'i-user',
-        '👥': 'i-users',
-        '👑': 'i-crown',
-
-        // Game / targets
-        '🎮': 'i-gamepad',
-        '🎯': 'i-target',
-        '🏆': 'i-trophy',
-        '⚡': 'i-bolt',
-        '⚔️': 'i-swords',
-        '💀': 'i-skull',
-        '🚀': 'i-rocket',
-        '⏳': 'i-hourglass',
-        '⛔': 'i-ban',
-        '🚫': 'i-ban',
-
-        // Actions
-        '➕': 'i-plus',
-        '🔍': 'i-search',
-        '🚪': 'i-exit',
-        '🔄': 'i-crossed',
-        '🗑️': 'i-trash',
-        '🗑': 'i-trash',
-        '📋': 'i-clipboard',
-        '✅': 'i-check',
-        '✓':  'i-check',
-        '❌': 'i-close',
-        '✕':  'i-close',
-        '✖':  'i-close',
-        '➤': 'i-send',
-        '📎': 'i-paperclip',
-        '📷': 'i-camera',
-        '🖼️': 'i-image',
-        '🖼': 'i-image',
-        '✈️': 'i-telegram',
-        '✈': 'i-telegram',
-
-        // Info
-        '📜': 'i-scroll',
-        '📥': 'i-inbox',
-        '🌐': 'i-globe',
-        '🏁': 'i-flag',
-        '🔒': 'i-lock',
-        '🔕': 'i-bell',       // «выкл. уведомления» — оставим звонок
-        '📱': 'i-clipboard',  // уведомления приложения — временная замена
-        '📨': 'i-send',
-        '📊': 'i-target',     // статистика
-        '⏱': 'i-hourglass',
-        '🏷': 'i-flag',
-        '⭐': 'i-crown',      // elder
-    };
-
-    // Где НЕ заменяем (текст уведомлений, чат, тултипы и т.п.)
-    const SKIP_SELECTORS = [
-        '.toast',                // всплывашки
-        '.chat-bubble',          // чат
-        '.room-chat-bubble',     // чат комнаты
-        '.notif-text',           // текст уведомлений
-        '.event-item',           // лог событий клуба
-        '.profile-view-value',   // значения
-        '.leaderboard-name',     // имена
-        '.club-member-name',
-        '.tz-name',
-        '.notif-time',
-        '.chat-quote',
-        '.chat-quote-text',
-        'option',
-        'textarea',
-        'input',
-        '[contenteditable]'
-    ];
-
-    function shouldSkip(node) {
-        let el = node.nodeType === 3 ? node.parentElement : node;
-        while (el) {
-            for (const sel of SKIP_SELECTORS) {
-                if (el.matches && el.matches(sel)) return true;
-            }
-            el = el.parentElement;
-        }
-        return false;
-    }
-
-    // Создаём span.ci с inline SVG
-    function makeIcon(id, size = 'ci-md', color = null) {
-        const span = document.createElement('span');
-        span.className = 'ci ' + size + (color ? ' ' + color : '');
-        span.setAttribute('data-icon', id);
-        // Используем <use> — быстро и без дублирования
-        span.innerHTML = `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
-        return span;
-    }
-
-    // Подбираем размер по родителю
-    function pickSize(parent, emoji) {
-        if (!parent) return 'ci-md';
-        const cls = parent.className || '';
-        // Крупные декоративные иконки
-        if (/(^|\s)(sc-icon|rv-ico|pbc-icon|cpm-icon|phc-icon|mode-icon|side-icon|notif-avatar|profile-avatar|club-logo)\b/.test(cls)) {
-            if (/phc-icon|pbc-icon|cpm-icon/.test(cls)) return 'ci-2xl';
-            if (/sc-icon|rv-ico|mode-icon|side-icon/.test(cls)) return 'ci-xl';
-        }
-        if (/(^|\s)(nav-icon|menu-item-icon|menu-drawer-icon|chat-attach-btn|chat-send-btn|room-chat-send)\b/.test(cls)) {
-            return 'ci-lg';
-        }
-        if (/(^|\s)(lb-avatar|tz-avatar|cp-avatar|club-member-avatar|notif-avatar|prc-avatar|chat-list-avatar)\b/.test(cls)) {
-            return 'ci-md';
-        }
-        return 'ci-md';
-    }
-
-    // Основная функция — обход текстовых узлов
-    function replaceInNode(root) {
-        if (!root) return;
-
-        // Быстрый выход, если это скрытая иконка
-        if (root.nodeType === 1 && root.hasAttribute && root.hasAttribute('data-icon')) return;
-
-        const walker = document.createTreeWalker(
-            root,
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: function(node) {
-                    const t = node.nodeValue;
-                    if (!t || !t.trim()) return NodeFilter.FILTER_REJECT;
-                    if (shouldSkip(node)) return NodeFilter.FILTER_REJECT;
-
-                    // Есть ли хоть один эмодзи из карты?
-                    for (const e in EMOJI_MAP) {
-                        if (t.includes(e)) return NodeFilter.FILTER_ACCEPT;
-                    }
-                    return NodeFilter.FILTER_REJECT;
-                }
-            }
-        );
-
-        const targets = [];
-        let n;
-        while ((n = walker.nextNode())) targets.push(n);
-
-        targets.forEach(textNode => {
-            const parent = textNode.parentElement;
-            if (!parent) return;
-
-            const text = textNode.nodeValue;
-            const size = pickSize(parent);
-
-            // Разбиваем строку: чередуем текст и иконки
-            const frag = document.createDocumentFragment();
-            let i = 0;
-
-            // Сортируем эмодзи по длине — чтобы составные (🛡️) срабатывали раньше (🛡)
-            const sortedEmojis = Object.keys(EMOJI_MAP).sort((a, b) => b.length - a.length);
-
-            while (i < text.length) {
-                let matched = null;
-                for (const e of sortedEmojis) {
-                    if (text.startsWith(e, i)) { matched = e; break; }
-                }
-                if (matched) {
-                    const icon = makeIcon(EMOJI_MAP[matched], size);
-                    // Копируем цвет из родителя
-                    frag.appendChild(icon);
-                    i += matched.length;
-                } else {
-                    // Накапливаем обычный текст до следующего эмодзи
-                    let j = i;
-                    while (j < text.length) {
-                        let isEmoji = false;
-                        for (const e of sortedEmojis) {
-                            if (text.startsWith(e, j)) { isEmoji = true; break; }
-                        }
-                        if (isEmoji) break;
-                        j++;
-                    }
-                    frag.appendChild(document.createTextNode(text.slice(i, j)));
-                    i = j;
-                }
-            }
-
-            parent.replaceChild(frag, textNode);
-        });
-    }
-
-    // Запуск после DOMContentLoaded
-    function run() {
-        replaceInNode(document.body);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', run);
-    } else {
-        run();
-    }
-
-    // ============================================================
-    // MutationObserver — заменяем эмодзи в динамически добавленных узлах
-    // ============================================================
-    const observer = new MutationObserver(mutations => {
-        for (const m of mutations) {
-            if (m.type === 'childList') {
-                m.addedNodes.forEach(node => {
-                    if (node.nodeType === 1) {
-                        // Не трогаем наш SVG-спрайт и уже готовые иконки
-                        if (node.id && node.id.startsWith('i-')) return;
-                        if (node.hasAttribute && node.hasAttribute('data-icon')) return;
-                        replaceInNode(node);
-                    } else if (node.nodeType === 3) {
-                        // Текстовый узел добавили напрямую — оборачиваем
-                        const parent = node.parentElement;
-                        if (!parent) return;
-                        const tmp = document.createElement('div');
-                        tmp.appendChild(node.cloneNode(true));
-                        replaceInNode(tmp);
-                        if (tmp.childNodes.length) {
-                            parent.replaceChild(tmp.firstChild, node);
-                            // Если остались ещё — вставим после
-                            while (tmp.firstChild) {
-                                parent.insertBefore(tmp.firstChild, parent.firstChild.nextSibling);
-                            }
-                        }
-                    }
-                });
-            }
-        }
-    });
-
-    function startObserver() {
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    if (document.body) startObserver();
-    else document.addEventListener('DOMContentLoaded', startObserver);
-
-    // Экспортируем на всякий случай
-    window.__replaceEmojiIcons = run;
-})();
-</script>  
+    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
+    <div class="sheet-title">🛡️ Все клубы</div>
+    <input type="text" class="field-input" id="allClubsSearch"
+           placeholder="🔍 Название или тег" autocomplete="off"
+           oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
+    <div id="allClubsList"><div class="empty">Загрузка...</div></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
 </body>
 </html>
