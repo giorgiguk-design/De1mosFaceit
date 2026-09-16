@@ -12390,9 +12390,9 @@ async function checkVetoTimeout() {
             return;
         }
 
-const last = new Date(data.last_action_at || data.veto_started_at).getTime();
-if (Date.now() - last > 60 * 1000) {   // ← 60 * 1000
-        if (Date.now() - last > 10 * 1000) {
+        // Проверяем, не истёк ли таймаут (60 секунд)
+        const last = new Date(data.last_action_at || data.veto_started_at).getTime();
+        if (Date.now() - last > 60 * 1000) {
             // Отменяем (атомарно — если несколько клиентов попытаются, не страшно)
             await sb.from('game_matches').update({
                 status: 'cancelled',
@@ -12406,7 +12406,7 @@ if (Date.now() - last > 60 * 1000) {   // ← 60 * 1000
         console.warn('checkVetoTimeout:', e);
     }
 }
-
+            
 function showVetoCancelledScreen(reason) {
     const content = document.getElementById('vetoContent');
     if (!content) return;
