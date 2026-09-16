@@ -7472,7 +7472,79 @@ function getDXP(user) {
             }
 
             html += `<div class="section-title" style="margin-top: 20px;">
-    <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
+    <svg class="cy-icon cy-xs cy-red" viewBox="0 0 24 24" style="margin-right: 6px;">
+        <path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/>
+        <path d="M12 9v4M12 17h.01"/>
+    </svg>
+    Жалобы на игроков (${reports.length})
+</div>`;
+
+if (!reports.length) {
+    html += '<div class="empty">Жалоб нет</div>';
+} else {
+    // Загружаем всех участников
+    const allIds = new Set();
+    reports.forEach(r => { 
+        if (r.reporter_id) allIds.add(r.reporter_id); 
+        if (r.target_id) allIds.add(r.target_id); 
+    });
+
+    const { data: rUsers } = await sb.from('users')
+        .select('telegram_id, display_name, username, custom_avatar, photo_url, elo')
+        .in('telegram_id', allIds.size ? [...allIds] : [0]);
+    const rMap = {};
+    (rUsers || []).forEach(u => rMap[u.telegram_id] = u);
+
+    // Группируем по матчу
+    const byMatch = {};
+    reports.forEach(r => {
+        if (!byMatch[r.match_id]) byMatch[r.match_id] = [];
+        byMatch[r.match_id].push(r);
+    });
+
+    html += Object.entries(byMatch).map(([matchId, list]) => `
+        <div style="margin-bottom: 18px;">
+            <div style="font-size: 11px; color: var(--hint); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; padding-left: 4px;">
+                Матч #${String(matchId).padStart(6, '0')} · ${list.length} ${list.length === 1 ? 'жалоба' : 'жалоб'}
+            </div>
+            ${list.map(r => {
+                const reporter = rMap[r.reporter_id] || {};
+                const target = rMap[r.target_id] || {};
+                const rAv = renderAvatar(reporter);
+                const tAv = renderAvatar(target);
+                const reason = r.reason_label || r.reason || 'Не указана';
+
+                return `
+                    <div class="notif-item" style="border-color: rgba(255,84,112,0.35); margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                            <div class="lb-avatar" style="width: 32px; height: 32px; font-size: 12px;">${rAv}</div>
+                            <div style="font-size: 13px; font-weight: 700;">
+                                ${escapeHtml(reporter.display_name || 'Игрок')}
+                            </div>
+                            <span style="color: var(--hint); font-size: 14px;">→</span>
+                            <div class="lb-avatar" style="width: 32px; height: 32px; font-size: 12px; background: linear-gradient(135deg, #ff5470, #cc1e38);">${tAv}</div>
+                            <div style="font-size: 13px; font-weight: 700; color: var(--red);">
+                                ${escapeHtml(target.display_name || 'Игрок')}
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--text); background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 10px; border-left: 3px solid var(--red);">
+                            <div style="font-weight: 800; color: var(--red); margin-bottom: 4px; font-size: 11px; letter-spacing: 0.5px;">
+                                ⚠️ ${escapeHtml(reason).toUpperCase()}
+                            </div>
+                            ${r.text && r.text !== reason ? `<div style="color: var(--hint); font-size: 11.5px;">${escapeHtml(r.text)}</div>` : ''}
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="friend-action decline" style="flex: 1; padding: 8px;" 
+                                    onclick="closeReport(${r.id})">✕ Закрыть</button>
+                            <button class="friend-action add" style="flex: 1; padding: 8px; background: rgba(255,84,112,0.15); color: var(--red);"
+                                    onclick="punishPlayer(${r.target_id}, ${r.id})">⚠️ Наказать</button>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `).join('');
+}
         <path d="M3 6h18v12H3z"/>
         <path d="m3 6 9 7 9-7"/>
     </svg>
@@ -11599,183 +11671,325 @@ function subscribeVetoRealtime(matchId) {
         }
 
 async function renderResultScreen() {
-    if (matchPollTimer) clearInterval(matchPollTimer);  // ← ДОБАВЬ ПЕРВОЙ СТРОКОЙ
+    if (matchPollTimer) clearInterval(matchPollTimer);
     const container = document.getElementById('resultContent');
-    const me = currentUser.telegram_id;
-    const isCapA = currentMatch.captain_a_id === me;
-    const isCapB = currentMatch.captain_b_id === me;
+    const me = Number(currentUser.telegram_id);
+    const isCapA = Number(currentMatch.captain_a_id) === me;
+    const isCapB = Number(currentMatch.captain_b_id) === me;
     const isCaptain = isCapA || isCapB;
+
     const teamA = currentMatch.team_a_players || [];
     const teamB = currentMatch.team_b_players || [];
+    const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
+                 : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
 
-    // Данные игроков
+    // --- Загружаем данные параллельно ---
     const allIds = [...teamA, ...teamB].map(p => p.telegram_id);
-    const { data: users } = await sb.from('users')
-        .select('telegram_id, display_name, custom_avatar, photo_url')
-        .in('telegram_id', allIds.length ? allIds : [0]);
+    const [usersRes, shotsRes, votesRes] = await Promise.all([
+        sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url')
+            .in('telegram_id', allIds.length ? allIds : [0]),
+        sb.from('match_screenshots').select('*').eq('match_id', currentMatch.id),
+        sb.from('match_votes').select('*').eq('match_id', currentMatch.id)
+    ]);
+
     const userMap = {};
-    (users || []).forEach(u => userMap[u.telegram_id] = u);
+    (usersRes.data || []).forEach(u => userMap[u.telegram_id] = u);
 
-    // Мои скрины
-    const { data: screenshots } = await sb.from('match_screenshots')
-        .select('*').eq('match_id', currentMatch.id);
-    const myShot = (screenshots || []).find(s => s.uploader_id === me);
+    const screenshots = shotsRes.data || [];
+    const votes = votesRes.data || [];
 
-    // Мои голоса
-    const { data: votes } = await sb.from('match_votes')
-        .select('*').eq('match_id', currentMatch.id);
-    const myVote = (votes || []).find(v => v.telegram_id === me);
+    const myVote = votes.find(v => Number(v.telegram_id) === me);
+    const myShot = screenshots.find(s => Number(s.uploader_id) === me);
 
-    const renderTeamPlayers = (players) => players.map(p => {
-        const u = userMap[p.telegram_id] || {};
-        const av = renderAvatar(u);
-        return `
-            <div class="confirm-player ${p.captain ? 'captain' : ''}">
-                <div class="cp-avatar">${av}</div>
-                <span class="cp-name">${escapeHtml(u.display_name || 'Игрок')}</span>
-                ${p.captain ? '<span class="cp-tag">👑</span>' : ''}
-            </div>
-        `;
-    }).join('');
+    // Скриншоты команды A и B (для показа капитанам)
+    const shotA = screenshots.find(s => s.team === 'A');
+    const shotB = screenshots.find(s => s.team === 'B');
 
-    let html = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px;">
-            <div>
-                <div style="font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: 2px;">Результат</div>
-                <div style="font-size: 22px; font-weight: 900; color: var(--emerald);">${escapeHtml(currentMatch.final_map || '—')}</div>
-            </div>
-            ${currentMatch.host_link ? `
-                <div style="display: flex; gap: 6px;">
-                    <button class="copy-id-btn" onclick="openStandoffLink('${currentMatch.host_link}')" title="Войти в игру" style="width: auto; padding: 0 12px; height: 36px; border-radius: 12px; font-weight: 800; font-size: 12px;">🎮 Войти</button>
-                    <button class="copy-id-btn" onclick="copyToClipboard('${currentMatch.host_link}')" title="Скопировать ссылку">📋</button>
+    // --- Проверяем конфликт голосов ---
+    const capAVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_a_id));
+    const capBVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_b_id));
+    const hasConflict = capAVote && capBVote &&
+        (capAVote.winner !== capBVote.winner ||
+         capAVote.score_a !== capBVote.score_a ||
+         capAVote.score_b !== capBVote.score_b);
+
+    // Если конфликт — показываем баннер "на проверке"
+    let conflictBanner = '';
+    if (hasConflict) {
+        conflictBanner = `
+            <div class="moderator-panel" style="margin-bottom: 16px;">
+                <div class="moderator-title">⚖️ РЕЗУЛЬТАТЫ РАСХОДЯТСЯ</div>
+                <div class="moderator-sub">
+                    Капитаны указали разный счёт. Матч ушёл на проверку модераторам.
                 </div>
-            ` : ''}
-        </div>
-    `;
-
-    // Сетка команд
-    html += `
-        <div class="confirm-teams">
-            <div class="confirm-team">
-                <div class="confirm-team-title">Команда A</div>
-                <div class="confirm-team-players">${renderTeamPlayers(teamA)}</div>
-            </div>
-            <div class="confirm-team">
-                <div class="confirm-team-title">Команда B</div>
-                <div class="confirm-team-players">${renderTeamPlayers(teamB)}</div>
-            </div>
-        </div>
-    `;
-
-    // Скриншот
-    html += `<div class="section-title">📸 Скриншот матча</div>`;
-    if (!myShot) {
-        html += `
-            <div class="profile-hero" style="text-align: center; padding: 20px;">
-                <div style="font-size: 42px; margin-bottom: 10px;">📸</div>
-                <div style="font-size: 13px; color: var(--hint); margin-bottom: 14px;">
-                    Загрузи скриншот результата матча
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+                    <div style="padding: 10px; background: rgba(0,224,138,0.08); border: 1px solid rgba(0,224,138,0.3); border-radius: 10px;">
+                        <div style="font-size: 10px; color: var(--hint); letter-spacing: 1px;">КАПИТАН A</div>
+                        <div style="font-size: 15px; font-weight: 900; color: var(--emerald); margin-top: 4px;">
+                            ${capAVote.score_a} : ${capAVote.score_b} → ${capAVote.winner}
+                        </div>
+                    </div>
+                    <div style="padding: 10px; background: rgba(255,84,112,0.08); border: 1px solid rgba(255,84,112,0.3); border-radius: 10px;">
+                        <div style="font-size: 10px; color: var(--hint); letter-spacing: 1px;">КАПИТАН B</div>
+                        <div style="font-size: 15px; font-weight: 900; color: #ff5470; margin-top: 4px;">
+                            ${capBVote.score_a} : ${capBVote.score_b} → ${capBVote.winner}
+                        </div>
+                    </div>
                 </div>
-                <button class="profile-action-btn save" onclick="document.getElementById('screenshotInput').click()">
-                    📤 Загрузить скриншот
-                </button>
-            </div>
-        `;
-    } else {
-        html += `
-            <div class="profile-hero" style="padding: 14px;">
-                <div style="font-size: 12px; color: var(--emerald); margin-bottom: 8px; font-weight: 700;">✅ Скриншот загружен</div>
-                <img src="${myShot.url}" style="width: 100%; border-radius: 12px; cursor: pointer;"
-                     onclick="openImageView('${myShot.url}')">
             </div>
         `;
     }
 
-    // Счёт и голосование капитанов
-    if (isCaptain) {
-        if (!myVote) {
-            html += `
-                <div class="section-title">🎯 Счёт и победитель</div>
-                <div class="score-input-row">
-                    <div class="score-input-col">
-                        <label>Счёт A</label>
-                        <input type="number" id="scoreA" min="0" max="30" value="0">
+    // --- Рендер игрока ---
+    const renderPlayerRow = (p, team) => {
+        const u = userMap[p.telegram_id] || {};
+        const av = renderAvatar(u);
+        const isMe = Number(p.telegram_id) === me;
+        const isCap = Number(p.telegram_id) === (team === 'A' ? currentMatch.captain_a_id : currentMatch.captain_b_id);
+        const playerVote = votes.find(v => Number(v.telegram_id) === Number(p.telegram_id));
+
+        let voteTag = '';
+        if (playerVote) {
+            voteTag = `<span style="font-size: 10px; color: var(--emerald); font-weight: 800; margin-left: 6px;">✓ ${playerVote.score_a}:${playerVote.score_b}</span>`;
+        }
+
+        return `
+            <div class="ig-player-row team-${team.toLowerCase()} ${isMe ? 'you' : ''}" style="margin-bottom: 6px;">
+                <div class="ig-player-avatar">${av}</div>
+                <div class="ig-player-info">
+                    <div class="ig-player-name">
+                        ${escapeHtml(u.display_name || 'Игрок')}
+                        ${isCap ? '<span style="color: var(--gold);">👑</span>' : ''}
+                        ${isMe ? '<span style="color: var(--emerald); font-size: 10px; font-weight: 800; margin-left: 4px;">ТЫ</span>' : ''}
+                        ${voteTag}
                     </div>
-                    <div class="score-input-col">
-                        <label>Счёт B</label>
-                        <input type="number" id="scoreB" min="0" max="30" value="0">
+                    <div class="ig-player-team-tag team-${team.toLowerCase()}">
+                        Команда ${team}${isCap ? ' · Капитан' : ''}
                     </div>
                 </div>
-                <div class="winner-choice">
-                    <button class="winner-btn" id="winBtnA" onclick="selectWinner('A')">🏆 Команда A</button>
-                    <button class="winner-btn" id="winBtnB" onclick="selectWinner('B')">🏆 Команда B</button>
+            </div>
+        `;
+    };
+
+    // --- Блок скриншота ---
+    const renderScreenshotBlock = () => {
+        // Если у меня уже есть скриншот — показываем
+        if (myShot) {
+            return `
+                <div class="ig-link-block" style="border-color: rgba(0,224,138,0.4);">
+                    <div class="ig-link-label">📸 Твой скриншот · Команда ${myShot.team}</div>
+                    <img src="${myShot.url}" style="width: 100%; border-radius: 12px; cursor: pointer; margin-top: 8px;"
+                         onclick="openImageView('${myShot.url}')">
                 </div>
-                <button class="profile-action-btn save" onclick="submitWinner()">📤 Отправить результат</button>
             `;
-        } else {
-            html += `
-                <div class="profile-hero" style="text-align: center; padding: 18px;">
-                    <div style="font-size: 13px;">
-                        Твой голос: <b style="color: var(--emerald);">
-                            ${myVote.vote === 'A' ? 'Команда A' : 'Команда B'}
-                        </b>
+        }
+
+        // Могу ли я загрузить?
+        // Капитан — всегда может. Игрок — только если у его команды ещё нет скрина.
+        const teamShot = myTeam === 'A' ? shotA : shotB;
+        const canUpload = isCaptain || !teamShot;
+
+        if (!canUpload) {
+            return `
+                <div class="ig-link-block">
+                    <div class="ig-link-label">📸 Скриншот команды</div>
+                    <div style="text-align: center; padding: 16px; color: var(--hint); font-size: 12px;">
+                        Скриншот уже загружен ${isCaptain ? 'сокомандником' : 'капитаном'}
                     </div>
-                    <div style="font-size: 12px; color: var(--hint); margin-top: 8px;">
-                        Счёт: ${myVote.score_a} : ${myVote.score_b}
+                    ${teamShot ? `<img src="${teamShot.url}" style="width: 100%; border-radius: 12px; margin-top: 8px; cursor: pointer;" onclick="openImageView('${teamShot.url}')">` : ''}
+                </div>
+            `;
+        }
+
+        const hintText = isCaptain
+            ? 'Загрузи скриншот с результатом матча. Это <b>обязательно</b>.'
+            : 'Капитан не загрузил скриншот. Ты можешь загрузить его за свою команду.';
+
+        return `
+            <div class="ig-link-block" style="border-color: rgba(255,84,112,0.4);">
+                <div class="ig-link-label">📸 Скриншот матча · Обязательно</div>
+                <div style="font-size: 12px; color: var(--hint); margin: 8px 0 12px; line-height: 1.5;">
+                    ${hintText}
+                </div>
+                <button class="ig-enter-btn" onclick="document.getElementById('screenshotInput').click()">
+                    📤 ЗАГРУЗИТЬ СКРИНШОТ
+                </button>
+            </div>
+        `;
+    };
+
+    // --- Блок ввода счёта ---
+    const renderScoreBlock = () => {
+        // Уже голосовал — показываем результат
+        if (myVote) {
+            return `
+                <div class="ig-vote-card" style="border-color: rgba(0,224,138,0.4);">
+                    <div class="ig-vote-title" style="color: var(--emerald);">✅ ТВОЙ РЕЗУЛЬТАТ ОТПРАВЛЕН</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                        <div style="font-size: 26px; font-weight: 900; color: var(--text);">
+                            <span style="color: ${myVote.winner === 'A' ? 'var(--emerald)' : 'var(--hint)'};">${myVote.score_a}</span>
+                            <span style="color: var(--hint); font-size: 18px; margin: 0 8px;">:</span>
+                            <span style="color: ${myVote.winner === 'B' ? '#ff5470' : 'var(--hint)'};">${myVote.score_b}</span>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 800; color: var(--emerald);">
+                            🏆 Команда ${myVote.winner}
+                        </div>
                     </div>
-                    <div style="font-size: 11px; color: var(--hint); margin-top: 8px;">
-                        Ожидание второго капитана...
+                    ${!hasConflict ? `
+                        <div style="font-size: 11px; color: var(--hint); margin-top: 10px; text-align: center;">
+                            ⏳ Ожидание второго капитана...
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Проверка: могу ли я вообще голосовать?
+        // Игрок (не капитан) может голосовать только если его команда уже загрузила скрин
+        const teamShot = myTeam === 'A' ? shotA : shotB;
+        const canVote = isCaptain || !!teamShot;
+
+        if (!canVote) {
+            return `
+                <div class="result-wait-card">
+                    <div class="rwc-title">⏳ Ожидание скриншота</div>
+                    <div style="font-size: 12px; color: var(--hint); text-align: center; padding: 10px 0;">
+                        Капитан твоей команды должен сначала загрузить скриншот матча
                     </div>
                 </div>
             `;
         }
-    } else {
-    // Считаем голоса
-    const capAVoted = (votes || []).some(v => v.telegram_id === currentMatch.captain_a_id);
-    const capBVoted = (votes || []).some(v => v.telegram_id === currentMatch.captain_b_id);
-    
-    html += `
-        <div class="result-wait-card">
-            <div class="rwc-title">⏳ Ожидание результата</div>
-            <div class="rwc-rows">
-                <div class="rwc-row">
-                    <span class="rwc-team">👑 Команда A</span>
-                    <span class="rwc-status ${capAVoted ? 'done' : 'pending'}">
-                        ${capAVoted ? '✅ Отправил' : '⏳ Голосует'}
-                    </span>
+
+        // Форма ввода
+        return `
+            <div class="ig-vote-card" style="border-color: rgba(0,224,138,0.35);">
+                <div class="ig-vote-title" style="color: var(--emerald);">
+                    ${isCaptain ? '👑 ТВОЙ РЕЗУЛЬТАТ (КАПИТАН)' : '🎯 ТВОЙ РЕЗУЛЬТАТ (ИГРОК)'}
                 </div>
-                <div class="rwc-row">
-                    <span class="rwc-team">👑 Команда B</span>
-                    <span class="rwc-status ${capBVoted ? 'done' : 'pending'}">
-                        ${capBVoted ? '✅ Отправил' : '⏳ Голосует'}
-                    </span>
+                <div class="ig-vote-desc">
+                    ${isCaptain 
+                        ? 'Введи итоговый счёт матча и выбери победителя'
+                        : 'Введи счёт как ты его видишь (необязательно)'}
                 </div>
+
+                <div class="score-input-row" style="margin-top: 12px;">
+                    <div class="score-input-col">
+                        <label>Команда A</label>
+                        <input type="number" id="scoreA" min="0" max="30" value="13" inputmode="numeric">
+                    </div>
+                    <div class="score-input-col">
+                        <label>Команда B</label>
+                        <input type="number" id="scoreB" min="0" max="30" value="0" inputmode="numeric">
+                    </div>
+                </div>
+
+                <div class="winner-choice">
+                    <button class="winner-btn" id="winBtnA" onclick="selectWinner('A')">
+                        🏆 КОМАНДА A
+                    </button>
+                    <button class="winner-btn" id="winBtnB" onclick="selectWinner('B')">
+                        🏆 КОМАНДА B
+                    </button>
+                </div>
+
+                <button class="ig-vote-btn" id="submitResultBtn" onclick="submitWinner()">
+                    📤 ОТПРАВИТЬ РЕЗУЛЬТАТ
+                </button>
+            </div>
+        `;
+    };
+
+    // --- Собираем итоговый HTML ---
+    container.innerHTML = `
+        <div class="ig-match-header">
+            <div class="ig-match-row">
+                <div class="ig-match-num">Матч <b>#${String(currentMatch.id).padStart(6, '0')}</b></div>
+                <div class="ig-status-badge live">РЕЗУЛЬТАТ</div>
+            </div>
+            <div class="ig-map-line">Карта</div>
+            <div class="ig-map-name">${escapeHtml(currentMatch.final_map || '—')}</div>
+            <div class="ig-players-line">
+                <span>Стороны: <b>A — ${escapeHtml(currentMatch.side_a || '—')}</b></span>
+                <span><b>B — ${escapeHtml(currentMatch.side_b || '—')}</b></span>
             </div>
         </div>
+
+        ${conflictBanner}
+
+        <div class="ig-section-title">
+            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5"/>
+                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+            </svg>
+            Состав · ${allIds.length} игроков
+        </div>
+
+        ${teamA.map(p => renderPlayerRow(p, 'A')).join('')}
+        ${teamB.map(p => renderPlayerRow(p, 'B')).join('')}
+
+        <div class="ig-section-title" style="margin-top: 20px;">
+            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
+                <path d="M3 7h18v13H3z"/>
+                <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Доказательство
+        </div>
+
+        ${renderScreenshotBlock()}
+
+        <div class="ig-section-title" style="margin-top: 20px;">
+            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 7v5l3 2"/>
+            </svg>
+            Твой результат
+        </div>
+
+        ${renderScoreBlock()}
+
+        <button class="profile-action-btn cancel" style="margin-top: 20px;"
+                onclick="openAppealDialog()">
+            ⚖️ Подать апелляцию
+        </button>
     `;
-}
 
-    // Кнопка апелляции
-    html += `
-        <button class="profile-action-btn cancel" style="margin-top: 16px;"
-                onclick="openAppealDialog()">⚖️ Подать апелляцию</button>
-    `;
+    // Автоустановка победителя при вводе счёта
+    const scoreAEl = document.getElementById('scoreA');
+    const scoreBEl = document.getElementById('scoreB');
+    if (scoreAEl && scoreBEl) {
+        const updateWinner = () => {
+            const a = parseInt(scoreAEl.value) || 0;
+            const b = parseInt(scoreBEl.value) || 0;
+            if (a > b) selectWinner('A');
+            else if (b > a) selectWinner('B');
+        };
+        scoreAEl.addEventListener('input', updateWinner);
+        scoreBEl.addEventListener('input', updateWinner);
+    }
 
-    container.innerHTML = html;
-
-    // Поллинг статуса
-    if (matchPollTimer) clearInterval(matchPollTimer);
+    // --- Поллинг для live-обновления ---
     matchPollTimer = setInterval(async () => {
-        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
-        if (data) {
-            currentMatch = data;
-            if (data.status === 'finished') { clearInterval(matchPollTimer); showFinishedScreen(); }
-            else if (data.result_status === 'disputed') {
+        const { data } = await sb.from('game_matches')
+            .select('*').eq('id', currentMatch.id).single();
+        if (!data) return;
+        currentMatch = data;
+
+        if (data.status === 'finished') {
+            clearInterval(matchPollTimer);
+            showFinishedScreen();
+        } else if (data.result_status === 'disputed') {
+            clearInterval(matchPollTimer);
+            renderResultScreen();  // перерисуем с баннером конфликта
+        } else {
+            // Проверяем, не изменились ли голоса/скрины
+            const { data: freshVotes } = await sb.from('match_votes')
+                .select('id').eq('match_id', currentMatch.id);
+            const { data: freshShots } = await sb.from('match_screenshots')
+                .select('id').eq('match_id', currentMatch.id);
+            const oldCount = votes.length + screenshots.length;
+            const newCount = (freshVotes || []).length + (freshShots || []).length;
+            if (newCount !== oldCount) {
                 clearInterval(matchPollTimer);
-                showToast('⚖️ Результаты расходятся — матч отправлен модераторам');
-                // Перерисуем, чтобы показать "спорный"
-                renderDisputedInfo();
-            } else {
                 renderResultScreen();
             }
         }
@@ -11817,58 +12031,86 @@ function copyToClipboard(text) {
         function syncScores() {}
 
 async function submitWinner() {
-    if (!selectedWinner) { showToast('Выберите победителя'); return; }
+    if (!selectedWinner) { 
+        showToast('⚠️ Выбери победителя'); 
+        return; 
+    }
+
     const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
     const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
 
-    if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
+    if (scoreA === scoreB) { 
+        showToast('⚠️ Счёт не может быть равным'); 
+        return; 
+    }
 
-    // Проверяем, что капитан загрузил скриншот
-    const { data: shots } = await sb.from('match_screenshots')
-        .select('*').eq('match_id', currentMatch.id).eq('uploader_id', currentUser.telegram_id);
-    if (!shots?.length) {
-        showToast('⚠️ Сначала загрузите скриншот матча');
+    // Проверка счёта на соответствие победителю
+    if (selectedWinner === 'A' && scoreA <= scoreB) {
+        showToast('⚠️ Команда A победила, но счёт не совпадает');
+        return;
+    }
+    if (selectedWinner === 'B' && scoreB <= scoreA) {
+        showToast('⚠️ Команда B победила, но счёт не совпадает');
         return;
     }
 
+    const me = Number(currentUser.telegram_id);
+    const isCaptain = me === Number(currentMatch.captain_a_id) 
+                   || me === Number(currentMatch.captain_b_id);
+
+    // Капитан обязан иметь скриншот
+    if (isCaptain) {
+        const { data: shots } = await sb.from('match_screenshots')
+            .select('id').eq('match_id', currentMatch.id).eq('uploader_id', me);
+        if (!shots?.length) {
+            showToast('⚠️ Сначала загрузи скриншот матча');
+            haptic('heavy');
+            return;
+        }
+    }
+
+    const btn = document.getElementById('submitResultBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
+
     try {
-        await mmCall('report_winner', {
+        const teamA = currentMatch.team_a_players || [];
+        const teamB = currentMatch.team_b_players || [];
+        const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
+                     : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
+
+        // Пишем голос в match_votes
+        await sb.from('match_votes').upsert({
             match_id: currentMatch.id,
-            telegram_id: currentUser.telegram_id,
+            telegram_id: me,
+            team: myTeam,
+            is_captain: isCaptain,
             winner: selectedWinner,
             score_a: scoreA,
-            score_b: scoreB
-        });
-        showToast('✅ Отправлено');
+            score_b: scoreB,
+            created_at: new Date().toISOString()
+        }, { onConflict: 'match_id,telegram_id' });
+
+        haptic('medium');
+        showToast('✅ Результат отправлен');
+
+        // Если капитан — пушим в mm-tick для проверки
+        if (isCaptain) {
+            await mmCall('report_winner', {
+                match_id: currentMatch.id,
+                telegram_id: me,
+                winner: selectedWinner,
+                score_a: scoreA,
+                score_b: scoreB
+            });
+        }
+
         selectedWinner = null;
         renderResultScreen();
-    } catch (e) { showToast('Ошибка: ' + e.message); }
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = '📤 ОТПРАВИТЬ РЕЗУЛЬТАТ'; }
+    }
 }
-
-        // Скриншоты
-        document.getElementById('screenshotInput').addEventListener('change', async (e) => {
-            const file = e.target.files?.[0]; e.target.value = '';
-            if (!file || !currentMatch) return;
-            showToast('Загрузка...');
-            try {
-                const blob = await compressImage(file, 1200, 0.85);
-                const path = `${currentMatch.id}/${currentUser.telegram_id}_${Date.now()}.jpg`;
-                const { error: upErr } = await sb.storage.from(BUCKETS.matches)
-                    .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-                if (upErr) throw upErr;
-                const { data: urlData } = sb.storage.from(BUCKETS.matches).getPublicUrl(path);
-
-                await mmCall('upload_screenshot', {
-                    match_id: currentMatch.id,
-                    telegram_id: currentUser.telegram_id,
-                    url: urlData.publicUrl,
-                    team: (currentMatch.team_a_players || []).some(p => p.telegram_id === currentUser.telegram_id) ? 'A' : 'B'
-                });
-
-                showToast('✅ Скриншот загружен');
-                renderResultScreen();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        });
 
         // ============================================================
         // FINISHED
@@ -16736,6 +16978,70 @@ if (!safeBoot()) {
 registerInterval('notifBadge', setInterval(() => {
     if (isAppVisible && currentUser) updateNotifBadge();
 }, 45000));
+
+// Периодическое обновление бейджа уведомлений
+registerInterval('notifBadge', setInterval(() => {
+    if (isAppVisible && currentUser) updateNotifBadge();
+}, 45000));
+
+            // ============================================================
+// СКРИНШОТ МАТЧА — обработчик (через делегирование, надёжно)
+// ============================================================
+document.addEventListener('change', async (e) => {
+    if (e.target?.id !== 'screenshotInput') return;
+
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!currentMatch || !currentUser) {
+        showToast('⚠️ Матч не активен');
+        return;
+    }
+
+    if (file.size > 10_000_000) {
+        showToast('⚠️ Максимум 10 МБ');
+        return;
+    }
+
+    showToast('📤 Загрузка скриншота...');
+
+    try {
+        const blob = await compressImage(file, 1400, 0.88);
+        const path = `${currentMatch.id}/${currentUser.telegram_id}_${Date.now()}.jpg`;
+
+        const { error: upErr } = await sb.storage.from(BUCKETS.matches)
+            .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from(BUCKETS.matches).getPublicUrl(path);
+
+        const me = Number(currentUser.telegram_id);
+        const myTeam = (currentMatch.team_a_players || []).some(p => Number(p.telegram_id) === me)
+            ? 'A' : 'B';
+
+        const { error: dbErr } = await sb.from('match_screenshots').upsert({
+            match_id: currentMatch.id,
+            uploader_id: me,
+            team: myTeam,
+            url: urlData.publicUrl,
+            created_at: new Date().toISOString()
+        }, { onConflict: 'match_id,uploader_id' });
+
+        if (dbErr) throw dbErr;
+
+        haptic('medium');
+        showToast('✅ Скриншот загружен');
+
+        // Перерисовываем экран результата
+        if (document.getElementById('page-result').classList.contains('active')) {
+            renderResultScreen();
+        }
+    } catch (err) {
+        console.error('Screenshot upload error:', err);
+        showToast('Ошибка: ' + (err.message || err));
+    }
+});
+            
     </script>
 
     <div class="sheet" id="clubInviteSheet" style="max-height: 88vh;">
