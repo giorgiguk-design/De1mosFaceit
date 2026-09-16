@@ -9704,7 +9704,7 @@ if (room.status === 'in_game' || room.status === 'cancelled') {
 
             await checkTeamsReady(roomId, room);
 
-            if (roomChatOpen) return;  // ← тоже добавить
+                        if (roomChatOpen) return;
 
             if (room.status === 'open') {
                 await renderRoomContent(roomId);
@@ -9712,17 +9712,17 @@ if (room.status === 'in_game' || room.status === 'cancelled') {
                 openVetoView(roomId);
             } else if (room.status === 'side_pick') {
                 showSidePick(roomId);
-            if (room.status === 'waiting_link') {
-    showLobbyScreen(roomId, room);
-    return;
-}
-if (room.status === 'in_game' || room.status === 'cancelled') {
-    renderInGameScreen(roomId);
-    return;
-}
-}).subscribe((status) => {
-    console.log('Room realtime status:', status);
-});
+            } else if (room.status === 'waiting_link') {
+                showLobbyScreen(roomId, room);
+                return;
+            } else if (room.status === 'in_game' || room.status === 'cancelled') {
+                renderInGameScreen(roomId);
+                return;
+            }
+        })
+        .subscribe((status) => {
+            console.log('Room realtime status:', status);
+        });
 }
         // ============================================================
         // START CLUB PARTY (клановая битва)
