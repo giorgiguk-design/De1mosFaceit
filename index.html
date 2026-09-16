@@ -1161,22 +1161,10 @@ body::after {
 }
 
 /* ============ MODE SELECTOR (compact) ============ */
-    .mode-selector .mode-card {
-    padding: 12px 8px;
-}
-.mode-selector .mode-card .mode-icon {
-    font-size: 22px;
-}
-.mode-selector .mode-card .mode-name {
-    font-size: 13px;
-}
-.mode-selector .mode-card .mode-capacity {
-    font-size: 9px;
-}
 .mode-selector {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
     margin-bottom: 18px;
 }
 .mode-selector .mode-card {
@@ -1184,14 +1172,15 @@ body::after {
     overflow: hidden;
     background: var(--card);
     border: 1.5px solid var(--border);
-    border-radius: 16px;
-    padding: 14px 12px;
+    border-radius: 14px;
+    padding: 12px 6px;
     text-align: center;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
     font-family: inherit;
 }
 .mode-selector .mode-card::before {
@@ -1212,27 +1201,26 @@ body::after {
 .mode-selector .mode-card.active::before { opacity: 1; }
 .mode-selector .mode-card:active { transform: scale(0.97); }
 .mode-selector .mode-card .mode-icon {
-    font-size: 28px;
+    font-size: 22px;
     line-height: 1;
     flex-shrink: 0;
 }
 .mode-selector .mode-card .mode-info {
-    flex: 1;
-    text-align: left;
+    text-align: center;
     min-width: 0;
 }
 .mode-selector .mode-card .mode-name {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 900;
     color: var(--text);
     letter-spacing: 0.3px;
 }
 .mode-selector .mode-card.active .mode-name { color: var(--emerald); }
 .mode-selector .mode-card .mode-capacity {
-    font-size: 10px;
+    font-size: 9px;
     color: var(--hint);
     font-weight: 600;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 /* ============ PLAY ACTIONS ============ */
@@ -9305,7 +9293,7 @@ function closeChatView() {
         function renderEmptyParty() {
     myParty = null;
     document.getElementById('partyCount').textContent = `1 / ${needPerTeam(selectedMode)}`;
-    document.getElementById('partyElo').textContent = currentUser.elo ?? 1000;
+    document.getElementById('partyDXP').textContent = currentUser.elo ?? 1000;
             document.getElementById('partyMembers').innerHTML = `
                 <div class="party-member">
                     <span>${escapeHtml(currentUser.display_name)}</span>
@@ -9321,7 +9309,7 @@ function renderParty() {
         : 1000;
 
     document.getElementById('partyCount').textContent = `${myParty.members.length} / ${maxSize}`;
-    document.getElementById('partyElo').textContent = avgElo;
+   document.getElementById('partyDXP').textContent = avgElo;
 
             document.getElementById('partyMembers').innerHTML = myParty.members.map(m => {
                 const isLeader = m.telegram_id === myParty.party.leader_id;
@@ -9343,16 +9331,10 @@ function renderParty() {
             }
         }
 
-        function selectMode(mode) {
+function selectMode(mode) {
     selectedMode = mode;
-    
-    // Обновляем активную карточку во всех наборах
-    ['1x1', '2x2', '5x5'].forEach(m => {
-        const el = document.getElementById('mode' + m.replace('x', 'x'));
-        if (el) el.classList.toggle('active', m === mode);
-    });
-    
-    ensureParty(mode).then(p => loadPartyMembers(p)).catch(e => console.warn(e));
+    haptic();
+    renderPlayList();
 }
 
         async function kickFromParty(userId) {
@@ -10780,13 +10762,18 @@ function renderPlayList() {
         </div>
 
         <div class="play-section-label">Режим</div>
-        <div class="mode-selector" style="grid-template-columns: 1fr 1fr 1fr;">
-<div class="mode-icon">
-    <svg class="cy-icon cy-md" viewBox="0 0 24 24">
-        <path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>
-        <path d="m13 19 6-6M16 16l4 4M19 21l2-2"/>
-    </svg>
-</div>
+<div class="mode-selector">
+    <div class="mode-card ${selectedMode === '1x1' ? 'active' : ''}" onclick="selectMode('1x1')">
+        <div class="mode-icon">
+            <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+                <path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>
+                <path d="m13 19 6-6M16 16l4 4M19 21l2-2"/>
+            </svg>
+        </div>
+        <div class="mode-info">
+            <div class="mode-name">1×1</div>
+            <div class="mode-capacity">до 2 игроков</div>
+        </div>
     </div>
     <div class="mode-card ${selectedMode === '2x2' ? 'active' : ''}" onclick="selectMode('2x2')">
         <div class="mode-icon">⚔️</div>
@@ -11135,11 +11122,11 @@ async function renderRoomContent(roomId) {
         const myTeam = me?.team;
         const iAmReady = me?.is_ready;
 
-        const needPerTeam = needPerTeam(room.mode);
+        const perTeamCount = needPerTeam(room.mode);
         const totalReady = teamA.length + teamB.length;
-        const canStart = teamA.length >= needPerTeam && teamB.length >= needPerTeam;
-        const teamAFull = teamA.length >= needPerTeam;
-        const teamBFull = teamB.length >= needPerTeam;
+const canStart = teamA.length >= perTeamCount && teamB.length >= perTeamCount;
+const teamAFull = teamA.length >= perTeamCount;
+const teamBFull = teamB.length >= perTeamCount;
 
         // Рендер игрока в team-zone
         const renderTZPlayer = (p, teamSide) => {
@@ -11169,7 +11156,7 @@ async function renderRoomContent(roomId) {
             const isMyTeam = myTeam === team;
             const cls = `team-zone team-${team.toLowerCase()} ${isMyTeam ? 'active' : ''} ${full ? 'full' : ''}`;
             const title = `Команда ${team}`;
-            const count = `${list.length}/${needPerTeam}`;
+            const count = `${list.length}/${perTeamCount}`;
 
             let playersHTML;
             if (list.length === 0) {
@@ -11329,10 +11316,10 @@ async function renderRoomContent(roomId) {
     </span>
     <span class="rlb-text">${canStart ? 'ЗАПУСТИТЬ МАТЧ' : 'ОЖИДАНИЕ ИГРОКОВ'}</span>
     <span class="rlb-sub">
-    ${teamA.length < needPerTeam 
-        ? `Не хватает ${needPerTeam - teamA.length} в команде A` 
-        : teamB.length < needPerTeam 
-            ? `Не хватает ${needPerTeam - teamB.length} в команде B`
+    ${teamA.length < perTeamCount 
+        ? `Не хватает ${perTeamCount - teamA.length} в команде A` 
+        : teamB.length < perTeamCount 
+            ? `Не хватает ${perTeamCount - teamB.length} в команде B`
             : 'Все на месте'}
 </span>
 </button>
@@ -11354,12 +11341,12 @@ async function openChangeTeamSheet(roomId) {
             const { data: me } = await sb.from('room_players')
                 .select('team').eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
 
-            const needPerTeamCount = needPerTeam(room.mode);
-            const teamACount = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
-            const teamBCount = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
+            const perTeamCount = needPerTeam(room.mode);
+const teamACount = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
+const teamBCount = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
 
-            const aDisabled = me?.team === 'A' || teamACount >= needPerTeam;
-            const bDisabled = me?.team === 'B' || teamBCount >= needPerTeam;
+const aDisabled = me?.team === 'A' || teamACount >= perTeamCount;
+const bDisabled = me?.team === 'B' || teamBCount >= perTeamCount;
 
             const sheet = document.createElement('div');
             sheet.className = 'sheet-overlay active';
@@ -11639,12 +11626,12 @@ async function closeRoom(roomId) {
 
             const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
             const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready);
-            const needPerTeamCount = needPerTeam(room.mode);
+            const perTeamCount = needPerTeam(room.mode);
 
-            if (teamA.length < needPerTeam || teamB.length < needPerTeam) {
-                showToast(`Нужно по ${needPerTeam} игроков в каждой команде`);
-                return;
-            }
+if (teamA.length < perTeamCount || teamB.length < perTeamCount) {
+    showToast(`Нужно по ${perTeamCount} игроков в каждой команде`);
+    return;
+}
             if (!confirm('Начать матч? Команды будут заблокированы.')) return;
 
     await sb.from('rooms').update({
