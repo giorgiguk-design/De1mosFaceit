@@ -9416,11 +9416,12 @@ async function updateRequestsBadge() {
         function debouncedClubSearch() {
             clearTimeout(clubSearchTimer);
             clubSearchTimer = setTimeout(() => {
-                const q = document.getElementById('clubSearchInput')?.value.trim() || '';
-                if (q.length === 0) loadAllClubs();
-                else if (q.length >= 2) searchClubs(q);
-                else loadAllClubs();
-            }, 300);
+    const el = document.getElementById('clubSearchInput');
+    const q = el ? el.value.trim() : '';
+    if (q.length === 0) loadAllClubs();
+    else if (q.length >= 2) searchClubs(q);
+    else loadAllClubs();
+}, 300);
         }
 
         async function loadAllClubs() {
@@ -11460,8 +11461,10 @@ async function openChangeCaptainSheet(team) {
 }
 
 function closeChangeCaptainSheet() {
-    document.getElementById('changeCapOverlay')?.remove();
-    document.getElementById('changeCapSheet')?.remove();
+    const ov = document.getElementById('changeCapOverlay');
+    if (ov) ov.remove();
+    const sh = document.getElementById('changeCapSheet');
+    if (sh) sh.remove();
 }
 
 async function doChangeCaptain(team, newCapId) {
@@ -12120,7 +12123,8 @@ async function revokeModerator(userId) {
 }
 
 async function removeModerator() {
-    const val = document.getElementById('modInput')?.value.trim();
+    const inputEl = document.getElementById('modInput');
+const val = inputEl ? inputEl.value.trim() : '';
     if (!val) return;
     const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
     const query = field === 'username' ? val.replace('@', '') : Number(val);
@@ -13894,8 +13898,10 @@ async function openReportSheet(roomId, targetId) {
 }
 
 function closeReportSheet() {
-    document.getElementById('reportOverlay')?.remove();
-    document.getElementById('reportSheet')?.remove();
+    const ov = document.getElementById('reportOverlay');
+    if (ov) ov.remove();
+    const sh = document.getElementById('reportSheet');
+    if (sh) sh.remove();
     _reportTargetId = null;
     _reportMatchId = null;
     _reportSelectedReason = null;
@@ -13920,7 +13926,8 @@ async function submitReport() {
     btn.disabled = true;
     btn.textContent = 'ОТПРАВКА...';
 
-    const comment = document.getElementById('reportComment')?.value.trim() || '';
+    const commentEl = document.getElementById('reportComment');
+const comment = commentEl ? commentEl.value.trim() : '';
     const reason = REPORT_REASONS.find(r => r.id === _reportSelectedReason)?.label || 'Другое';
 
     try {
@@ -14960,14 +14967,16 @@ function subscribeCoversRealtime() {
     if (coversChannel) sb.removeChannel(coversChannel);
     coversChannel = sb.channel('covers_rt')
         .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'app_settings'
-        }, (payload) => {
-            const key = payload.new?.key || payload.old?.key;
-            if (!key || !key.startsWith('cover_')) return;
-            const shortKey = key.replace(/^cover_/, '');
-            coversCache[shortKey] = payload.new?.value || null;
-            applyCoverToButton(shortKey, coversCache[shortKey]);
-        })
+    event: '*', schema: 'public', table: 'app_settings'
+}, (payload) => {
+    const newKey = payload.new && payload.new.key;
+    const oldKey = payload.old && payload.old.key;
+    const key = newKey || oldKey;
+    if (!key || !key.startsWith('cover_')) return;
+    const shortKey = key.replace(/^cover_/, '');
+    coversCache[shortKey] = (payload.new && payload.new.value) || null;
+    applyCoverToButton(shortKey, coversCache[shortKey]);
+})
         .subscribe();
 }
 
@@ -16303,9 +16312,10 @@ let _clubInviteTimer = null;
 function debouncedClubInviteSearch() {
     clearTimeout(_clubInviteTimer);
     _clubInviteTimer = setTimeout(() => {
-        const q = document.getElementById('clubInviteSearch')?.value.trim() || '';
-        loadClubInviteList(q);
-    }, 300);
+    const el = document.getElementById('clubInviteSearch');
+    const q = el ? el.value.trim() : '';
+    loadClubInviteList(q);
+}, 300);
 }
 
 async function loadClubInviteList(q) {
@@ -16591,8 +16601,10 @@ async function shareProfile(userId) {
 }
 
 function closeShareSheet() {
-    document.getElementById('shareOverlay')?.remove();
-    document.getElementById('shareSheet')?.remove();
+    const ov = document.getElementById('shareOverlay');
+    if (ov) ov.remove();
+    const sh = document.getElementById('shareSheet');
+    if (sh) sh.remove();
 }
 
 async function copyShareText() {
