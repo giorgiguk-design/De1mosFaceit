@@ -93,16 +93,20 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             min-height: 100vh; -webkit-tap-highlight-color: transparent; overflow-x: hidden;
         }
+
+/* Слой 1: статичный градиентный фон (без анимации и blur) */
 body::before {
     content: ''; position: fixed; inset: -50%;
     background:
         radial-gradient(circle at 20% 20%, var(--glow-1), transparent 45%),
         radial-gradient(circle at 80% 60%, var(--glow-2), transparent 50%),
         radial-gradient(circle at 50% 100%, var(--glow-3), transparent 55%);
-    animation: bgFloat 24s ease-in-out infinite alternate;
-    z-index: -2; filter: blur(30px);
+    z-index: -2;
+    opacity: 0.9;
     transition: background 0.5s ease;
 }
+
+/* Слой 2: статичная сетка */
 body::after {
     content: ''; position: fixed; inset: 0;
     background-image:
@@ -112,16 +116,18 @@ body::after {
     mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 70%);
     -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 70%);
     z-index: -1; pointer-events: none;
-    transition: background-image 0.5s ease;
 }
-        @keyframes bgFloat { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(2%,-2%,0) scale(1.06); } }
+
+/* Пауза анимаций при сворачивании приложения */
+body.app-hidden * {
+    animation-play-state: paused !important;
+}
+
         .header {
             position: sticky; top: 0; z-index: 100;
             display: flex; align-items: center; justify-content: space-between;
             padding: 14px 18px;
-            background: rgba(5, 8, 7, 0.65);
-            backdrop-filter: blur(18px) saturate(140%);
-            -webkit-backdrop-filter: blur(18px) saturate(140%);
+            background: rgba(5, 8, 7, 0.92);
             border-bottom: 1px solid var(--border);
         }
         .avatar {
@@ -132,27 +138,23 @@ body::after {
             overflow: hidden;
             box-shadow: 0 0 0 1.5px rgba(var(--emerald-rgb),0.18), 0 0 12px rgba(var(--emerald-rgb),0.18);
             cursor: pointer;
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar:hover { transform: scale(1.08); }
 .header-title {
     font-size: 17px;
     font-weight: 800;
     letter-spacing: 0.6px;
     background: linear-gradient(90deg, var(--text) 0%, var(--emerald) 50%, var(--text) 100%);
-    background-size: 200% auto;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: shine 6s linear infinite;
     flex: 1;
     text-align: center;
 }
 .header-title span {
     -webkit-text-fill-color: var(--emerald);
-}
-@keyframes shine {
-    0%   { background-position: 0% center; }
-    100% { background-position: -200% center; }
 }
         .notif-btn {
             width: 42px; height: 42px; border-radius: 50%;
@@ -179,7 +181,6 @@ body::after {
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6)) drop-shadow(0 0 16px rgba(var(--emerald-rgb), 0.5));
-    animation: countUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
         .elo-level { display: inline-block; background: rgba(var(--emerald-rgb),0.08); border: 1px solid var(--border-strong); color: var(--emerald); padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 10px; }
         .elo-progress { margin-top: 18px; height: 6px; background: rgba(var(--emerald-rgb),0.06); border-radius: 3px; overflow: hidden; }
@@ -311,7 +312,6 @@ body::after {
     text-transform: uppercase;
     margin-bottom: 10px;
     box-shadow: 0 0 20px rgba(217,171,90,0.15);
-    animation: bounceIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
     
         .profile-level-badge {
@@ -390,8 +390,7 @@ body::after {
             position: fixed; bottom: 0; left: 0; right: 0;
             display: flex; justify-content: space-around;
             padding: 8px 0 14px;
-            background: rgba(5, 8, 7, 0.78);
-            backdrop-filter: blur(20px) saturate(140%);
+            background: rgba(5, 8, 7, 0.94);
             border-top: 1px solid var(--border); z-index: 100;
         }
         .nav-item {
@@ -402,7 +401,6 @@ body::after {
         }
         .nav-item.active { color: var(--emerald); }
         .nav-item:active { transform: scale(0.9); }
-        .nav-item.active .nav-icon { animation: bounceIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .nav-icon { font-size: 19px; }
         .loading { display: none; text-align: center; padding: 18px; color: var(--emerald); font-weight: 600; font-size: 13px; }
         .loading.active { display: block; }
@@ -429,7 +427,7 @@ body::after {
         #avatarFileInput, #clubLogoFileInput, #chatImageInput, #screenshotInput { display: none; }
 .sheet-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px); z-index: 800;
+    z-index: 800;
     opacity: 0; pointer-events: none; transition: opacity 0.3s;
 }
         .sheet-overlay.active { opacity: 1; pointer-events: auto; }
@@ -478,7 +476,6 @@ body::after {
             display: inline-block; padding: 2px 8px; border-radius: 6px;
             font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
             margin-left: 6px; vertical-align: middle;
-            animation: fadeInScale 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
         }
         .role-tag.owner { background: rgba(217,171,90,0.18); color: var(--gold); border: 1px solid rgba(217,171,90,0.3); }
         .role-tag.elder { background: rgba(167,139,250,0.18); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
@@ -579,7 +576,6 @@ body::after {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            animation: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .owner-dots-btn {
@@ -618,7 +614,7 @@ body::after {
 
         .chat-view { position: fixed; inset: 0; z-index: 400; background: var(--bg); display: none; flex-direction: column; }
         .chat-view.active { display: flex; }
-        .chat-view-header { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(5,8,7,0.9); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .chat-view-header { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(5,8,7,0.96); border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .chat-back-btn { background: none; border: none; color: var(--emerald); font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: inherit; }
         .chat-view-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
@@ -634,7 +630,7 @@ body::after {
         .chat-quote-author { font-weight: 700; color: var(--emerald); margin-bottom: 2px; }
         .chat-quote-text { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-bubble img.chat-img { max-width: 100%; border-radius: 10px; margin-top: 6px; cursor: pointer; display: block; }
-        .chat-input-bar { display: flex; gap: 8px; padding: 10px 12px; background: rgba(5,8,7,0.9); border-top: 1px solid var(--border); flex-shrink: 0; align-items: center; }
+        .chat-input-bar { display: flex; gap: 8px; padding: 10px 12px; background: rgba(5,8,7,0.96); border-top: 1px solid var(--border); flex-shrink: 0; align-items: center; }
         .chat-input-bar input[type="text"] { flex: 1; background: rgba(var(--emerald-rgb),0.05); border: 1px solid var(--border); border-radius: 22px; padding: 12px 16px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; }
         .chat-input-bar input[type="text"]:focus { border-color: var(--border-strong); }
         .chat-send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--emerald); color: #04140e; border: none; font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
@@ -649,7 +645,7 @@ body::after {
 
         .player-modal {
             position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+            background: rgba(0,0,0,0.75);
             display: none; align-items: flex-start; justify-content: center;
             padding: 20px; overflow-y: auto;
             transition: opacity 0.28s ease;
@@ -661,9 +657,7 @@ body::after {
             border: 1px solid var(--border-strong);
             border-radius: 22px; padding: 20px;
             margin: 20px 0; position: relative;
-            transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .player-modal.active .player-modal-inner { animation: bounceIn 0.42s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .player-modal-close {
             position: absolute; top: 12px; right: 12px;
             background: rgba(255,255,255,0.06); border: none; color: var(--text);
@@ -671,7 +665,7 @@ body::after {
             font-size: 18px; font-family: inherit;
         }
 
-        .msg-menu-overlay { position: fixed; inset: 0; z-index: 810; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: none; align-items: flex-end; justify-content: center; }
+        .msg-menu-overlay { position: fixed; inset: 0; z-index: 810; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; }
         .msg-menu-overlay.active { display: flex; }
         .msg-menu { width: 100%; max-width: 500px; background: #0e1a16; border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid var(--border-strong); padding: 20px 20px 28px; animation: slideUpMenu 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes slideUpMenu { from { transform: translateY(100%); } to { transform: translateY(0); } }
@@ -696,11 +690,7 @@ body::after {
             border-color: var(--border-strong);
             box-shadow: 0 10px 30px rgba(var(--emerald-rgb),0.15);
         }
-        .mode-card.active {
-            box-shadow: 0 0 0 2px rgba(var(--emerald-rgb),0.25), 0 10px 30px rgba(var(--emerald-rgb),0.2);
-            animation: glowPulse 2.4s ease-in-out infinite;
-        }
-        .mode-icon { font-size: 38px; margin-bottom: 8px; display: inline-block; animation: floatY 3s ease-in-out infinite; }
+        .mode-icon { font-size: 38px; margin-bottom: 8px; display: inline-block; }
         .mode-title { font-size: 16px; font-weight: 800; }
         .mode-desc { font-size: 11px; color: var(--hint); margin-top: 4px; }
 
@@ -730,14 +720,10 @@ body::after {
         }
 
         .mm-screen { text-align: center; padding: 40px 20px; }
-        .mm-timer { font-size: 44px; font-weight: 900; color: var(--emerald); margin-bottom: 6px; animation: pulseText 2s ease-in-out infinite; }
+        .mm-timer { font-size: 44px; font-weight: 900; color: var(--emerald); margin-bottom: 6px; }
         .mm-timer-label { font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px; }
         .mm-elo-range { font-size: 13px; color: var(--hint); margin-bottom: 8px; }
         .mm-queue-count { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 30px; }
-        @keyframes pulseText {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.04); opacity: 0.92; }
-        }
 
         .confirm-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
         .confirm-team {
@@ -774,7 +760,7 @@ body::after {
         }
         .veto-card:active { transform: scale(0.97); }
         .veto-card:disabled { opacity: 0.4; cursor: not-allowed; }
-        .veto-card.banned { opacity: 0.3; cursor: default; animation: fadeInScale 0.3s ease; }
+        .veto-card.banned { opacity: 0.3; cursor: default; }
         .veto-card.banned::after {
             content: '✕'; position: absolute; inset: 0;
             display: flex; align-items: center; justify-content: center;
@@ -798,7 +784,6 @@ body::after {
             color: var(--emerald); margin: 12px 0;
             user-select: text; -webkit-user-select: text;
             font-family: 'Courier New', monospace;
-            animation: countUp 0.6s 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
         }
 
         .score-input-row { display: flex; gap: 12px; margin-bottom: 16px; }
@@ -857,7 +842,7 @@ body::after {
         .toggle-switch.on { background: var(--emerald); }
         .toggle-switch.on::after { transform: translateX(20px); }
 
-        /* ============ АНИМАЦИИ ============ */
+        /* ============ АНИМАЦИИ (только одноразовые / hover) ============ */
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -870,20 +855,9 @@ body::after {
             from { opacity: 0; transform: scale(0.92); }
             to { opacity: 1; transform: scale(1); }
         }
-        @keyframes glowPulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(var(--emerald-rgb),0.4); }
-            50% { box-shadow: 0 0 0 12px rgba(var(--emerald-rgb),0); }
-        }
-        @keyframes shimmer {
-            0% { background-position: -200% center; }
-            100% { background-position: 200% center; }
-        }
         @keyframes floatY {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-6px); }
-        }
-        @keyframes spinSlow {
-            to { transform: rotate(360deg); }
         }
         @keyframes countUp {
             from { opacity: 0; transform: translateY(10px) scale(0.85); }
@@ -897,6 +871,11 @@ body::after {
         @keyframes bubbleIn {
             from { opacity: 0; transform: translateY(8px) scale(0.92); }
             to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes statBump {
+            0%   { transform: scale(1); filter: brightness(1); }
+            35%  { transform: scale(1.25); filter: brightness(1.9); text-shadow: 0 0 24px rgba(var(--emerald-rgb), 1); }
+            100% { transform: scale(1); filter: brightness(1); }
         }
 
         .page.active { animation: pageFade 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -933,9 +912,6 @@ body::after {
         .stat-card:nth-child(2) { animation-delay: 0.10s; }
         .stat-card:nth-child(3) { animation-delay: 0.15s; }
         .section-title { animation: slideDown 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-        .menu-item:nth-child(2) .menu-icon { animation-delay: 0.4s; }
-        .menu-item:nth-child(3) .menu-icon { animation-delay: 0.8s; }
-        .menu-item:nth-child(4) .menu-icon { animation-delay: 1.2s; }
 
         .leaderboard-item,
         .menu-item,
@@ -959,12 +935,6 @@ body::after {
         .menu-item:active,
         .chat-list-item:active { transform: scale(0.98); }
 
-        .avatar { animation: pulseGlow 4s ease-in-out infinite; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 0 1.5px rgba(var(--emerald-rgb),0.18), 0 0 12px rgba(var(--emerald-rgb),0.18); }
-            50%      { box-shadow: 0 0 0 1.5px rgba(var(--emerald-rgb),0.28), 0 0 18px rgba(var(--emerald-rgb),0.28); }
-        }
-        .avatar:hover { transform: scale(1.08); }
         .profile-avatar { animation: bounceIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); transition: transform 0.3s ease; }
         .profile-avatar:hover { transform: scale(1.05) rotate(-2deg); }
         .profile-level-badge { animation: slideUp 0.5s 0.15s both; }
@@ -983,8 +953,10 @@ body::after {
             height: 56px;
             margin-bottom: 8px;
         }
-
-        #partyInviteSheet .lb-avatar { animation: bounceIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
 
         .container, .sheet { scroll-behavior: smooth; }
 
@@ -1005,7 +977,6 @@ body::after {
         .page-loading-bar.active { opacity: 1; }
 
         #page-finished .profile-hero { animation: fadeInScale 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        #page-finished .profile-hero div:first-child { animation: bounceIn 0.9s cubic-bezier(0.34, 1.56, 0.64, 1); }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -1043,9 +1014,7 @@ body::after {
     top: 12px; right: 12px;
     width: 40px; height: 40px;
     border-radius: 50%;
-    background: rgba(10, 20, 16, 0.85);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    background: rgba(10, 20, 16, 0.95);
     border: 1px solid var(--border-strong);
     color: var(--emerald);
     font-size: 20px;
@@ -1058,9 +1027,7 @@ body::after {
                 background 0.25s ease;
 }
 .play-close-float:active { transform: scale(0.88); }
-.play-close-float:hover {
-    background: rgba(var(--emerald-rgb), 0.15);
-}
+.play-close-float:hover { background: rgba(var(--emerald-rgb), 0.15); }
 
 /* Плавающая "Войти в игру" */
 .play-enter-float {
@@ -1082,7 +1049,6 @@ body::after {
     gap: 6px;
     z-index: 405;
     box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.35);
-    animation: bannerPulse 2.5s ease-in-out infinite;
 }
 .play-enter-float.active { display: flex; }
 .play-enter-float:active { transform: scale(0.96); }
@@ -1711,7 +1677,6 @@ body::after {
     color: #04140e;
     box-shadow: 0 8px 32px rgba(var(--emerald-rgb), 0.45),
                 inset 0 1px 0 rgba(255,255,255,0.35);
-    animation: launchPulse 2.2s ease-in-out infinite;
 }
 .room-launch-btn.ready:active { transform: scale(0.97); }
 .room-launch-btn.waiting {
@@ -1736,17 +1701,6 @@ body::after {
     font-weight: 700;
     opacity: 0.75;
     letter-spacing: 0.5px;
-}
-@keyframes launchPulse {
-    0%, 100% {
-        box-shadow: 0 8px 32px rgba(var(--emerald-rgb), 0.45),
-                    inset 0 1px 0 rgba(255,255,255,0.35);
-    }
-    50% {
-        box-shadow: 0 8px 40px rgba(var(--emerald-rgb), 0.65),
-                    0 0 60px rgba(var(--emerald-rgb), 0.3),
-                    inset 0 1px 0 rgba(255,255,255,0.35);
-    }
 }
 
 /* Подсказка зрителю */
@@ -1941,21 +1895,15 @@ body::after {
     justify-content: space-between;
     gap: 10px;
     cursor: pointer;
-    box-shadow: 0 8px 30px rgba(var(--emerald-rgb),0.35), 0 0 40px rgba(var(--emerald-rgb),0.15);
-    animation: bannerPulse 2.5s ease-in-out infinite;
+    box-shadow: 0 8px 30px rgba(var(--emerald-rgb),0.35);
     transition: transform 0.2s;
     font-family: inherit;
 }
 .active-room-banner.active { display: flex; }
 .active-room-banner:active { transform: scale(0.97); }
 
-@keyframes bannerPulse {
-    0%, 100% { box-shadow: 0 8px 30px rgba(var(--emerald-rgb),0.35), 0 0 40px rgba(var(--emerald-rgb),0.15); }
-    50%      { box-shadow: 0 8px 34px rgba(var(--emerald-rgb),0.5), 0 0 60px rgba(var(--emerald-rgb),0.25); }
-}
-
 .active-room-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
-.active-room-icon { font-size: 24px; flex-shrink: 0; animation: floatY 2s ease-in-out infinite; }
+.active-room-icon { font-size: 24px; flex-shrink: 0; }
 .active-room-text { flex: 1; min-width: 0; }
 .active-room-title {
     font-size: 14px; font-weight: 800; color: #04140e;
@@ -1966,11 +1914,6 @@ body::after {
 }
 .active-room-arrow {
     font-size: 20px; font-weight: 900; color: #04140e; flex-shrink: 0;
-    animation: arrowSlide 1.8s ease-in-out infinite;
-}
-@keyframes arrowSlide {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(4px); }
 }
 
 /* ============ ROOM CHAT BTN ============ */
@@ -1993,11 +1936,6 @@ body::after {
     background: rgba(255,46,77,0.15);
     border-color: var(--red);
     color: var(--red);
-    animation: pulseChatBtn 1.8s ease-in-out infinite;
-}
-@keyframes pulseChatBtn {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255,46,77,0.5); }
-    50% { box-shadow: 0 0 0 8px rgba(255,46,77,0); }
 }
 
 .room-chat-messages {
@@ -2067,13 +2005,11 @@ body::after {
     margin: -8px -16px 14px;
     background: linear-gradient(180deg,
         rgba(var(--emerald-rgb), 0.06) 0%,
-        rgba(0, 0, 0, 0.3) 100%);
+        rgba(0, 0, 0, 0.5) 100%);
     border-bottom: 1px solid var(--border-strong);
     position: sticky;
     top: 0;
     z-index: 10;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
 }
 .room-chat-header::before {
     content: '';
@@ -2175,7 +2111,6 @@ body::after {
     background: var(--emerald); color: var(--bg);
     display: flex; align-items: center; justify-content: center;
     font-size: 15px; font-weight: 900; flex-shrink: 0;
-    animation: bounceIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* ============ HEADER ROOM INDICATOR ============ */
@@ -2186,39 +2121,19 @@ body::after {
     display: flex; align-items: center; justify-content: center;
     font-size: 18px; cursor: pointer;
     position: relative;
-    animation: pulseIndicator 2s ease-in-out infinite;
 }
 .hri-dot {
     position: absolute; top: 6px; right: 6px;
     width: 10px; height: 10px; border-radius: 50%;
     background: var(--red);
     box-shadow: 0 0 8px var(--red);
-    animation: dotPulse 1.5s ease-in-out infinite;
-}
-@keyframes pulseIndicator {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--emerald-rgb), 0.4); }
-    50% { box-shadow: 0 0 0 10px rgba(var(--emerald-rgb), 0); }
-}
-@keyframes dotPulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.3); opacity: 0.7; }
-}
-
-/* ============ TEAM FLASH ============ */
-.team-flash { animation: teamFlash 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes teamFlash {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--emerald-rgb), 0.6); }
-    50% { transform: scale(1.02); box-shadow: 0 0 0 16px rgba(var(--emerald-rgb), 0); }
-    100% { transform: scale(1); }
 }
 
     /* ============ MENU DRAWER ============ */
 .menu-drawer-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
     z-index: 900;
     opacity: 0;
     pointer-events: none;
@@ -2435,27 +2350,9 @@ body::after {
     align-items: center;
     justify-content: center;
     border: 2px solid var(--bg);
-    animation: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .notif-btn.has-notif {
-    animation: notifPulse 1.6s ease-in-out infinite;
-}
-.notif-btn.has-notif::before {
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    background: rgba(255, 46, 77, 0.35);
-    animation: notifRing 1.6s ease-out infinite;
-    z-index: -1;
-}
-@keyframes notifPulse {
-    0%, 100% { color: var(--red); transform: scale(1); }
-    50%      { color: var(--red); transform: scale(1.08); }
-}
-@keyframes notifRing {
-    0%   { transform: scale(0.9); opacity: 0.8; }
-    100% { transform: scale(1.6); opacity: 0; }
+    color: var(--red);
 }
 
 /* ============ NOTIF ITEMS ============ */
@@ -2548,7 +2445,7 @@ body::after {
     mix-blend-mode: overlay;
 }
 .btn-with-cover.has-cover .btn-cover-bg {
-    opacity: 0.18;   /* 🔥 сила прозрачности */
+    opacity: 0.18;
 }
 .btn-with-cover > *:not(.btn-cover-bg) {
     position: relative;
@@ -2786,10 +2683,8 @@ body::after {
     align-items: center;
     justify-content: center;
     border: 2px solid var(--bg);
-    animation: bounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .room-icon-btn.has-unread {
-    animation: notifPulse 1.6s ease-in-out infinite;
     color: var(--red);
     border-color: rgba(255, 84, 112, 0.4);
     background: rgba(255, 84, 112, 0.08);
@@ -2867,7 +2762,6 @@ body::after {
     align-items: center;
     justify-content: center;
     border: 2px solid var(--bg);
-    animation: bounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     pointer-events: none;
     z-index: 2;
 }
@@ -2877,7 +2771,6 @@ body::after {
 }
 .nav-item.has-unread .nav-icon,
 .menu-drawer-btn.has-unread {
-    animation: notifPulse 1.6s ease-in-out infinite;
     color: var(--red);
 }
 
@@ -3078,7 +2971,6 @@ body::after {
     );
 }
 
-/* Верхняя неоновая полоска */
 .play-btn-cyber::before {
     content: '';
     position: absolute;
@@ -3096,7 +2988,6 @@ body::after {
     transition: opacity 0.25s ease;
 }
 
-/* Нижняя тонкая подложка */
 .play-btn-cyber::after {
     content: '';
     position: absolute;
@@ -3129,29 +3020,9 @@ body::after {
 .pbc-corner-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
 .pbc-corner-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
 
-/* Бегущая тонкая линия «сканирования» */
+/* Скан-линия — скрыта, чтобы не жрать FPS */
 .pbc-scan {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(var(--emerald-rgb), 0.7) 50%,
-        transparent 100%);
-    z-index: 3;
-    opacity: 0.6;
-    pointer-events: none;
-    animation: pbcScan 5s linear infinite;
-}
-
-@keyframes pbcScan {
-    0%   { transform: translateY(0); opacity: 0; }
-    10%  { opacity: 0.6; }
-    50%  { opacity: 0.6; }
-    90%  { opacity: 0.6; }
-    100% { transform: translateY(calc(100% - 1px)); opacity: 0; }
+    display: none;
 }
 
 /* Содержимое */
@@ -3222,7 +3093,6 @@ body::after {
     text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
 }
 
-/* Hover — сдержанный */
 .play-btn-cyber:hover {
     border-color: var(--emerald);
     box-shadow:
@@ -3238,21 +3108,12 @@ body::after {
 .play-btn-cyber:hover .pbc-arrow { transform: translateX(4px); color: var(--emerald-3); }
 .play-btn-cyber:hover .pbc-icon  { transform: scale(1.06); }
 
-/* Active */
 .play-btn-cyber:active {
     transform: scale(0.985);
     box-shadow:
         inset 0 0 0 1px rgba(0, 0, 0, 0.5),
         inset 0 2px 8px rgba(0, 0, 0, 0.4),
         0 2px 10px rgba(var(--emerald-rgb), 0.15);
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .pbc-scan { animation: none; opacity: 0; }
-    .play-btn-cyber,
-    .pbc-icon,
-    .pbc-arrow { transition: none; }
 }
 
     /* ============ CHOOSE TEAM HINT (cyber) ============ */
@@ -3284,7 +3145,6 @@ body::after {
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Верхняя неоновая линия */
 .choose-team-hint::before {
     content: '';
     position: absolute;
@@ -3299,7 +3159,6 @@ body::after {
     pointer-events: none;
 }
 
-/* Внутренний сетчатый паттерн */
 .choose-team-hint::after {
     content: '';
     position: absolute;
@@ -3314,7 +3173,6 @@ body::after {
     z-index: 0;
 }
 
-/* Мягкий пульс */
 .cth-glow {
     position: absolute;
     top: -50%;
@@ -3328,15 +3186,8 @@ body::after {
     filter: blur(28px);
     pointer-events: none;
     z-index: 0;
-    animation: cthGlow 4s ease-in-out infinite alternate;
 }
 
-@keyframes cthGlow {
-    0%   { transform: translate(0, 0); opacity: 0.6; }
-    100% { transform: translate(20px, 10px); opacity: 1; }
-}
-
-/* Углы-скобки */
 .cth-corner {
     position: absolute;
     width: 10px;
@@ -3353,7 +3204,6 @@ body::after {
 .cth-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
 .cth-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
 
-/* Иконка */
 .cth-icon {
     position: relative;
     z-index: 2;
@@ -3370,15 +3220,8 @@ body::after {
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.06),
         0 0 12px rgba(var(--emerald-rgb), 0.15);
-    animation: cthIconPulse 2.6s ease-in-out infinite;
 }
 
-@keyframes cthIconPulse {
-    0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 12px rgba(var(--emerald-rgb), 0.15); }
-    50%      { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 20px rgba(var(--emerald-rgb), 0.35); }
-}
-
-/* Текст */
 .cth-body {
     position: relative;
     z-index: 2;
@@ -3443,7 +3286,6 @@ body::after {
                 box-shadow 0.25s ease;
 }
 
-/* Верхняя тонкая неоновая линия */
 .menu-item::before {
     content: '';
     position: absolute;
@@ -3459,7 +3301,6 @@ body::after {
     transition: opacity 0.22s ease;
 }
 
-/* Уголок в правом нижнем углу */
 .menu-item::after {
     content: '';
     position: absolute;
@@ -3491,7 +3332,6 @@ body::after {
     transform: scale(0.98);
 }
 
-/* Мягкое свечение-пятно */
 .menu-item-glow {
     position: absolute;
     top: -50%;
@@ -3523,13 +3363,11 @@ body::after {
     font-size: 20px;
     line-height: 1;
     border-radius: 0px;
-    /* 🔥 Тёмная подложка, чтобы эмодзи не сливались */
     background: rgba(0, 0, 0, 0.45);
     border: 1px solid var(--border-strong);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
         inset 0 -1px 0 rgba(0, 0, 0, 0.4);
-    /* 🔥 Тонкая неоновая подсветка иконки */
     text-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.5);
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
                 background 0.25s ease,
@@ -3632,7 +3470,7 @@ body::after {
         rgba(var(--emerald-rgb), 0.015) 50%,
         rgba(0, 0, 0, 0.4) 100%);
     border: 1px solid var(--border-strong);
-    border-radius: 0; /* ← без скруглений */
+    border-radius: 0;
     clip-path: polygon(
         10px 0, 100% 0, 100% calc(100% - 10px),
         calc(100% - 10px) 100%, 0 100%, 0 10px
@@ -3645,7 +3483,6 @@ body::after {
                 box-shadow 0.25s ease;
 }
 
-/* Верхняя неоновая линия */
 .stat-card::before {
     content: '';
     position: absolute;
@@ -3661,7 +3498,6 @@ body::after {
     transition: opacity 0.22s ease;
 }
 
-/* Уголок-скобка снизу справа */
 .stat-card::after {
     content: '';
     position: absolute;
@@ -3677,7 +3513,6 @@ body::after {
     transition: opacity 0.22s ease;
 }
 
-/* Углы-скобки */
 .sc-corner {
     position: absolute;
     width: 9px;
@@ -3694,7 +3529,6 @@ body::after {
 .sc-bl { bottom: 5px; left: 5px; border-bottom-width: 2px; border-left-width: 2px; }
 .sc-br { bottom: 5px; right: 5px; border-bottom-width: 2px; border-right-width: 2px; }
 
-/* Мягкое свечение */
 .sc-glow {
     position: absolute;
     top: -40%;
@@ -3713,7 +3547,6 @@ body::after {
     z-index: 0;
 }
 
-/* Иконка-эмблема */
 .sc-icon {
     position: relative;
     z-index: 2;
@@ -3722,14 +3555,8 @@ body::after {
     margin-bottom: 6px;
     text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
     display: inline-block;
-    animation: scIconFloat 3s ease-in-out infinite;
-}
-@keyframes scIconFloat {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-3px); }
 }
 
-/* Значение */
 .stat-value {
     position: relative;
     z-index: 2;
@@ -3744,7 +3571,6 @@ body::after {
     transition: color 0.25s ease, text-shadow 0.25s ease;
 }
 
-/* Заголовок */
 .stat-label {
     position: relative;
     z-index: 2;
@@ -3756,7 +3582,6 @@ body::after {
     font-weight: 800;
 }
 
-/* Hover */
 .stat-card:hover {
     transform: translateY(-2px);
     border-color: var(--emerald);
@@ -3769,12 +3594,8 @@ body::after {
 .stat-card:hover::after  { opacity: 1; }
 .stat-card:hover .sc-glow { opacity: 1; }
 
-/* === Разные акценты для трёх карточек === */
-
-/* Матчи — изумруд */
 .stat-card-matches .stat-value { color: var(--emerald); }
 
-/* Победы — золото */
 .stat-card-wins .sc-corner,
 .stat-card-wins::after { border-color: var(--gold); }
 .stat-card-wins::before {
@@ -3796,20 +3617,13 @@ body::after {
         0 0 0 1px rgba(217, 171, 90, 0.35);
 }
 
-/* Winrate — фиолетовый/пурпур (акцент темы) */
 .stat-card-winrate .stat-value {
     color: var(--emerald-3);
     text-shadow: 0 0 12px rgba(var(--emerald-light-rgb), 0.55), 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* Микро-вспышка при обновлении значения */
 .stat-value.bump {
     animation: statBump 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes statBump {
-    0%   { transform: scale(1); filter: brightness(1); }
-    35%  { transform: scale(1.25); filter: brightness(1.9); text-shadow: 0 0 24px rgba(var(--emerald-rgb), 1); }
-    100% { transform: scale(1); filter: brightness(1); }
 }
 
     /* ============ DXPCHART CARD ============ */
@@ -3866,7 +3680,6 @@ body::after {
 .ech-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
 .ech-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
 
-/* Header */
 .ech-header {
     display: flex;
     align-items: flex-start;
@@ -3908,7 +3721,6 @@ body::after {
     text-shadow: 0 0 8px rgba(255, 84, 112, 0.4);
 }
 
-/* Body: ось Y + SVG */
 .ech-body {
     display: grid;
     grid-template-columns: 42px 1fr;
@@ -3946,31 +3758,12 @@ body::after {
 }
 
 #eloLinePath {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
     filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.65));
-    animation: echLineDraw 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-@keyframes echLineDraw {
-    to { stroke-dashoffset: 0; }
-}
-#eloAreaPath {
-    opacity: 0;
-    animation: echAreaFade 0.9s 0.5s ease forwards;
-}
-@keyframes echAreaFade {
-    to { opacity: 1; }
 }
 #eloLastDot {
     filter: drop-shadow(0 0 6px var(--emerald-3));
-    animation: echDotPulse 2s ease-in-out infinite;
-}
-@keyframes echDotPulse {
-    0%, 100% { r: 3; opacity: 1; }
-    50%      { r: 5; opacity: 0.6; }
 }
 
-/* Полоски-«streak» (W/L) под графиком */
 .ech-streak {
     display: flex;
     flex-wrap: wrap;
@@ -3996,7 +3789,6 @@ body::after {
 }
 .ech-streak:empty { display: none; }
 
-/* W/L футер */
 .ech-footer {
     display: flex;
     justify-content: space-between;
@@ -4026,7 +3818,6 @@ body::after {
 }
 .ech-w b, .ech-l b { font-weight: 900; margin-left: 2px; }
 
-/* Пустое состояние */
 .elo-chart-card.empty .ech-body { opacity: 0.35; }
 .elo-chart-card.empty .ech-empty-msg {
     position: absolute;
@@ -4062,7 +3853,6 @@ body::after {
     box-shadow: 0 10px 28px rgba(var(--emerald-rgb), 0.25);
 }
 
-/* Тонкая неоновая полоска сверху баннера */
 #leaderboardHeroWrap .leaderboard-hero::before {
     content: '';
     position: absolute;
@@ -4281,7 +4071,6 @@ body::after {
 }
 .mini-stat-copy:active { transform: scale(0.88); }
 
-/* DXP-график — оставляем стили что выше, добавляем winrate */
 .ech-winrate {
     font-size: 11px;
     font-weight: 900;
@@ -4396,7 +4185,6 @@ body::after {
     filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.5));
 }
 
-/* Шестерёнка рядом с клубом */
 .club-gear {
     width: 40px;
     height: 40px;
@@ -4424,7 +4212,6 @@ body::after {
 }
 .club-gear:active { transform: scale(0.9) rotate(45deg); }
 
-/* Главная кнопка "Начать игру" */
 .club-play-main {
     position: relative;
     width: 100%;
@@ -4455,7 +4242,6 @@ body::after {
         0 6px 22px rgba(var(--emerald-rgb), 0.35),
         inset 0 1px 0 rgba(255, 255, 255, 0.35);
     transition: transform 0.2s ease, box-shadow 0.3s ease, background-position 0.5s ease;
-    animation: cpmPulse 2.6s ease-in-out infinite;
 }
 .club-play-main:hover {
     transform: translateY(-2px);
@@ -4477,18 +4263,7 @@ body::after {
     opacity: 0.75;
     letter-spacing: 0.5px;
 }
-@keyframes cpmPulse {
-    0%, 100% {
-        box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.35),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-    }
-    50% {
-        box-shadow: 0 6px 30px rgba(var(--emerald-rgb), 0.6),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    }
-}
 
-/* Ряд мелких прямоугольных кнопок */
 .club-actions-row-new {
     display: flex;
     flex-wrap: wrap;
@@ -4539,7 +4314,6 @@ body::after {
     border-color: var(--red);
 }
 
-/* Компактный список участников */
 .club-member-row {
     display: flex;
     align-items: center;
@@ -4604,7 +4378,6 @@ body::after {
 }
 .club-mini-dots:active { transform: scale(0.9); background: rgba(var(--emerald-rgb),0.1); }
 
-/* Бейдж заявок внутри мелкой кнопки */
 .club-mini-btn .badge {
     position: absolute;
     top: -4px;
@@ -4712,7 +4485,6 @@ body::after {
 }
 .dev-tag:active { transform: scale(0.95); }
 
-    /* ===== AVATAR FALLBACK ===== */
 .av-fallback-letter,
 .av-fallback {
     width: 100%;
@@ -4730,7 +4502,6 @@ body::after {
     letter-spacing: 0.5px;
 }
 
-/* Если фон у родителя светлый — сделать авто-контраст */
 .lb-avatar .av-fallback-letter,
 .chat-list-avatar .av-fallback-letter,
 .menu-drawer-avatar .av-fallback-letter,
@@ -4744,7 +4515,6 @@ body::after {
     color: var(--emerald-3);
 }
 
-    /* Мини-версия тега для списков */
 .dev-tag-mini {
     display: inline-flex;
     align-items: center;
@@ -4766,7 +4536,7 @@ body::after {
     font-family: inherit;
 }
 
-    .elo-value-wrap {
+.elo-value-wrap {
     display: flex;
     align-items: baseline;
     gap: 10px;
@@ -4785,133 +4555,6 @@ body::after {
     opacity: 0.9;
     align-self: flex-end;
     padding-bottom: 6px;
-    animation: dxpLabelPulse 3s ease-in-out infinite;
-}
-@keyframes dxpLabelPulse {
-    0%, 100% { text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.55); }
-    50%      { text-shadow: 0 0 22px rgba(var(--emerald-rgb), 0.9); }
-}
-
-    /* ============ ANIMATED BACKGROUND ============ */
-/* Слой 1: пульсирующие орбы */
-body::before {
-    content: ''; position: fixed; inset: -50%;
-    background:
-        radial-gradient(circle at 20% 20%, var(--glow-1), transparent 45%),
-        radial-gradient(circle at 80% 60%, var(--glow-2), transparent 50%),
-        radial-gradient(circle at 50% 100%, var(--glow-3), transparent 55%);
-    animation: bgFloat 24s ease-in-out infinite alternate,
-               bgHueShift 30s linear infinite;
-    z-index: -3; filter: blur(40px);
-}
-
-/* Слой 2: движущиеся частицы */
-.bg-particles {
-    position: fixed; inset: 0;
-    pointer-events: none;
-    z-index: -2;
-    overflow: hidden;
-}
-.bg-particles::before,
-.bg-particles::after {
-    content: '';
-    position: absolute;
-    width: 3px; height: 3px;
-    border-radius: 50%;
-    background: var(--emerald);
-    box-shadow:
-        120px 80px 0 -1px var(--emerald),
-        240px 200px 0 -1.5px var(--emerald-3),
-        360px 120px 0 -1px var(--emerald-2),
-        480px 300px 0 -2px var(--emerald),
-        620px 180px 0 -1px var(--emerald-3),
-        780px 420px 0 -1.5px var(--emerald-2),
-        900px 260px 0 -1px var(--emerald),
-        1050px 540px 0 -2px var(--emerald-3),
-        1180px 380px 0 -1px var(--emerald-2),
-        1320px 620px 0 -1.5px var(--emerald),
-        200px 500px 0 -2px var(--emerald-3),
-        700px 700px 0 -1px var(--emerald-2);
-    animation: particlesFloat 40s linear infinite;
-    opacity: 0.6;
-}
-.bg-particles::after {
-    width: 2px; height: 2px;
-    box-shadow:
-        150px 350px 0 -1px var(--emerald-3),
-        340px 550px 0 -1.5px var(--emerald),
-        520px 420px 0 -1px var(--emerald-2),
-        700px 180px 0 -2px var(--emerald-3),
-        880px 660px 0 -1px var(--emerald),
-        1020px 400px 0 -1.5px var(--emerald-2),
-        1250px 220px 0 -1px var(--emerald-3),
-        1420px 580px 0 -2px var(--emerald);
-    animation: particlesFloat2 55s linear infinite reverse;
-    opacity: 0.4;
-}
-@keyframes particlesFloat {
-    0%   { transform: translateY(0) translateX(0); }
-    100% { transform: translateY(-60vh) translateX(-40px); }
-}
-@keyframes particlesFloat2 {
-    0%   { transform: translateY(0) translateX(0); }
-    100% { transform: translateY(-80vh) translateX(60px); }
-}
-@keyframes bgHueShift {
-    0%   { filter: blur(40px) hue-rotate(0deg); }
-    100% { filter: blur(40px) hue-rotate(360deg); }
-}
-
-/* Слой 3: сетка (усиливаем) */
-body::after {
-    content: ''; position: fixed; inset: 0;
-    background-image:
-        linear-gradient(var(--grid-line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px;
-    mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 75%);
-    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 75%);
-    z-index: -1; pointer-events: none;
-    animation: gridDrift 60s linear infinite;
-}
-@keyframes gridDrift {
-    0%   { background-position: 0 0, 0 0; }
-    100% { background-position: 40px 40px, 40px 40px; }
-}
-
-/* Плавающие световые лучи */
-.bg-rays {
-    position: fixed; inset: 0;
-    pointer-events: none;
-    z-index: -2;
-    overflow: hidden;
-}
-.bg-rays::before,
-.bg-rays::after {
-    content: '';
-    position: absolute;
-    top: -50%; left: -50%;
-    width: 200%; height: 200%;
-    background: conic-gradient(
-        from 0deg,
-        transparent 0deg,
-        rgba(var(--emerald-rgb), 0.03) 60deg,
-        transparent 120deg,
-        rgba(var(--emerald-rgb), 0.04) 180deg,
-        transparent 240deg,
-        rgba(var(--emerald-rgb), 0.03) 300deg,
-        transparent 360deg
-    );
-    animation: raysRotate 90s linear infinite;
-}
-.bg-rays::after {
-    animation-duration: 140s;
-    animation-direction: reverse;
-    opacity: 0.6;
-}
-@keyframes raysRotate {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 
     .onboard-themes {
@@ -4991,63 +4634,6 @@ body::after {
     position: relative;
     overflow: hidden;
 }
-.leaderboard-item::after,
-.menu-item::after,
-.chat-list-item::after,
-.play-room-card::after,
-.club-member-row::after {
-    content: '';
-    position: absolute;
-    top: 0; left: -60%;
-    width: 40%; height: 100%;
-    background: linear-gradient(120deg,
-        transparent 0%,
-        rgba(var(--emerald-rgb), 0.10) 50%,
-        transparent 100%);
-    transform: skewX(-20deg);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-.leaderboard-item:hover::after,
-.menu-item:hover::after,
-.chat-list-item:hover::after,
-.play-room-card:hover::after,
-.club-member-row:hover::after {
-    opacity: 1;
-    animation: cardShine 0.9s ease-out;
-}
-@keyframes cardShine {
-    0%   { left: -60%; }
-    100% { left: 130%; }
-}
-
-    .nav-item.active .nav-icon {
-    animation: navPulse 2s ease-in-out infinite;
-}
-@keyframes navPulse {
-    0%, 100% { filter: drop-shadow(0 0 0 rgba(var(--emerald-rgb), 0)); transform: scale(1); }
-    50%      { filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.8)); transform: scale(1.06); }
-}
-
-    .play-room-card::before {
-    background: linear-gradient(90deg,
-        var(--emerald), var(--emerald-2), var(--emerald-3), var(--emerald-2), var(--emerald));
-    background-size: 200% 100%;
-    animation: barFlow 4s linear infinite;
-}
-@keyframes barFlow {
-    0%   { background-position: 0% 0; }
-    100% { background-position: 200% 0; }
-}
-
-    .page.active {
-    animation: pageFade 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-@keyframes pageFade {
-    from { opacity: 0; transform: translateY(20px) scale(0.98); filter: blur(4px); }
-    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-}
 
     .club-logo {
     box-shadow: 0 0 0 1px var(--border-strong),
@@ -5059,7 +4645,32 @@ body::after {
                 0 0 28px rgba(var(--emerald-rgb), 0.45);
     transform: scale(1.03);
 }
-    
+
+/* ============ OPTIMIZATION: GPU HINTS ============ */
+.leaderboard-item,
+.menu-item,
+.chat-list-item,
+.play-room-card,
+.club-member-row,
+.stat-card,
+.mode-card,
+.veto-card,
+.rv-icon-btn,
+.club-mini-btn,
+.team-zone {
+    will-change: transform;
+}
+
+/* Убираем will-change после взаимодействия — оставляем только на hover */
+.leaderboard-item:hover,
+.menu-item:hover,
+.chat-list-item:hover,
+.play-room-card:hover,
+.stat-card:hover,
+.mode-card:hover,
+.veto-card:hover {
+    will-change: transform, box-shadow;
+}
 </style>
 </head>
 <body>
