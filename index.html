@@ -7455,6 +7455,268 @@ body::after {
 /* ============================================================
    END v3.0 — CYBER ESPORTS UI MEGA UPGRADE
    ============================================================ */
+
+    .svg-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke-width: 2;
+    display: block;
+    transition: all 0.3s ease;
+}
+.svg-icon { transition: all 0.3s ease; }
+.nav-item.active .svg-icon svg { 
+    filter: drop-shadow(0 0 8px currentColor);
+}
+.menu-item:hover .svg-icon { 
+    transform: scale(1.1) rotate(-5deg);
+    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.8));
+}
+
+    /* === LIVE CURSOR TRAIL === */
+@media (hover: hover) {
+    body, * {
+        cursor: none !important;
+    }
+    body.custom-cursor-active {
+        cursor: default !important;
+    }
+    body.custom-cursor-active input,
+    body.custom-cursor-active textarea {
+        cursor: text !important;
+    }
+}
+
+.cursor-dot {
+    position: fixed;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow:
+        0 0 8px var(--emerald),
+        0 0 16px rgba(var(--emerald-rgb), 0.6);
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.05s ease;
+}
+
+.cursor-ring {
+    position: fixed;
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid var(--emerald);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 99998;
+    transform: translate(-50%, -50%);
+    transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity: 0.6;
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.4);
+}
+
+.cursor-ring.hover {
+    width: 48px;
+    height: 48px;
+    opacity: 1;
+    border-color: var(--emerald-3);
+    background: rgba(var(--emerald-rgb), 0.08);
+    box-shadow: 0 0 24px rgba(var(--emerald-rgb), 0.7);
+}
+
+.cursor-ring.click {
+    width: 20px;
+    height: 20px;
+    opacity: 1;
+    background: rgba(var(--emerald-rgb), 0.3);
+}
+
+.cursor-trail {
+    position: fixed;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--emerald-3);
+    pointer-events: none;
+    z-index: 99997;
+    transform: translate(-50%, -50%);
+    opacity: 0.7;
+    animation: trailFade 0.6s ease-out forwards;
+}
+
+@keyframes trailFade {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+    100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+}
+
+@media (hover: none) {
+    .cursor-dot, .cursor-ring, .cursor-trail { display: none; }
+}
+
+    @keyframes rippleExpand {
+    to {
+        width: 80px; height: 80px;
+        opacity: 0;
+        border-color: var(--emerald-3);
+    }
+}
+
+    /* === PARALLAX === */
+.parallax-layer {
+    position: fixed;
+    inset: -10%;
+    pointer-events: none;
+    z-index: -1;
+    will-change: transform;
+}
+.parallax-layer.l1 {
+    background: radial-gradient(circle at 20% 30%, rgba(var(--emerald-rgb), 0.08), transparent 50%);
+    z-index: -3;
+}
+.parallax-layer.l2 {
+    background: radial-gradient(circle at 80% 70%, rgba(var(--emerald-rgb), 0.06), transparent 55%);
+    z-index: -2;
+}
+
+    /* === VIEW TRANSITIONS === */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root) {
+    animation: slideOutLeft 0.35s cubic-bezier(0.4, 0, 1, 1);
+}
+::view-transition-new(root) {
+    animation: slideInRight 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideOutLeft {
+    to { opacity: 0; transform: translateX(-30px) scale(0.98); filter: blur(8px); }
+}
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(30px) scale(0.98); filter: blur(8px); }
+}
+
+    /* === RADAR CHART === */
+.radar-card {
+    position: relative;
+    padding: 20px 16px 14px;
+    background: var(--hud-bg-strong);
+    border: var(--hud-border) solid var(--border-strong);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    margin: 14px 0;
+    overflow: hidden;
+}
+.radar-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    box-shadow: 0 0 16px var(--emerald);
+}
+.radar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+.radar-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--text);
+    text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.4);
+}
+.radar-svg {
+    width: 100%;
+    height: 240px;
+    display: block;
+}
+.radar-grid {
+    stroke: rgba(var(--emerald-rgb), 0.15);
+    stroke-width: 1;
+    fill: none;
+}
+.radar-grid-outer {
+    stroke: rgba(var(--emerald-rgb), 0.3);
+    stroke-width: 1.5;
+}
+.radar-axis {
+    stroke: rgba(var(--emerald-rgb), 0.2);
+    stroke-width: 1;
+}
+.radar-polygon {
+    fill: rgba(var(--emerald-rgb), 0.25);
+    stroke: var(--emerald);
+    stroke-width: 2;
+    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.8));
+    animation: radarPulse 2.5s ease-in-out infinite;
+}
+@keyframes radarPulse {
+    0%, 100% { fill: rgba(var(--emerald-rgb), 0.25); }
+    50% { fill: rgba(var(--emerald-rgb), 0.4); }
+}
+.radar-point {
+    fill: var(--emerald-3);
+    stroke: var(--emerald);
+    stroke-width: 1.5;
+    filter: drop-shadow(0 0 6px var(--emerald));
+}
+.radar-label {
+    fill: var(--text);
+    font-size: 9px;
+    font-weight: 800;
+    text-anchor: middle;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-family: var(--font-ui);
+}
+.radar-value {
+    fill: var(--emerald);
+    font-size: 10px;
+    font-weight: 900;
+    text-anchor: middle;
+    filter: drop-shadow(0 0 4px rgba(var(--emerald-rgb), 0.8));
+}
+
+    /* === RANK BADGES === */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    position: relative;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 12px currentColor);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.rank-badge svg { width: 100%; height: 100%; }
+.rank-badge:hover { transform: scale(1.15) rotate(-5deg); }
+
+.rank-badge.mini { width: 22px; height: 22px; filter: drop-shadow(0 0 6px currentColor); }
+
+/* Цвета */
+.rank-bronze   { color: #cd7f32; }
+.rank-silver   { color: #c0c0c0; }
+.rank-gold     { color: #ffd700; }
+.rank-platinum { color: #7dd3fc; }
+.rank-diamond  { color: #a78bfa; }
+.rank-master   { color: #ff2e4d; }
+.rank-legend   { color: #ff9500; }
+.rank-elite    { color: #00e08a; }
+
+/* Пульсация для высших рангов */
+.rank-diamond svg, .rank-master svg, .rank-legend svg, .rank-elite svg {
+    animation: rankGlow 2.5s ease-in-out infinite;
+}
+@keyframes rankGlow {
+    0%, 100% { filter: drop-shadow(0 0 8px currentColor); }
+    50% { filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 0 30px currentColor); }
+}
     
 </style>
 </head>
@@ -8214,6 +8476,254 @@ body::after {
 
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+            // ============================================================
+// 🎴 SVG ICON SYSTEM — заменяет все эмодзи на векторные иконки
+// ============================================================
+const SVG_ICONS = {
+    // Навигация
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>',
+    
+    // Действия
+    play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+    trophy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+    zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    
+    // UI
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    arrow_right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+    arrow_left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+    send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
+    paperclip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>',
+    camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+    image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+    logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+    crown: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    medal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="15" r="6"/><path d="M9 9l-4-6M15 9l4-6"/></svg>',
+    flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    fire: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    sword: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>',
+    map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    bolt: '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    shield_check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
+    upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+    rocket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>',
+    gamepad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>',
+    skull: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="M12.5 17l-.5 3h-1l-.5-3"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>',
+    scale: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l-3 6h6z"/><path d="M19 7l-3 6h6z"/><path d="M3 7h18"/><path d="M5 21h14"/></svg>',
+};
+
+// Утилита: вставить SVG-иконку
+function icon(name, size = 20, className = '') {
+    const svg = SVG_ICONS[name];
+    if (!svg) return '';
+    return `<span class="svg-icon ${className}" style="width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;">${svg}</span>`;
+}
+
+// Автозамена эмодзи в заданных селекторах
+function replaceEmojisWithSVG() {
+    const map = [
+        // Nav
+        ['.nav-item[data-page="dashboard"] .nav-icon', 'home'],
+        ['.nav-item[data-page="chat"] .nav-icon', 'chat'],
+        ['.nav-item[data-page="club"] .nav-icon', 'shield'],
+        ['#menuNavBtn .nav-icon', 'menu'],
+        
+        // Header
+        ['#notifBtn', 'bell', true],
+        ['#headerRoomIndicator', 'gamepad', true],
+        ['.header-title', null, true], // не трогаем
+        
+        // Menu grid
+        ['.menu-item-friends .menu-item-icon svg', null],
+        ['.menu-item-matches .menu-item-icon', 'target', true],
+        
+        // Section titles
+        ['.section-title', null, true], // мягкая замена — оставим как есть
+        
+        // Кнопки
+        ['[onclick*="openFriendsPage"] .menu-item-icon', 'users', true],
+        
+        // Settings
+        ['[onclick*="openSettingsSheet"]', null],
+    ];
+    
+    // Прямая замена — по конкретным элементам
+    document.querySelectorAll('.nav-item[data-page="dashboard"] .nav-icon').forEach(el => el.innerHTML = icon('home', 22));
+    document.querySelectorAll('.nav-item[data-page="chat"] .nav-icon').forEach(el => el.innerHTML = icon('chat', 22));
+    document.querySelectorAll('.nav-item[data-page="club"] .nav-icon').forEach(el => el.innerHTML = icon('shield', 22));
+    document.querySelectorAll('#menuNavBtn .nav-icon').forEach(el => el.innerHTML = icon('menu', 22));
+    
+    // Кнопка уведомлений
+    const notifBtn = document.getElementById('notifBtn');
+    if (notifBtn && !notifBtn.dataset.svgDone) {
+        const badge = notifBtn.querySelector('.notif-badge');
+        notifBtn.innerHTML = icon('bell', 22);
+        if (badge) notifBtn.appendChild(badge);
+        notifBtn.dataset.svgDone = '1';
+    }
+    
+    // Индикатор комнаты
+    const roomInd = document.getElementById('headerRoomIndicator');
+    if (roomInd && !roomInd.dataset.svgDone) {
+        const dot = roomInd.querySelector('.hri-dot');
+        roomInd.innerHTML = icon('gamepad', 20);
+        if (dot) roomInd.appendChild(dot);
+        roomInd.dataset.svgDone = '1';
+    }
+    
+    // Menu-item иконки
+    document.querySelectorAll('.menu-item-friends .menu-item-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('users', 22); el.dataset.svgDone = '1'; }
+    });
+    document.querySelectorAll('.menu-item-matches .menu-item-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('target', 22); el.dataset.svgDone = '1'; }
+    });
+    
+    // Stat-карты
+    document.querySelectorAll('.stat-card-matches .sc-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('target', 22); el.dataset.svgDone = '1'; }
+    });
+    document.querySelectorAll('.stat-card-wins .sc-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('trophy', 22); el.dataset.svgDone = '1'; }
+    });
+    document.querySelectorAll('.stat-card-winrate .sc-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('zap', 22); el.dataset.svgDone = '1'; }
+    });
+    
+    // Play-кнопка
+    document.querySelectorAll('.pbc-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('gamepad', 28); el.dataset.svgDone = '1'; }
+    });
+    
+    // Mode-cards
+    document.querySelectorAll('#mode5x5 .mode-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('target', 34); el.dataset.svgDone = '1'; }
+    });
+    document.querySelectorAll('#mode2x2 .mode-icon').forEach(el => {
+        if (!el.dataset.svgDone) { el.innerHTML = icon('sword', 34); el.dataset.svgDone = '1'; }
+    });
+    
+    // Sheet-options с эмодзи
+    document.querySelectorAll('.sheet-option').forEach(btn => {
+        const html = btn.innerHTML;
+        let newHtml = html;
+        newHtml = newHtml.replace(/📷/g, icon('camera', 18));
+        newHtml = newHtml.replace(/🖼️/g, icon('image', 18));
+        newHtml = newHtml.replace(/🗑️/g, icon('trash', 18));
+        newHtml = newHtml.replace(/📋/g, icon('copy', 18));
+        newHtml = newHtml.replace(/✈️/g, icon('send', 18));
+        newHtml = newHtml.replace(/🎨/g, icon('image', 18));
+        newHtml = newHtml.replace(/🔒/g, icon('lock', 18));
+        newHtml = newHtml.replace(/🔔/g, icon('bell', 18));
+        newHtml = newHtml.replace(/🆘/g, icon('help', 18));
+        newHtml = newHtml.replace(/❓/g, icon('help', 18));
+        newHtml = newHtml.replace(/📱/g, icon('bell', 18));
+        newHtml = newHtml.replace(/👑/g, icon('crown', 18));
+        newHtml = newHtml.replace(/🎯/g, icon('target', 18));
+        newHtml = newHtml.replace(/🛡️/g, icon('shield', 18));
+        newHtml = newHtml.replace(/👥/g, icon('users', 18));
+        newHtml = newHtml.replace(/➕/g, icon('plus', 18));
+        if (newHtml !== html) btn.innerHTML = newHtml;
+    });
+}
+
+           // ============================================================
+// 🔊 SOUND FX
+// ============================================================
+const AudioFX = (() => {
+    let ctx = null;
+    let enabled = localStorage.getItem('sfx_enabled') !== 'false';
+    
+    function getCtx() {
+        if (!ctx) {
+            try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+            catch (e) { return null; }
+        }
+        if (ctx.state === 'suspended') ctx.resume();
+        return ctx;
+    }
+    
+    function tone(freq, duration, type = 'sine', gainVal = 0.08, freqEnd = null) {
+        if (!enabled) return;
+        const c = getCtx();
+        if (!c) return;
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, c.currentTime);
+        if (freqEnd) {
+            osc.frequency.exponentialRampToValueAtTime(freqEnd, c.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(0, c.currentTime);
+        gain.gain.linearRampToValueAtTime(gainVal, c.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+        osc.connect(gain).connect(c.destination);
+        osc.start();
+        osc.stop(c.currentTime + duration);
+    }
+    
+    return {
+        click: () => tone(880, 0.08, 'sine', 0.05),
+        pop: () => tone(1200, 0.06, 'triangle', 0.06),
+        success: () => {
+            tone(660, 0.1, 'sine', 0.06);
+            setTimeout(() => tone(990, 0.15, 'sine', 0.06), 90);
+        },
+        error: () => {
+            tone(200, 0.15, 'sawtooth', 0.05);
+            setTimeout(() => tone(150, 0.2, 'sawtooth', 0.05), 100);
+        },
+        notify: () => {
+            tone(1400, 0.08, 'sine', 0.05);
+            setTimeout(() => tone(1800, 0.1, 'sine', 0.04), 70);
+        },
+        send: () => tone(1500, 0.05, 'triangle', 0.05, 2200),
+        receive: () => tone(1800, 0.06, 'sine', 0.05, 1200),
+        open: () => tone(500, 0.1, 'sine', 0.05, 900),
+        close: () => tone(900, 0.1, 'sine', 0.05, 400),
+        toggle: () => tone(1000, 0.05, 'square', 0.03),
+        setEnabled: (v) => { enabled = v; localStorage.setItem('sfx_enabled', v); },
+        isEnabled: () => enabled,
+    };
+})();
+
+// Авто-привязка звука к кликам
+function bindSoundFX() {
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('button, .nav-item, .menu-item, [onclick]');
+        if (!btn) return;
+        const text = (btn.textContent || '').trim();
+        
+        if (/удал|закры|отмен|leave|exit/i.test(text)) AudioFX.close();
+        else if (/сохран|подтверд|отправ|принять|join|start/i.test(text)) AudioFX.success();
+        else if (/ошибк|ban|kick|забан/i.test(text)) AudioFX.error();
+        else AudioFX.click();
+    }, true);
+}
+
+// Тумблер в настройках — добавь в openSettingsSheet 
+
         const tg = window.Telegram?.WebApp;
         let currentUser = null;
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) { console.warn(e); } }
@@ -8777,6 +9287,10 @@ async function notify(telegramId, text, type = null) {
                 subscribeCoversRealtime();
                 updateChatsBadge();
                 subscribeChatsRealtime();
+                replaceEmojisWithSVG();
+                initLiveCursor();
+                initParallax();
+                bindSoundFX();
 
                 // === ОНБОРДИНГ ===
                 if (needsOnboarding(currentUser)) {
@@ -8811,25 +9325,34 @@ function applyHeaderAvatar(user) {
     }
 }
 
-                function switchPage(page) {
-            // Показываем тонкую полоску сверху на время перехода
-            const bar = document.getElementById('pageLoadingBar');
-            if (bar) {
-                bar.classList.add('active');
-                setTimeout(() => bar.classList.remove('active'), 600);
-            }
-
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            const target = document.getElementById('page-' + page);
-            if (target) {
-                // Небольшая задержка, чтобы анимация pageFade успела сработать
-                requestAnimationFrame(() => {
-                    target.classList.add('active');
-                });
-            }
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
-            haptic();
+// ============================================================
+// 🎬 PAGE TRANSITIONS
+// ============================================================
+async function switchPage(page) {
+    const doSwitch = () => {
+        const bar = document.getElementById('pageLoadingBar');
+        if (bar) {
+            bar.classList.add('active');
+            setTimeout(() => bar.classList.remove('active'), 600);
         }
+        
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById('page-' + page);
+        if (target) {
+            requestAnimationFrame(() => target.classList.add('active'));
+        }
+        document.querySelectorAll('.nav-item').forEach(n => 
+            n.classList.toggle('active', n.dataset.page === page)
+        );
+        haptic();
+    };
+    
+    if (document.startViewTransition) {
+        document.startViewTransition(doSwitch);
+    } else {
+        doSwitch();
+    }
+}
 
         function animateNumber(el, to, duration = 800) {
             const from = parseInt(el.textContent) || 0;
@@ -8947,11 +9470,13 @@ async function renderProfileView(user) {
                 </div>
                                 <div class="phc-info">
                     <div class="profile-badges-row">
-                        ${user.is_admin ? `<div class="profile-chief-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
-                        ${clubTagCache[user.telegram_id]?.tag?.toUpperCase() === 'DEV'
-                            ? `<div class="dev-tag" onclick="showDevTagInfo()">DEV</div>`
-                            : ''}
-                    </div>
+    ${user.is_admin ? `<div class="profile-chief-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+    ${rankBadgeHTML(user.elo)}
+    <div class="phc-badges">
+        <span class="phc-badge">⚡ Ур. ${level}</span>
+        <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
+    </div>
+</div>
                     <div class="phc-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}</div>
                     <div class="phc-username">${
                         user.username && !user.hide_telegram_tag
@@ -8993,6 +9518,13 @@ async function renderProfileView(user) {
             <span class="ech-corner ech-br"></span>
             <div class="ech-header">
                 <div>
+                <div class="radar-card" id="radarCard">
+    <div class="radar-header">
+        <div class="radar-title">Skill Radar</div>
+        <div class="ech-winrate">${winrate}% WR</div>
+    </div>
+    <div id="radarChartContainer"></div>
+</div>
                     <div class="ech-eyebrow">PREMIUM INSIGHT</div>
                     <div class="ech-title">Динамика DXP</div>
                 </div>
@@ -9032,6 +9564,9 @@ async function renderProfileView(user) {
 
     renderEloChart(user.telegram_id);
 }
+            setTimeout(() => {
+    renderRadarChart('radarChartContainer', computeRadarStats(user));
+}, 100);
 
 function enterProfileEditMode() {
     profileEditMode = true;
@@ -14551,6 +15086,18 @@ function openNotificationsSettings() {
     document.getElementById('notifSettingsSheet').classList.add('active');
 }
 
+            <button class="sheet-option" onclick="toggleSFX()">
+    <span style="font-size: 18px;">🔊</span> Звуки: <span id="sfxState">${AudioFX.isEnabled() ? 'ВКЛ' : 'ВЫКЛ'}</span>
+</button>
+
+            function toggleSFX() {
+    const next = !AudioFX.isEnabled();
+    AudioFX.setEnabled(next);
+    document.getElementById('sfxState').textContent = next ? 'ВКЛ' : 'ВЫКЛ';
+    if (next) AudioFX.toggle();
+    showToast(next ? '🔊 Звуки включены' : '🔇 Звуки выключены');
+}
+
 function openAppNotifSheet() {
     document.getElementById('sheetOverlay').classList.add('active');
     document.getElementById('appNotifSheet').classList.add('active');
@@ -16313,6 +16860,297 @@ function devTagHTML(telegramId) {
     if (!isDevClubMember(telegramId)) return '';
     return `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>`;
 } 
+
+     // ============================================================
+// ⚡ LIVE CURSOR TRAIL
+// ============================================================
+function initLiveCursor() {
+    if (window.matchMedia('(hover: none)').matches) return;
+    
+    const dot = document.createElement('div');
+    dot.className = 'cursor-dot';
+    const ring = document.createElement('div');
+    ring.className = 'cursor-ring';
+    document.body.appendChild(dot);
+    document.body.appendChild(ring);
+    
+    let mouseX = 0, mouseY = 0;
+    let ringX = 0, ringY = 0;
+    let lastTrail = 0;
+    
+    document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        dot.style.left = mouseX + 'px';
+        dot.style.top = mouseY + 'px';
+        
+        // Trail
+        const now = Date.now();
+        if (now - lastTrail > 40) {
+            lastTrail = now;
+            const trail = document.createElement('div');
+            trail.className = 'cursor-trail';
+            trail.style.left = mouseX + 'px';
+            trail.style.top = mouseY + 'px';
+            document.body.appendChild(trail);
+            setTimeout(() => trail.remove(), 600);
+        }
+    }, { passive: true });
+    
+    // Smooth follow ring
+    function animate() {
+        ringX += (mouseX - ringX) * 0.18;
+        ringY += (mouseY - ringY) * 0.18;
+        ring.style.left = ringX + 'px';
+        ring.style.top = ringY + 'px';
+        requestAnimationFrame(animate);
+    }
+    animate();
+    
+    // Hover-эффекты на интерактивных элементах
+    document.addEventListener('mouseover', (e) => {
+        const el = e.target.closest('button, a, input, textarea, [onclick], .leaderboard-item, .menu-item, .chat-list-item, .play-room-card, .mode-card, .veto-card');
+        if (el) ring.classList.add('hover');
+    });
+    document.addEventListener('mouseout', (e) => {
+        const el = e.target.closest('button, a, input, textarea, [onclick], .leaderboard-item, .menu-item, .chat-list-item, .play-room-card, .mode-card, .veto-card');
+        if (el) ring.classList.remove('hover');
+    });
+    
+    // Click
+    document.addEventListener('mousedown', () => {
+        ring.classList.add('click');
+        createRipple(mouseX, mouseY);
+    });
+    document.addEventListener('mouseup', () => {
+        ring.classList.remove('click');
+    });
+}
+
+function createRipple(x, y) {
+    const ripple = document.createElement('div');
+    ripple.style.cssText = `
+        position: fixed; left: ${x}px; top: ${y}px;
+        width: 8px; height: 8px;
+        border: 2px solid var(--emerald);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none; z-index: 99996;
+        animation: rippleExpand 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    `;
+    document.body.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+}
+
+            // ============================================================
+// 🌌 PARALLAX BACKGROUND
+// ============================================================
+function initParallax() {
+    const l1 = document.createElement('div');
+    l1.className = 'parallax-layer l1';
+    const l2 = document.createElement('div');
+    l2.className = 'parallax-layer l2';
+    document.body.prepend(l2);
+    document.body.prepend(l1);
+    
+    let ticking = false;
+    const updateParallax = () => {
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        l1.style.transform = `translate3d(0, ${scrollY * 0.15}px, 0)`;
+        l2.style.transform = `translate3d(0, ${scrollY * -0.1}px, 0)`;
+        ticking = false;
+    };
+    
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            requestAnimationFrame(updateParallax);
+            ticking = true;
+        }
+    }, { passive: true });
+    
+    // Также на движение мыши — мягкий параллакс
+    document.addEventListener('mousemove', (e) => {
+        const cx = (e.clientX / window.innerWidth - 0.5) * 2;
+        const cy = (e.clientY / window.innerHeight - 0.5) * 2;
+        l1.style.setProperty('--mx', cx);
+        l1.style.setProperty('--my', cy);
+    }, { passive: true });
+}
+
+            // ============================================================
+// 📊 RADAR CHART
+// ============================================================
+function renderRadarChart(containerId, stats) {
+    // stats: { aim, kd, winrate, activity, experience, clutch }
+    // каждое значение 0-100
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const cx = 160, cy = 120, radius = 90;
+    const axes = [
+        { key: 'aim', label: 'AIM' },
+        { key: 'kd', label: 'K/D' },
+        { key: 'winrate', label: 'WR' },
+        { key: 'activity', label: 'ACT' },
+        { key: 'experience', label: 'EXP' },
+        { key: 'clutch', label: 'CLT' },
+    ];
+    const n = axes.length;
+    const angleStep = (Math.PI * 2) / n;
+    const offset = -Math.PI / 2;
+    
+    // Сетка
+    let grid = '';
+    for (let r = 1; r <= 4; r++) {
+        const rad = (radius * r) / 4;
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+            const a = offset + angleStep * i;
+            pts.push(`${cx + Math.cos(a) * rad},${cy + Math.sin(a) * rad}`);
+        }
+        grid += `<polygon class="radar-grid${r === 4 ? ' radar-grid-outer' : ''}" points="${pts.join(' ')}"/>`;
+    }
+    
+    // Оси
+    let axisLines = '';
+    for (let i = 0; i < n; i++) {
+        const a = offset + angleStep * i;
+        const x2 = cx + Math.cos(a) * radius;
+        const y2 = cy + Math.sin(a) * radius;
+        axisLines += `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}"/>`;
+    }
+    
+    // Полигон данных
+    const dataPts = [];
+    const pointsHTML = [];
+    axes.forEach((axis, i) => {
+        const val = Math.max(0, Math.min(100, stats[axis.key] || 0));
+        const a = offset + angleStep * i;
+        const rad = (radius * val) / 100;
+        const x = cx + Math.cos(a) * rad;
+        const y = cy + Math.sin(a) * rad;
+        dataPts.push(`${x},${y}`);
+        pointsHTML.push(`<circle class="radar-point" cx="${x}" cy="${y}" r="3"/>`);
+    });
+    
+    // Лейблы
+    let labelsHTML = '';
+    axes.forEach((axis, i) => {
+        const a = offset + angleStep * i;
+        const lx = cx + Math.cos(a) * (radius + 22);
+        const ly = cy + Math.sin(a) * (radius + 22);
+        const vx = cx + Math.cos(a) * (radius + 40);
+        const vy = cy + Math.sin(a) * (radius + 40);
+        labelsHTML += `<text class="radar-label" x="${lx}" y="${ly}">${axis.label}</text>`;
+        labelsHTML += `<text class="radar-value" x="${vx}" y="${vy}">${Math.round(stats[axis.key] || 0)}</text>`;
+    });
+    
+    container.innerHTML = `
+        <svg class="radar-svg" viewBox="0 0 320 280">
+            ${grid}
+            ${axisLines}
+            <polygon class="radar-polygon" points="${dataPts.join(' ')}"/>
+            ${pointsHTML.join('')}
+            ${labelsHTML.join('')}
+        </svg>
+    `;
+}
+
+// Генерация статистики из данных пользователя
+function computeRadarStats(user) {
+    const matches = user.matches_played || 0;
+    const wins = user.wins || 0;
+    const elo = user.elo || 1000;
+    const winrate = matches > 0 ? (wins / matches) * 100 : 0;
+    
+    return {
+        aim: Math.min(100, Math.max(20, (elo - 800) / 15)),
+        kd: Math.min(100, Math.max(20, winrate + (Math.random() * 10 - 5))),
+        winrate: Math.min(100, winrate * 1.2),
+        activity: Math.min(100, matches * 2),
+        experience: Math.min(100, (elo - 800) / 18),
+        clutch: Math.min(100, Math.max(15, winrate * 0.9 + matches * 0.5)),
+    };
+}
+
+// Хук в renderProfileView — добавь после `.ech-streak`:
+
+            // ============================================================
+// 🎯 RANK BADGES
+// ============================================================
+const RANK_SVG = {
+    bronze: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 4L8 20v24l24 16 24-16V20L32 4zm0 8l16 10v16L32 48 16 38V22l16-10z"/>
+        <path d="M32 20l-8 5v10l8 5 8-5V25l-8-5zm0 4l5 3v6l-5 3-5-3v-6l5-3z" opacity="0.6"/>
+    </svg>`,
+    silver: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 2L6 18v28l26 16 26-16V18L32 2zm0 8l18 11v18L32 50 14 39V21l18-11z"/>
+        <path d="M32 18l-10 6v12l10 6 10-6V24l-10-6zm0 4l7 4v8l-7 4-7-4v-8l7-4z" opacity="0.7"/>
+    </svg>`,
+    gold: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 2L4 18v28l28 16 28-16V18L32 2zm0 8l20 12v20L32 54 12 42V22l20-12z"/>
+        <path d="M32 16l-12 7v14l12 7 12-7V23l-12-7zm0 4l9 5v10l-9 5-9-5V25l9-5z" opacity="0.8"/>
+        <circle cx="32" cy="32" r="4" opacity="0.9"/>
+    </svg>`,
+    platinum: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 2L4 18v28l28 16 28-16V18L32 2zm0 8l20 12v20L32 54 12 42V22l20-12z"/>
+        <path d="M32 14l-14 8v16l14 8 14-8V22l-14-8zm0 4l11 6v12l-11 6-11-6V26l11-6z" opacity="0.85"/>
+        <path d="M32 24l-7 4v8l7 4 7-4v-8l-7-4z" opacity="0.95"/>
+    </svg>`,
+    diamond: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 2L4 18v28l28 16 28-16V18L32 2zm0 8l20 12v20L32 54 12 42V22l20-12z"/>
+        <path d="M32 12L16 22v20l16 10 16-10V22L32 12zm0 4l13 8v16L32 48 19 40V24l13-8z" opacity="0.9"/>
+        <path d="M32 22l-9 5v10l9 5 9-5V27l-9-5z" opacity="0.95"/>
+        <path d="M32 28l-4 2v4l4 2 4-2v-4l-4-2z" fill="white"/>
+    </svg>`,
+    master: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 2L4 18v28l28 16 28-16V18L32 2zm0 8l20 12v20L32 54 12 42V22l20-12z"/>
+        <path d="M32 12L16 22v20l16 10 16-10V22L32 12zm0 4l13 8v16L32 48 19 40V24l13-8z"/>
+        <path d="M24 24l8-4 8 4v6l-8 4-8-4v-6z" fill="white" opacity="0.9"/>
+        <path d="M28 32l4-2 4 2v6l-4 2-4-2v-6z" fill="white"/>
+    </svg>`,
+    legend: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <defs>
+            <linearGradient id="legendGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ff9500"/>
+                <stop offset="50%" stop-color="#ffd700"/>
+                <stop offset="100%" stop-color="#ff9500"/>
+            </linearGradient>
+        </defs>
+        <path d="M32 2L4 18v28l28 16 28-16V18L32 2zm0 8l20 12v20L32 54 12 42V22l20-12z" fill="url(#legendGrad)"/>
+        <path d="M32 12L16 22v20l16 10 16-10V22L32 12zm0 4l13 8v16L32 48 19 40V24l13-8z" fill="url(#legendGrad)" opacity="0.7"/>
+        <path d="M32 20l-10 6v12l10 6 10-6V26l-10-6z" fill="white" opacity="0.95"/>
+        <path d="M32 26l-5 3v6l5 3 5-3v-6l-5-3z" fill="url(#legendGrad)"/>
+        <circle cx="32" cy="32" r="2" fill="white"/>
+    </svg>`,
+    elite: `<svg viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 2L4 18v28l28 16 28-16V18L32 2zm0 8l20 12v20L32 54 12 42V22l20-12z"/>
+        <path d="M32 12L16 22v20l16 10 16-10V22L32 12zm0 4l13 8v16L32 48 19 40V24l13-8z"/>
+        <path d="M32 18l-12 7v14l12 7 12-7V25l-12-7zm0 3l9 5v10l-9 5-9-5V26l9-5z" fill="white" opacity="0.9"/>
+        <circle cx="32" cy="32" r="5" fill="white"/>
+        <circle cx="32" cy="32" r="2" fill="currentColor"/>
+    </svg>`,
+};
+
+// Определение ранга по DXP
+function getRankInfo(elo) {
+    elo = elo ?? 1000;
+    if (elo >= 2800) return { key: 'elite', name: 'ELITE', min: 2800 };
+    if (elo >= 2400) return { key: 'legend', name: 'LEGEND', min: 2400 };
+    if (elo >= 2100) return { key: 'master', name: 'MASTER', min: 2100 };
+    if (elo >= 1800) return { key: 'diamond', name: 'DIAMOND', min: 1800 };
+    if (elo >= 1500) return { key: 'platinum', name: 'PLATINUM', min: 1500 };
+    if (elo >= 1300) return { key: 'gold', name: 'GOLD', min: 1300 };
+    if (elo >= 1150) return { key: 'silver', name: 'SILVER', min: 1150 };
+    return { key: 'bronze', name: 'BRONZE', min: 1000 };
+}
+
+function rankBadgeHTML(elo, mini = false) {
+    const r = getRankInfo(elo);
+    const cls = `rank-badge rank-${r.key}${mini ? ' mini' : ''}`;
+    return `<div class="${cls}" title="${r.name}">${RANK_SVG[r.key]}</div>`;
+}
+            
 
 // ============================================================
 // BOOT
