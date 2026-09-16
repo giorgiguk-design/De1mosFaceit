@@ -191,6 +191,7 @@ body::after {
             border: 1px solid var(--border-strong); border-radius: 22px;
             padding: 22px; margin-bottom: 14px; overflow: hidden;
         }
+    <div id="dashboardHint" style="display: none;"></div>
         .elo-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--emerald); opacity: 0.65; margin-bottom: 6px; font-weight: 600; }
 .elo-value {
     font-size: 54px; font-weight: 900; line-height: 1;
@@ -4780,8 +4781,7 @@ body::after {
     vertical-align: middle;
     cursor: pointer;
     background: linear-gradient(90deg, #ff2e6e, #ff7a2e, #ffcc2e, #ff7a2e, #ff2e6e);
-    background-size: 300% 100%;
-    animation: devShimmer 3s linear infinite;
+    background-size: 100% 100%;
     color: #000;
     box-shadow: 0 0 8px rgba(255, 122, 46, 0.5);
     border: none;
@@ -5158,6 +5158,95 @@ body::after {
     width: 22px;
     height: 22px;
 }
+
+    .phc-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+    .dashboard-hint {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb), 0.10), rgba(var(--emerald-rgb), 0.03));
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--emerald);
+    border-radius: 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    animation: slideUp 0.5s ease;
+}
+.dashboard-hint b { color: var(--emerald); }
+
+    .mm-search-visual {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0 20px;
+}
+.mm-radar {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mm-radar-ring {
+    position: absolute;
+    border: 1.5px solid rgba(var(--emerald-rgb), 0.3);
+    border-radius: 50%;
+    animation: radarPulse 2.4s ease-out infinite;
+}
+.mm-radar-ring:nth-child(1) { width: 30px;  height: 30px;  animation-delay: 0s; }
+.mm-radar-ring:nth-child(2) { width: 60px;  height: 60px;  animation-delay: 0.6s; }
+.mm-radar-ring:nth-child(3) { width: 90px;  height: 90px;  animation-delay: 1.2s; }
+.mm-radar-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow: 0 0 20px var(--emerald), 0 0 40px rgba(var(--emerald-rgb), 0.5);
+}
+@keyframes radarPulse {
+    0%   { transform: scale(0.5); opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+
+    .result-wait-card {
+    padding: 16px;
+    background: rgba(var(--emerald-rgb), 0.05);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-top: 12px;
+}
+.rwc-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--emerald);
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+.rwc-rows { display: flex; flex-direction: column; gap: 8px; }
+.rwc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.rwc-team { color: var(--text); }
+.rwc-status.done { color: var(--emerald); font-weight: 800; }
+.rwc-status.pending { color: var(--hint); }
+
+    
     
 </style>
 </head>
@@ -5247,7 +5336,7 @@ body::after {
 </span>
         <span class="pbc-text">
             <span class="pbc-title">ИГРАТЬ</span>
-            <span class="pbc-sub">Найти матч · Создать комнату</span>
+            <span class="pbc-sub" id="playBtnSub">Найти матч · Создать комнату</span>
         </span>
         <span class="pbc-arrow">›</span>
     </span>
@@ -5266,7 +5355,7 @@ body::after {
 </span>
         <span class="menu-item-content">
             <span class="menu-item-title">Друзья</span>
-            <span class="menu-item-sub">Найди тиммейтов</span>
+            <span class="menu-item-sub">Найди друзей</span>
         </span>
     </button>
     <button class="menu-item menu-item-matches" onclick="openMatchesHistory()">
@@ -5281,7 +5370,7 @@ body::after {
 </span>
 <span class="menu-item-content">
     <span class="menu-item-title">Матчи</span>
-    <span class="menu-item-sub">История игр</span>
+    <span class="menu-item-sub">Твои матчи</span>
 </span>
     </button>
 </div>
@@ -5565,8 +5654,11 @@ body::after {
             </div>
             <div>
                 <label class="field-label">ID в Standoff 2 (7-9 цифр) *</label>
-                <input type="text" class="field-input" id="onboardStandoff"
-                       placeholder="1234567" maxlength="9" autocomplete="off">
+<input type="text" class="field-input" id="onboardStandoff"
+       placeholder="1234567" maxlength="9" inputmode="numeric" autocomplete="off">
+<div style="font-size: 11px; color: var(--hint); margin-top: 6px; line-height: 1.4;">
+    Найди в Standoff 2 → Профиль → ID. Это цифры внизу экрана.
+</div>
             </div>
             <div>
                 <label class="field-label">Аватар (необязательно)</label>
@@ -6525,22 +6617,32 @@ function eloToLevel(elo) {
             return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
         let toastTimer;
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.style.transform = 'translateX(-50%) translateY(24px) scale(0.9)';
-            toast.classList.add('show');
-            requestAnimationFrame(() => {
-                toast.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-            });
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => {
-                toast.style.transform = 'translateX(-50%) translateY(24px) scale(0.9)';
-                toast.classList.remove('show');
-            }, 2500);
-        }
+        function showToast(msg, type = 'info') {
+    const toast = document.getElementById('toast');
+    
+    // Иконка по типу
+    const icons = { 
+        info: '💬', 
+        success: '✅', 
+        error: '❌', 
+        warning: '⚠️' 
+    };
+    
+    // Автоопределение типа по эмодзи в тексте
+    if (msg.startsWith('✅')) type = 'success';
+    else if (msg.startsWith('❌') || msg.startsWith('🚫')) type = 'error';
+    else if (msg.startsWith('⚠️') || msg.startsWith('⏰')) type = 'warning';
+    
+    toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+    toast.className = `toast toast-${type} show`;
+    
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2500);
+}
 
-            function renderAvatar(user, size = 34, borderRadius = '50%') {
+            function renderAvatar(user) {
     const custom = user?.custom_avatar;
     const telegram = user?.photo_url;
     const src = custom || telegram;
@@ -6732,7 +6834,9 @@ function applyHeaderAvatar(user) {
         // DASHBOARD
         // ============================================================
 function renderDashboard(user) {
-    const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
+    const winrate = user.matches_played > 0 
+        ? Math.round((user.wins / user.matches_played) * 100) 
+        : 0;
     animateNumber(document.getElementById('eloValue'), user.elo ?? 1000, 1000);
     document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
 
@@ -6754,7 +6858,31 @@ function renderDashboard(user) {
     bumpStat('statWinrate', winrate + '%');
 
     const progress = ((user.elo ?? 1000) % 250) / 250 * 100;
-    setTimeout(() => { document.getElementById('eloProgress').style.width = progress + '%'; }, 200);
+    setTimeout(() => {
+        document.getElementById('eloProgress').style.width = progress + '%';
+    }, 200);
+    
+    // 🆕 Подсказка новичку
+    const hint = document.getElementById('dashboardHint');
+    if (hint) {
+        if ((user.matches_played ?? 0) === 0) {
+            hint.innerHTML = `
+                <div class="dashboard-hint">
+                    <svg class="cy-icon cy-md cy-emerald" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8h.01M11 12h1v4h1"/>
+                    </svg>
+                    <div>
+                        <b>Добро пожаловать!</b><br>
+                        Нажми <b style="color:var(--emerald);">ИГРАТЬ</b>, чтобы найти первый матч
+                    </div>
+                </div>
+            `;
+            hint.style.display = 'block';
+        } else {
+            hint.style.display = 'none';
+        }
+    }
 }
 
         // ============================================================
@@ -6846,7 +6974,21 @@ async function renderProfileView(user) {
                         <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
                     </div>
                 </div>
-                <button class="phc-settings" onclick="enterProfileEditMode()" title="Настройки">⚙️</button>
+                <div class="phc-actions">
+                    <button class="phc-settings" onclick="shareProfile(${user.telegram_id})" title="Поделиться">
+                        <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                            <circle cx="18" cy="5" r="3"/>
+                            <circle cx="6" cy="12" r="3"/>
+                            <circle cx="18" cy="19" r="3"/>
+                            <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
+                        </svg>
+                    </button>
+                    <button class="phc-settings" onclick="enterProfileEditMode()" title="Редактировать">
+                        <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                            <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -7109,10 +7251,10 @@ async function openPlayerProfile(userId) {
                 <div class="profile-level-badge" style="margin-top: 10px;">⚡ Уровень ${level}</div>
             </div>
             <div class="profile-stats-grid">
-                <div class="profi<div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">DXP</div></div>le-stat"><div class="profile-stat-value">${user.DXP?? 1000}</div><div class="profile-stat-label">DXP</div></div>
-                <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
-                <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
-            </div>
+    <div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">DXP</div></div>
+    <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
+    <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
+</div>
             <div class="elo-chart-card" id="eloChartCard" data-user-id="${user.telegram_id}">
     <span class="ech-corner ech-tl"></span>
     <span class="ech-corner ech-tr"></span>
@@ -7539,7 +7681,7 @@ function openFriendSearchSheet() {
         async function loadFriends() {
             if (!currentUser) return;
             const container = document.getElementById('friendsList');
-            container.innerHTML = '<div class="empty">Загрузка...</div>';
+            container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
             try {
                 const me = currentUser.telegram_id;
                 const { data: rels, error } = await sb.from('friendships')
@@ -7728,7 +7870,10 @@ function renderMyClub(container) {
                 <div class="club-member-avatar">${av}</div>
                 <div class="club-member-info">
                     <div class="club-member-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
-                    <div class="club-member-sub">DXP ${u.elo || 1000}</div>
+                    <div class="club-member-sub">
+    ⚡ ${eloToLevel(u.elo)} ур. · ${u.elo || 1000} DXP
+    ${u.last_seen ? ` · ${formatTimeAgo(u.last_seen)}` : ''}
+</div>
                 </div>
                 ${dotsBtn}
             </div>
@@ -10055,14 +10200,30 @@ async function renderResultScreen() {
             `;
         }
     } else {
-        html += `
-            <div class="profile-hero" style="text-align: center; padding: 18px;">
-                <div style="font-size: 12px; color: var(--hint);">
-                    Ожидание результата от капитанов команд
+    // Считаем голоса
+    const capAVoted = (votes || []).some(v => v.telegram_id === currentMatch.captain_a_id);
+    const capBVoted = (votes || []).some(v => v.telegram_id === currentMatch.captain_b_id);
+    
+    html += `
+        <div class="result-wait-card">
+            <div class="rwc-title">⏳ Ожидание результата</div>
+            <div class="rwc-rows">
+                <div class="rwc-row">
+                    <span class="rwc-team">👑 Команда A</span>
+                    <span class="rwc-status ${capAVoted ? 'done' : 'pending'}">
+                        ${capAVoted ? '✅ Отправил' : '⏳ Голосует'}
+                    </span>
+                </div>
+                <div class="rwc-row">
+                    <span class="rwc-team">👑 Команда B</span>
+                    <span class="rwc-status ${capBVoted ? 'done' : 'pending'}">
+                        ${capBVoted ? '✅ Отправил' : '⏳ Голосует'}
+                    </span>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `;
+}
 
     // Кнопка апелляции
     html += `
@@ -11098,7 +11259,13 @@ async function renderRoomContent(roomId) {
             : `<svg class="cy-icon cy-xl" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`}
     </span>
     <span class="rlb-text">${canStart ? 'ЗАПУСТИТЬ МАТЧ' : 'ОЖИДАНИЕ ИГРОКОВ'}</span>
-    <span class="rlb-sub">${teamA.length}/${needPerTeam} vs ${teamB.length}/${needPerTeam}</span>
+    <span class="rlb-sub">
+    ${teamA.length < needPerTeam 
+        ? `Не хватает ${needPerTeam - teamA.length} в команде A` 
+        : teamB.length < needPerTeam 
+            ? `Не хватает ${needPerTeam - teamB.length} в команде B`
+            : 'Все на месте'}
+</span>
 </button>
                 ` : ''}
             ` : ''}
@@ -12784,6 +12951,14 @@ async function loadNotifications() {
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
 
+        // 4. Непрочитанные сообщения
+const { data: unreadMsgs } = await sb.from('messages')
+    .select('id, sender_id, text, image_url, created_at')
+    .eq('recipient_id', currentUser.telegram_id)
+    .gt('created_at', lastChatsReadAt.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(5);
+
         // Собираем все userId
         const ids = new Set();
         (friendships || []).forEach(f => ids.add(f.requester_id));
@@ -12868,6 +13043,22 @@ async function loadNotifications() {
                 unread: true
             });
         });
+
+        (unreadMsgs || []).forEach(m => {
+    if (ids.has(m.sender_id)) return; // уже учтён
+    ids.add(m.sender_id);
+    list.push({
+        id: 'msg_' + m.id,
+        type: 'message',
+        userId: m.sender_id,
+        user: userMap[m.sender_id] || {},
+        text: `<b>${escapeHtml(userMap[m.sender_id]?.display_name || 'Игрок')}</b>: ${
+            escapeHtml((m.text || '').slice(0, 80)) || '📷 Фото'
+        }`,
+        time: m.created_at,
+        unread: true
+    });
+});
 
         // --- Клуб ---
         (clubInvites || []).forEach(i => {
@@ -14262,6 +14453,52 @@ function devTagHTML(telegramId) {
     return `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>`;
 } 
 
+            async function shareProfile(userId) {
+    const me = currentUser?.telegram_id;
+    if (!me) return;
+    
+    // Загружаем данные профиля
+    const { data: u } = await sb.from('users')
+        .select('display_name, elo, standoff_id')
+        .eq('telegram_id', userId)
+        .single();
+    
+    if (!u) { showToast('Профиль не найден'); return; }
+    
+    const text = `🎮 ${u.display_name || 'Игрок'}\n` +
+                 `⚡ Уровень ${eloToLevel(u.elo)}\n` +
+                 `🎯 ${u.elo ?? 1000} DXP\n` +
+                 `🆔 Standoff ID: ${u.standoff_id || '—'}\n\n` +
+                 `Играй на De1mos Faceit!`;
+    
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: 'De1mos Faceit', text });
+        } else {
+            await navigator.clipboard.writeText(text);
+            showToast('📋 Профиль скопирован');
+        }
+    } catch (e) {
+        if (e.name !== 'AbortError') showToast('Ошибка');
+    }
+}
+
+            // Обновляем подпись кнопки Играть при загрузке dashboard
+async function updatePlayBtnSub() {
+    try {
+        const { count } = await sb.from('rooms')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'open');
+        
+        const el = document.getElementById('playBtnSub');
+        if (el) {
+            el.textContent = count > 0 
+                ? `Открыто комнат: ${count}` 
+                : 'Найти матч · Создать комнату';
+        }
+    } catch (e) {}
+}
+
 // ============================================================
 // BOOT (safe — ждём, пока Supabase загрузится)
 // ============================================================
@@ -14333,14 +14570,5 @@ registerInterval('notifBadge', setInterval(() => {
         <div id="allClubsList"><div class="empty">Загрузка...</div></div>
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
-
-    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
-    <div class="sheet-title">🛡️ Все клубы</div>
-    <input type="text" class="field-input" id="allClubsSearch"
-           placeholder="🔍 Название или тег" autocomplete="off"
-           oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
-    <div id="allClubsList"><div class="empty">Загрузка...</div></div>
-    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
-</div>
 </body>
 </html>
