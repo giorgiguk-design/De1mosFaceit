@@ -8325,6 +8325,9 @@ body::after {
     <button class="sheet-option" onclick="closeAllSheets(); setTimeout(() => openNotificationsSettings(), 260);">
         <span style="font-size: 18px;">🔔</span> Уведомления
     </button>
+    <button class="sheet-option" onclick="toggleSFX()">  <!-- 👈 ДОБАВЬ -->
+        <span style="font-size: 18px;">🔊</span> Звуки: <span id="sfxState">ВКЛ</span>
+    </button>
     <button class="sheet-option" onclick="menuDrawerSupport()">
         <span style="font-size: 18px;">🆘</span> Тех-поддержка
     </button>
@@ -9511,20 +9514,21 @@ async function renderProfileView(user) {
             </div>
         </div>
 
+            <div class="radar-card" id="radarCard">
+        <div class="radar-header">
+            <div class="radar-title">Skill Radar</div>
+            <div class="ech-winrate">${winrate}% WR</div>
+        </div>
+        <div id="radarChartContainer"></div>
+    </div>
+
         <div class="elo-chart-card" id="eloChartCard" data-user-id="${user.telegram_id}">
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
             <span class="ech-corner ech-bl"></span>
             <span class="ech-corner ech-br"></span>
             <div class="ech-header">
-                <div>
-                <div class="radar-card" id="radarCard">
-    <div class="radar-header">
-        <div class="radar-title">Skill Radar</div>
-        <div class="ech-winrate">${winrate}% WR</div>
-    </div>
-    <div id="radarChartContainer"></div>
-</div>
+                </div>
                     <div class="ech-eyebrow">PREMIUM INSIGHT</div>
                     <div class="ech-title">Динамика DXP</div>
                 </div>
@@ -15086,10 +15090,6 @@ function openNotificationsSettings() {
     document.getElementById('notifSettingsSheet').classList.add('active');
 }
 
-            <button class="sheet-option" onclick="toggleSFX()">
-    <span style="font-size: 18px;">🔊</span> Звуки: <span id="sfxState">${AudioFX.isEnabled() ? 'ВКЛ' : 'ВЫКЛ'}</span>
-</button>
-
             function toggleSFX() {
     const next = !AudioFX.isEnabled();
     AudioFX.setEnabled(next);
@@ -16485,9 +16485,13 @@ function throttle(fn, delay = 300) {
          // ============================================================
 // DXPCHART — рисует график DXPпо последним матчам
 // ============================================================
-async function renderEloChart(userId) {
-    const card = document.getElementById('eloChartCard');
+async function renderEloChart(userId, containerId = 'eloChartCard') {
+    const card = document.getElementById(containerId);
     if (!card) return;
+    // ... всё остальное через card.querySelector(...)
+    const areaEl = card.querySelector('.ech-area-path') || card.querySelector('#eloAreaPath');
+    // и т.д.
+}
 
     const svgEl = document.getElementById('eloChartSvg');
     const areaEl = document.getElementById('eloAreaPath');
@@ -17188,14 +17192,6 @@ registerInterval('notifBadge', setInterval(() => {
         <div id="allClubsList"><div class="empty">Загрузка...</div></div>
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
-
-    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
-    <div class="sheet-title">🛡️ Все клубы</div>
-    <input type="text" class="field-input" id="allClubsSearch"
-           placeholder="🔍 Название или тег" autocomplete="off"
-           oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
-    <div id="allClubsList"><div class="empty">Загрузка...</div></div>
-    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 </body>
 </html>
