@@ -5059,6 +5059,112 @@ body::after {
                 0 0 28px rgba(var(--emerald-rgb), 0.45);
     transform: scale(1.03);
 }
+
+    /* ============================================================
+   CYBER ICONS (SVG)
+   ============================================================ */
+.ci {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    color: currentColor;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                filter 0.25s ease;
+    filter: drop-shadow(0 0 6px currentColor);
+    opacity: 0.95;
+    vertical-align: -0.125em;
+}
+.ci svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+}
+.ci svg * { vector-effect: non-scaling-stroke; }
+.ci svg [stroke] {
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.ci-xs  { font-size: 12px; }
+.ci-sm  { font-size: 14px; }
+.ci-md  { font-size: 18px; }
+.ci-lg  { font-size: 22px; }
+.ci-xl  { font-size: 28px; }
+.ci-2xl { font-size: 36px; }
+.ci-3xl { font-size: 48px; }
+.ci-4xl { font-size: 64px; }
+
+.ci-glow-strong {
+    filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 20px currentColor);
+}
+.ci-muted { opacity: 0.55; filter: none; }
+.ci-emerald { color: var(--emerald); }
+.ci-gold    { color: var(--gold); }
+.ci-red     { color: var(--red); }
+.ci-purple  { color: var(--purple); }
+.ci-hint    { color: var(--hint); }
+.ci-text    { color: var(--text); }
+
+.ci-pulse { animation: ciPulse 2.4s ease-in-out infinite; }
+@keyframes ciPulse {
+    0%, 100% { opacity: 0.95; transform: scale(1); }
+    50%      { opacity: 0.7;  transform: scale(1.06); }
+}
+.ci-float { animation: ciFloat 3s ease-in-out infinite; }
+@keyframes ciFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+
+    /* Авто-акценты для SVG-иконок в конкретных местах */
+
+/* Главная — статы */
+.stat-card-matches  .ci { color: var(--emerald); }
+.stat-card-wins     .ci { color: var(--gold); }
+.stat-card-winrate  .ci { color: var(--emerald-3); }
+
+/* Play button */
+.pbc-icon.ci   { color: var(--emerald); filter: drop-shadow(0 0 10px var(--emerald)); }
+.cpm-icon.ci   { color: #04140e; filter: none; }
+
+/* Mode selector */
+.mode-selector .mode-card.active .ci { color: var(--emerald); }
+
+/* Room actions */
+.rv-icon-btn .ci         { color: var(--emerald); }
+.rv-icon-btn.danger .ci  { color: var(--red); }
+
+/* Club mini buttons */
+.club-mini-btn .ci          { color: var(--emerald); }
+.club-mini-btn.danger .ci   { color: var(--red); }
+
+/* Menu item icons */
+.menu-item-friends .menu-item-icon .ci { color: var(--emerald); }
+.menu-item-matches .menu-item-icon .ci { color: var(--gold); }
+
+/* Nav active */
+.nav-item.active .nav-icon.ci { color: var(--emerald); }
+
+/* Kicked / danger rows */
+.menu-item-matches .menu-item-icon .ci { filter: drop-shadow(0 0 6px rgba(217,171,90,0.6)); }
+
+/* Notif button */
+.notif-btn .ci { color: var(--emerald); }
+.notif-btn.has-notif .ci { color: var(--red); }
+
+/* Header room indicator */
+.header-room-indicator .ci { color: var(--emerald); }
+
+/* Bottom nav иконки — побольше */
+.nav-icon.ci { font-size: 22px; }
+
+/* Крупные декоративные — убираем лишний glow */
+.profile-hero .ci-3xl,
+.profile-hero .ci-4xl { filter: drop-shadow(0 0 12px currentColor); }
     
 </style>
 </head>
@@ -13963,5 +14069,267 @@ registerInterval('notifBadge', setInterval(() => {
     <div id="allClubsList"><div class="empty">Загрузка...</div></div>
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
+          <script>
+/* ============================================================
+   AUTO-REPLACE EMOJI → SVG ICONS
+   ============================================================ */
+(function() {
+    'use strict';
+
+    // Карта: эмодзи → id symbol
+    const EMOJI_MAP = {
+        // Header / nav
+        '🏠': 'i-home',
+        '💬': 'i-chat',
+        '🛡️': 'i-shield',
+        '☰': 'i-menu',
+        '🔔': 'i-bell',
+        '⚙️': 'i-settings',
+        '❓': 'i-help',
+        '🆘': 'i-help',
+        '⚖️': 'i-scales',
+
+        // Menu drawer
+        '👤': 'i-user',
+        '👥': 'i-users',
+        '👑': 'i-crown',
+
+        // Game / targets
+        '🎮': 'i-gamepad',
+        '🎯': 'i-target',
+        '🏆': 'i-trophy',
+        '⚡': 'i-bolt',
+        '⚔️': 'i-swords',
+        '💀': 'i-skull',
+        '🚀': 'i-rocket',
+        '⏳': 'i-hourglass',
+        '⛔': 'i-ban',
+        '🚫': 'i-ban',
+
+        // Actions
+        '➕': 'i-plus',
+        '🔍': 'i-search',
+        '🚪': 'i-exit',
+        '🔄': 'i-crossed',
+        '🗑️': 'i-trash',
+        '🗑': 'i-trash',
+        '📋': 'i-clipboard',
+        '✅': 'i-check',
+        '✓':  'i-check',
+        '❌': 'i-close',
+        '✕':  'i-close',
+        '✖':  'i-close',
+        '➤': 'i-send',
+        '📎': 'i-paperclip',
+        '📷': 'i-camera',
+        '🖼️': 'i-image',
+        '🖼': 'i-image',
+        '✈️': 'i-telegram',
+        '✈': 'i-telegram',
+
+        // Info
+        '📜': 'i-scroll',
+        '📥': 'i-inbox',
+        '🌐': 'i-globe',
+        '🏁': 'i-flag',
+        '🔒': 'i-lock',
+        '🔕': 'i-bell',       // «выкл. уведомления» — оставим звонок
+        '📱': 'i-clipboard',  // уведомления приложения — временная замена
+        '📨': 'i-send',
+        '📊': 'i-target',     // статистика
+        '⏱': 'i-hourglass',
+        '🏷': 'i-flag',
+        '⭐': 'i-crown',      // elder
+    };
+
+    // Где НЕ заменяем (текст уведомлений, чат, тултипы и т.п.)
+    const SKIP_SELECTORS = [
+        '.toast',                // всплывашки
+        '.chat-bubble',          // чат
+        '.room-chat-bubble',     // чат комнаты
+        '.notif-text',           // текст уведомлений
+        '.event-item',           // лог событий клуба
+        '.profile-view-value',   // значения
+        '.leaderboard-name',     // имена
+        '.club-member-name',
+        '.tz-name',
+        '.notif-time',
+        '.chat-quote',
+        '.chat-quote-text',
+        'option',
+        'textarea',
+        'input',
+        '[contenteditable]'
+    ];
+
+    function shouldSkip(node) {
+        let el = node.nodeType === 3 ? node.parentElement : node;
+        while (el) {
+            for (const sel of SKIP_SELECTORS) {
+                if (el.matches && el.matches(sel)) return true;
+            }
+            el = el.parentElement;
+        }
+        return false;
+    }
+
+    // Создаём span.ci с inline SVG
+    function makeIcon(id, size = 'ci-md', color = null) {
+        const span = document.createElement('span');
+        span.className = 'ci ' + size + (color ? ' ' + color : '');
+        span.setAttribute('data-icon', id);
+        // Используем <use> — быстро и без дублирования
+        span.innerHTML = `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
+        return span;
+    }
+
+    // Подбираем размер по родителю
+    function pickSize(parent, emoji) {
+        if (!parent) return 'ci-md';
+        const cls = parent.className || '';
+        // Крупные декоративные иконки
+        if (/(^|\s)(sc-icon|rv-ico|pbc-icon|cpm-icon|phc-icon|mode-icon|side-icon|notif-avatar|profile-avatar|club-logo)\b/.test(cls)) {
+            if (/phc-icon|pbc-icon|cpm-icon/.test(cls)) return 'ci-2xl';
+            if (/sc-icon|rv-ico|mode-icon|side-icon/.test(cls)) return 'ci-xl';
+        }
+        if (/(^|\s)(nav-icon|menu-item-icon|menu-drawer-icon|chat-attach-btn|chat-send-btn|room-chat-send)\b/.test(cls)) {
+            return 'ci-lg';
+        }
+        if (/(^|\s)(lb-avatar|tz-avatar|cp-avatar|club-member-avatar|notif-avatar|prc-avatar|chat-list-avatar)\b/.test(cls)) {
+            return 'ci-md';
+        }
+        return 'ci-md';
+    }
+
+    // Основная функция — обход текстовых узлов
+    function replaceInNode(root) {
+        if (!root) return;
+
+        // Быстрый выход, если это скрытая иконка
+        if (root.nodeType === 1 && root.hasAttribute && root.hasAttribute('data-icon')) return;
+
+        const walker = document.createTreeWalker(
+            root,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: function(node) {
+                    const t = node.nodeValue;
+                    if (!t || !t.trim()) return NodeFilter.FILTER_REJECT;
+                    if (shouldSkip(node)) return NodeFilter.FILTER_REJECT;
+
+                    // Есть ли хоть один эмодзи из карты?
+                    for (const e in EMOJI_MAP) {
+                        if (t.includes(e)) return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_REJECT;
+                }
+            }
+        );
+
+        const targets = [];
+        let n;
+        while ((n = walker.nextNode())) targets.push(n);
+
+        targets.forEach(textNode => {
+            const parent = textNode.parentElement;
+            if (!parent) return;
+
+            const text = textNode.nodeValue;
+            const size = pickSize(parent);
+
+            // Разбиваем строку: чередуем текст и иконки
+            const frag = document.createDocumentFragment();
+            let i = 0;
+
+            // Сортируем эмодзи по длине — чтобы составные (🛡️) срабатывали раньше (🛡)
+            const sortedEmojis = Object.keys(EMOJI_MAP).sort((a, b) => b.length - a.length);
+
+            while (i < text.length) {
+                let matched = null;
+                for (const e of sortedEmojis) {
+                    if (text.startsWith(e, i)) { matched = e; break; }
+                }
+                if (matched) {
+                    const icon = makeIcon(EMOJI_MAP[matched], size);
+                    // Копируем цвет из родителя
+                    frag.appendChild(icon);
+                    i += matched.length;
+                } else {
+                    // Накапливаем обычный текст до следующего эмодзи
+                    let j = i;
+                    while (j < text.length) {
+                        let isEmoji = false;
+                        for (const e of sortedEmojis) {
+                            if (text.startsWith(e, j)) { isEmoji = true; break; }
+                        }
+                        if (isEmoji) break;
+                        j++;
+                    }
+                    frag.appendChild(document.createTextNode(text.slice(i, j)));
+                    i = j;
+                }
+            }
+
+            parent.replaceChild(frag, textNode);
+        });
+    }
+
+    // Запуск после DOMContentLoaded
+    function run() {
+        replaceInNode(document.body);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+    } else {
+        run();
+    }
+
+    // ============================================================
+    // MutationObserver — заменяем эмодзи в динамически добавленных узлах
+    // ============================================================
+    const observer = new MutationObserver(mutations => {
+        for (const m of mutations) {
+            if (m.type === 'childList') {
+                m.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) {
+                        // Не трогаем наш SVG-спрайт и уже готовые иконки
+                        if (node.id && node.id.startsWith('i-')) return;
+                        if (node.hasAttribute && node.hasAttribute('data-icon')) return;
+                        replaceInNode(node);
+                    } else if (node.nodeType === 3) {
+                        // Текстовый узел добавили напрямую — оборачиваем
+                        const parent = node.parentElement;
+                        if (!parent) return;
+                        const tmp = document.createElement('div');
+                        tmp.appendChild(node.cloneNode(true));
+                        replaceInNode(tmp);
+                        if (tmp.childNodes.length) {
+                            parent.replaceChild(tmp.firstChild, node);
+                            // Если остались ещё — вставим после
+                            while (tmp.firstChild) {
+                                parent.insertBefore(tmp.firstChild, parent.firstChild.nextSibling);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    function startObserver() {
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    if (document.body) startObserver();
+    else document.addEventListener('DOMContentLoaded', startObserver);
+
+    // Экспортируем на всякий случай
+    window.__replaceEmojiIcons = run;
+})();
+</script>  
 </body>
 </html>
