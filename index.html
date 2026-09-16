@@ -9729,93 +9729,6 @@ async function updateRequestsBadge() {
             } catch (e) { showToast('Ошибка: ' + e.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; } }
         }
 
-function subscribeRoomRealtime(roomId) {
-    if (roomRealtimeChannel) sb.removeChannel(roomRealtimeChannel);
-
-    roomRealtimeChannel = sb.channel('room_rt_' + roomId)
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'rooms',
-            filter: 'id=eq.' + roomId
-        }, async (payload) => {
-            const room = payload.new;
-            if (!room) return;
-
-            // Проверка кика
-            const kicked = room.kicked_users || [];
-            if (kicked.includes(Number(currentUser.telegram_id))) {
-                showToast('🚪 Тебя исключили из комнаты');
-                haptic('heavy');
-                unsubscribeRoomRealtime();
-                closePlayScreen();
-                checkActiveRoom();
-                const newKicked = kicked.filter(id => id !== Number(currentUser.telegram_id));
-                await sb.from('rooms').update({ kicked_users: newKicked }).eq('id', roomId);
-                return;
-            }
-
-            // Обновляем баннер
-            if (activeRoomId === roomId) {
-                showActiveRoomBanner(room);
-            }
-
-            // ✅ НОВОЕ: не перерисовываем, если открыт чат
-            if (roomChatOpen) return;
-
-            // Роутинг по статусу
-            if (room.status === 'veto') { openVetoView(roomId); return; }
-            if (room.status === 'side_pick') { showSidePick(roomId); return; }
-            if (room.status === 'waiting_link') {
-    showLobbyScreen(roomId, room);
-    return;
-}
-if (room.status === 'in_game' || room.status === 'cancelled') {
-    renderInGameScreen(roomId);
-    return;
-}
-            if (room.status === 'cancelled') {
-                showToast('❌ Матч отменён');
-                unsubscribeRoomRealtime();
-                closePlayScreen();
-                checkActiveRoom();
-                return;
-            }
-            if (room.status === 'open') {
-                await renderRoomContent(roomId);
-            }
-        })
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'room_players',
-            filter: 'room_id=eq.' + roomId
-        }, async () => {
-            const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
-            if (!room) return;
-
-            await checkTeamsReady(roomId, room);
-
-                        if (roomChatOpen) return;
-
-            if (room.status === 'open') {
-                await renderRoomContent(roomId);
-            } else if (room.status === 'veto') {
-                openVetoView(roomId);
-            } else if (room.status === 'side_pick') {
-                showSidePick(roomId);
-            } else if (room.status === 'waiting_link') {
-                showLobbyScreen(roomId, room);
-                return;
-            } else if (room.status === 'in_game' || room.status === 'cancelled') {
-                renderInGameScreen(roomId);
-                return;
-            }
-        })
-        .subscribe((status) => {
-            console.log('Room realtime status:', status);
-        });
-}
         // ============================================================
         // START CLUB PARTY (клановая битва)
         // ============================================================
@@ -12230,18 +12143,15 @@ async function finishMatch(matchId, result) {
         const updatesB = [];
 
         for (const p of teamA) {
-            const u = userMap[Number(p.telegram_id)] || { elo: 1000 };
-            const before = u.elo ?? 1000;
-            const delta = winnerTeam === 'A' ? WIN_DELTA : LOSE_DELTA;
-            const after = Math.max(0, before + delta);
-
-            updatesA.push({ ...p, elo_before: before, elo_after: after });
-            await sb.from('users').update({
-                elo: after,
-                matches_played: (u.matches_played ?? 0) + 1,
-                wins: (u.wins ?? 0) + (winnerTeam === 'A' ? 1 : 0)
-            }).eq('telegram_id', p.telegram_id);
-        }
+    const pid = Number(p.telegram_id);
+    const u = userMap[pid] || { elo: 1000 };
+    ...
+    await sb.from('users').update({
+        elo: after,
+        matches_played: (u.matches_played ?? 0) + 1,
+        wins: (u.wins ?? 0) + (winnerTeam === 'A' ? 1 : 0)
+    }).eq('telegram_id', pid);
+}
 
         for (const p of teamB) {
             const u = userMap[Number(p.telegram_id)] || { elo: 1000 };
@@ -12299,7 +12209,7 @@ async function finishMatch(matchId, result) {
 
             const myTeam = (currentMatch.team_a_players || []).some(p => p.telegram_id === me) ? 'A' : 'B';
             const myBefore = ((myTeam === 'A' ? currentMatch.team_a_players : currentMatch.team_b_players) || [])
-                .find(p => p.telegram_id === me)?.elo_before || 1000;
+    .find(p => Number(p.telegram_id) === Number(me))?.elo_before || 1000;
 
             const { data: meData } = await sb.from('users').select('elo').eq('telegram_id', me).single();
             const myAfter = meData?.elo ?? 1000;
@@ -14113,6 +14023,15 @@ async function cancelMatchByVote(roomId) {
                 await sb.from('room_messages').delete().eq('room_id', roomId);
                 await sb.from('match_cancel_votes').delete().eq('match_id', roomId);
                 await sb.from('rooms').delete().eq('id', roomId);
+                // Принудительно чистим баннер и индикатор у себя
+if (activeRoomId === roomId) {
+    activeRoomId = null;
+    hideActiveRoomBanner();
+    const indicator = document.getElementById('headerRoomIndicator');
+    if (indicator) indicator.style.display = 'none';
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
+}
             } catch (e) {}
         }, 5000);
     } catch (e) {
