@@ -705,7 +705,26 @@ body::after {
         .msg-menu-edit { width: 100%; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 15px; color: var(--text); font-family: inherit; font-weight: 600; outline: none; resize: none; min-height: 80px; margin-bottom: 10px; }
 
         /* MATCHMAKING */
-        .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .mode-grid { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 8px; 
+    margin-bottom: 20px; 
+}
+
+/* Компактные карточки для 3 режимов */
+.mode-grid .mode-card {
+    padding: 16px 8px;
+}
+.mode-grid .mode-icon {
+    font-size: 28px;
+}
+.mode-grid .mode-title {
+    font-size: 14px;
+}
+.mode-grid .mode-desc {
+    font-size: 10px;
+}
         .mode-card {
             padding: 24px 16px;
             background: var(--card); border: 2px solid var(--border);
@@ -1142,6 +1161,18 @@ body::after {
 }
 
 /* ============ MODE SELECTOR (compact) ============ */
+    .mode-selector .mode-card {
+    padding: 12px 8px;
+}
+.mode-selector .mode-card .mode-icon {
+    font-size: 22px;
+}
+.mode-selector .mode-card .mode-name {
+    font-size: 13px;
+}
+.mode-selector .mode-card .mode-capacity {
+    font-size: 9px;
+}
 .mode-selector {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -5447,18 +5478,23 @@ body::after {
     <!-- ============ PLAY (выбор режима и пати) ============ -->
     <div class="container page" id="page-play">
         <div class="section-title" style="margin-top: 0;">Выбор режима</div>
-        <div class="mode-grid">
-            <div class="mode-card active" id="mode5x5" onclick="selectMode('5x5')">
-                <div class="mode-icon">🎯</div>
-                <div class="mode-title">5×5</div>
-                <div class="mode-desc">до 5 игроков</div>
-            </div>
-            <div class="mode-card" id="mode2x2" onclick="selectMode('2x2')">
-                <div class="mode-icon">⚔️</div>
-                <div class="mode-title">2×2</div>
-                <div class="mode-desc">до 2 игроков</div>
-            </div>
-        </div>
+        <div class="mode-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+    <div class="mode-card active" id="mode5x5" onclick="selectMode('5x5')">
+        <div class="mode-icon">🎯</div>
+        <div class="mode-title">5×5</div>
+        <div class="mode-desc">до 5 игроков</div>
+    </div>
+    <div class="mode-card" id="mode2x2" onclick="selectMode('2x2')">
+        <div class="mode-icon">⚔️</div>
+        <div class="mode-title">2×2</div>
+        <div class="mode-desc">до 2 игроков</div>
+    </div>
+    <div class="mode-card" id="mode1x1" onclick="selectMode('1x1')">
+        <div class="mode-icon">🗡️</div>
+        <div class="mode-title">1×1</div>
+        <div class="mode-desc">дуэль</div>
+    </div>
+</div>
 
         <div class="section-title">Открытые комнаты</div>
         <div id="openRoomsList" style="margin-bottom: 20px;">
@@ -6611,6 +6647,22 @@ function eloToLevel(elo) {
     if (elo <= 2300) return 9;
     return 10;
 }
+
+           // ============================================================
+// MODE CONFIG — единая точка правды для всех режимов
+// ============================================================
+function getModeConfig(mode) {
+    const configs = {
+        '1x1': { perTeam: 1, maxPlayers: 2,  label: '1×1' },
+        '2x2': { perTeam: 2, maxPlayers: 4,  label: '2×2' },
+        '5x5': { perTeam: 5, maxPlayers: 10, label: '5×5' },
+    };
+    return configs[mode] || configs['5x5'];
+}
+
+// Короткие обёртки для частого использования
+function needPerTeam(mode) { return getModeConfig(mode).perTeam; }
+function maxPlayers(mode)  { return getModeConfig(mode).maxPlayers; } 
 
         function haptic(style = 'light') { try { tg?.HapticFeedback?.impactOccurred(style); } catch (e) {} }
         function escapeHtml(str) {
@@ -9251,9 +9303,9 @@ function closeChatView() {
         }
 
         function renderEmptyParty() {
-            myParty = null;
-            document.getElementById('partyCount').textContent = `1 / ${selectedMode === '5x5' ? 5 : 2}`;
-            document.getElementById('partyElo').textContent = currentUser.elo ?? 1000;
+    myParty = null;
+    document.getElementById('partyCount').textContent = `1 / ${needPerTeam(selectedMode)}`;
+    document.getElementById('partyElo').textContent = currentUser.elo ?? 1000;
             document.getElementById('partyMembers').innerHTML = `
                 <div class="party-member">
                     <span>${escapeHtml(currentUser.display_name)}</span>
@@ -9263,7 +9315,7 @@ function closeChatView() {
 
 function renderParty() {
     if (!myParty) return renderEmptyParty();
-    const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
+    const maxSize = needPerTeam(myParty.party.mode);
     const avgElo = myParty.members.length
         ? Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length)
         : 1000;
@@ -9292,11 +9344,16 @@ function renderParty() {
         }
 
         function selectMode(mode) {
-            selectedMode = mode;
-            document.getElementById('mode5x5').classList.toggle('active', mode === '5x5');
-            document.getElementById('mode2x2').classList.toggle('active', mode === '2x2');
-            ensureParty(mode).then(p => loadPartyMembers(p)).catch(e => console.warn(e));
-        }
+    selectedMode = mode;
+    
+    // Обновляем активную карточку во всех наборах
+    ['1x1', '2x2', '5x5'].forEach(m => {
+        const el = document.getElementById('mode' + m.replace('x', 'x'));
+        if (el) el.classList.toggle('active', m === mode);
+    });
+    
+    ensureParty(mode).then(p => loadPartyMembers(p)).catch(e => console.warn(e));
+}
 
         async function kickFromParty(userId) {
             if (!myParty) return;
@@ -9381,7 +9438,7 @@ function renderParty() {
                     const initial = (leader.display_name || 'U')[0].toUpperCase();
                     const av = src ? `<img src="${src}" alt="">` : initial;
                     const count = (memberMap[q.party_id] || []).length;
-                    const maxSize = q.mode === '5x5' ? 5 : 2;
+                    const maxSize = needPerTeam(q.mode);
                     const clubBadge = party.is_club_party ? ' 🛡️' : '';
 
                     return `
@@ -9419,7 +9476,7 @@ function renderParty() {
                 const userMap = {};
                 (users || []).forEach(u => userMap[u.telegram_id] = u);
 
-                const maxSize = party.mode === '5x5' ? 5 : 2;
+                const maxSize = needPerTeam(party.mode);
                 const leaderName = userMap[party.leader_id]?.display_name || 'Игрок';
 
                 content.innerHTML = `
@@ -9453,7 +9510,7 @@ async function askJoinRoom(partyId) {
     try {
         const { data: party } = await sb.from('parties').select('*').eq('id', partyId).single();
         const { data: members } = await sb.from('party_members').select('telegram_id').eq('party_id', partyId);
-        const maxSize = party.mode === '5x5' ? 5 : 2;
+        const maxSize = needPerTeam(party.mode);
 
         if ((members || []).length >= maxSize) {
             showToast('Комната заполнена');
@@ -9534,7 +9591,7 @@ async function askJoinRoom(partyId) {
                 if (iAmLeader) {
                     const newMemberId = invite.from_id;
                     const { data: members } = await sb.from('party_members').select('telegram_id').eq('party_id', party.id);
-                    const maxSize = party.mode === '5x5' ? 5 : 2;
+                    const maxSize = needPerTeam(myParty.party.mode);
                     if ((members || []).length >= maxSize) {
                         showToast('Комната заполнена');
                         closePartyInvite();
@@ -9735,12 +9792,12 @@ async function inviteToParty(userId) {
         // ============================================================
         // SEARCH
         // ============================================================
-        async function startSearch() {
-            if (!myParty) { await ensureParty(selectedMode); await loadOrCreateParty(); }
-            if (!myParty) return;
+async function startSearch() {
+    if (!myParty) { await ensureParty(selectedMode); await loadOrCreateParty(); }
+    if (!myParty) return;
 
-            const maxSize = myParty.party.mode === '5x5' ? 5 : 2;
-            if (myParty.members.length > maxSize) { showToast('Слишком много игроков'); return; }
+    const maxSize = needPerTeam(myParty.party.mode);
+    if (myParty.members.length > maxSize) { showToast('Слишком много игроков'); return; }
 
             const avgElo = Math.round(myParty.members.reduce((s, m) => s + (m.elo || 1000), 0) / myParty.members.length);
 
@@ -10723,22 +10780,29 @@ function renderPlayList() {
         </div>
 
         <div class="play-section-label">Режим</div>
-        <div class="mode-selector">
-            <div class="mode-card ${selectedMode === '2x2' ? 'active' : ''}" onclick="selectMode('2x2')">
-                <div class="mode-icon">⚔️</div>
-                <div class="mode-info">
-                    <div class="mode-name">2×2</div>
-                    <div class="mode-capacity">до 4 игроков</div>
-                </div>
-            </div>
-            <div class="mode-card ${selectedMode === '5x5' ? 'active' : ''}" onclick="selectMode('5x5')">
-                <div class="mode-icon">🛡️</div>
-                <div class="mode-info">
-                    <div class="mode-name">5×5</div>
-                    <div class="mode-capacity">до 10 игроков</div>
-                </div>
-            </div>
+        <div class="mode-selector" style="grid-template-columns: 1fr 1fr 1fr;">
+<div class="mode-icon">
+    <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+        <path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>
+        <path d="m13 19 6-6M16 16l4 4M19 21l2-2"/>
+    </svg>
+</div>
+    </div>
+    <div class="mode-card ${selectedMode === '2x2' ? 'active' : ''}" onclick="selectMode('2x2')">
+        <div class="mode-icon">⚔️</div>
+        <div class="mode-info">
+            <div class="mode-name">2×2</div>
+            <div class="mode-capacity">до 4 игроков</div>
         </div>
+    </div>
+    <div class="mode-card ${selectedMode === '5x5' ? 'active' : ''}" onclick="selectMode('5x5')">
+        <div class="mode-icon">🛡️</div>
+        <div class="mode-info">
+            <div class="mode-name">5×5</div>
+            <div class="mode-capacity">до 10 игроков</div>
+        </div>
+    </div>
+</div>
 
         <div class="play-actions">
     <button class="play-btn-find" onclick="findOrCreateRoom()">
@@ -10768,6 +10832,11 @@ function selectMode(mode) {
     selectedMode = mode;
     haptic();
     renderPlayList();
+    // Обновляем активную карточку
+    ['1x1', '2x2', '5x5'].forEach(m => {
+        const el = document.getElementById('mode' + m);
+        if (el) el.classList.toggle('active', m === mode);
+    });
 }
 
 function selectMap(map) {
@@ -10943,14 +11012,14 @@ async function createRoomInline() {
         }
     }
 
-    const maxPlayers = selectedMode === '2x2' ? 4 : 10;
+    const maxPlayersCount = maxPlayers(selectedMode);
     const roomName = `${currentUser.display_name || 'Комната'} · ${selectedMode}`;
 
     const { data: created, error } = await sb.from('rooms').insert({
         name: roomName,
         mode: selectedMode,
         map: selectedMap,
-        max_players: maxPlayers,
+        max_players: maxPlayersCount,
         leader_id: currentUser.telegram_id,
         status: 'open',
     }).select().single();
@@ -11066,7 +11135,7 @@ async function renderRoomContent(roomId) {
         const myTeam = me?.team;
         const iAmReady = me?.is_ready;
 
-        const needPerTeam = room.mode === '2x2' ? 2 : 5;
+        const needPerTeam = needPerTeam(room.mode);
         const totalReady = teamA.length + teamB.length;
         const canStart = teamA.length >= needPerTeam && teamB.length >= needPerTeam;
         const teamAFull = teamA.length >= needPerTeam;
@@ -11179,8 +11248,8 @@ async function renderRoomContent(roomId) {
                 ${renderTeamZone('B', teamB, teamBFull)}
             </div>
 
-            ${spectators.length > 0 ? `
-                <div class="play-section-label">Зрители (${spectators.length})</div>
+            ${spectators.length > 0 && room.mode !== '1x1' ? `
+    <div class="play-section-label">Зрители (${spectators.length})</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
                     ${spectators.map(s => {
                         const u = userById[s.telegram_id] || {};
@@ -11285,7 +11354,7 @@ async function openChangeTeamSheet(roomId) {
             const { data: me } = await sb.from('room_players')
                 .select('team').eq('room_id', roomId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
 
-            const needPerTeam = room.mode === '2x2' ? 2 : 5;
+            const needPerTeamCount = needPerTeam(room.mode);
             const teamACount = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
             const teamBCount = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
 
@@ -11300,15 +11369,15 @@ async function openChangeTeamSheet(roomId) {
                 <div class="sheet active" id="changeTeamSheet" style="z-index: 802;">
                     <div class="sheet-title">🔄 Сменить команду</div>
                     <button class="sheet-option" ${aDisabled ? 'disabled' : ''}
-                            onclick="doChangeTeam(${roomId}, 'A')">
-                        <span style="font-size: 18px;">🛡️</span>
-                        Команда A · ${teamACount}/${needPerTeam}${me?.team === 'A' ? ' (ты здесь)' : ''}
-                    </button>
-                    <button class="sheet-option" ${bDisabled ? 'disabled' : ''}
-                            onclick="doChangeTeam(${roomId}, 'B')">
-                        <span style="font-size: 18px;">💣</span>
-                        Команда B · ${teamBCount}/${needPerTeam}${me?.team === 'B' ? ' (ты здесь)' : ''}
-                    </button>
+        onclick="doChangeTeam(${roomId}, 'A')">
+    <span style="font-size: 18px;">🛡️</span>
+    Команда A · ${teamACount}/${perTeamCount}${me?.team === 'A' ? ' (ты здесь)' : ''}
+</button>
+<button class="sheet-option" ${bDisabled ? 'disabled' : ''}
+        onclick="doChangeTeam(${roomId}, 'B')">
+    <span style="font-size: 18px;">💣</span>
+    Команда B · ${teamBCount}/${perTeamCount}${me?.team === 'B' ? ' (ты здесь)' : ''}
+</button>
                     <button class="sheet-cancel" onclick="closeChangeTeamSheet()">ОТМЕНА</button>
                 </div>
             `;
@@ -11430,11 +11499,11 @@ async function checkTeamsReady(roomId, room) {
             const { data: players } = await sb.from('room_players')
                 .select('telegram_id, team, is_ready').eq('room_id', roomId);
 
-            const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
-            const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
-            const needPerTeam = room.mode === '2x2' ? 2 : 5;
+                const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
+    const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
+    const perTeamCount = needPerTeam(room.mode);
 
-            if (teamA < needPerTeam || teamB < needPerTeam) return;
+    if (teamA < perTeamCount || teamB < perTeamCount) return;
 
             const allPlayers = players || [];
             const { data: roomData } = await sb.from('rooms')
@@ -11570,7 +11639,7 @@ async function closeRoom(roomId) {
 
             const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
             const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready);
-            const needPerTeam = room.mode === '2x2' ? 2 : 5;
+            const needPerTeamCount = needPerTeam(room.mode);
 
             if (teamA.length < needPerTeam || teamB.length < needPerTeam) {
                 showToast(`Нужно по ${needPerTeam} игроков в каждой команде`);
@@ -13288,7 +13357,7 @@ async function acceptInviteNotif(inviteId, partyId) {
 
             const { data: members } = await sb.from('party_members')
                 .select('telegram_id').eq('party_id', partyId);
-            const maxSize = party.mode === '5x5' ? 5 : 2;
+            const maxSize = needPerTeam(party.mode);
             if ((members || []).length >= maxSize) {
                 showToast('❌ Пати заполнено');
                 await sb.from('party_invites').update({ status: 'declined' }).eq('id', inviteId);
