@@ -11703,35 +11703,15 @@ async function doChangeCaptain(team, newCapId) {
     } catch (e) { showToast('Ошибка: ' + e.message); }
 }
 
-            // ============================================================
-// VETO — пики карт
-// Логика:
-//   1) Случайно определяется, кто первый: A или B (50/50)
-//   2) Первый банит 2 карты
-//   3) Второй банит 3 карты
-//   4) Первый банит 1 карту
-//   5) Второй выбирает сторону (Спецназ / Террорист)
-// Всего 7 карт, 6 банов, остаётся 1 карта для игры.
 // ============================================================
-
-const VETO_TOTAL_MAPS = 7;
+// VETO — пики карт
+// ============================================================
+const STANDOFF_MAPS = ['Hanami', 'Prison', 'Rust', 'Dune', 'Breeze', 'Province', 'Sandstone'];
 const VETO_TOTAL_BANS = 6;
 
-// Кто банит сколько на каждом шаге (в порядке очереди)
-// phase.team — 'first' или 'second' (кто первый, определяется рандомом)
-const VETO_PHASES = [
-    { role: 'first',  count: 2, label: 'Фаза 1 · Первая команда банит 2 карты' },
-    { role: 'second', count: 3, label: 'Фаза 2 · Вторая команда банит 3 карты' },
-    { role: 'first',  count: 1, label: 'Фаза 3 · Первая команда банит 1 карту' },
-];
-
-// ============================================================
-// Определение текущей фазы по логу банов
-// ============================================================
 function getCurrentVetoPhase(match) {
     const log = match.veto_log || [];
-    const firstTeam = match.veto_first_team; // 'A' или 'B', определён при создании матча
-
+    const firstTeam = match.veto_first_team;
     if (!firstTeam) return null;
 
     const bansFirst = log.filter(v => v.team === firstTeam).length;
@@ -11740,44 +11720,37 @@ function getCurrentVetoPhase(match) {
     // Фаза 1: первая команда банит 2
     if (bansFirst < 2) {
         return {
-            role: 'first',
+            index: 0,
             team: firstTeam,
             remaining: 2 - bansFirst,
-            label: VETO_PHASES[0].label,
-            index: 0
+            label: 'Фаза 1 · Первая команда банит 2 карты'
         };
     }
     // Фаза 2: вторая команда банит 3
     if (bansSecond < 3) {
         return {
-            role: 'second',
+            index: 1,
             team: firstTeam === 'A' ? 'B' : 'A',
             remaining: 3 - bansSecond,
-            label: VETO_PHASES[1].label,
-            index: 1
+            label: 'Фаза 2 · Вторая команда банит 3 карты'
         };
     }
-    // Фаза 3: первая команда банит 1 (последний бан)
+    // Фаза 3: первая команда банит 1 (последний)
     if (bansFirst < 3) {
         return {
-            role: 'first',
+            index: 2,
             team: firstTeam,
             remaining: 3 - bansFirst,
-            label: VETO_PHASES[2].label,
-            index: 2
+            label: 'Фаза 3 · Первая команда банит 1 карту'
         };
     }
-    // Все баны сделаны
     return null;
 }
 
-// ============================================================
-// Кто выбирает сторону — тот, кто НЕ делал последний бан
-// ============================================================
 function getSidePickerTeam(match) {
     const firstTeam = match.veto_first_team;
     if (!firstTeam) return 'A';
-    // Последний бан делает первая команда (фаза 3) → сторону выбирает вторая
+    // Последний бан делает первая → сторону выбирает вторая
     return firstTeam === 'A' ? 'B' : 'A';
 }
 
@@ -11806,35 +11779,30 @@ async function renderVeto() {
     const allPlayers = [...teamA, ...teamB];
     const allIds = allPlayers.map(p => Number(p.telegram_id));
 
-    // Загружаем игроков
     const { data: users } = await sb.from('users')
         .select('telegram_id, display_name, custom_avatar, photo_url, elo')
         .in('telegram_id', allIds.length ? allIds : [0]);
     const userMap = {};
     (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
 
-    // Капитаны
     const capAId = Number(match.captain_a_id);
     const capBId = Number(match.captain_b_id);
     const iAmCapA = me === capAId;
     const iAmCapB = me === capBId;
-    const iAmCaptain = iAmCapA || iAmCapB;
     const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
                   : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
 
     const vetoLog = match.veto_log || [];
     const bannedMaps = vetoLog.map(v => v.map);
 
-    // Финал? — если статус side_pick или ready
+    // Переход на финал
     if (match.status === 'side_pick' || match.status === 'ready') {
         renderVetoFinal(content, match, userMap);
         return;
     }
 
-    // Текущая фаза
     const phase = getCurrentVetoPhase(match);
     if (!phase) {
-        // Все баны сделаны → финализируем
         await finalizeVeto();
         return;
     }
@@ -11843,20 +11811,19 @@ async function renderVeto() {
     const isMyTurn = (iAmCapA && currentTurn === 'A') || (iAmCapB && currentTurn === 'B');
     const isMyTeamTurn = myTeam === currentTurn;
 
-    // Таймер
     const timerDuration = 30;
     const lastActionAt = match.last_action_at || match.veto_started_at || new Date().toISOString();
     const elapsed = Math.floor((Date.now() - new Date(lastActionAt).getTime()) / 1000);
     const timeLeft = Math.max(0, timerDuration - elapsed);
 
-    // Прогресс — 6 шагов
-    const bansFirst = vetoLog.filter(v => v.team === match.veto_first_team).length;
-    const bansSecond = vetoLog.filter(v => v.team !== match.veto_first_team).length;
+    // Прогресс
     const firstTeam = match.veto_first_team;
+    const bansFirst = vetoLog.filter(v => v.team === firstTeam).length;
+    const bansSecond = vetoLog.filter(v => v.team !== firstTeam).length;
 
     const steps = [
-        { done: bansFirst >= 1,  active: phase.index === 0 && bansFirst === 0, team: firstTeam },
-        { done: bansFirst >= 2,  active: phase.index === 0 && bansFirst === 1, team: firstTeam },
+        { done: bansFirst >= 1,  active: phase.index === 0 && bansFirst === 0,  team: firstTeam },
+        { done: bansFirst >= 2,  active: phase.index === 0 && bansFirst === 1,  team: firstTeam },
         { done: bansSecond >= 1, active: phase.index === 1 && bansSecond === 0, team: firstTeam === 'A' ? 'B' : 'A' },
         { done: bansSecond >= 2, active: phase.index === 1 && bansSecond === 1, team: firstTeam === 'A' ? 'B' : 'A' },
         { done: bansSecond >= 3, active: phase.index === 1 && bansSecond === 2, team: firstTeam === 'A' ? 'B' : 'A' },
@@ -11870,7 +11837,6 @@ async function renderVeto() {
         return `<div class="${cls}"></div>`;
     }).join('');
 
-    // Карты
     const mapsHTML = STANDOFF_MAPS.map(map => {
         const isBanned = bannedMaps.includes(map);
         const banEntry = vetoLog.find(v => v.map === map);
@@ -11898,27 +11864,24 @@ async function renderVeto() {
         `;
     }).join('');
 
-    // Карточки капитанов
     const capCard = (team) => {
         const capId = team === 'A' ? capAId : capBId;
         const u = userMap[capId] || {};
         const av = renderAvatar(u);
         const isCurrent = currentTurn === team;
         const bans = team === firstTeam ? bansFirst : bansSecond;
-        const total = team === firstTeam ? 3 : 3;
         return `
             <div class="veto-cap-card ${team.toLowerCase()} ${isCurrent ? 'active' : ''}">
                 <div class="veto-cap-label">Капитан ${team}${isCurrent ? ' · ХОД' : ''}</div>
                 <div class="veto-cap-row">
                     <div class="veto-cap-avatar">${av}</div>
                     <div class="veto-cap-name">${escapeHtml(u.display_name || '—')}</div>
-                    <div class="veto-cap-bans">${bans}/${total}</div>
+                    <div class="veto-cap-bans">${bans}/3</div>
                 </div>
             </div>
         `;
     };
 
-    // Лог
     const logHTML = vetoLog.length ? `
         <div class="veto-log-v2">
             <div class="log-title">История банов (${vetoLog.length}/${VETO_TOTAL_BANS})</div>
@@ -11935,7 +11898,6 @@ async function renderVeto() {
         </div>
     ` : '';
 
-    // Ожидание
     const waitingHTML = !isMyTurn ? `
         <div class="veto-waiting">
             <span class="wait-icon">⏳</span>
@@ -12027,14 +11989,13 @@ async function pickMap(map) {
             last_action_at: new Date().toISOString()
         };
 
-        // Все баны сделаны → переходим к выбору стороны
         if (remaining.length === 1) {
+            // Все баны сделаны → выбор стороны
             update.final_map = remaining[0];
             update.status = 'side_pick';
             update.side_picker_team = getSidePickerTeam(currentMatch);
             update.current_turn = null;
         } else {
-            // Определяем новую фазу и чей ход
             const tempMatch = { ...currentMatch, veto_log: newLog };
             const nextPhase = getCurrentVetoPhase(tempMatch);
             update.current_turn = nextPhase ? nextPhase.team : null;
@@ -12207,9 +12168,17 @@ async function pickSideVeto(side) {
         await sb.from('game_matches').update({
             side_a: side,
             side_b: opposite,
-            status: 'ready',
+            status: 'in_game',
             last_action_at: new Date().toISOString()
         }).eq('id', currentMatch.id);
+
+        // Обновляем комнату
+        await sb.from('rooms').update({
+            status: 'in_game',
+            final_map: currentMatch.final_map,
+            side_a: side,
+            side_b: opposite
+        }).eq('id', currentMatch.room_id);
 
         haptic('medium');
         showToast(`✅ Сторона ${sidePickerTeam}: ${side}`);
@@ -12229,7 +12198,8 @@ async function pickSideVeto(side) {
             .select('*').eq('id', currentMatch.id).single();
         if (data) {
             currentMatch = data;
-            showMatchScreen();
+            // Показываем экран in-game с ссылкой
+            showInGameScreen();
         }
     } catch (e) {
         console.error('pickSideVeto:', e);
@@ -12288,6 +12258,75 @@ function subscribeVetoRealtime(matchId) {
         .subscribe();
 }
 
+            function showInGameScreen() {
+    switchPage('ingame');
+    renderInGameContent();
+}
+
+function renderInGameContent() {
+    const container = document.getElementById('inGameContent');
+    if (!container || !currentMatch) return;
+
+    const roomLink = currentMatch.host_link || '';
+
+    container.innerHTML = `
+        <div class="ig-match-header">
+            <div class="ig-match-row">
+                <div class="ig-match-num">Матч <b>#${String(currentMatch.id).padStart(6, '0')}</b></div>
+                <div class="ig-status-badge live">В ИГРЕ</div>
+            </div>
+            <div class="ig-map-line">Карта</div>
+            <div class="ig-map-name">${escapeHtml(currentMatch.final_map || '—')}</div>
+            <div class="ig-players-line">
+                <span>Стороны: <b>A — ${escapeHtml(currentMatch.side_a || '—')}</b></span>
+                <span><b>B — ${escapeHtml(currentMatch.side_b || '—')}</b></span>
+            </div>
+        </div>
+
+        <div class="ig-link-block">
+            <div class="ig-link-label">🔗 Ссылка на лобби</div>
+            <div class="ig-link-row">
+                <div class="ig-link-input" id="igLinkValue">${escapeHtml(roomLink || 'Хост ещё не создал лобби')}</div>
+                <button class="ig-link-copy" onclick="copyInGameLink('${escapeHtml(roomLink)}')">📋</button>
+            </div>
+            <button class="ig-enter-btn" onclick="enterInGameLinkAndGoResult('${escapeHtml(roomLink)}')">
+                🎮 ВОЙТИ В ИГРУ
+            </button>
+        </div>
+
+        <div class="ig-section-title">Игроки матча</div>
+
+        ${(currentMatch.team_a_players || []).concat(currentMatch.team_b_players || []).map(p => {
+            const isMe = Number(p.telegram_id) === Number(currentUser.telegram_id);
+            return `
+                <div class="ig-player-row ${currentMatch.team_a_players?.some(x => x.telegram_id === p.telegram_id) ? 'team-a' : 'team-b'} ${isMe ? 'you' : ''}">
+                    <div class="ig-player-avatar">${renderAvatar({})}</div>
+                    <div class="ig-player-info">
+                        <div class="ig-player-name">ID: ${p.telegram_id} ${isMe ? '· ТЫ' : ''}</div>
+                    </div>
+                </div>
+            `;
+        }).join('')}
+
+        <button class="profile-action-btn cancel" 
+                style="margin-top: 20px;"
+                onclick="openAppealDialog()">
+            ⚖️ Пожаловаться
+        </button>
+    `;
+}
+
+// Открывает ссылку и сразу переходит к экрану результата
+function enterInGameLinkAndGoResult(url) {
+    if (url) {
+        try {
+            if (tg?.openLink) tg.openLink(url);
+            else window.open(url, '_blank');
+        } catch (e) {}
+    }
+    // Переходим на экран результата
+    showResultScreen();
+}
 
         // ============================================================
         // MATCH (ИГРАЕМ)
@@ -14204,6 +14243,8 @@ async function startMatch(roomId) {
 
         // 🎲 50/50 — кто первый банит
         const vetoFirstTeam = Math.random() < 0.5 ? 'A' : 'B';
+        // Кто выбирает сторону = та команда, что НЕ банила последней (последний бан делает первая)
+        const sidePickerTeam = vetoFirstTeam === 'A' ? 'B' : 'A';
 
         const { data: match, error } = await sb.from('game_matches').insert({
             status: 'veto',
@@ -14214,8 +14255,9 @@ async function startMatch(roomId) {
             team_a_players: teamA.map(p => ({ telegram_id: p.telegram_id })),
             team_b_players: teamB.map(p => ({ telegram_id: p.telegram_id })),
             veto_log: [],
-            veto_first_team: vetoFirstTeam,   // 🔥 кто первый
-            current_turn: vetoFirstTeam,       // 🔥 чей ход сейчас
+            veto_first_team: vetoFirstTeam,
+            side_picker_team: sidePickerTeam,
+            current_turn: vetoFirstTeam,
             veto_started_at: new Date().toISOString(),
             last_action_at: new Date().toISOString()
         }).select().single();
@@ -14232,11 +14274,9 @@ async function startMatch(roomId) {
 
         currentMatch = match;
 
-        const firstName = vetoFirstTeam === 'A' ? (teamA[0].display_name || 'A') : (teamB[0].display_name || 'B');
         showToast(`🎲 Первой банит команда ${vetoFirstTeam}`);
         haptic('heavy');
 
-        // Переходим к veto
         showVetoScreen();
         subscribeVetoRealtime(match.id);
     } catch (e) {
