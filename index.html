@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>De1mos Faceit</title>
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=uz8S-P25jsoYdqnCcdGTxej3ngVRNbzh4Hj6w3U6K0k2LrqaOFt6KelbAneGiA3Tw9wQOzt01PLJbd_YLidIT1oMyUGGhJ06cN5wyksj8Sc" charset="UTF-8"></script><script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
         /* ============================================================
@@ -3804,11 +3804,11 @@ body::after {
 
 /* Микро-вспышка при обновлении значения */
 .stat-value.bump {
-    animation: statBump 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: statBump 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes statBump {
     0%   { transform: scale(1); filter: brightness(1); }
-    40%  { transform: scale(1.15); filter: brightness(1.6); }
+    35%  { transform: scale(1.25); filter: brightness(1.9); text-shadow: 0 0 24px rgba(var(--emerald-rgb), 1); }
     100% { transform: scale(1); filter: brightness(1); }
 }
 
@@ -4765,10 +4765,2703 @@ body::after {
     border: none;
     font-family: inherit;
 }
+
+    .elo-value-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+.elo-value-wrap .elo-value {
+    font-size: 54px;
+    line-height: 1;
+}
+.elo-dxp-label {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--emerald-3);
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.55);
+    opacity: 0.9;
+    align-self: flex-end;
+    padding-bottom: 6px;
+    animation: dxpLabelPulse 3s ease-in-out infinite;
+}
+@keyframes dxpLabelPulse {
+    0%, 100% { text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.55); }
+    50%      { text-shadow: 0 0 22px rgba(var(--emerald-rgb), 0.9); }
+}
+
+    /* ============ ANIMATED BACKGROUND ============ */
+/* Слой 1: пульсирующие орбы */
+body::before {
+    content: ''; position: fixed; inset: -50%;
+    background:
+        radial-gradient(circle at 20% 20%, var(--glow-1), transparent 45%),
+        radial-gradient(circle at 80% 60%, var(--glow-2), transparent 50%),
+        radial-gradient(circle at 50% 100%, var(--glow-3), transparent 55%);
+    animation: bgFloat 24s ease-in-out infinite alternate,
+               bgHueShift 30s linear infinite;
+    z-index: -3; filter: blur(40px);
+}
+
+/* Слой 2: движущиеся частицы */
+.bg-particles {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    overflow: hidden;
+}
+.bg-particles::before,
+.bg-particles::after {
+    content: '';
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow:
+        120px 80px 0 -1px var(--emerald),
+        240px 200px 0 -1.5px var(--emerald-3),
+        360px 120px 0 -1px var(--emerald-2),
+        480px 300px 0 -2px var(--emerald),
+        620px 180px 0 -1px var(--emerald-3),
+        780px 420px 0 -1.5px var(--emerald-2),
+        900px 260px 0 -1px var(--emerald),
+        1050px 540px 0 -2px var(--emerald-3),
+        1180px 380px 0 -1px var(--emerald-2),
+        1320px 620px 0 -1.5px var(--emerald),
+        200px 500px 0 -2px var(--emerald-3),
+        700px 700px 0 -1px var(--emerald-2);
+    animation: particlesFloat 40s linear infinite;
+    opacity: 0.6;
+}
+.bg-particles::after {
+    width: 2px; height: 2px;
+    box-shadow:
+        150px 350px 0 -1px var(--emerald-3),
+        340px 550px 0 -1.5px var(--emerald),
+        520px 420px 0 -1px var(--emerald-2),
+        700px 180px 0 -2px var(--emerald-3),
+        880px 660px 0 -1px var(--emerald),
+        1020px 400px 0 -1.5px var(--emerald-2),
+        1250px 220px 0 -1px var(--emerald-3),
+        1420px 580px 0 -2px var(--emerald);
+    animation: particlesFloat2 55s linear infinite reverse;
+    opacity: 0.4;
+}
+@keyframes particlesFloat {
+    0%   { transform: translateY(0) translateX(0); }
+    100% { transform: translateY(-60vh) translateX(-40px); }
+}
+@keyframes particlesFloat2 {
+    0%   { transform: translateY(0) translateX(0); }
+    100% { transform: translateY(-80vh) translateX(60px); }
+}
+@keyframes bgHueShift {
+    0%   { filter: blur(40px) hue-rotate(0deg); }
+    100% { filter: blur(40px) hue-rotate(360deg); }
+}
+
+/* Слой 3: сетка (усиливаем) */
+body::after {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 75%);
+    z-index: -1; pointer-events: none;
+    animation: gridDrift 60s linear infinite;
+}
+@keyframes gridDrift {
+    0%   { background-position: 0 0, 0 0; }
+    100% { background-position: 40px 40px, 40px 40px; }
+}
+
+/* Плавающие световые лучи */
+.bg-rays {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    overflow: hidden;
+}
+.bg-rays::before,
+.bg-rays::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(var(--emerald-rgb), 0.03) 60deg,
+        transparent 120deg,
+        rgba(var(--emerald-rgb), 0.04) 180deg,
+        transparent 240deg,
+        rgba(var(--emerald-rgb), 0.03) 300deg,
+        transparent 360deg
+    );
+    animation: raysRotate 90s linear infinite;
+}
+.bg-rays::after {
+    animation-duration: 140s;
+    animation-direction: reverse;
+    opacity: 0.6;
+}
+@keyframes raysRotate {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+    .onboard-themes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+}
+.onboard-theme {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 6px;
+    background: rgba(var(--emerald-rgb), 0.04);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--text);
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.22s ease,
+                background 0.22s ease;
+}
+.onboard-theme:active { transform: scale(0.95); }
+.onboard-theme.active {
+    border-color: var(--emerald);
+    background: rgba(var(--emerald-rgb), 0.12);
+    box-shadow: 0 0 0 1px rgba(var(--emerald-rgb), 0.25),
+                0 0 20px rgba(var(--emerald-rgb), 0.2);
+}
+.onboard-theme-swatch {
+    width: 32px; height: 32px; border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1),
+                0 4px 12px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.onboard-theme-name {
+    font-size: 11px; font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--hint);
+}
+.onboard-theme.active .onboard-theme-name { color: var(--emerald); }
+
+    .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--hint);
+    margin: 4px 0 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+.section-title::before {
+    content: '';
+    width: 3px; height: 12px;
+    background: linear-gradient(180deg, var(--emerald), var(--emerald-3));
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+}
+.section-title::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--border-strong), transparent);
+}
+
+    .leaderboard-item,
+.menu-item,
+.chat-list-item,
+.play-room-card,
+.club-member-row,
+.mini-stat,
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+.leaderboard-item::after,
+.menu-item::after,
+.chat-list-item::after,
+.play-room-card::after,
+.club-member-row::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -60%;
+    width: 40%; height: 100%;
+    background: linear-gradient(120deg,
+        transparent 0%,
+        rgba(var(--emerald-rgb), 0.10) 50%,
+        transparent 100%);
+    transform: skewX(-20deg);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.leaderboard-item:hover::after,
+.menu-item:hover::after,
+.chat-list-item:hover::after,
+.play-room-card:hover::after,
+.club-member-row:hover::after {
+    opacity: 1;
+    animation: cardShine 0.9s ease-out;
+}
+@keyframes cardShine {
+    0%   { left: -60%; }
+    100% { left: 130%; }
+}
+
+    .nav-item.active .nav-icon {
+    animation: navPulse 2s ease-in-out infinite;
+}
+@keyframes navPulse {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(var(--emerald-rgb), 0)); transform: scale(1); }
+    50%      { filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.8)); transform: scale(1.06); }
+}
+
+    .play-room-card::before {
+    background: linear-gradient(90deg,
+        var(--emerald), var(--emerald-2), var(--emerald-3), var(--emerald-2), var(--emerald));
+    background-size: 200% 100%;
+    animation: barFlow 4s linear infinite;
+}
+@keyframes barFlow {
+    0%   { background-position: 0% 0; }
+    100% { background-position: 200% 0; }
+}
+
+    .page.active {
+    animation: pageFade 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes pageFade {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); filter: blur(4px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+    .club-logo {
+    box-shadow: 0 0 0 1px var(--border-strong),
+                0 0 20px rgba(var(--emerald-rgb), 0.15);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.club-logo:hover {
+    box-shadow: 0 0 0 1px var(--emerald),
+                0 0 28px rgba(var(--emerald-rgb), 0.45);
+    transform: scale(1.03);
+}
+
+   /* ============================================================
+   ⚡ CYBER ESPORTS UPGRADE v2.0 — De1mos Faceit
+   ============================================================ */
+
+/* === 1. ГЛОБАЛЬНАЯ ТИПОГРАФИКА === */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+    --font-display: 'Orbitron', -apple-system, sans-serif;
+    --font-ui: 'Rajdhani', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+    --cyber-glow-sm: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+    --cyber-glow-md: 0 0 16px rgba(var(--emerald-rgb), 0.5);
+    --cyber-glow-lg: 0 0 32px rgba(var(--emerald-rgb), 0.4);
+    --cyber-glow-xl: 0 0 60px rgba(var(--emerald-rgb), 0.3);
+}
+
+body, button, input, textarea, select {
+    font-family: var(--font-ui);
+    letter-spacing: 0.02em;
+}
+
+.header-title,
+.elo-value,
+.stat-value,
+.mm-timer,
+.match-host-id,
+.pbc-title,
+.phc-name,
+.rv-title {
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+}
+
+/* === 2. ПРОДВИНУТЫЙ ФОН С СЕТКОЙ + СКАНЛАЙНОМ === */
+body::after {
+    background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+        repeating-linear-gradient(
+            0deg,
+            transparent 0px,
+            transparent 2px,
+            rgba(var(--emerald-rgb), 0.012) 2px,
+            rgba(var(--emerald-rgb), 0.012) 4px
+        );
+    background-size: 40px 40px, 40px 40px, 100% 4px;
+    animation: gridDrift 60s linear infinite, scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+    0% { background-position: 0 0, 0 0, 0 0; }
+    100% { background-position: 40px 40px, 40px 40px, 0 100vh; }
+}
+
+/* === 3. HEADER — УСИЛЕННЫЙ КИБЕР-СТИЛЬ === */
+.header {
+    background:
+        linear-gradient(180deg,
+            rgba(5, 8, 7, 0.92) 0%,
+            rgba(5, 8, 7, 0.75) 100%);
+    border-bottom: 1px solid transparent;
+    background-image:
+        linear-gradient(180deg,
+            rgba(5, 8, 7, 0.92) 0%,
+            rgba(5, 8, 7, 0.75) 100%),
+        linear-gradient(90deg,
+            transparent 0%,
+            var(--emerald) 50%,
+            transparent 100%);
+    background-size: 100% 100%, 100% 1px;
+    background-position: 0 0, 0 100%;
+    background-repeat: no-repeat;
+}
+
+.header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 20%,
+        var(--emerald-3) 50%,
+        var(--emerald) 80%,
+        transparent 100%);
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.8);
+    animation: headerScan 4s ease-in-out infinite;
+}
+
+@keyframes headerScan {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.header-title {
+    font-weight: 900;
+    font-size: 18px;
+    text-shadow:
+        0 0 8px rgba(var(--emerald-rgb), 0.5),
+        0 0 20px rgba(var(--emerald-rgb), 0.3);
+    position: relative;
+}
+
+.header-title::after {
+    content: '';
+    position: absolute;
+    inset: -4px -10px;
+    background: radial-gradient(ellipse at center, rgba(var(--emerald-rgb), 0.15), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+    border-radius: 50%;
+    animation: titleAura 3s ease-in-out infinite;
+}
+
+@keyframes titleAura {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.1); }
+}
+
+/* === 4. ELO-КАРТА — ГОЛОГРАФИЧЕСКИЙ ЭФФЕКТ === */
+.elo-card {
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(140deg,
+            rgba(var(--emerald-rgb), 0.10) 0%,
+            rgba(var(--emerald-dark-rgb), 0.02) 45%,
+            rgba(5, 10, 8, 0.7) 100%);
+    border: 1px solid var(--border-strong);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 0 40px rgba(var(--emerald-rgb), 0.05),
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 0 60px rgba(var(--emerald-rgb), 0.12);
+}
+
+.elo-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg,
+        transparent 30%,
+        rgba(var(--emerald-rgb), 0.12) 50%,
+        transparent 70%);
+    background-size: 200% 100%;
+    animation: holoSweep 6s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes holoSweep {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.elo-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(var(--emerald-rgb), 0.08) 90deg,
+        transparent 180deg,
+        rgba(var(--emerald-rgb), 0.06) 270deg,
+        transparent 360deg
+    );
+    animation: raysRotate 30s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.elo-value {
+    position: relative;
+    z-index: 2;
+    text-shadow:
+        0 0 12px rgba(var(--emerald-rgb), 0.9),
+        0 0 30px rgba(var(--emerald-rgb), 0.5),
+        0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.elo-dxp-label {
+    position: relative;
+    z-index: 2;
+    animation: dxpLabelPulse 2s ease-in-out infinite;
+}
+
+/* === 5. STAT-КАРТЫ — HOVER-ГОЛОГРАММА === */
+.stat-card {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-style: preserve-3d;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(135deg,
+        transparent 0%,
+        rgba(var(--emerald-rgb), 0.4) 50%,
+        transparent 100%);
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: -1;
+    filter: blur(8px);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: var(--emerald);
+    box-shadow:
+        0 12px 32px rgba(var(--emerald-rgb), 0.3),
+        0 0 60px rgba(var(--emerald-rgb), 0.15);
+}
+
+.stat-card:hover::before { opacity: 1; }
+
+.stat-card:hover .stat-value {
+    transform: scale(1.15);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stat-value {
+    transition: transform 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+/* === 6. PLAY-КНОПКА — КИБЕР-УСИЛЕНИЕ === */
+.play-btn-cyber {
+    position: relative;
+    isolation: isolate;
+}
+
+.play-btn-cyber::before {
+    height: 2px !important;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 15%,
+        var(--emerald-3) 50%,
+        var(--emerald) 85%,
+        transparent 100%) !important;
+    opacity: 0.9 !important;
+    box-shadow: 0 0 12px var(--emerald);
+}
+
+.play-btn-cyber::after {
+    height: 2px !important;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(var(--emerald-rgb), 0.6) 50%,
+        transparent 100%) !important;
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+}
+
+.play-btn-cyber:hover {
+    transform: translateY(-3px) scale(1.01) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+        0 12px 40px rgba(var(--emerald-rgb), 0.35),
+        0 0 80px rgba(var(--emerald-rgb), 0.2),
+        0 0 0 1px rgba(var(--emerald-rgb), 0.5) !important;
+}
+
+.play-btn-cyber:hover .pbc-title {
+    text-shadow:
+        0 0 12px rgba(var(--emerald-rgb), 0.9),
+        0 0 24px rgba(var(--emerald-rgb), 0.6);
+    letter-spacing: 7px;
+    transition: all 0.3s ease;
+}
+
+.pbc-title {
+    transition: all 0.3s ease;
+}
+
+.play-btn-cyber:active {
+    transform: scale(0.97) !important;
+}
+
+/* Дополнительный glow-эффект на кнопке */
+.play-btn-cyber .pbc-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(var(--emerald-rgb), 0.15), transparent 50%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.play-btn-cyber:hover .pbc-content::before { opacity: 1; }
+
+/* === 7. MENU-ITEM — НЕОН+ГЛИТЧ HOVER === */
+.menu-item {
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+}
+
+.menu-item::before {
+    height: 2px !important;
+    box-shadow: 0 0 8px var(--emerald);
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+.menu-item:hover::before {
+    opacity: 1;
+    box-shadow: 0 0 16px var(--emerald), 0 0 32px rgba(var(--emerald-rgb), 0.5);
+}
+
+.menu-item:hover {
+    transform: translateY(-3px) !important;
+    box-shadow:
+        0 12px 32px rgba(var(--emerald-rgb), 0.3),
+        0 0 60px rgba(var(--emerald-rgb), 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+.menu-item:hover .menu-item-icon {
+    transform: scale(1.12) rotate(-6deg);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 0 20px rgba(var(--emerald-rgb), 0.5);
+}
+
+.menu-item-icon {
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* === 8. LEADERBOARD — ТОП-3 С ОСОБЫМ СТИЛЕМ === */
+.leaderboard-item {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.leaderboard-item:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow:
+        0 8px 24px rgba(var(--emerald-rgb), 0.25),
+        0 0 40px rgba(var(--emerald-rgb), 0.1);
+}
+
+/* Топ-1 */
+.leaderboard-item:first-child {
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.15),
+        rgba(217, 171, 90, 0.03));
+    border-color: rgba(217, 171, 90, 0.4);
+    position: relative;
+}
+
+.leaderboard-item:first-child::before {
+    content: '👑';
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    font-size: 20px;
+    filter: drop-shadow(0 0 8px rgba(217, 171, 90, 0.9));
+    animation: crownFloat 2s ease-in-out infinite;
+}
+
+@keyframes crownFloat {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-4px) rotate(5deg); }
+}
+
+.leaderboard-item:first-child .leaderboard-rank {
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(217, 171, 90, 0.8);
+    font-size: 18px;
+}
+
+.leaderboard-item:first-child .leaderboard-DXP {
+    color: var(--gold);
+    text-shadow: 0 0 10px rgba(217, 171, 90, 0.6);
+}
+
+/* Топ-2 */
+.leaderboard-item:nth-child(2) {
+    background: linear-gradient(135deg,
+        rgba(192, 192, 192, 0.1),
+        rgba(192, 192, 192, 0.02));
+    border-color: rgba(192, 192, 192, 0.3);
+}
+
+.leaderboard-item:nth-child(2) .leaderboard-rank {
+    color: #c0c0c0;
+    text-shadow: 0 0 10px rgba(192, 192, 192, 0.6);
+}
+
+/* Топ-3 */
+.leaderboard-item:nth-child(3) {
+    background: linear-gradient(135deg,
+        rgba(205, 127, 50, 0.12),
+        rgba(205, 127, 50, 0.02));
+    border-color: rgba(205, 127, 50, 0.3);
+}
+
+.leaderboard-item:nth-child(3) .leaderboard-rank {
+    color: #cd7f32;
+    text-shadow: 0 0 10px rgba(205, 127, 50, 0.6);
+}
+
+/* === 9. BOTTOM NAV — АКТИВНАЯ ВКЛАДКА С ИНДИКАТОРОМ === */
+.bottom-nav {
+    background: linear-gradient(180deg,
+        rgba(5, 8, 7, 0.85) 0%,
+        rgba(5, 8, 7, 0.98) 100%);
+    border-top: 1px solid transparent;
+    background-image:
+        linear-gradient(180deg,
+            rgba(5, 8, 7, 0.85) 0%,
+            rgba(5, 8, 7, 0.98) 100%),
+        linear-gradient(90deg,
+            transparent 0%,
+            var(--emerald) 50%,
+            transparent 100%);
+    background-size: 100% 100%, 100% 1px;
+    background-position: 0 0, 0 0;
+    background-repeat: no-repeat;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.nav-item {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.nav-item.active {
+    color: var(--emerald);
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.7);
+}
+
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 3px;
+    background: linear-gradient(90deg,
+        transparent,
+        var(--emerald),
+        transparent);
+    box-shadow: 0 0 12px var(--emerald);
+    border-radius: 2px;
+    animation: navIndicator 2s ease-in-out infinite;
+}
+
+@keyframes navIndicator {
+    0%, 100% { width: 32px; opacity: 1; }
+    50% { width: 44px; opacity: 0.7; }
+}
+
+.nav-item.active .nav-icon {
+    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.9));
+    transform: scale(1.15);
+}
+
+/* === 10. КНОПКИ СЕКЦИЙ — ЕДИНЫЙ КИБЕР-СТИЛЬ === */
+.profile-action-btn,
+.room-start-btn-v2,
+.friend-action,
+.prc-action,
+.room-join-btn,
+.room-open-btn,
+.sheet-option {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.profile-action-btn.save,
+.profile-action-btn.edit,
+.room-start-btn-v2 {
+    box-shadow:
+        0 4px 16px rgba(var(--emerald-rgb), 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+.profile-action-btn.save:hover,
+.profile-action-btn.edit:hover,
+.room-start-btn-v2:hover {
+    transform: translateY(-2px) !important;
+    box-shadow:
+        0 8px 28px rgba(var(--emerald-rgb), 0.5),
+        0 0 40px rgba(var(--emerald-rgb), 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Shimmer-эффект при hover */
+.profile-action-btn::after,
+.room-start-btn-v2::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.25),
+        transparent);
+    transition: left 0.6s ease;
+    pointer-events: none;
+}
+
+.profile-action-btn:hover::after,
+.room-start-btn-v2:hover::after {
+    left: 100%;
+}
+
+/* === 11. TEAM ZONES — КИБЕРСПОРТИВНЫЙ СТИЛЬ === */
+.team-zone {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.team-zone.team-a:hover:not(.full),
+.team-zone.team-b:hover:not(.full) {
+    transform: translateY(-3px) scale(1.01);
+}
+
+.team-zone.team-a:not(.full):hover {
+    box-shadow:
+        0 12px 32px rgba(var(--emerald-rgb), 0.35),
+        0 0 60px rgba(var(--emerald-rgb), 0.15);
+}
+
+.team-zone.team-b:not(.full):hover {
+    box-shadow:
+        0 12px 32px rgba(255, 84, 112, 0.35),
+        0 0 60px rgba(255, 84, 112, 0.15);
+}
+
+.tz-player {
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+.tz-player:hover {
+    background: rgba(var(--emerald-rgb), 0.12);
+    transform: translateX(3px);
+}
+
+.tz-player::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--emerald);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    box-shadow: 0 0 8px var(--emerald);
+}
+
+.tz-player:hover::before { opacity: 1; }
+
+/* === 12. MODE CARDS — АКТИВНАЯ С ПУЛЬСАЦИЕЙ === */
+.mode-card.active {
+    position: relative;
+    animation: modePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes modePulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 1px rgba(var(--emerald-rgb), 0.4),
+            0 8px 28px rgba(var(--emerald-rgb), 0.25),
+            0 0 40px rgba(var(--emerald-rgb), 0.15);
+    }
+    50% {
+        box-shadow:
+            0 0 0 1px rgba(var(--emerald-rgb), 0.7),
+            0 12px 40px rgba(var(--emerald-rgb), 0.4),
+            0 0 80px rgba(var(--emerald-rgb), 0.25);
+    }
+}
+
+.mode-card .mode-icon {
+    display: inline-block;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mode-card:hover .mode-icon {
+    transform: scale(1.2) rotate(-8deg);
+    filter: drop-shadow(0 0 12px rgba(var(--emerald-rgb), 0.8));
+}
+
+/* === 13. AVATAR — ОРЕОЛ + ВРАЩАЮЩЕЕСЯ КОЛЬЦО === */
+.profile-avatar {
+    position: relative;
+}
+
+.profile-avatar::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        var(--emerald),
+        var(--emerald-3),
+        var(--emerald),
+        transparent,
+        var(--emerald)
+    );
+    animation: avatarRing 4s linear infinite;
+    z-index: -1;
+    filter: blur(2px);
+    opacity: 0.7;
+}
+
+@keyframes avatarRing {
+    to { transform: rotate(360deg); }
+}
+
+.profile-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px dashed rgba(var(--emerald-rgb), 0.4);
+    animation: avatarRing 8s linear infinite reverse;
+    pointer-events: none;
+}
+
+/* === 14. CHAT BUBBLES — БОЛЕЕ ЖИВЫЕ === */
+.chat-bubble.me {
+    background: linear-gradient(135deg,
+        var(--emerald),
+        var(--emerald-2) 55%,
+        var(--emerald-3));
+    box-shadow:
+        0 4px 12px rgba(var(--emerald-rgb), 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.chat-bubble.them {
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.chat-bubble {
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.chat-bubble:hover {
+    transform: translateY(-1px);
+}
+
+/* === 15. TOAST — БОЛЕЕ ЗАМЕТНЫЙ === */
+.toast {
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.6),
+        0 0 60px rgba(var(--emerald-rgb), 0.2);
+    border: 1px solid var(--border-strong);
+}
+
+.toast.show {
+    animation: toastPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes toastPop {
+    0% { transform: translateX(-50%) translateY(24px) scale(0.8); }
+    60% { transform: translateX(-50%) translateY(-4px) scale(1.05); }
+    100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* === 16. SECTION TITLE — УСИЛЕННЫЙ === */
+.section-title::before {
+    width: 4px;
+    height: 14px;
+    box-shadow:
+        0 0 8px var(--emerald),
+        0 0 16px rgba(var(--emerald-rgb), 0.5);
+    animation: sectionBar 2s ease-in-out infinite;
+}
+
+@keyframes sectionBar {
+    0%, 100% { height: 14px; opacity: 1; }
+    50% { height: 18px; opacity: 0.7; }
+}
+
+/* === 17. PLAY-ROOM-CARD — HOVER-ЛИФТ === */
+.play-room-card {
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.play-room-card:hover {
+    transform: translateY(-4px) scale(1.01) !important;
+    box-shadow:
+        0 16px 40px rgba(var(--emerald-rgb), 0.25),
+        0 0 60px rgba(var(--emerald-rgb), 0.1);
+}
+
+.play-room-card::before {
+    height: 3px;
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.6);
+}
+
+/* === 18. КНОПКА ОБНОВЛЕНИЯ ГЛАВНОГО ЭКРАНА === */
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--emerald-rgb), 0.4); }
+    50% { box-shadow: 0 0 0 16px rgba(var(--emerald-rgb), 0); }
+}
+
+/* === 19. ФОРМ-ПОЛЯ — NEON FOCUS === */
+.field-input:focus {
+    border-color: var(--emerald);
+    background: rgba(var(--emerald-rgb), 0.08);
+    box-shadow:
+        0 0 0 4px rgba(var(--emerald-rgb), 0.12),
+        0 0 20px rgba(var(--emerald-rgb), 0.2);
+    transition: all 0.3s ease;
+}
+
+/* === 20. LOADING SHIMMER — КИБЕР-СКЕЛЕТОН === */
+.loading-shimmer {
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.04) 0%,
+        rgba(var(--emerald-rgb), 0.15) 50%,
+        rgba(var(--emerald-rgb), 0.04) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(var(--emerald-rgb), 0.2),
+        transparent);
+    animation: shimmerSweep 1.8s ease-in-out infinite;
+}
+
+@keyframes shimmerSweep {
+    0% { left: -100%; }
+    100% { left: 200%; }
+}
+
+/* === 21. SVG-ИКОНКИ ВМЕСТО ЭМОДЗИ === */
+.nav-icon,
+.pbc-icon,
+.menu-item-icon,
+.stat-card .sc-icon,
+.mode-icon,
+.menu-drawer-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+/* Улучшенные переходы для всех иконок */
+.nav-item:hover .nav-icon {
+    transform: scale(1.15) translateY(-2px);
+    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.8));
+}
+
+/* === 22. ФИНАЛЬНЫЙ ГЛОУ-ЭФФЕКТ НА ВСЁ === */
+.elo-card,
+.play-btn-cyber,
+.profile-hero,
+.stat-card {
+    will-change: transform, box-shadow;
+}
+
+/* === 23. ПЛАВНОЕ ПОЯВЛЕНИЕ СТРАНИЦ === */
+.page.active {
+    animation: pageFade 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes pageFade {
+    0% {
+        opacity: 0;
+        transform: translateY(24px) scale(0.98);
+        filter: blur(6px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+}
+
+/* === 24. КАСТОМНЫЙ СКРОЛЛБАР === */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(var(--emerald-rgb), 0.04);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--emerald), var(--emerald-2));
+    border-radius: 3px;
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--emerald-3), var(--emerald));
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.8);
+}
+
+/* === 25. УВЕДОМЛЕНИЯ — БОЛЕЕ ЖИВЫЕ === */
+.notif-item {
+    transition: all 0.25s ease;
+}
+
+.notif-item:hover {
+    transform: translateX(3px);
+    border-color: var(--border-strong);
+    box-shadow: 0 4px 16px rgba(var(--emerald-rgb), 0.15);
+}
+
+.notif-item.unread {
+    position: relative;
+}
+
+.notif-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--emerald);
+    box-shadow: 0 0 12px var(--emerald);
+    animation: unreadPulse 2s ease-in-out infinite;
+}
+
+@keyframes unreadPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* === 26. КИБЕР-ГРАНИЦА ДЛЯ МОДАЛОК === */
+.player-modal-inner {
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.7),
+        0 0 100px rgba(var(--emerald-rgb), 0.15);
+    position: relative;
+}
+
+.player-modal-inner::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg,
+        var(--emerald),
+        transparent 40%,
+        transparent 60%,
+        var(--emerald-3));
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0.4;
+    animation: borderRotate 8s linear infinite;
+}
+
+@keyframes borderRotate {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+/* === 27. RESPONSIVE === */
+@media (max-width: 380px) {
+    .elo-value { font-size: 44px; }
+    .stat-value { font-size: 20px; }
+}
+
+/* === 28. REDUCED MOTION === */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* === 29. ФИНАЛЬНЫЙ АКЦЕНТ — СВЕЧЕНИЕ НА ЛОГОТИПЕ === */
+.header .avatar {
+    position: relative;
+}
+
+.header .avatar::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        transparent,
+        var(--emerald),
+        transparent,
+        var(--emerald-3),
+        transparent
+    );
+    animation: avatarRing 3s linear infinite;
+    z-index: -1;
+    filter: blur(1px);
+    opacity: 0.8;
+}
+
+/* === 30. КРАСИВЫЙ ВЫБОР ЭЛЕМЕНТА === */
+::selection {
+    background: rgba(var(--emerald-rgb), 0.35);
+    color: #fff;
+    text-shadow: 0 0 8px var(--emerald);
+}
+
+/* ============================================================
+   END CYBER ESPORTS UPGRADE
+   ============================================================ */ 
+
+    /* ============================================================
+   🚀 CYBER ESPORTS UI v3.0 — CLARITY + POWER
+   ============================================================ */
+
+/* === 1. ПЕРЕМЕННЫЕ ДЛЯ HUD-СТИЛЯ === */
+:root {
+    --hud-corner: 14px;
+    --hud-border: 1.5px;
+    --hud-bg: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.08) 0%,
+        rgba(var(--emerald-rgb), 0.02) 50%,
+        rgba(0, 0, 0, 0.5) 100%);
+    --hud-bg-strong: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.15) 0%,
+        rgba(var(--emerald-rgb), 0.05) 50%,
+        rgba(0, 0, 0, 0.4) 100%);
+    --text-shadow-glow: 0 0 12px rgba(var(--emerald-rgb), 0.6);
+    --text-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* === 2. ВСЕ КАРТОЧКИ — ЕДИНЫЙ HUD-СТИЛЬ === */
+.elo-card,
+.stat-card,
+.profile-hero,
+.party-box,
+.leaderboard-item,
+.menu-item,
+.chat-list-item,
+.play-room-card,
+.match-host-box,
+.confirm-team,
+.mode-card,
+.veto-card,
+.mini-stat,
+.club-hero {
+    position: relative;
+    border-radius: 0 !important;
+    clip-path: polygon(
+        var(--hud-corner) 0,
+        100% 0,
+        100% calc(100% - var(--hud-corner)),
+        calc(100% - var(--hud-corner)) 100%,
+        0 100%,
+        0 var(--hud-corner)
+    );
+    background: var(--hud-bg);
+    border: var(--hud-border) solid var(--border-strong);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 4px 20px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* === 3. ВЕРХНЯЯ НЕОНОВАЯ ПОЛОСКА НА КАЖДОЙ КАРТОЧКЕ === */
+.elo-card::before,
+.profile-hero::before,
+.party-box::before,
+.match-host-box::before,
+.club-hero::before,
+.mode-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 50%,
+        transparent 100%);
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 2;
+    animation: hudScan 3s ease-in-out infinite;
+}
+
+@keyframes hudScan {
+    0%, 100% { opacity: 0.5; box-shadow: 0 0 4px rgba(var(--emerald-rgb), 0.3); }
+    50% { opacity: 1; box-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.8); }
+}
+
+/* === 4. УГЛОВЫЕ СКОБКИ (HUD) === */
+.hud-brackets {
+    position: absolute;
+    inset: 8px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.hud-brackets::before,
+.hud-brackets::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: var(--emerald);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0.5;
+}
+
+.hud-brackets::before {
+    top: 0;
+    left: 0;
+    border-top-width: 2px;
+    border-left-width: 2px;
+}
+
+.hud-brackets::after {
+    bottom: 0;
+    right: 0;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+}
+
+/* === 5. ELO-КАРТА — БОЛЬШОЙ РАНГОВЫЙ ДИСПЛЕЙ === */
+.elo-card {
+    padding: 26px 22px 22px;
+    background: 
+        radial-gradient(circle at 80% 10%, rgba(var(--emerald-rgb), 0.15), transparent 45%),
+        radial-gradient(circle at 10% 90%, rgba(var(--emerald-rgb), 0.08), transparent 40%),
+        var(--hud-bg-strong);
+    overflow: hidden;
+}
+
+.elo-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 300px;
+    height: 300px;
+    background: conic-gradient(
+        from 0deg,
+        transparent,
+        rgba(var(--emerald-rgb), 0.15) 90deg,
+        transparent 180deg,
+        rgba(var(--emerald-rgb), 0.1) 270deg,
+        transparent
+    );
+    animation: eloOrbit 20s linear infinite;
+    pointer-events: none;
+    filter: blur(20px);
+}
+
+@keyframes eloOrbit {
+    to { transform: rotate(360deg); }
+}
+
+.elo-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    color: var(--emerald);
+    opacity: 0.85;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.elo-label::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald));
+    box-shadow: 0 0 6px var(--emerald);
+}
+
+.elo-value {
+    font-size: 64px !important;
+    font-weight: 900 !important;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    filter: 
+        drop-shadow(0 0 16px rgba(var(--emerald-rgb), 0.9))
+        drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
+    position: relative;
+    z-index: 2;
+}
+
+.elo-dxp-label {
+    font-size: 20px !important;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--emerald-3);
+    opacity: 0.9;
+    text-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.7);
+}
+
+.elo-level {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1.5px solid var(--emerald);
+    color: var(--emerald);
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow:
+        0 0 20px rgba(var(--emerald-rgb), 0.3),
+        inset 0 0 12px rgba(var(--emerald-rgb), 0.1);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+}
+
+.elo-progress {
+    height: 8px !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid rgba(var(--emerald-rgb), 0.15);
+    border-radius: 0 !important;
+    clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+    margin-top: 22px !important;
+    position: relative;
+    overflow: visible;
+}
+
+.elo-progress-bar {
+    background: linear-gradient(90deg,
+        var(--emerald-2),
+        var(--emerald),
+        var(--emerald-3),
+        var(--emerald)) !important;
+    background-size: 200% 100% !important;
+    animation: progressFlow 2s linear infinite;
+    box-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.8);
+    height: 100% !important;
+    position: relative;
+}
+
+.elo-progress-bar::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -3px;
+    bottom: -3px;
+    width: 3px;
+    background: #fff;
+    box-shadow:
+        0 0 12px #fff,
+        0 0 24px var(--emerald),
+        0 0 40px var(--emerald);
+}
+
+@keyframes progressFlow {
+    to { background-position: 200% 0; }
+}
+
+/* === 6. STAT-КАРТЫ — БОЛЬШИЕ ПОНЯТНЫЕ === */
+.stat-card {
+    padding: 18px 8px 16px !important;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--emerald);
+    box-shadow:
+        0 12px 32px rgba(var(--emerald-rgb), 0.3),
+        0 0 60px rgba(var(--emerald-rgb), 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.stat-value {
+    font-size: 28px !important;
+    font-weight: 900 !important;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow:
+        0 0 12px rgba(var(--emerald-rgb), 0.7),
+        0 2px 6px rgba(0, 0, 0, 0.6);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-value {
+    transform: scale(1.15);
+    text-shadow:
+        0 0 20px rgba(var(--emerald-rgb), 1),
+        0 0 40px rgba(var(--emerald-rgb), 0.6);
+}
+
+.stat-label {
+    font-size: 9px !important;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--hint);
+    margin-top: 8px;
+    opacity: 0.85;
+}
+
+.sc-icon {
+    font-size: 20px !important;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.7));
+}
+
+/* === 7. PLAY-КНОПКА — МЕГА-ЗАМЕТНАЯ === */
+.play-btn-cyber {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    animation: playBtnGlow 3s ease-in-out infinite;
+}
+
+@keyframes playBtnGlow {
+    0%, 100% {
+        box-shadow:
+            0 0 0 1px rgba(var(--emerald-rgb), 0.3),
+            0 8px 30px rgba(var(--emerald-rgb), 0.25),
+            0 0 60px rgba(var(--emerald-rgb), 0.1);
+    }
+    50% {
+        box-shadow:
+            0 0 0 1px rgba(var(--emerald-rgb), 0.6),
+            0 12px 40px rgba(var(--emerald-rgb), 0.4),
+            0 0 100px rgba(var(--emerald-rgb), 0.2);
+    }
+}
+
+.pbc-content {
+    padding: 20px 24px !important;
+    position: relative;
+    z-index: 2;
+}
+
+.pbc-icon {
+    font-size: 30px !important;
+    filter: drop-shadow(0 0 12px var(--emerald));
+    animation: playIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes playIconPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.pbc-title {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    letter-spacing: 8px !important;
+    text-shadow:
+        0 0 12px rgba(var(--emerald-rgb), 0.8),
+        0 0 24px rgba(var(--emerald-rgb), 0.4);
+}
+
+.pbc-sub {
+    font-size: 10px !important;
+    font-weight: 700;
+    letter-spacing: 2px !important;
+    color: var(--hint);
+}
+
+.pbc-arrow {
+    font-size: 26px !important;
+    color: var(--emerald) !important;
+    filter: drop-shadow(0 0 10px var(--emerald));
+    animation: arrowSlide 2s ease-in-out infinite;
+}
+
+@keyframes arrowSlide {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(6px); }
+}
+
+/* === 8. MENU-ITEM — БОЛЬШИЕ ПОНЯТНЫЕ КНОПКИ === */
+.menu-item {
+    padding: 18px 16px !important;
+    gap: 14px !important;
+    cursor: pointer;
+}
+
+.menu-item-icon {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 24px !important;
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.15),
+        rgba(0, 0, 0, 0.4)) !important;
+    border: 1.5px solid var(--border-strong) !important;
+    border-radius: 0 !important;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 20px rgba(var(--emerald-rgb), 0.2) !important;
+}
+
+.menu-item:hover .menu-item-icon {
+    transform: scale(1.1) rotate(-4deg);
+    border-color: var(--emerald) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 0 30px rgba(var(--emerald-rgb), 0.6) !important;
+}
+
+.menu-item-title {
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text);
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.3);
+}
+
+.menu-item-sub {
+    font-size: 10px !important;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-top: 3px;
+}
+
+/* === 9. LEADERBOARD — КАК В ПРОФИЛЬНЫХ КИБЕРСПОРТ. ИГРАХ === */
+.leaderboard-item {
+    padding: 14px 16px !important;
+    gap: 14px !important;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.leaderboard-rank {
+    font-family: var(--font-display);
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    color: var(--emerald) !important;
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.7);
+    width: 36px !important;
+    height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1.5px solid var(--border-strong);
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+}
+
+.leaderboard-item:first-child .leaderboard-rank {
+    background: linear-gradient(135deg, rgba(217, 171, 90, 0.25), rgba(217, 171, 90, 0.08));
+    border-color: var(--gold);
+    color: var(--gold) !important;
+    text-shadow: 0 0 16px rgba(217, 171, 90, 0.9) !important;
+    box-shadow: 0 0 20px rgba(217, 171, 90, 0.3);
+    animation: goldRank 2s ease-in-out infinite;
+}
+
+@keyframes goldRank {
+    0%, 100% { box-shadow: 0 0 20px rgba(217, 171, 90, 0.3); }
+    50% { box-shadow: 0 0 32px rgba(217, 171, 90, 0.6); }
+}
+
+.leaderboard-item:nth-child(2) .leaderboard-rank {
+    background: linear-gradient(135deg, rgba(192, 192, 192, 0.2), rgba(192, 192, 192, 0.05));
+    border-color: #c0c0c0;
+    color: #c0c0c0 !important;
+    text-shadow: 0 0 12px rgba(192, 192, 192, 0.7) !important;
+}
+
+.leaderboard-item:nth-child(3) .leaderboard-rank {
+    background: linear-gradient(135deg, rgba(205, 127, 50, 0.2), rgba(205, 127, 50, 0.05));
+    border-color: #cd7f32;
+    color: #cd7f32 !important;
+    text-shadow: 0 0 12px rgba(205, 127, 50, 0.7) !important;
+}
+
+.leaderboard-name {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: var(--text);
+    letter-spacing: 0.3px;
+}
+
+.leaderboard-DXP {
+    font-family: var(--font-display);
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    color: var(--emerald) !important;
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.6);
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-item:hover {
+    transform: translateX(4px);
+    border-color: var(--emerald);
+    box-shadow:
+        0 4px 20px rgba(var(--emerald-rgb), 0.2),
+        inset 0 0 20px rgba(var(--emerald-rgb), 0.05);
+}
+
+/* === 10. AVATAR — КИБЕР-СТИЛЬ === */
+.lb-avatar,
+.chat-list-avatar,
+.menu-drawer-avatar,
+.club-member-avatar,
+.tz-avatar,
+.notif-avatar,
+.cp-avatar {
+    border-radius: 0 !important;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    border: 1.5px solid var(--border-strong);
+    box-shadow:
+        inset 0 0 12px rgba(var(--emerald-rgb), 0.2),
+        0 0 12px rgba(var(--emerald-rgb), 0.15);
+    transition: all 0.3s ease;
+}
+
+.lb-avatar:hover {
+    border-color: var(--emerald);
+    box-shadow:
+        inset 0 0 20px rgba(var(--emerald-rgb), 0.4),
+        0 0 24px rgba(var(--emerald-rgb), 0.5);
+    transform: scale(1.05);
+}
+
+/* Профиль-аватар — оставляем круглым, но с кольцом */
+.profile-avatar {
+    border-radius: 50% !important;
+    clip-path: none !important;
+    border: 3px solid var(--emerald) !important;
+    box-shadow:
+        0 0 0 4px rgba(var(--emerald-rgb), 0.15),
+        0 0 40px rgba(var(--emerald-rgb), 0.4),
+        inset 0 0 20px rgba(var(--emerald-rgb), 0.2) !important;
+}
+
+/* === 11. BOTTOM NAV — КАК В ИГРОВЫХ КЛИЕНТАХ === */
+.bottom-nav {
+    padding: 10px 0 16px !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+}
+
+.nav-item {
+    padding: 8px 16px !important;
+    gap: 6px !important;
+    font-size: 10px !important;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.nav-icon {
+    font-size: 22px !important;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-item.active {
+    color: var(--emerald);
+}
+
+.nav-item.active .nav-icon {
+    transform: scale(1.2) translateY(-2px);
+    filter: drop-shadow(0 0 12px var(--emerald));
+}
+
+.nav-item.active span:last-child {
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.8);
+    letter-spacing: 1.5px;
+}
+
+.nav-item:not(.active):hover .nav-icon {
+    transform: scale(1.15) translateY(-2px);
+    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.6));
+    color: var(--emerald);
+}
+
+/* === 12. ПРОФИЛЬ — БОЛЬШИЕ ПОНЯТНЫЕ БЛОКИ === */
+.phc-name {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.3);
+}
+
+.phc-username {
+    font-size: 13px !important;
+    color: var(--emerald) !important;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.phc-badge {
+    padding: 5px 12px !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    border-radius: 0 !important;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    border: 1.5px solid var(--border-strong);
+    background: rgba(var(--emerald-rgb), 0.1);
+    color: var(--emerald);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.15);
+}
+
+.mini-stat {
+    padding: 14px 10px !important;
+    aspect-ratio: auto !important;
+    min-height: 90px;
+}
+
+.mini-stat-value {
+    font-family: var(--font-display);
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    color: var(--text);
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.5);
+}
+
+.mini-stat-label {
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    color: var(--hint);
+    text-transform: uppercase;
+    margin-top: 6px !important;
+}
+
+.mini-stat-icon {
+    font-size: 18px !important;
+    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.6));
+}
+
+.mini-stat:hover {
+    transform: translateY(-3px);
+    border-color: var(--emerald);
+    box-shadow:
+        0 8px 24px rgba(var(--emerald-rgb), 0.3),
+        0 0 40px rgba(var(--emerald-rgb), 0.1);
+}
+
+/* === 13. ROOM CARD — БОЛЕЕ ЗАМЕТНЫЕ И ПОНЯТНЫЕ === */
+.play-room-card {
+    padding: 16px !important;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    cursor: pointer;
+}
+
+.play-room-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    border-color: var(--emerald);
+    box-shadow:
+        0 16px 40px rgba(var(--emerald-rgb), 0.3),
+        0 0 60px rgba(var(--emerald-rgb), 0.15);
+}
+
+.prc-name {
+    font-size: 15px !important;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+}
+
+.prc-count-num {
+    font-family: var(--font-display);
+    font-size: 24px !important;
+    font-weight: 900 !important;
+    color: var(--emerald) !important;
+    text-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.7);
+    line-height: 1;
+}
+
+.prc-count-num small {
+    font-size: 14px !important;
+    color: var(--hint) !important;
+    font-weight: 700;
+}
+
+.prc-count-label {
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    color: var(--hint);
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+
+.prc-badge {
+    padding: 4px 10px !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px;
+    border-radius: 0 !important;
+    clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+    text-shadow: 0 0 6px currentColor;
+}
+
+.prc-action {
+    padding: 12px !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase;
+    border-radius: 0 !important;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow:
+        0 4px 16px rgba(var(--emerald-rgb), 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: all 0.25s ease;
+}
+
+.prc-action:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 8px 28px rgba(var(--emerald-rgb), 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* === 14. КНОПКИ ДЕЙСТВИЙ (профиль) — БОЛЬШИЕ И ЯСНЫЕ === */
+.profile-action-btn {
+    padding: 16px 20px !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase;
+    border-radius: 0 !important;
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-action-btn.save,
+.profile-action-btn.edit {
+    box-shadow:
+        0 6px 24px rgba(var(--emerald-rgb), 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.profile-action-btn.save:hover,
+.profile-action-btn.edit:hover {
+    transform: translateY(-3px);
+    box-shadow:
+        0 12px 40px rgba(var(--emerald-rgb), 0.55),
+        0 0 60px rgba(var(--emerald-rgb), 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+.profile-action-btn.cancel {
+    background: rgba(var(--emerald-rgb), 0.08) !important;
+    border: 1.5px solid var(--border-strong) !important;
+    color: var(--emerald) !important;
+}
+
+.profile-action-btn.cancel:hover {
+    background: rgba(var(--emerald-rgb), 0.15) !important;
+    border-color: var(--emerald) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(var(--emerald-rgb), 0.25);
+}
+
+/* === 15. SECTION TITLE — БОЛЬШЕ И ПОНЯТНЕЕ === */
+.section-title {
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    letter-spacing: 3px !important;
+    text-transform: uppercase;
+    color: var(--text) !important;
+    margin: 20px 0 14px !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.3);
+}
+
+.section-title::before {
+    width: 4px !important;
+    height: 16px !important;
+    background: linear-gradient(180deg, var(--emerald), var(--emerald-3)) !important;
+    box-shadow:
+        0 0 12px var(--emerald),
+        0 0 24px rgba(var(--emerald-rgb), 0.5) !important;
+    border-radius: 0 !important;
+    clip-path: polygon(2px 0, 100% 0, calc(100% - 2px) 100%, 0 100%);
+}
+
+.section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.5),
+        transparent 100%);
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.3);
+}
+
+/* === 16. CHAT ITEMS — БОЛЕЕ ПОНЯТНЫЕ === */
+.chat-list-item {
+    padding: 16px !important;
+    gap: 14px !important;
+    transition: all 0.25s ease;
+}
+
+.chat-list-item:hover {
+    transform: translateX(4px);
+    border-color: var(--emerald);
+    box-shadow: 0 4px 20px rgba(var(--emerald-rgb), 0.2);
+}
+
+.chat-list-name {
+    font-size: 15px !important;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+}
+
+.chat-list-preview {
+    font-size: 12px !important;
+    color: var(--hint);
+    margin-top: 4px;
+}
+
+/* === 17. ЧАТ-БАББЛЫ — БОЛЕЕ ЖИВЫЕ === */
+.chat-bubble {
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    line-height: 1.5;
+    border-radius: 0 !important;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    max-width: 82% !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.chat-bubble.me {
+    background: linear-gradient(135deg,
+        var(--emerald),
+        var(--emerald-2) 60%,
+        var(--emerald-3)) !important;
+    box-shadow:
+        0 4px 16px rgba(var(--emerald-rgb), 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    color: #04140e !important;
+    font-weight: 600;
+}
+
+.chat-bubble.them {
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.12),
+        rgba(var(--emerald-rgb), 0.05)) !important;
+    border: 1.5px solid var(--border-strong) !important;
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* === 18. MODE CARDS — БОЛЬШИЕ ПОНЯТНЫЕ === */
+.mode-card {
+    padding: 24px 18px !important;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.mode-card .mode-icon {
+    font-size: 42px !important;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 12px rgba(var(--emerald-rgb), 0.6));
+    display: inline-block;
+    animation: floatY 3s ease-in-out infinite;
+}
+
+.mode-card .mode-title {
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    letter-spacing: 3px;
+    color: var(--text);
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.3);
+}
+
+.mode-card .mode-desc {
+    font-size: 11px !important;
+    color: var(--hint);
+    margin-top: 6px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.mode-card.active {
+    border-color: var(--emerald) !important;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(var(--emerald-rgb), 0.15), transparent 70%),
+        var(--hud-bg-strong) !important;
+    animation: modeActiveGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes modeActiveGlow {
+    0%, 100% {
+        box-shadow:
+            0 0 0 1px rgba(var(--emerald-rgb), 0.4),
+            0 8px 24px rgba(var(--emerald-rgb), 0.25);
+    }
+    50% {
+        box-shadow:
+            0 0 0 2px rgba(var(--emerald-rgb), 0.7),
+            0 12px 40px rgba(var(--emerald-rgb), 0.45),
+            0 0 60px rgba(var(--emerald-rgb), 0.2);
+    }
+}
+
+.mode-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--emerald);
+}
+
+/* === 19. SHEET — БОЛЕЕ ПОНЯТНЫЕ МОДАЛКИ === */
+.sheet {
+    border-radius: 0 !important;
+    clip-path: polygon(
+        24px 0,
+        100% 0,
+        100% 100%,
+        0 100%,
+        0 24px
+    );
+    background:
+        radial-gradient(circle at 50% 0%, rgba(var(--emerald-rgb), 0.08), transparent 50%),
+        linear-gradient(180deg, #0e1a16 0%, #0a1410 100%) !important;
+    border-top: 2px solid var(--emerald) !important;
+    box-shadow:
+        0 -8px 40px rgba(0, 0, 0, 0.6),
+        0 -2px 40px rgba(var(--emerald-rgb), 0.2);
+}
+
+.sheet::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 50%,
+        transparent 100%);
+    box-shadow: 0 0 16px var(--emerald);
+}
+
+.sheet-title {
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    letter-spacing: 3px !important;
+    text-transform: uppercase;
+    color: var(--emerald) !important;
+    margin-bottom: 18px !important;
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.6);
+    position: relative;
+    display: block;
+}
+
+.sheet-option {
+    padding: 18px 20px !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    border-radius: 0 !important;
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    border: 1.5px solid var(--border-strong) !important;
+    background: rgba(var(--emerald-rgb), 0.06) !important;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.sheet-option::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--emerald);
+    box-shadow: 0 0 12px var(--emerald);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.sheet-option:hover {
+    background: rgba(var(--emerald-rgb), 0.12) !important;
+    border-color: var(--emerald) !important;
+    transform: translateX(4px);
+    box-shadow: 0 4px 20px rgba(var(--emerald-rgb), 0.2);
+}
+
+.sheet-option:hover::before {
+    opacity: 1;
+}
+
+.sheet-option.danger {
+    border-color: rgba(255, 84, 112, 0.3) !important;
+    background: rgba(255, 84, 112, 0.06) !important;
+    color: var(--red) !important;
+}
+
+.sheet-option.danger:hover {
+    border-color: var(--red) !important;
+    background: rgba(255, 84, 112, 0.12) !important;
+    box-shadow: 0 4px 20px rgba(255, 84, 112, 0.25);
+}
+
+.sheet-option.danger::before {
+    background: var(--red);
+    box-shadow: 0 0 12px var(--red);
+}
+
+.sheet-cancel {
+    padding: 16px !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-radius: 0 !important;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    margin-top: 10px !important;
+}
+
+/* === 20. TEAM ZONES — БОЛЬШЕ И ПОНЯТНЕЕ === */
+.team-zone {
+    min-height: 260px !important;
+    padding: 18px 16px !important;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tz-title {
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-shadow: 0 0 12px currentColor;
+}
+
+.tz-count {
+    font-family: var(--font-display);
+    font-size: 14px !important;
+    font-weight: 900;
+    padding: 6px 12px !important;
+    letter-spacing: 1px;
+}
+
+.tz-player {
+    padding: 10px 12px !important;
+    border-radius: 0 !important;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    transition: all 0.25s ease;
+}
+
+.tz-player:hover {
+    background: rgba(var(--emerald-rgb), 0.15) !important;
+    transform: translateX(4px);
+    box-shadow: 0 4px 16px rgba(var(--emerald-rgb), 0.2);
+}
+
+.tz-name {
+    font-size: 13px !important;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.tz-stats {
+    font-size: 10px !important;
+    font-weight: 700;
+    color: var(--hint);
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+}
+
+/* === 21. ROOM LAUNCH BUTTON — МЕГА-ЗАМЕТНАЯ === */
+.room-launch-btn {
+    padding: 22px 20px !important;
+    border-radius: 0 !important;
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+    letter-spacing: 3px;
+    transition: all 0.3s ease;
+}
+
+.room-launch-btn.ready {
+    animation: launchBtnPulse 2s ease-in-out infinite !important;
+    box-shadow:
+        0 8px 40px rgba(var(--emerald-rgb), 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+@keyframes launchBtnPulse {
+    0%, 100% {
+        box-shadow:
+            0 8px 32px rgba(var(--emerald-rgb), 0.45),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow:
+            0 12px 48px rgba(var(--emerald-rgb), 0.7),
+            0 0 80px rgba(var(--emerald-rgb), 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        transform: scale(1.01);
+    }
+}
+
+.rlb-text {
+    font-size: 17px !important;
+    font-weight: 900 !important;
+    letter-spacing: 4px !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.rlb-sub {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px;
+    opacity: 0.85;
+}
+
+.rlb-icon {
+    font-size: 32px !important;
+    filter: drop-shadow(0 0 12px currentColor);
+}
+
+/* === 22. ROOM ICON BUTTONS — КРУПНЫЕ ТАЧ-КНОПКИ === */
+.rv-icon-btn {
+    border-radius: 0 !important;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.rv-icon-btn .rv-ico {
+    font-size: 26px !important;
+    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.6)) !important;
+}
+
+.rv-icon-btn .rv-lbl {
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    opacity: 0.9;
+}
+
+.rv-icon-btn:hover {
+    transform: translateY(-3px);
+    background: rgba(var(--emerald-rgb), 0.18) !important;
+    border-color: var(--emerald) !important;
+    box-shadow: 0 6px 20px rgba(var(--emerald-rgb), 0.3);
+}
+
+/* === 23. NOTIF ITEMS — БОЛЕЕ ЗАМЕТНЫЕ === */
+.notif-item {
+    padding: 16px !important;
+    border-radius: 0 !important;
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    transition: all 0.25s ease;
+}
+
+.notif-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 20px rgba(var(--emerald-rgb), 0.2);
+}
+
+.notif-text {
+    font-size: 13px !important;
+    line-height: 1.5;
+    font-weight: 600;
+}
+
+.notif-text b {
+    color: var(--emerald);
+    font-weight: 900;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.4);
+}
+
+.notif-time {
+    font-size: 11px !important;
+    color: var(--hint);
+    margin-top: 6px !important;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.notif-btn-accept,
+.notif-btn-decline {
+    padding: 10px 16px !important;
+    border-radius: 0 !important;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+}
+
+.notif-btn-accept {
+    box-shadow: 0 2px 12px rgba(var(--emerald-rgb), 0.3);
+}
+
+.notif-btn-accept:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--emerald-rgb), 0.5);
+}
+
+/* === 24. ПОНЯТНЫЕ ЛЕЙБЛЫ ДЛЯ СТАТУСОВ === */
+.status-badge {
+    padding: 6px 14px !important;
+    border-radius: 0 !important;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px currentColor;
+}
+
+/* === 25. ЗАГОЛОВОК ПРИЛОЖЕНИЯ — ЛУЧШИЙ === */
+.header-title {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase;
+    background: linear-gradient(90deg,
+        var(--text) 0%,
+        var(--emerald) 50%,
+        var(--text) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: titleShine 4s linear infinite;
+    filter: drop-shadow(0 0 12px rgba(var(--emerald-rgb), 0.4));
+}
+
+.header-title span {
+    -webkit-text-fill-color: var(--emerald);
+    text-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.8);
+}
+
+@keyframes titleShine {
+    to { background-position: -200% center; }
+}
+
+/* === 26. КНОПКА ПРОФИЛЯ (шестерёнка) — ЗАМЕТНЕЕ === */
+.phc-settings {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 22px !important;
+    border-width: 2px !important;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.phc-settings:hover {
+    background: rgba(var(--emerald-rgb), 0.2) !important;
+    border-color: var(--emerald) !important;
+    transform: rotate(90deg) scale(1.05);
+    box-shadow: 0 0 24px rgba(var(--emerald-rgb), 0.5);
+}
+
+/* === 27. ТАБЛИЦА ЛИДЕРОВ — БОЛЬШЕ ПОЛОСОК === */
+.leaderboard-item:first-child {
+    background: 
+        radial-gradient(circle at 100% 0%, rgba(217, 171, 90, 0.15), transparent 60%),
+        linear-gradient(135deg, rgba(217, 171, 90, 0.12), rgba(217, 171, 90, 0.02)) !important;
+    border-color: rgba(217, 171, 90, 0.5) !important;
+    box-shadow: 
+        0 4px 24px rgba(217, 171, 90, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.leaderboard-item:nth-child(2) {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(192, 192, 192, 0.1), transparent 60%),
+        linear-gradient(135deg, rgba(192, 192, 192, 0.08), rgba(192, 192, 192, 0.02)) !important;
+    border-color: rgba(192, 192, 192, 0.35) !important;
+}
+
+.leaderboard-item:nth-child(3) {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(205, 127, 50, 0.1), transparent 60%),
+        linear-gradient(135deg, rgba(205, 127, 50, 0.08), rgba(205, 127, 50, 0.02)) !important;
+    border-color: rgba(205, 127, 50, 0.35) !important;
+}
+
+/* === 28. КНОПКИ В МЕНЮ (Drawer) — ПОНЯТНЕЕ === */
+.menu-drawer-btn {
+    padding: 16px 18px !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px;
+    border-radius: 0 !important;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.menu-drawer-btn::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--emerald);
+    box-shadow: 0 0 12px var(--emerald);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.menu-drawer-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.12) !important;
+    border-color: var(--emerald) !important;
+    transform: translateX(4px);
+}
+
+.menu-drawer-btn:hover::before {
+    opacity: 1;
+}
+
+.menu-drawer-icon {
+    font-size: 20px !important;
+    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.5));
+    transition: all 0.3s ease;
+}
+
+.menu-drawer-btn:hover .menu-drawer-icon {
+    transform: scale(1.15) rotate(-5deg);
+    filter: drop-shadow(0 0 12px rgba(var(--emerald-rgb), 0.8));
+}
+
+/* === 29. КАСТОМНЫЕ СТАТУС-ИНДИКАТОРЫ === */
+.online-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--emerald);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--emerald);
+    animation: onlinePulse 2s ease-in-out infinite;
+}
+
+@keyframes onlinePulse {
+    0%, 100% { 
+        box-shadow: 0 0 8px var(--emerald);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 16px var(--emerald), 0 0 24px rgba(var(--emerald-rgb), 0.5);
+        transform: scale(1.2);
+    }
+}
+
+/* === 30. ФИНАЛЬНЫЙ АКЦЕНТ — КИБЕР-РАМКА ВОКРУГ ВСЕХ КАРТОЧЕК === */
+.elo-card,
+.profile-hero,
+.party-box,
+.match-host-box,
+.club-hero {
+    position: relative;
+}
+
+.elo-card::after,
+.profile-hero::after,
+.party-box::after,
+.match-host-box::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+    border: 1px solid rgba(var(--emerald-rgb), 0.08);
+    clip-path: polygon(
+        12px 0, 100% 0, 100% calc(100% - 12px),
+        calc(100% - 12px) 100%, 0 100%, 0 12px
+    );
+    z-index: 1;
+}
+
+/* === 31. HUD-ЧИПЫ (статусы) === */
+.hud-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(var(--emerald-rgb), 0.1);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    text-shadow: 0 0 6px currentColor;
+}
+
+.hud-chip.warn {
+    background: rgba(217, 171, 90, 0.12);
+    border-color: rgba(217, 171, 90, 0.4);
+    color: var(--gold);
+}
+
+.hud-chip.danger {
+    background: rgba(255, 84, 112, 0.12);
+    border-color: rgba(255, 84, 112, 0.4);
+    color: var(--red);
+}
+
+/* === 32. RESPONSIVE УЛУЧШЕНИЯ === */
+@media (max-width: 380px) {
+    .elo-value { font-size: 52px !important; }
+    .stat-value { font-size: 24px !important; }
+    .pbc-title { font-size: 16px !important; letter-spacing: 5px !important; }
+    .prc-count-num { font-size: 20px !important; }
+    .section-title { font-size: 11px !important; letter-spacing: 2px !important; }
+}
+
+/* === 33. ФИНАЛЬНЫЙ SHINE НА HOVER === */
+.play-btn-cyber .pbc-content,
+.profile-action-btn,
+.room-launch-btn,
+.prc-action {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.play-btn-cyber .pbc-content::after,
+.profile-action-btn::after,
+.room-launch-btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -100%;
+    width: 80%;
+    height: 200%;
+    background: linear-gradient(115deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.35) 50%,
+        transparent 70%);
+    transform: skewX(-20deg);
+    transition: left 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
+    z-index: 3;
+}
+
+.play-btn-cyber:hover .pbc-content::after,
+.profile-action-btn:hover::after,
+.room-launch-btn:hover::after {
+    left: 150%;
+}
+
+/* ============================================================
+   END v3.0 — CYBER ESPORTS UI MEGA UPGRADE
+   ============================================================ */
     
 </style>
 </head>
 <body>
+    <div class="bg-particles"></div>
+    <div class="bg-rays"></div>
+
         <header class="header">
         <div class="avatar" id="headerAvatar" onclick="switchPage('profile')">?</div>
 <div class="header-title">De1mos <span>Faceit</span></div>
@@ -4788,7 +7481,10 @@ body::after {
     <div class="container page active" id="page-dashboard">
         <div class="elo-card">
             <div class="elo-label">Ваш рейтинг</div>
-            <div class="elo-value" id="eloValue">—</div>
+            <div class="elo-value-wrap">
+    <span class="elo-value" id="eloValue">—</span>
+    <span class="elo-dxp-label">DXP</span>
+</div>
             <div class="elo-level" id="eloLevel">Уровень —</div>
             <div class="elo-progress"><div class="elo-progress-bar" id="eloProgress"></div></div>
         </div>
@@ -5094,6 +7790,24 @@ body::after {
                 <input type="file" id="onboardAvatarInput" accept="image/*" style="display: none;">
             </div>
         </div>
+
+        <div>
+    <label class="field-label" style="margin-top: 14px;">Выбери тему</label>
+    <div class="onboard-themes" id="onboardThemes">
+        <button type="button" class="onboard-theme" data-theme="green" onclick="pickOnboardTheme('green', this)">
+            <span class="onboard-theme-swatch" style="background: linear-gradient(135deg, #00e08a, #00b874);"></span>
+            <span class="onboard-theme-name">Изумруд</span>
+        </button>
+        <button type="button" class="onboard-theme" data-theme="purple" onclick="pickOnboardTheme('purple', this)">
+            <span class="onboard-theme-swatch" style="background: linear-gradient(135deg, #a78bfa, #8b5cf6);"></span>
+            <span class="onboard-theme-name">Аметист</span>
+        </button>
+        <button type="button" class="onboard-theme" data-theme="red" onclick="pickOnboardTheme('red', this)">
+            <span class="onboard-theme-swatch" style="background: linear-gradient(135deg, #ff2e4d, #cc1e38);"></span>
+            <span class="onboard-theme-name">Кровь</span>
+        </button>
+    </div>
+</div>
 
         <button class="profile-action-btn save" id="onboardSaveBtn"
                 style="margin-top: 18px;" onclick="saveOnboarding()">
@@ -5625,6 +8339,13 @@ body::after {
                 btn.disabled = false;
                 btn.textContent = '✅ НАЧАТЬ ИГРАТЬ';
             }
+        }
+
+            function pickOnboardTheme(theme, btn) {
+            applyTheme(theme);
+            document.querySelectorAll('.onboard-theme').forEach(b => b.classList.remove('active'));
+            btn?.classList.add('active');
+            haptic('light');
         }
 
         // ============================================================
@@ -6224,14 +8945,13 @@ async function renderProfileView(user) {
                     <div class="profile-avatar">${avatarHTML}</div>
                     <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
                 </div>
-                <div class="phc-info">
-                    ${user.is_admin || user.is_dev ? `
-<div class="profile-badges-row">
-    ${user.is_admin ? `<div class="profile-chief-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
-    ${clubTagCache[user.telegram_id]?.tag?.toUpperCase() === 'DEV'
-        ? `<div class="dev-tag" onclick="showDevTagInfo()">DEV</div>`
-        : ''}
-</div>
+                                <div class="phc-info">
+                    <div class="profile-badges-row">
+                        ${user.is_admin ? `<div class="profile-chief-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+                        ${clubTagCache[user.telegram_id]?.tag?.toUpperCase() === 'DEV'
+                            ? `<div class="dev-tag" onclick="showDevTagInfo()">DEV</div>`
+                            : ''}
+                    </div>
                     <div class="phc-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}</div>
                     <div class="phc-username">${
                         user.username && !user.hide_telegram_tag
@@ -7173,6 +9893,8 @@ function renderMyClub(container) {
                     <div class="club-hero-name">${escapeHtml(club.name)}</div>
                     <div class="club-hero-meta">[${escapeHtml(club.tag)}] · ${members.length}/${club.max_members}</div>
                 </div>
+                <button class="club-gear" onclick="openAllClubsSheet()" title="Все клубы">🔍</button>
+                
                 ${canEdit ? `
                     <button class="club-gear" onclick="openEditClubSheet()" title="Настройки клуба">
                         ⚙️
@@ -7196,6 +9918,65 @@ function renderMyClub(container) {
     `;
 
     if (isOwner) updateRequestsBadge();
+}
+
+            async function openAllClubsSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('allClubsSheet').classList.add('active');
+    document.getElementById('allClubsSearch').value = '';
+    await loadAllClubsSheet('');
+}
+
+let _allClubsTimer = null;
+function debouncedAllClubsSearch() {
+    clearTimeout(_allClubsTimer);
+    _allClubsTimer = setTimeout(() => {
+        const q = document.getElementById('allClubsSearch').value.trim();
+        loadAllClubsSheet(q);
+    }, 300);
+}
+
+async function loadAllClubsSheet(q) {
+    const el = document.getElementById('allClubsList');
+    el.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+        let query = sb.from('clubs')
+            .select('id, name, tag, description, logo_url, max_members')
+            .order('created_at', { ascending: false }).limit(100);
+        if (q.length >= 2) {
+            const safe = q.replace(/[%_]/g, '');
+            query = query.or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`);
+        }
+        const { data: clubs } = await query;
+
+        const clubIds = (clubs || []).map(c => c.id);
+        const { data: members } = await sb.from('club_members').select('club_id').in('club_id', clubIds);
+        const countMap = {};
+        (members || []).forEach(m => countMap[m.club_id] = (countMap[m.club_id] || 0) + 1);
+
+        if (!clubs?.length) { el.innerHTML = '<div class="empty">Клубов не найдено</div>'; return; }
+
+        el.innerHTML = clubs.map(c => {
+            const logoHTML = c.logo_url ? `<img src="${c.logo_url}" alt="">` : c.tag.slice(0, 2).toUpperCase();
+            const count = countMap[c.id] || 0;
+            const isMine = myClub?.club?.id === c.id;
+            return `
+                <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => viewClub(${c.id}), 200);">
+                    <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="leaderboard-name">
+                            ${escapeHtml(c.name)}
+                            ${isMine ? '<span class="role-tag owner" style="margin-left:6px;">ТВОЙ</span>' : ''}
+                        </div>
+                        <div style="font-size:11px;color:var(--hint);">[${escapeHtml(c.tag)}] · ${count}/${c.max_members}</div>
+                    </div>
+                    <button class="friend-action add" onclick="event.stopPropagation();closeAllSheets();setTimeout(() => viewClub(${c.id}), 200);">Открыть</button>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>';
+    }
 }
 
         // ============================================================
@@ -7527,7 +10308,15 @@ async function updateRequestsBadge() {
             } catch (e) { showToast('Ошибка'); }
         }
 
-        function openCreateClubSheet() {
+        async function openCreateClubSheet() {
+            const { data: ban } = await sb.from('club_deletion_bans')
+                .select('banned_until, reason').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+            if (ban && new Date(ban.banned_until) > new Date()) {
+                const left = Math.ceil((new Date(ban.banned_until) - Date.now()) / 3600000);
+                showToast(`🚫 Создание клуба заблокировано на ${left} ч.`);
+                return;
+            }
+
             const name = prompt('Название клуба (2-30):');
             if (!name || name.length < 2 || name.length > 30) return;
             const tag = prompt('Тег (2-5):');
@@ -7706,11 +10495,62 @@ async function updateRequestsBadge() {
                                 </div>
                             </div>`;
                     }).join('')}
+
+                    ${(isModerator(currentUser) && myClub?.club?.id !== clubId) ? `
+                        <button class="profile-action-btn cancel"
+                                style="margin-top: 14px; background: rgba(255,84,112,0.15); border: 1px solid rgba(255,84,112,0.4); color: var(--red);"
+                                onclick="adminDeleteClub(${clubId})">
+                            🗑️ Удалить клуб (модератор)
+                        </button>
+                    ` : ''}
                 `;
             } catch (e) {
                 content.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить</div>';
             }
         }
+
+            async function adminDeleteClub(clubId) {
+    if (!isModerator(currentUser)) return;
+    if (!confirm('Удалить этот клуб по причине нарушений? Игроки получат уведомление.')) return;
+
+    const reason = prompt('Причина удаления (увидят владелец и участники):', 'Нарушение правил клуба');
+    if (!reason) return;
+
+    try {
+        const { data: club } = await sb.from('clubs').select('*').eq('id', clubId).single();
+        const { data: members } = await sb.from('club_members').select('telegram_id').eq('club_id', clubId);
+
+        await sb.from('club_members').delete().eq('club_id', clubId);
+        await sb.from('club_requests').delete().eq('club_id', clubId);
+        await sb.from('club_events').delete().eq('club_id', clubId);
+        await sb.from('club_bans').delete().eq('club_id', clubId);
+        await sb.from('club_invites').delete().eq('club_id', clubId);
+        await sb.from('clubs').delete().eq('id', clubId);
+
+        if (club?.owner_id) {
+            const until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+            await sb.from('club_deletion_bans').upsert({
+                telegram_id: club.owner_id,
+                banned_until: until,
+                reason: reason
+            }, { onConflict: 'telegram_id' });
+        }
+
+        const msg = `🚫 <b>Ваш клуб удалён по причине нарушений правил</b>\n\n` +
+                    `<b>Клуб:</b> ${escapeHtml(club?.name || '')} [${escapeHtml(club?.tag || '')}]\n` +
+                    `<b>Причина:</b> ${escapeHtml(reason)}\n\n` +
+                    `Повторное создание клуба возможно только <b>через 24 часа</b>.`;
+        for (const m of members || []) {
+            await notify(m.telegram_id, msg, 'club');
+        }
+
+        showToast('✅ Клуб удалён');
+        closePlayerModal();
+        if (myClub?.club?.id === clubId) { myClub = null; openClubPage(); }
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
+}
 
         async function sendClubRequest(clubId, btnEl) {
             if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
@@ -13499,6 +16339,24 @@ registerInterval('notifBadge', setInterval(() => {
     <div class="sheet" id="clubEventsSheet" style="max-height: 88vh;">
     <div class="sheet-title">📜 Недавние события</div>
     <div id="clubEventsSheetContent"><div class="empty">Загрузка...</div></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
+    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
+        <div class="sheet-title">🛡️ Все клубы</div>
+        <input type="text" class="field-input" id="allClubsSearch"
+               placeholder="🔍 Название или тег" autocomplete="off"
+               oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
+        <div id="allClubsList"><div class="empty">Загрузка...</div></div>
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    </div>
+
+    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
+    <div class="sheet-title">🛡️ Все клубы</div>
+    <input type="text" class="field-input" id="allClubsSearch"
+           placeholder="🔍 Название или тег" autocomplete="off"
+           oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
+    <div id="allClubsList"><div class="empty">Загрузка...</div></div>
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 </body>
