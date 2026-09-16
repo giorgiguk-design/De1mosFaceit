@@ -13926,7 +13926,6 @@ async function renderRoomContent(roomId) {
 
         if (!room) { content.innerHTML = '<div class="empty-rooms">Комната не найдена</div>'; return; }
 
-// Роутинг по статусу
 if (room.status === 'waiting_link' || room.status === 'in_game') {
     showLobbyScreen(roomId, room);
     return;
@@ -14254,44 +14253,47 @@ function subscribeRoomRealtime(roomId) {
                 showActiveRoomBanner(room);
             }
 
-// Роутим на нужный экран
-if (room.status === 'waiting_link' || room.status === 'in_game') {
-    showLobbyScreen(roomId, room);
+if (room.status === 'cancelled') {
+    unsubscribeRoomRealtime();
+    unsubscribeInGameRealtime();
+    showCancelledOnce(roomId);
     return;
 }
-            if (room.status === 'cancelled') {
-                showToast('❌ Матч отменён');
-                unsubscribeRoomRealtime();
-                closePlayScreen();
-                checkActiveRoom();
-                return;
-            }
-            if (room.status === 'open') {
-                await renderRoomContent(roomId);
-            }
-        })
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'room_players',
-            filter: 'room_id=eq.' + roomId
-        }, async () => {
-            // Любое изменение в составе → перерисовываем текущий экран
-            const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
-            if (!room) return;
-
-            // ✅ НОВОЕ: проверяем, все ли игроки собрались
-            await checkTeamsReady(roomId, room);
-
+if (room.status === 'veto') {
+    const screen = document.getElementById('playScreen');
+    if (screen) screen.classList.remove('active');
+    showVetoScreen();
+    return;
+}
+if (room.status === 'side_pick') {
+    showVetoScreen();
+    return;
+}
+if (room.status === 'waiting_link') {
+    showWaitingLinkScreen(roomId, room);
+    return;
+}
+if (room.status === 'in_game') {
+    showInGameScreen(roomId, room);
+    return;
+}
+if (room.status === 'result') {
+    // Все переходят на экран результата
+    try {
+        const { data: match } = await sb.from('game_matches')
+            .select('*')
+            .eq('room_id', roomId)
+            .order('created_at', { ascending: false })
+            .limit(1).maybeSingle();
+        if (match) {
+            currentMatch = match;
+            showResultScreen();
+        }
+    } catch (e) {}
+    return;
+}
 if (room.status === 'open') {
     await renderRoomContent(roomId);
-} else if (room.status === 'waiting_link' || room.status === 'in_game') {
-    showLobbyScreen(roomId, room);
-}
-        })
-        .subscribe((status) => {
-            console.log('Room realtime status:', status);
-        });
 }
 
 function unsubscribeRoomRealtime() {
@@ -14709,70 +14711,100 @@ async function pickSide(roomId, side) {
 // ============================================================
 // HOST LINK
 // ============================================================
-async function showLobbyScreen(roomId, room) {
-    const content = document.getElementById('playScreenContent');
-    if (!content) return;
+let waitingLinkTimer = null;
 
-    currentPlayRoomId = roomId;              // ← ДОБАВЛЕНО
+async function showWaitingLinkScreen(roomId, room) {
+    // Закрываем play-screen, если открыт — переходим на отдельный экран
+    const screen = document.getElementById('playScreen');
+    if (screen) screen.classList.remove('active');
+    
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
 
-    const iAmLeader = String(room.leader_id) === String(currentUser.telegram_id);
+    // Показываем "Войти в игру" — плавающая кнопка (только если ссылка есть)
+    const isLeader = String(room.leader_id) === String(currentUser.telegram_id);
     const hasLink = !!room.host_link;
 
-    // Показываем "Войти в игру" плавающую кнопку, если ссылка есть
-    const enterFloat = document.getElementById('playEnterFloat');
-    if (enterFloat) {
-        if (hasLink) enterFloat.classList.add('active');
-        else enterFloat.classList.remove('active');
-    }
-
-    if (!hasLink && iAmLeader) {
-        content.innerHTML = `
-            <div class="profile-hero">
-                <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">Ты хост матча</div>
-                <div style="font-size: 12px; color: var(--hint); margin-bottom: 14px; line-height: 1.5;">
-                    1. Открой Standoff 2<br>
-                    2. Создай соревновательный режим (непубличный)<br>
-                    3. Установи до 13 раундов<br>
-                    4. Скопируй ссылку на лобби<br>
-                    5. Вставь её сюда
-                </div>
-                <input type="text" class="field-input" id="hostLinkInput" 
-                       placeholder="https://link.standoff2.com/..." 
-                       style="margin-bottom: 10px;">
-                <button class="save-btn" onclick="submitHostLink(${roomId})">✅ Отправить ссылку</button>
-            </div>
-        `;
+    // Проверяем: если ссылка уже залита — сразу на in_game
+    if (hasLink) {
+        showInGameScreen(roomId, room);
         return;
     }
 
-    if (!hasLink && !iAmLeader) {
+    // Если хост — 5 секунд показываем "Карта выбрана", потом форму
+    if (isLeader) {
+        switchPage('veto');
+        const content = document.getElementById('vetoContent');
         content.innerHTML = `
-            <div class="profile-hero" style="text-align: center;">
-                <div style="font-size: 40px; margin-bottom: 12px;">⏳</div>
-                <div style="font-size: 15px; font-weight: 700; margin-bottom: 8px;">Ожидайте ссылку на вход</div>
-                <div style="font-size: 12px; color: var(--hint); margin-bottom: 16px;">
-                    Хост создаёт лобби в Standoff 2<br>
-                    <b>${escapeHtml(room.final_map || '—')}</b>
-                </div>
-                                <div style="font-size: 32px; font-weight: 900; color: var(--emerald);" id="linkTimer">10:00</div>
-                <div style="font-size: 11px; color: var(--hint); margin-top: 8px;">
-                    Если ссылка не поступит за 10 минут, матч отменится
-                </div>
+            <div class="veto-final-v2">
+                <span class="final-icon">🎯</span>
+                <div class="final-label">Карта выбрана</div>
+                <div class="final-map">${escapeHtml(room.final_map || '—')}</div>
+                <div class="final-sub">Приготовься создать лобби...</div>
             </div>
-<button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
-    <svg class="cy-icon cy-xs" viewBox="0 0 24 24" style="margin-right: 6px;">
-        <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
-    </svg>
-    Чат комнаты
-</button>
         `;
-        setTimeout(() => updateRoomChatButton(roomId), 100);
-        startLinkTimer(roomId);
+
+        clearTimeout(waitingLinkTimer);
+        waitingLinkTimer = setTimeout(() => {
+            renderHostLinkForm(roomId);
+        }, 5000);
         return;
     }
 
-        // Есть ссылка → переходим на In-Game экран
-    await renderInGameScreen(roomId);
+    // Если не хост — показываем ожидание
+    switchPage('veto');
+    const content = document.getElementById('vetoContent');
+    content.innerHTML = `
+        <div class="veto-final-v2">
+            <span class="final-icon">🎯</span>
+            <div class="final-label">Карта выбрана</div>
+            <div class="final-map">${escapeHtml(room.final_map || '—')}</div>
+            <div class="final-sub">
+                Хост создаёт лобби в Standoff 2...<br>
+                <span style="color: var(--emerald); font-weight: 800;">Ожидайте ссылку</span>
+            </div>
+        </div>
+        <div class="veto-waiting">
+            <span class="wait-icon">⏳</span>
+            <div class="wait-text">
+                Ссылка появится автоматически, когда хост её зальёт
+            </div>
+        </div>
+    `;
+}
+
+function renderHostLinkForm(roomId) {
+    switchPage('veto');
+    const content = document.getElementById('vetoContent');
+    content.innerHTML = `
+        <div class="veto-wrap">
+            <div class="veto-header-v2">
+                <div class="veto-header-top">
+                    <div>
+                        <div class="veto-phase-label">Шаг 2 из 2</div>
+                        <div class="veto-phase-title">Создай лобби</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="veto-hint-v2">
+                <span class="hint-icon">🎮</span>
+                <div>
+                    1. Открой <b>Standoff 2</b><br>
+                    2. Создай <b>соревновательный</b> матч<br>
+                    3. Скопируй ссылку на лобби<br>
+                    4. Вставь её сюда
+                </div>
+            </div>
+
+            <input type="text" class="field-input" id="hostLinkInput"
+                   placeholder="https://link.standoff2.com/..."
+                   style="margin-bottom: 10px;">
+            <button class="profile-action-btn save" onclick="submitHostLink(${roomId})">
+                ✅ ОТПРАВИТЬ ССЫЛКУ
+            </button>
+        </div>
+    `;
 }
 
 async function submitHostLink(roomId) {
@@ -14812,169 +14844,53 @@ async function submitHostLink(roomId) {
 // ============================================================
 let inGameChannel = null;
 
-async function renderInGameScreen(roomId) {
-    const content = document.getElementById('playScreenContent');
+async function showInGameScreen(roomId, room) {
+    switchPage('veto');
+    const content = document.getElementById('vetoContent');
     if (!content) return;
 
-    // Показываем плавающую кнопку "Войти в игру"
-    const enterFloat = document.getElementById('playEnterFloat');
-    if (enterFloat) enterFloat.classList.add('active');
-
-    let room, players;
-    try {
-        const [r, p] = await Promise.all([
-            sb.from('rooms').select('*').eq('id', roomId).single(),
-            sb.from('room_players').select('*').eq('room_id', roomId)
-        ]);
-        room = r.data;
-        players = p.data;
-    } catch (e) {
-        console.error('renderInGameScreen:', e);
-        showToast('Ошибка загрузки комнаты: ' + e.message);
+    const hasLink = !!room.host_link;
+    if (!hasLink) {
+        showWaitingLinkScreen(roomId, room);
         return;
     }
-
-    if (!room) return;
-
-    // Матч отменён — показываем финальный экран
-    if (room.status === 'cancelled') {
-        renderCancelledMatch(roomId, room);
-        return;
-    }
-
-    // Загружаем данные игроков
-    const ids = (players || []).map(p => p.telegram_id);
-    const { data: users } = await sb.from('users')
-        .select('telegram_id, display_name, custom_avatar, photo_url, elo, standoff_id')
-        .in('telegram_id', ids.length ? ids : [0]);
-    const userMap = {};
-    (users || []).forEach(u => userMap[u.telegram_id] = u);
-
-    // Загружаем голоса за отмену
-    const votes = await getCancelVotes(roomId);
-    const votedIds = votes.map(v => v.voter_id);
-    const iVoted = votedIds.includes(Number(currentUser.telegram_id));
-
-    // Считаем сколько нужно
-    const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
-    const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready);
-    const totalPlayers = teamA.length + teamB.length;
-    const votesNeeded = getVotesNeeded(totalPlayers);
-
-    // Загружаем жалобы, которые я уже подал
-    const { data: myReports } = await sb.from('match_reports')
-        .select('target_id')
-        .eq('match_id', roomId)
-        .eq('reporter_id', currentUser.telegram_id)
-        .eq('type', 'ingame_complaint');
-    const reportedIds = new Set((myReports || []).map(r => r.target_id));
-
-    // Формат номера матча
-    const matchNum = String(roomId).padStart(6, '0');
-    const startedAgo = room.link_added_at 
-        ? formatTimeAgo(room.link_added_at) 
-        : 'только что';
-
-    // Строим HTML
-    const allPlayers = [...teamA, ...teamB];
-    const playersHTML = allPlayers.map(p => {
-        const u = userMap[p.telegram_id] || {};
-        const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
-        const alreadyReported = reportedIds.has(Number(p.telegram_id));
-        const av = renderAvatar(u);
-        const teamLabel = p.team === 'A' ? 'Команда A' : 'Команда B';
-        const teamCls = p.team === 'A' ? 'team-a' : 'team-b';
-
-        return `
-            <div class="ig-player-row ${teamCls} ${isMe ? 'you' : ''}">
-                <div class="ig-player-avatar">${av}</div>
-                <div class="ig-player-info">
-                    <div class="ig-player-name">
-                        ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
-                        ${isMe ? '<span style="color: var(--emerald); font-size: 10px; font-weight: 800; margin-left: 4px;">ТЫ</span>' : ''}
-                    </div>
-                    <div class="ig-player-team-tag ${teamCls}">${teamLabel}</div>
-                </div>
-                ${!isMe ? (
-                    alreadyReported
-                        ? `<button class="ig-report-btn" disabled style="opacity: 0.5;">✓ Отправлено</button>`
-                        : `<button class="ig-report-btn" onclick="openReportSheet(${roomId}, ${p.telegram_id})">⚠️ Жалоба</button>`
-                ) : ''}
-            </div>
-        `;
-    }).join('');
-
-    const votePercent = votesNeeded > 0 
-        ? Math.min(100, Math.round((votes.length / votesNeeded) * 100)) 
-        : 0;
 
     content.innerHTML = `
-        <div class="ig-match-header">
-            <div class="ig-match-row">
-                <div class="ig-match-num">Матч <b>#${matchNum}</b></div>
-                <div class="ig-status-badge live">В ИГРЕ</div>
+        <div class="veto-wrap">
+            <div class="veto-final-v2">
+                <span class="final-icon">🎮</span>
+                <div class="final-label">Матч готов</div>
+                <div class="final-map">${escapeHtml(room.final_map || '—')}</div>
+                <div class="final-sub">
+                    Стороны: <b>A — ${escapeHtml(room.side_a || '—')}</b> ·
+                    <b>B — ${escapeHtml(room.side_b || '—')}</b>
+                </div>
             </div>
-            <div class="ig-map-line">Карта</div>
-            <div class="ig-map-name">${escapeHtml(room.final_map || '—')}</div>
-            <div class="ig-players-line">
-                <span><b>${totalPlayers}</b> игроков в матче</span>
-                <span>Начало: <b>${startedAgo}</b></span>
-            </div>
-        </div>
 
-        <div class="ig-link-block">
-            <div class="ig-link-label">🔗 Ссылка на лобби</div>
-            <div class="ig-link-row">
-                <div class="ig-link-input" id="igLinkValue">${escapeHtml(room.host_link || '')}</div>
-                <button class="ig-link-copy" onclick="copyInGameLink('${escapeHtml(room.host_link || '')}')">📋</button>
-            </div>
-            <button class="ig-enter-btn" onclick="enterInGameLink('${escapeHtml(room.host_link || '')}')">
-                🎮 ВСТУПИТЬ В ЛОББИ
+            <button class="ig-enter-btn" onclick="enterInGameLinkAndGoResult('${escapeHtml(room.host_link)}', ${roomId})">
+                🎮 ЗАЙТИ В ИГРУ
+            </button>
+
+            <button class="profile-action-btn cancel" onclick="copyInGameLink('${escapeHtml(room.host_link)}')">
+                📋 Скопировать ссылку на лобби
             </button>
         </div>
-
-        <div class="ig-section-title">
-            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
-                <circle cx="9" cy="8" r="3.5"/>
-                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
-                <circle cx="17.5" cy="9" r="2.5"/>
-            </svg>
-            Игроки матча
-        </div>
-
-        ${playersHTML}
-
-        <div class="ig-vote-card">
-            <div class="ig-vote-title">⚠️ Отмена матча</div>
-            <div class="ig-vote-desc">
-                Если матч не состоялся или возникла проблема — проголосуй за отмену. 
-                Нужно <b style="color: var(--red);">${votesNeeded}</b> ${plural(votesNeeded, 'голос', 'голоса', 'голосов')}.
-            </div>
-            <div class="ig-vote-bar">
-                <div class="ig-vote-bar-fill" style="width: ${votePercent}%;"></div>
-            </div>
-            <div class="ig-vote-stats">
-                <span>Голосов за отмену</span>
-                <span><span class="ig-vote-count">${votes.length}</span> / ${votesNeeded}</span>
-            </div>
-            <button class="ig-vote-btn ${iVoted ? 'voted' : ''}" 
-                    onclick="voteCancelMatch(${roomId})" 
-                    ${iVoted ? 'disabled' : ''}>
-                ${iVoted 
-                    ? '✓ ТЫ ПРОГОЛОСОВАЛ' 
-                    : '🗳️ ПРОГОЛОСОВАТЬ ЗА ОТМЕНУ'}
-            </button>
-        </div>
-
-        <button class="profile-action-btn cancel" 
-                onclick="goToResultFromInGame(${roomId})" 
-                style="margin-top: 14px;">
-            📸 Загрузить результат матча
-        </button>
     `;
+}
 
-    // Подписка на изменения
-    subscribeInGameRealtime(roomId);
+// Кнопка "Зайти в игру" — открывает ссылку и переводит всех на результат
+async function enterInGameLinkAndGoResult(url, roomId) {
+    if (url) {
+        try {
+            if (tg?.openLink) tg.openLink(url);
+            else window.open(url, '_blank');
+        } catch (e) {}
+    }
+
+    // Переводим комнату в статус result — все увидят экран результата
+    try {
+        await sb.from('rooms').update({ status: 'result' }).eq('id', roomId);
+    } catch (e) {}
 }
 
 function getVotesNeeded(totalPlayers) {
@@ -15067,29 +14983,57 @@ if (activeRoomId === roomId) {
     }
 }
 
-function renderCancelledMatch(roomId, room) {
-    const content = document.getElementById('playScreenContent');
-    if (!content) return;
+const CANCELLED_SHOWN_KEY = 'cancelledShownFor';
 
+function showCancelledOnce(roomId) {
+    // Проверяем — показывали ли уже для этой комнаты
+    const shown = localStorage.getItem(CANCELLED_SHOWN_KEY);
+    if (shown === String(roomId)) {
+        // Уже показывали — просто чистим и уходим на главную
+        cleanupAfterCancel(roomId);
+        return;
+    }
+    localStorage.setItem(CANCELLED_SHOWN_KEY, String(roomId));
+
+    // Показываем один раз
+    showToast('🚫 Матч отменён');
+    haptic('heavy');
+
+    // Очищаем play-screen, баннеры, индикаторы
+    const screen = document.getElementById('playScreen');
+    if (screen) screen.classList.remove('active');
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
+    const banner = document.getElementById('activeRoomBanner');
+    if (banner) banner.classList.remove('active');
+    const indicator = document.getElementById('headerRoomIndicator');
+    if (indicator) indicator.style.display = 'none';
 
-    const matchNum = String(roomId).padStart(6, '0');
+    // Через секунду — на главную
+    setTimeout(() => {
+        cleanupAfterCancel(roomId);
+    }, 1500);
+}
 
-    content.innerHTML = `
-        <div class="ig-cancelled-box">
-            <span class="ig-cancelled-icon">🚫</span>
-            <div class="ig-cancelled-title">МАТЧ ОТМЕНЁН</div>
-            <div class="ig-cancelled-sub">
-                Матч <b style="color: var(--red);">#${matchNum}</b> был отменён по голосованию игроков.<br>
-                Комната будет закрыта автоматически.
-            </div>
-        </div>
+async function cleanupAfterCancel(roomId) {
+    try {
+        await sb.from('room_players').delete()
+            .eq('telegram_id', currentUser.telegram_id);
+    } catch (e) {}
 
-        <button class="profile-action-btn save" onclick="closeCancelledAndExit()">
-            ← ВЕРНУТЬСЯ К КОМНАТАМ
-        </button>
-    `;
+    unsubscribeRoomRealtime();
+    unsubscribeInGameRealtime();
+    if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
+    if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
+    if (matchPollTimer) clearInterval(matchPollTimer);
+
+    activeRoomId = null;
+    currentPlayRoomId = null;
+    currentMatch = null;
+
+    switchPage('dashboard');
+    checkActiveRoom();
+    loadLeaderboard();
 }
 
 async function closeCancelledAndExit() {
@@ -15184,17 +15128,6 @@ function copyInGameLink(url) {
         }).catch(() => fallbackCopy(url));
     } else {
         fallbackCopy(url);
-    }
-}
-
-function enterInGameLink(url) {
-    if (!url) { showToast('Ссылка отсутствует'); return; }
-    try {
-        if (tg?.openLink) tg.openLink(url);
-        else window.open(url, '_blank');
-        haptic('medium');
-    } catch (e) {
-        window.open(url, '_blank');
     }
 }
 
