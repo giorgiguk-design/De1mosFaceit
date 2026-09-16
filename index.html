@@ -2,11 +2,19 @@
 <html lang="ru" data-theme="green">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>De1mos Faceit</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="theme-color" content="#050807">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<meta name="color-scheme" content="dark">
+<title>De1mos Faceit</title>
+<link rel="preconnect" href="https://ksmuopoasgzyromdjtnt.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://ksmuopoasgzyromdjtnt.supabase.co">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 <style>
         /* ============================================================
    ТЕМЫ
@@ -100,8 +108,15 @@ body::before {
         radial-gradient(circle at 80% 60%, var(--glow-2), transparent 50%),
         radial-gradient(circle at 50% 100%, var(--glow-3), transparent 55%);
     animation: bgFloat 24s ease-in-out infinite alternate;
-    z-index: -2; filter: blur(30px);
+    z-index: -2;
+    /* 🔥 Blur заменён на will-change + transform — GPU-friendly */
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* filter: blur(30px) убран — радиальный градиент и так мягкий */
     transition: background 0.5s ease;
+    contain: strict;
 }
 body::after {
     content: ''; position: fixed; inset: 0;
@@ -113,17 +128,25 @@ body::after {
     -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 70%);
     z-index: -1; pointer-events: none;
     transition: background-image 0.5s ease;
+    /* 🔥 Принудительное GPU-ускорение, без постоянного repaint */
+    will-change: auto;
+    contain: strict;
+    transform: translateZ(0);
 }
         @keyframes bgFloat { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(2%,-2%,0) scale(1.06); } }
         .header {
-            position: sticky; top: 0; z-index: 100;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 14px 18px;
-            background: rgba(5, 8, 7, 0.65);
-            backdrop-filter: blur(18px) saturate(140%);
-            -webkit-backdrop-filter: blur(18px) saturate(140%);
-            border-bottom: 1px solid var(--border);
-        }
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    background: rgba(5, 8, 7, 0.85);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border-bottom: 1px solid var(--border);
+    /* 🔥 GPU-ускорение слоя */
+    transform: translateZ(0);
+    will-change: transform;
+    contain: layout style paint;
+}
         .avatar {
             width: 42px; height: 42px; border-radius: 50%;
             background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
@@ -4811,6 +4834,9 @@ body::before {
     pointer-events: none;
     z-index: -2;
     overflow: hidden;
+    /* 🔥 Изолируем слой — не влияет на layout */
+    contain: strict;
+    will-change: auto;
 }
 .bg-particles::before,
 .bg-particles::after {
@@ -4858,8 +4884,8 @@ body::before {
     100% { transform: translateY(-80vh) translateX(60px); }
 }
 @keyframes bgHueShift {
-    0%   { filter: blur(40px) hue-rotate(0deg); }
-    100% { filter: blur(40px) hue-rotate(360deg); }
+    0%   { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
 }
 
 /* Слой 3: сетка (усиливаем) */
@@ -4885,6 +4911,10 @@ body::after {
     pointer-events: none;
     z-index: -2;
     overflow: hidden;
+    /* 🔥 conic-gradient + rotate — самая дорогая анимация на Android */
+    /* Отключаем на слабых устройствах */
+    contain: strict;
+    will-change: auto;
 }
 .bg-rays::before,
 .bg-rays::after {
