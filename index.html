@@ -6848,6 +6848,15 @@ body::after {
     border-color: var(--gold);
     box-shadow: 0 0 12px rgba(217, 171, 90, 0.4);
 }
+
+    .veto-timer-v2.warning {
+    color: var(--red) !important;
+    animation: pulseRed 0.6s ease-in-out infinite;
+}
+@keyframes pulseRed {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
+}
     
 </style>
 </head>
@@ -12210,20 +12219,229 @@ async function pickSideVeto(side) {
 // ============================================================
 // Таймер veto (30 сек на ход)
 // ============================================================
+let vetoTimeoutHandle = null;
+
 function startVetoCountdown() {
-    const tick = () => {
-        if (!currentMatch || currentMatch.status !== 'veto') return;
-        const last = new Date(currentMatch.last_action_at || currentMatch.veto_started_at || Date.now()).getTime();
+    if (vetoTimeoutHandle) clearTimeout(vetoTimeoutHandle);
+
+    const tick = async () => {
+        if (!currentMatch) return;
+        if (currentMatch.status !== 'veto' && currentMatch.status !== 'side_pick') return;
+
+        const last = new Date(
+            currentMatch.last_action_at ||
+            currentMatch.veto_started_at ||
+            Date.now()
+        ).getTime();
+
         const elapsed = Math.floor((Date.now() - last) / 1000);
-        const left = Math.max(0, 30 - elapsed);
+        const left = Math.max(0, 10 - elapsed);   // ← 10 секунд
+
         const timerEl = document.getElementById('vetoTimer');
         if (timerEl) {
             timerEl.textContent = `00:${String(left).padStart(2, '0')}`;
-            if (left <= 10) timerEl.classList.add('warning');
+            if (left <= 3) timerEl.classList.add('warning');
         }
-        setTimeout(tick, 1000);
+
+        // Время вышло — пробуем отменить
+        if (left <= 0) {
+            await tryCancelByTimeout();
+            return;
+        }
+
+        vetoTimeoutHandle = setTimeout(tick, 500);
     };
+
     tick();
+}
+
+// Пытаемся атомарно отменить матч из-за таймаута
+async function tryCancelByTimeout() {
+    if (!currentMatch) return;
+
+    // Сначала читаем свежий статус
+    try {
+        const { data } = await sb.from('game_matches')
+            .select('*').eq('id', currentMatch.id).single();
+        if (!data) return;
+
+        currentMatch = data;
+
+        // Уже отменён — просто показываем экран
+        if (data.status === 'cancelled') {
+            showVetoCancelledScreen(data.cancelled_reason);
+            return;
+        }
+
+        // Уже in_game — кто-то успел
+        if (data.status === 'in_game' || data.status === 'ready') {
+            return;
+        }
+
+        // Проверяем, точно ли истёк таймаут
+        const last = new Date(data.last_action_at || data.veto_started_at).getTime();
+        if (Date.now() - last <= 10 * 1000) {
+            // Кто-то сделал ход — перезапускаем таймер
+            startVetoCountdown();
+            return;
+        }
+
+        // Атомарно отменяем: только если статус всё ещё veto/side_pick
+        const { error } = await sb.from('game_matches')
+            .update({
+                status: 'cancelled',
+                cancelled_reason: 'veto_timeout',
+                cancelled_at: new Date().toISOString()
+            })
+            .eq('id', data.id)
+            .in('status', ['veto', 'side_pick']);
+
+        if (error) {
+            console.warn('tryCancelByTimeout update:', error);
+        }
+
+        showVetoCancelledScreen('veto_timeout');
+    } catch (e) {
+        console.warn('tryCancelByTimeout:', e);
+    }
+}
+
+function showVetoCancelledScreen(reason) {
+    const content = document.getElementById('vetoContent');
+    if (!content) return;
+
+    const text = reason === 'veto_timeout'
+        ? 'Капитан не сделал выбор за 10 секунд.'
+        : 'Матч отменён.';
+
+    content.innerHTML = `
+        <div class="veto-wrap">
+            <div class="ig-cancelled-box" style="margin-top: 40px;">
+                <span class="ig-cancelled-icon">⏰</span>
+                <div class="ig-cancelled-title">МАТЧ ОТМЕНЁН</div>
+                <div class="ig-cancelled-sub">
+                    ${escapeHtml(text)}<br>
+                    Комната будет закрыта.
+                </div>
+            </div>
+
+            <button class="profile-action-btn save" onclick="returnAfterVetoCancel()">
+                ← ВЕРНУТЬСЯ К КОМНАТАМ
+            </button>
+        </div>
+    `;
+
+    if (vetoTimeoutHandle) {
+        clearTimeout(vetoTimeoutHandle);
+        vetoTimeoutHandle = null;
+    }
+
+    haptic('heavy');
+}
+
+async function returnAfterVetoCancel() {
+    if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
+    if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
+
+    // Убираемся из комнаты
+    try {
+        await sb.from('room_players').delete()
+            .eq('telegram_id', currentUser.telegram_id);
+    } catch (e) {}
+
+    // Если я был хостом — удаляем комнату
+    try {
+        const { data: room } = await sb.from('rooms')
+            .select('id, leader_id')
+            .eq('id', currentMatch?.room_id)
+            .maybeSingle();
+        if (room && String(room.leader_id) === String(currentUser.telegram_id)) {
+            await sb.from('room_players').delete().eq('room_id', room.id);
+            await sb.from('rooms').delete().eq('id', room.id);
+        }
+    } catch (e) {}
+
+    currentMatch = null;
+    switchPage('play');
+    await loadOpenRooms();
+    checkActiveRoom();
+}
+
+async function checkVetoTimeout() {
+    if (!currentMatch) return;
+    try {
+        // Перечитываем матч — вдруг уже отменён другим игроком или edge-функцией
+        const { data } = await sb.from('game_matches')
+            .select('*').eq('id', currentMatch.id).single();
+        if (!data) return;
+
+        currentMatch = data;
+
+        if (data.status === 'cancelled') {
+            showVetoCancelledScreen(data.cancelled_reason);
+            return;
+        }
+
+        // Проверяем, не истёк ли таймаут
+        const last = new Date(data.last_action_at || data.veto_started_at).getTime();
+        if (Date.now() - last > 10 * 1000) {
+            // Отменяем (атомарно — если несколько клиентов попытаются, не страшно)
+            await sb.from('game_matches').update({
+                status: 'cancelled',
+                cancelled_reason: 'veto_timeout',
+                cancelled_at: new Date().toISOString()
+            }).eq('id', data.id).eq('status', 'veto');
+
+            showVetoCancelledScreen('veto_timeout');
+        }
+    } catch (e) {
+        console.warn('checkVetoTimeout:', e);
+    }
+}
+
+function showVetoCancelledScreen(reason) {
+    const content = document.getElementById('vetoContent');
+    if (!content) return;
+
+    const text = reason === 'veto_timeout'
+        ? 'Капитан не сделал выбор за 10 секунд.'
+        : 'Матч отменён.';
+
+    content.innerHTML = `
+        <div class="veto-wrap">
+            <div class="ig-cancelled-box" style="margin-top: 40px;">
+                <span class="ig-cancelled-icon">⏰</span>
+                <div class="ig-cancelled-title">МАТЧ ОТМЕНЁН</div>
+                <div class="ig-cancelled-sub">
+                    ${escapeHtml(text)}<br>
+                    Комната будет закрыта.
+                </div>
+            </div>
+
+            <button class="profile-action-btn save" onclick="returnAfterVetoCancel()">
+                ← ВЕРНУТЬСЯ К КОМНАТАМ
+            </button>
+        </div>
+    `;
+
+    haptic('heavy');
+}
+
+async function returnAfterVetoCancel() {
+    // Сбрасываем состояние
+    if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
+    if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
+
+    // Удаляем игрока из комнаты
+    try {
+        await sb.from('room_players').delete()
+            .eq('telegram_id', currentUser.telegram_id);
+    } catch (e) {}
+
+    currentMatch = null;
+    switchPage('play');
+    await loadOpenRooms();
+    checkActiveRoom();
 }
 
 // ============================================================
@@ -12246,21 +12464,17 @@ function subscribeVetoRealtime(matchId) {
 
             if (currentMatch.status === 'veto') {
                 renderVeto();
+                startVetoCountdown();
             } else if (currentMatch.status === 'side_pick') {
                 renderVeto();
-            } else if (currentMatch.status === 'ready') {
-                showMatchScreen();
+                startVetoCountdown();
+            } else if (currentMatch.status === 'in_game') {
+                showInGameScreen();
             } else if (currentMatch.status === 'cancelled') {
-                showToast('Матч отменён');
-                switchPage('play');
+                showVetoCancelledScreen(currentMatch.cancelled_reason);
             }
         })
         .subscribe();
-}
-
-            function showInGameScreen() {
-    switchPage('ingame');
-    renderInGameContent();
 }
 
 function renderInGameContent() {
