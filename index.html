@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>De1mos Faceit</title>
     <script src="https://telegram.org/js/telegram-web-app.js" async></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" async></script>
 <style>
         /* ============================================================
    ТЕМЫ
@@ -6096,11 +6096,17 @@ body::after {
 
         const MAP_POOL = ["Sandstone", "Province", "Breeze", "Dune", "Rust", "Hanami", "Prison"];
 
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const tg = window.Telegram?.WebApp;
-        let currentUser = null;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) { console.warn(e); } }
+let tg = null;
+
+function refreshTg() {
+    tg = window.Telegram?.WebApp || null;
+    if (tg) {
+        try { tg.ready(); tg.expand(); } catch(e) { console.warn(e); }
+    }
+    return tg;
+}
 
         // ============================================================
         // STATE
@@ -6613,6 +6619,7 @@ async function notify(telegramId, text, type = null) {
         // INIT
         // ============================================================
 async function init() {
+    refreshTg();                     // ← перечитываем window.Telegram.WebApp
     let user = tg?.initDataUnsafe?.user;
 
     // Fallback: если Telegram SDK не загрузился — используем dev-режим
@@ -14198,6 +14205,21 @@ function devTagHTML(telegramId) {
     return `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>`;
 } 
 
+            function subscribeClubRealtime() {
+    if (!myClub?.club) return;
+    if (clubChannel) sb.removeChannel(clubChannel);
+    clubChannel = sb.channel('club_' + myClub.club.id)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_members',
+            filter: 'club_id=eq.' + myClub.club.id
+        }, () => { loadClub(); })
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_requests',
+            filter: 'club_id=eq.' + myClub.club.id
+        }, () => { updateRequestsBadge(); })
+        .subscribe();
+}
+
 // ============================================================
 // BOOT
 // ============================================================
@@ -14249,15 +14271,6 @@ registerInterval('notifBadge', setInterval(() => {
         <div id="allClubsList"><div class="empty">Загрузка...</div></div>
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
-
-    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
-    <div class="sheet-title">🛡️ Все клубы</div>
-    <input type="text" class="field-input" id="allClubsSearch"
-           placeholder="🔍 Название или тег" autocomplete="off"
-           oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
-    <div id="allClubsList"><div class="empty">Загрузка...</div></div>
-    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
-</div>
           <script>
 /* ============================================================
    AUTO-REPLACE EMOJI → SVG ICONS
