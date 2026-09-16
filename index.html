@@ -6975,14 +6975,14 @@ async function renderProfileView(user) {
                     </div>
                 </div>
                 <div class="phc-actions">
-                    <button class="phc-settings" onclick="shareProfile(${user.telegram_id})" title="Поделиться">
-                        <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
-                            <circle cx="18" cy="5" r="3"/>
-                            <circle cx="6" cy="12" r="3"/>
-                            <circle cx="18" cy="19" r="3"/>
-                            <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
-                        </svg>
-                    </button>
+                    <button type="button" class="phc-settings" onclick="shareProfile(${user.telegram_id}); return false;" title="Поделиться">
+    <svg class="cy-icon cy-sm" viewBox="0 0 24 24" style="pointer-events: none;">
+        <circle cx="18" cy="5" r="3"/>
+        <circle cx="6" cy="12" r="3"/>
+        <circle cx="18" cy="19" r="3"/>
+        <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
+    </svg>
+</button>
                     <button class="phc-settings" onclick="enterProfileEditMode()" title="Редактировать">
                         <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
                             <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/>
@@ -13495,18 +13495,23 @@ function subscribeNotificationsRealtime() {
 function fallbackCopy(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
     document.body.appendChild(ta);
     ta.select();
+    ta.setSelectionRange(0, text.length);
+    let ok = false;
     try {
-        document.execCommand('copy');
-        showToast('📋 ID скопирован');
-        haptic('medium');
-    } catch (e) {
-        showToast('Не удалось скопировать');
-    }
+        ok = document.execCommand('copy');
+    } catch (e) { ok = false; }
     document.body.removeChild(ta);
+    
+    if (ok) {
+        showToast('📋 Скопировано');
+        haptic('medium');
+    } else {
+        showToast('❌ Не удалось скопировать');
+    }
 }
 
             // ============================================================
@@ -14453,17 +14458,16 @@ function devTagHTML(telegramId) {
     return `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>`;
 } 
 
-            async function shareProfile(userId) {
-    const me = currentUser?.telegram_id;
-    if (!me) return;
+async function shareProfile(userId) {
+    if (!currentUser) return;
     
     // Загружаем данные профиля
-    const { data: u } = await sb.from('users')
+    const { data: u, error } = await sb.from('users')
         .select('display_name, elo, standoff_id')
         .eq('telegram_id', userId)
         .single();
     
-    if (!u) { showToast('Профиль не найден'); return; }
+    if (error || !u) { showToast('Профиль не найден'); return; }
     
     const text = `🎮 ${u.display_name || 'Игрок'}\n` +
                  `⚡ Уровень ${eloToLevel(u.elo)}\n` +
@@ -14471,16 +14475,144 @@ function devTagHTML(telegramId) {
                  `🆔 Standoff ID: ${u.standoff_id || '—'}\n\n` +
                  `Играй на De1mos Faceit!`;
     
-    try {
-        if (navigator.share) {
+    // 1. Пытаемся через нативный Share (iOS/Android браузер)
+    if (navigator.share && !window.Telegram?.WebApp?.initData) {
+        try {
             await navigator.share({ title: 'De1mos Faceit', text });
-        } else {
-            await navigator.clipboard.writeText(text);
-            showToast('📋 Профиль скопирован');
+            haptic('light');
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError') return;
         }
-    } catch (e) {
-        if (e.name !== 'AbortError') showToast('Ошибка');
     }
+    
+    // 2. В Telegram — копируем в буфер и показываем меню
+    //    с быстрыми действиями
+    openShareSheet(text, u);
+}
+
+            function openShareSheet(text, user) {
+    // Убираем старый
+    const old = document.getElementById('shareSheet');
+    if (old) old.remove();
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'shareOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeShareSheet(); };
+    
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'shareSheet';
+    sheet.style.zIndex = '802';
+    
+    sheet.innerHTML = `
+        <div class="sheet-title">📤 Поделиться профилем</div>
+        <div style="
+            padding: 14px;
+            background: rgba(var(--emerald-rgb), 0.06);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 12.5px;
+            color: var(--text);
+            line-height: 1.5;
+            white-space: pre-wrap;
+            margin-bottom: 14px;
+            font-family: 'Courier New', monospace;
+        " id="shareTextPreview">${escapeHtml(text)}</div>
+        
+        <button class="sheet-option" onclick="copyShareText()">
+            <span style="font-size: 18px;">📋</span> Скопировать текст
+        </button>
+        <button class="sheet-option" onclick="shareToTelegram()">
+            <span style="font-size: 18px;">✈️</span> Отправить в Telegram
+        </button>
+        <button class="sheet-option" onclick="shareToFriendsInApp()">
+            <span style="font-size: 18px;">👥</span> Отправить другу в приложении
+        </button>
+        <button class="sheet-cancel" onclick="closeShareSheet()">ОТМЕНА</button>
+    `;
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    window._shareText = text;
+    window._shareUser = user;
+    haptic('medium');
+}
+
+function closeShareSheet() {
+    document.getElementById('shareOverlay')?.remove();
+    document.getElementById('shareSheet')?.remove();
+}
+
+async function copyShareText() {
+    const text = window._shareText || '';
+    if (!text) return;
+    
+    try {
+        // Современный API
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            // Fallback для WebView
+            fallbackCopySilent(text);
+        }
+        showToast('📋 Скопировано');
+        haptic('medium');
+        closeShareSheet();
+    } catch (e) {
+        // Пробуем fallback в любом случае
+        try {
+            fallbackCopySilent(text);
+            showToast('📋 Скопировано');
+            haptic('medium');
+            closeShareSheet();
+        } catch (e2) {
+            showToast('❌ Не удалось скопировать');
+        }
+    }
+}
+
+// Тихий fallback без тоста (для использования в составе других функций)
+function fallbackCopySilent(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (!ok) throw new Error('execCommand failed');
+}
+
+function shareToTelegram() {
+    const text = window._shareText || '';
+    if (!text) return;
+    const encoded = encodeURIComponent(text);
+    const url = `https://t.me/share/url?url=${encodeURIComponent('De1mos Faceit')}&text=${encoded}`;
+    
+    try {
+        if (tg?.openTelegramLink) {
+            tg.openTelegramLink(url);
+        } else if (tg?.openLink) {
+            tg.openLink(url);
+        } else {
+            window.open(url, '_blank');
+        }
+        closeShareSheet();
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
+}
+
+function shareToFriendsInApp() {
+    closeShareSheet();
+    // Открываем список друзей для отправки
+    switchPage('friends');
+    loadFriends();
+    showToast('💬 Выбери друга для отправки');
 }
 
             // Обновляем подпись кнопки Играть при загрузке dashboard
