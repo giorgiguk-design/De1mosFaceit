@@ -138,13 +138,9 @@ body::after {
     position: sticky; top: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 18px;
-    background: rgba(5, 8, 7, 0.85);
-    backdrop-filter: blur(12px) saturate(140%);
-    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    background: rgba(5, 8, 7, 0.98);
     border-bottom: 1px solid var(--border);
-    /* 🔥 GPU-ускорение слоя */
-    transform: translateZ(0);
-    will-change: transform;
+    /* backdrop-filter убран — замена на плотный фон */
     contain: layout style paint;
 }
         .avatar {
@@ -410,13 +406,14 @@ body::after {
         .field-input:focus { border-color: var(--border-strong); background: rgba(var(--emerald-rgb),0.07); box-shadow: 0 0 0 4px rgba(var(--emerald-rgb),0.10); }
 
         .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            display: flex; justify-content: space-around;
-            padding: 8px 0 14px;
-            background: rgba(5, 8, 7, 0.78);
-            backdrop-filter: blur(20px) saturate(140%);
-            border-top: 1px solid var(--border); z-index: 100;
-        }
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; justify-content: space-around;
+    padding: 8px 0 calc(14px + env(safe-area-inset-bottom, 0px));
+    background: rgba(5, 8, 7, 0.98);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    contain: layout style paint;
+}
         .nav-item {
             display: flex; flex-direction: column; align-items: center; gap: 3px;
             background: none; border: none; color: var(--hint);
@@ -451,9 +448,11 @@ body::after {
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         #avatarFileInput, #clubLogoFileInput, #chatImageInput, #screenshotInput { display: none; }
 .sheet-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px); z-index: 800;
-    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    z-index: 800;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
 }
         .sheet-overlay.active { opacity: 1; pointer-events: auto; }
 .sheet {
@@ -671,8 +670,8 @@ body::after {
         .chat-reply-bar-close { background: none; border: none; color: var(--hint); font-size: 20px; cursor: pointer; padding: 0 6px; font-family: inherit; }
 
         .player-modal {
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0, 0, 0, 0.88);
             display: none; align-items: flex-start; justify-content: center;
             padding: 20px; overflow-y: auto;
             transition: opacity 0.28s ease;
@@ -1066,7 +1065,7 @@ body::after {
     top: 12px; right: 12px;
     width: 40px; height: 40px;
     border-radius: 50%;
-    background: rgba(10, 20, 16, 0.85);
+    background: rgba(10, 20, 16, 0.96);
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid var(--border-strong);
@@ -5102,9 +5101,9 @@ body::after {
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.45));
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-                filter 0.25s ease;
+    /* 🔥 drop-shadow убран — самый дорогой filter на Android */
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
 }
 .cy-icon * {
     vector-effect: non-scaling-stroke;
