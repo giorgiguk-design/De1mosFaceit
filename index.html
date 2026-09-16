@@ -11767,6 +11767,16 @@ function getSidePickerTeam(match) {
 // Открытие экрана veto
 // ============================================================
 function showVetoScreen() {
+    // Принудительно закрываем play-screen, если он открыт
+    const screen = document.getElementById('playScreen');
+    if (screen) screen.classList.remove('active');
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
+
+    // Отписываемся от реалтайма комнаты, чтобы не тянуть лишнее
+    unsubscribeRoomRealtime();
+    unsubscribeInGameRealtime();
+
     switchPage('veto');
     renderVeto();
     startVetoCountdown();
@@ -11820,10 +11830,10 @@ async function renderVeto() {
     const isMyTurn = (iAmCapA && currentTurn === 'A') || (iAmCapB && currentTurn === 'B');
     const isMyTeamTurn = myTeam === currentTurn;
 
-    const timerDuration = 30;
-    const lastActionAt = match.last_action_at || match.veto_started_at || new Date().toISOString();
-    const elapsed = Math.floor((Date.now() - new Date(lastActionAt).getTime()) / 1000);
-    const timeLeft = Math.max(0, timerDuration - elapsed);
+const timerDuration = 60;  // ← 60 секунд
+const lastActionAt = match.last_action_at || match.veto_started_at || new Date().toISOString();
+const elapsed = Math.floor((Date.now() - new Date(lastActionAt).getTime()) / 1000);
+const timeLeft = Math.max(0, timerDuration - elapsed);
 
     // Прогресс
     const firstTeam = match.veto_first_team;
@@ -11931,7 +11941,7 @@ async function renderVeto() {
                         </div>
                     </div>
                     <div class="veto-timer-v2 ${currentTurn === 'B' ? 'team-b' : ''} ${timeLeft <= 10 ? 'warning' : ''}"
-                         id="vetoTimer">00:${String(timeLeft).padStart(2, '0')}</div>
+     id="vetoTimer">${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}</div>
                 </div>
                 <div class="veto-progress-v2">${progressHTML}</div>
             </div>
@@ -12234,12 +12244,12 @@ function startVetoCountdown() {
             Date.now()
         ).getTime();
 
-        const elapsed = Math.floor((Date.now() - last) / 1000);
-        const left = Math.max(0, 10 - elapsed);   // ← 10 секунд
+const elapsed = Math.floor((Date.now() - last) / 1000);
+const left = Math.max(0, 60 - elapsed);   // ← 60 секунд
 
         const timerEl = document.getElementById('vetoTimer');
         if (timerEl) {
-            timerEl.textContent = `00:${String(left).padStart(2, '0')}`;
+            timerEl.textContent = `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
             if (left <= 3) timerEl.classList.add('warning');
         }
 
@@ -12278,13 +12288,11 @@ async function tryCancelByTimeout() {
             return;
         }
 
-        // Проверяем, точно ли истёк таймаут
-        const last = new Date(data.last_action_at || data.veto_started_at).getTime();
-        if (Date.now() - last <= 10 * 1000) {
-            // Кто-то сделал ход — перезапускаем таймер
-            startVetoCountdown();
-            return;
-        }
+const last = new Date(data.last_action_at || data.veto_started_at).getTime();
+if (Date.now() - last <= 60 * 1000) {   // ← 60 * 1000
+    startVetoCountdown();
+    return;
+}
 
         // Атомарно отменяем: только если статус всё ещё veto/side_pick
         const { error } = await sb.from('game_matches')
@@ -12382,8 +12390,8 @@ async function checkVetoTimeout() {
             return;
         }
 
-        // Проверяем, не истёк ли таймаут
-        const last = new Date(data.last_action_at || data.veto_started_at).getTime();
+const last = new Date(data.last_action_at || data.veto_started_at).getTime();
+if (Date.now() - last > 60 * 1000) {   // ← 60 * 1000
         if (Date.now() - last > 10 * 1000) {
             // Отменяем (атомарно — если несколько клиентов попытаются, не страшно)
             await sb.from('game_matches').update({
@@ -12403,9 +12411,9 @@ function showVetoCancelledScreen(reason) {
     const content = document.getElementById('vetoContent');
     if (!content) return;
 
-    const text = reason === 'veto_timeout'
-        ? 'Капитан не сделал выбор за 10 секунд.'
-        : 'Матч отменён.';
+const text = reason === 'veto_timeout'
+    ? 'Капитан не сделал выбор за 60 секунд.'
+    : 'Матч отменён.';
 
     content.innerHTML = `
         <div class="veto-wrap">
