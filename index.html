@@ -13,8 +13,8 @@
 <title>De1mos Faceit</title>
 <link rel="preconnect" href="https://ksmuopoasgzyromdjtnt.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://ksmuopoasgzyromdjtnt.supabase.co">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="https://telegram.org/js/telegram-web-app.js" onerror="console.warn('Telegram SDK не загрузился');"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
         /* ============================================================
    ТЕМЫ
@@ -6069,7 +6069,13 @@ body::after {
 
         const MAP_POOL = ["Sandstone", "Province", "Breeze", "Dune", "Rust", "Hanami", "Prison"];
 
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Защита: ждём загрузку Supabase
+let sb = null;
+if (window.supabase?.createClient) {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+    console.warn('⚠️ Supabase не загружен при старте скрипта');
+}
 
         const tg = window.Telegram?.WebApp;
         let currentUser = null;
@@ -14241,14 +14247,49 @@ function devTagHTML(telegramId) {
 } 
 
 // ============================================================
-// BOOT
+// BOOT (safe — ждём, пока Supabase загрузится)
 // ============================================================
-init();
+function safeBoot() {
+    if (typeof window.supabase === 'undefined' || !window.supabase?.createClient) {
+        console.warn('⏳ Supabase ещё не загрузился, ждём...');
+        return false;
+    }
+    init();
+    return true;
+}
+
+if (!safeBoot()) {
+    // Пробуем каждые 200мс до 10 секунд
+    let _bootAttempts = 0;
+    const _bootTimer = setInterval(() => {
+        _bootAttempts++;
+        if (safeBoot() || _bootAttempts > 50) {
+            clearInterval(_bootTimer);
+            if (_bootAttempts > 50) {
+                document.body.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                                min-height:100vh;text-align:center;padding:30px;background:#050807;color:#e6f5ee;font-family:sans-serif;">
+                        <div style="font-size:64px;margin-bottom:20px;">📡</div>
+                        <div style="font-size:18px;font-weight:800;margin-bottom:10px;">Нет соединения</div>
+                        <div style="font-size:13px;color:#6d8a80;line-height:1.6;max-width:280px;">
+                            Не удалось загрузить библиотеку.<br>Проверь интернет и перезапусти приложение.
+                        </div>
+                        <button onclick="location.reload()" style="margin-top:20px;padding:12px 28px;
+                                background:linear-gradient(135deg,#00e08a,#00b874);color:#04140e;border:none;
+                                border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;">
+                            🔄 ПЕРЕЗАГРУЗИТЬ
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }, 200);
+}
 
 // Периодическое обновление бейджа уведомлений
 registerInterval('notifBadge', setInterval(() => {
     if (isAppVisible && currentUser) updateNotifBadge();
-}, 30000));
+}, 45000));
     </script>
 
     <div class="sheet" id="clubInviteSheet" style="max-height: 88vh;">
