@@ -803,32 +803,528 @@ body::after {
         .confirm-player .cp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .confirm-player .cp-tag { font-size: 9px; font-weight: 800; color: var(--gold); }
 
-        .veto-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-        .veto-card {
-            padding: 20px 12px;
-            background: var(--card); border: 2px solid var(--border);
-            border-radius: 16px; text-align: center;
-            cursor: pointer; transition: all 0.2s;
-            position: relative; overflow: hidden;
-            background-size: cover; background-position: center;
-            font-family: inherit;
-            font-size: 15px; font-weight: 800; color: var(--text);
-        }
-        .veto-card:active { transform: scale(0.97); }
-        .veto-card:disabled { opacity: 0.4; cursor: not-allowed; }
-        .veto-card.banned { opacity: 0.3; cursor: default; animation: fadeInScale 0.3s ease; }
-        .veto-card.banned::after {
-            content: '✕'; position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 48px; color: var(--red); background: rgba(0,0,0,0.5);
-        }
-        .veto-card:hover:not(:disabled) {
-            transform: translateY(-3px) scale(1.02);
-            border-color: var(--red);
-            box-shadow: 0 10px 30px rgba(255,84,112,0.25);
-        }
-        .veto-card-map { font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
-        .veto-card-auto { font-size: 10px; color: var(--gold); margin-top: 4px; }
+    /* ============ VETO (NEW) ============ */
+.veto-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 20px;
+}
+
+/* HEADER */
+.veto-header {
+    position: relative;
+    overflow: hidden;
+    padding: 16px 18px;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.10) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.veto-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.8;
+}
+.veto-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.veto-header-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--hint);
+}
+.veto-header-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.veto-header-title b {
+    color: var(--emerald);
+}
+.veto-header-title.team-b b {
+    color: #ff5470;
+}
+
+.veto-timer {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+    animation: pulseText 2s ease-in-out infinite;
+}
+.veto-timer.team-b { color: #ff5470; }
+.veto-timer.warning { color: var(--red); animation: none; }
+@keyframes pulseText {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.04); opacity: 0.92; }
+}
+
+/* ПРОГРЕСС-БАР */
+.veto-progress {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+}
+.veto-progress-step {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    transition: background 0.3s ease;
+    position: relative;
+}
+.veto-progress-step.active-a {
+    background: var(--emerald);
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+}
+.veto-progress-step.active-b {
+    background: #ff5470;
+    box-shadow: 0 0 8px rgba(255, 84, 112, 0.6);
+}
+.veto-progress-step.done-a {
+    background: rgba(var(--emerald-rgb), 0.35);
+}
+.veto-progress-step.done-b {
+    background: rgba(255, 84, 112, 0.35);
+}
+
+/* ПОДСКАЗКА */
+.veto-hint {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(var(--emerald-rgb), 0.06);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    font-size: 12.5px;
+    color: var(--text);
+    line-height: 1.4;
+}
+.veto-hint.team-b {
+    background: rgba(255, 84, 112, 0.06);
+    border-color: rgba(255, 84, 112, 0.3);
+}
+.veto-hint-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.veto-hint b { color: var(--emerald); }
+.veto-hint.team-b b { color: #ff5470; }
+
+/* КАПИТАНЫ */
+.veto-captains {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.veto-captain-card {
+    position: relative;
+    padding: 10px 12px;
+    background: rgba(var(--emerald-rgb), 0.05);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.25s ease;
+}
+.veto-captain-card.team-a { border-left: 3px solid var(--emerald); }
+.veto-captain-card.team-b { border-left: 3px solid #ff5470; }
+.veto-captain-card.active {
+    background: rgba(var(--emerald-rgb), 0.12);
+    border-color: var(--emerald);
+    box-shadow: 0 0 0 1px var(--emerald), 0 4px 16px rgba(var(--emerald-rgb), 0.3);
+}
+.veto-captain-card.active.team-b {
+    background: rgba(255, 84, 112, 0.12);
+    border-color: #ff5470;
+    box-shadow: 0 0 0 1px #ff5470, 0 4px 16px rgba(255, 84, 112, 0.3);
+}
+.veto-captain-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-bottom: 6px;
+}
+.veto-captain-card.team-a .veto-captain-label { color: var(--emerald); }
+.veto-captain-card.team-b .veto-captain-label { color: #ff5470; }
+.veto-captain-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.veto-captain-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 900;
+    color: #04140e;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.veto-captain-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.veto-captain-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+.veto-captain-crown {
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+/* СЕТКА КАРТ */
+.veto-maps {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.veto-map {
+    position: relative;
+    padding: 14px 10px;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1.5px solid var(--border-strong);
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--text);
+    transition: transform 0.18s ease, border-color 0.25s ease, background 0.25s ease;
+    overflow: hidden;
+    isolation: isolate;
+}
+.veto-map::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.5;
+}
+.veto-map:not(:disabled):hover {
+    transform: translateY(-2px);
+    border-color: var(--emerald);
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.14) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    box-shadow: 0 6px 20px rgba(var(--emerald-rgb), 0.25);
+}
+.veto-map:active:not(:disabled) { transform: scale(0.97); }
+.veto-map:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.veto-map-name {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Забанено */
+.veto-map.banned {
+    opacity: 0.35;
+    cursor: default;
+    position: relative;
+}
+.veto-map.banned::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 45%, rgba(255,84,112,0.8) 50%, transparent 55%);
+    pointer-events: none;
+    z-index: 3;
+}
+.veto-map-ban-label {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: var(--red);
+    text-transform: uppercase;
+    background: rgba(255, 84, 112, 0.15);
+    padding: 2px 6px;
+    border-radius: 6px;
+    z-index: 4;
+}
+.veto-map-ban-author {
+    font-size: 9px;
+    color: var(--hint);
+    margin-top: 4px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Бейдж подсказки от тиммейта */
+.veto-map-suggest {
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 6px;
+    z-index: 3;
+    background: rgba(217, 171, 90, 0.2);
+    color: var(--gold);
+    border: 1px solid rgba(217, 171, 90, 0.4);
+    animation: suggestPulse 2s ease-in-out infinite;
+}
+.veto-map-suggest.team-b {
+    background: rgba(167, 139, 250, 0.2);
+    color: var(--purple);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+@keyframes suggestPulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+}
+
+/* Список игроков компактный */
+.veto-players {
+    padding: 12px;
+    background: rgba(var(--emerald-rgb), 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+.veto-players-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.veto-players-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-strong), transparent);
+}
+.veto-players-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.veto-player-mini {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    font-size: 11px;
+    min-width: 0;
+}
+.veto-player-mini.team-a { border-left: 2px solid var(--emerald); }
+.veto-player-mini.team-b { border-left: 2px solid #ff5470; }
+.veto-player-mini.is-captain {
+    background: rgba(217, 171, 90, 0.12);
+    box-shadow: 0 0 0 1px rgba(217, 171, 90, 0.35);
+}
+.veto-player-mini-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 900;
+    color: #04140e;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.veto-player-mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.veto-player-mini-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 700;
+    color: var(--text);
+}
+.veto-player-mini-crown {
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* Кнопка смены капитана */
+.veto-captain-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 5px 10px;
+    background: rgba(217, 171, 90, 0.10);
+    border: 1px solid rgba(217, 171, 90, 0.3);
+    border-radius: 8px;
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 800;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.veto-captain-change:active { transform: scale(0.95); }
+
+/* Кнопки подсказок для тиммейтов */
+.veto-suggest-bar {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.veto-suggest-btn {
+    padding: 6px 12px;
+    background: rgba(217, 171, 90, 0.08);
+    border: 1px solid rgba(217, 171, 90, 0.3);
+    border-radius: 8px;
+    color: var(--gold);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: transform 0.15s ease, background 0.2s ease;
+}
+.veto-suggest-btn:active { transform: scale(0.94); }
+.veto-suggest-btn.selected {
+    background: rgba(217, 171, 90, 0.25);
+    border-color: var(--gold);
+    box-shadow: 0 0 12px rgba(217, 171, 90, 0.4);
+}
+
+/* Финальное состояние */
+.veto-final {
+    text-align: center;
+    padding: 30px 20px;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.12) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+    margin-bottom: 14px;
+    animation: bounceIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.veto-final-icon {
+    font-size: 56px;
+    margin-bottom: 10px;
+    display: block;
+    animation: floatY 3s ease-in-out infinite;
+}
+.veto-final-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--hint);
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+.veto-final-map {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    text-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.4);
+}
+.veto-final-sub {
+    font-size: 12.5px;
+    color: var(--hint);
+    line-height: 1.5;
+}
+
+/* Лог банов */
+.veto-log {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.veto-log-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 12px;
+    color: var(--text);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.veto-log-item:last-child { border-bottom: none; }
+.veto-log-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--hint);
+    flex-shrink: 0;
+}
+.veto-log-item.team-a .veto-log-num {
+    background: rgba(var(--emerald-rgb), 0.15);
+    color: var(--emerald);
+}
+.veto-log-item.team-b .veto-log-num {
+    background: rgba(255, 84, 112, 0.15);
+    color: #ff5470;
+}
+.veto-log-text { flex: 1; min-width: 0; }
+.veto-log-map {
+    font-weight: 900;
+    color: var(--red);
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 84, 112, 0.6);
+}
+.veto-log-author { color: var(--hint); font-size: 11px; }
 
         .match-host-box {
             background: linear-gradient(140deg, rgba(var(--emerald-rgb),0.08), rgba(var(--emerald-dark-rgb),0.02));
@@ -6026,15 +6522,10 @@ body::after {
         <button class="profile-action-btn cancel" onclick="confirmMatch(false)">❌ ОТКАЗАТЬСЯ</button>
     </div>
 
-    <!-- ============ VETO ============ -->
-    <div class="container page" id="page-veto">
-        <div class="mm-screen" style="padding: 20px;">
-            <div class="mm-timer" id="vetoTimer">00:30</div>
-            <div class="mm-timer-label" id="vetoTurnLabel">Ход команды A</div>
-        </div>
-        <div id="vetoGrid" class="veto-grid"></div>
-        <div id="vetoLog" style="margin-top: 20px;"></div>
-    </div>
+   <!-- ============ VETO ============ -->
+<div class="container page" id="page-veto">
+    <div id="vetoContent"></div>
+</div>
 
     <!-- ============ MATCH (играем) ============ -->
     <div class="container page" id="page-match">
@@ -10374,29 +10865,35 @@ async function startSearch() {
             subscribeMatchRealtime();
         }
 
-        async function subscribeMatchRealtime() {
-            if (currentMatchChannel) sb.removeChannel(currentMatchChannel);
-            if (!currentMatch) return;
-            const matchId = currentMatch.id;
+async function subscribeMatchRealtime() {
+    if (currentMatchChannel) sb.removeChannel(currentMatchChannel);
+    if (!currentMatch) return;
+    const matchId = currentMatch.id;
 
-            currentMatchChannel = sb.channel('match_' + matchId)
-                .on('postgres_changes', {
-                    event: 'UPDATE', schema: 'public', table: 'game_matches',
-                    filter: `id=eq.${matchId}`
-                }, async (payload) => {
-                    currentMatch = payload.new;
-                    if (currentMatch.status === 'veto') showVetoScreen();
-                    else if (currentMatch.status === 'ready') showMatchScreen();
-                    else if (currentMatch.status === 'result') showResultScreen();
-                    else if (currentMatch.status === 'finished') showFinishedScreen();
-                    else if (currentMatch.status === 'cancelled') {
-                        showToast('Матч отменён');
-                        if (matchPollTimer) clearInterval(matchPollTimer);
-                        switchPage('play');
-                    }
-                })
-                .subscribe();
-        }
+    currentMatchChannel = sb.channel('match_' + matchId)
+        .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'game_matches',
+            filter: `id=eq.${matchId}`
+        }, async (payload) => {
+            currentMatch = payload.new;
+            if (currentMatch.status === 'veto') showVetoScreen();
+            else if (currentMatch.status === 'ready') { renderVeto(); }
+            else if (currentMatch.status === 'result') showResultScreen();
+            else if (currentMatch.status === 'finished') showFinishedScreen();
+            else if (currentMatch.status === 'cancelled') {
+                showToast('Матч отменён');
+                if (matchPollTimer) clearInterval(matchPollTimer);
+                switchPage('play');
+            }
+        })
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'match_veto_suggestions',
+            filter: `match_id=eq.${matchId}`
+        }, () => {
+            if (currentMatch?.status === 'veto') renderVeto();
+        })
+        .subscribe();
+}
 
         function showConfirmScreen() {
             switchPage('confirm');
@@ -10477,80 +10974,565 @@ async function startSearch() {
             }
         }
 
-        // ============================================================
-        // VETO
-        // ============================================================
-        function showVetoScreen() {
-            switchPage('veto');
-            renderVeto();
-            startVetoCountdown();
+// ============================================================
+// VETO (пики карт) — НОВАЯ ЛОГИКА
+// Порядок: A банит 2 → B банит 3 → A банит 1 → финал
+// Кто первый — определяется случайно (50/50)
+// ============================================================
+
+const VETO_SEQUENCE = [
+    { team: 'A', count: 2 },   // A банит 2
+    { team: 'B', count: 3 },   // B банит 3
+    { team: 'A', count: 1 },   // A банит 1 (последняя)
+];
+const TOTAL_BANS = 6;
+const TOTAL_MAPS = 7;
+
+function showVetoScreen() {
+    switchPage('veto');
+    renderVeto();
+    startVetoCountdown();
+}
+
+async function renderVeto() {
+    const content = document.getElementById('vetoContent');
+    if (!content) return;
+
+    const match = currentMatch;
+    if (!match) return;
+
+    const me = Number(currentUser.telegram_id);
+
+    // Загружаем игроков матча
+    const teamA = match.team_a_players || [];
+    const teamB = match.team_b_players || [];
+    const allPlayers = [...teamA, ...teamB];
+    const allIds = allPlayers.map(p => p.telegram_id);
+
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+        .in('telegram_id', allIds.length ? allIds : [0]);
+    const userMap = {};
+    (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+    // Капитаны
+    const capAId = match.captain_a_id;
+    const capBId = match.captain_b_id;
+    const iAmCapA = me === capAId;
+    const iAmCapB = me === capBId;
+    const iAmCaptain = iAmCapA || iAmCapB;
+    const myTeam = teamA.some(p => p.telegram_id === me) ? 'A'
+                  : teamB.some(p => p.telegram_id === me) ? 'B' : null;
+
+    // Текущий ход
+    const currentTurn = match.current_turn;             // 'A' или 'B'
+    const vetoLog = match.veto_log || [];
+    const bannedMaps = vetoLog.map(v => v.map);
+    const myTeamTurn = myTeam === currentTurn;
+    const isMyTurn = (iAmCapA && currentTurn === 'A') || (iAmCapB && currentTurn === 'B');
+
+    // Определяем, сколько банов уже сделала текущая команда и сколько ей осталось
+    const teamABans = vetoLog.filter(v => v.team === 'A').length;
+    const teamBBans = vetoLog.filter(v => v.team === 'B').length;
+    const totalBans = vetoLog.length;
+
+    // Какая фаза сейчас?
+    let phase = 0; // 0 = A(2), 1 = B(3), 2 = A(1)
+    if (teamABans < 2) phase = 0;
+    else if (teamBBans < 3) phase = 1;
+    else phase = 2;
+
+    // Кто первый в этой игре — определяется по первому бану в логе
+    const firstBanTeam = vetoLog.length > 0 ? vetoLog[0].team : currentTurn;
+
+    // Текущий капитан
+    const currentCapId = currentTurn === 'A' ? capAId : capBId;
+    const currentCap = userMap[currentCapId] || {};
+    const currentCapName = currentCap.display_name || 'Игрок';
+
+    // Подсказки от команды (кто что предлагает)
+    // В таблице match_veto_suggestions: match_id, suggester_id, team, map, created_at
+    const { data: suggestions } = await sb.from('match_veto_suggestions')
+        .select('suggester_id, team, map')
+        .eq('match_id', match.id);
+    const myTeamSuggestions = (suggestions || []).filter(s => s.team === myTeam);
+    const suggestedMaps = new Set(myTeamSuggestions.map(s => s.map));
+
+    // Если матч завершил veto → финал
+    if (match.status === 'ready' || totalBans >= TOTAL_BANS) {
+        renderVetoFinal(content, match, userMap, allPlayers);
+        return;
+    }
+
+    // === СТРОИМ HTML ===
+    const otherTeam = currentTurn === 'A' ? 'B' : 'A';
+    const timerDuration = 30;
+    const lastActionAt = match.last_action_at || match.veto_started_at || new Date().toISOString();
+    const elapsed = Math.floor((Date.now() - new Date(lastActionAt).getTime()) / 1000);
+    const timeLeft = Math.max(0, timerDuration - elapsed);
+
+    const phaseLabel = (() => {
+        if (phase === 0) return 'Фаза 1 · Команда A банит 2 карты';
+        if (phase === 1) return 'Фаза 2 · Команда B банит 3 карты';
+        return 'Фаза 3 · Команда A банит последнюю';
+    })();
+
+    const allMapsHTML = STANDOFF_MAPS.map(map => {
+        const isBanned = bannedMaps.includes(map);
+        const banEntry = vetoLog.find(v => v.map === map);
+        const banAuthorId = banEntry?.by;
+        const banAuthor = banAuthorId ? userMap[banAuthorId] : null;
+        const banAuthorName = banAuthor?.display_name || '—';
+        const suggestClass = suggestedMaps.has(map) ? 'has-suggest' : '';
+
+        if (isBanned) {
+            return `
+                <div class="veto-map banned">
+                    <div class="veto-map-name">${escapeHtml(map)}</div>
+                    <div class="veto-map-ban-label">БАН</div>
+                    <div class="veto-map-ban-author">${escapeHtml(banAuthorName)}</div>
+                </div>
+            `;
         }
 
-        function renderVeto() {
-            const me = currentUser.telegram_id;
-            const isCapA = currentMatch.captain_a_id === me;
-            const isCapB = currentMatch.captain_b_id === me;
-            const isMyTurn = (currentMatch.current_turn === 'A' && isCapA) || (currentMatch.current_turn === 'B' && isCapB);
+        const canClick = isMyTurn;
+        return `
+            <button class="veto-map ${suggestClass}"
+                    onclick="pickMap('${map}')"
+                    ${canClick ? '' : 'disabled'}>
+                ${suggestedMaps.has(map) ? `<div class="veto-map-suggest ${myTeam === 'B' ? 'team-b' : ''}">СОВЕТ</div>` : ''}
+                <div class="veto-map-name">${escapeHtml(map)}</div>
+            </button>
+        `;
+    }).join('');
 
-            document.getElementById('vetoTurnLabel').textContent = isMyTurn
-                ? `Твой ход (Команда ${currentMatch.current_turn})`
-                : `Ход команды ${currentMatch.current_turn}`;
+    // Компактный список игроков
+    const playerRow = (p, team) => {
+        const u = userMap[p.telegram_id] || {};
+        const isCap = p.telegram_id === (team === 'A' ? capAId : capBId);
+        const av = renderAvatar(u);
+        return `
+            <div class="veto-player-mini team-${team.toLowerCase()} ${isCap ? 'is-captain' : ''}">
+                <div class="veto-player-mini-avatar">${av}</div>
+                <div class="veto-player-mini-name">${escapeHtml(u.display_name || 'Игрок')}</div>
+                ${isCap ? '<span class="veto-player-mini-crown">👑</span>' : ''}
+            </div>
+        `;
+    };
 
-            const vetoLog = currentMatch.veto_log || [];
-            const banned = vetoLog.map(v => v.map);
-            const mapPool = currentMatch.map_pool || MAP_POOL;
-
-            document.getElementById('vetoGrid').innerHTML = mapPool.map(map => {
-                const isBanned = banned.includes(map);
-                return `
-                    <button class="veto-card ${isBanned ? 'banned' : ''}"
-                            onclick="pickMap('${map}')"
-                            ${isBanned || !isMyTurn ? 'disabled' : ''}>
-                        <div class="veto-card-map">${escapeHtml(map)}</div>
+    // Капитанская карточка
+    const capCard = (team) => {
+        const capId = team === 'A' ? capAId : capBId;
+        const u = userMap[capId] || {};
+        const av = renderAvatar(u);
+        const isCurrent = currentTurn === team;
+        const isMe = me === capId;
+        return `
+            <div class="veto-captain-card team-${team.toLowerCase()} ${isCurrent ? 'active' : ''}">
+                <div class="veto-captain-label">Капитан команды ${team}${isCurrent ? ' · ХОД' : ''}</div>
+                <div class="veto-captain-row">
+                    <div class="veto-captain-avatar">${av}</div>
+                    <div class="veto-captain-name">${escapeHtml(u.display_name || '—')}</div>
+                    <div class="veto-captain-crown">👑</div>
+                </div>
+                ${isMe ? `
+                    <button class="veto-captain-change" onclick="openChangeCaptainSheet('${team}')">
+                        🔄 Сменить капитана
                     </button>
-                `;
-            }).join('');
+                ` : ''}
+            </div>
+        `;
+    };
 
-            document.getElementById('vetoLog').innerHTML = vetoLog.length ? `
-                <div class="section-title">История банов</div>
-                ${vetoLog.map(v => `
-                    <div style="font-size:12px;color:var(--hint);margin-bottom:4px;">
-                        #${v.turn} · Команда ${v.team}: <b style="color:var(--red);">${escapeHtml(v.map)}</b>${v.auto ? ' (авто)' : ''}
+    // Прогресс-бар
+    const progressSteps = [];
+    // Фаза A: 2 бана
+    for (let i = 0; i < 2; i++) {
+        const done = teamABans > i;
+        const active = !done && phase === 0 && currentTurn === 'A';
+        progressSteps.push(`<div class="veto-progress-step ${done ? 'done-a' : active ? 'active-a' : ''}"></div>`);
+    }
+    // Фаза B: 3 бана
+    for (let i = 0; i < 3; i++) {
+        const done = teamBBans > i;
+        const active = !done && phase === 1 && currentTurn === 'B';
+        progressSteps.push(`<div class="veto-progress-step ${done ? 'done-b' : active ? 'active-b' : ''}"></div>`);
+    }
+    // Фаза A: 1 бан
+    const lastDone = teamABans > 2;
+    const lastActive = !lastDone && phase === 2 && currentTurn === 'A';
+    progressSteps.push(`<div class="veto-progress-step ${lastDone ? 'done-a' : lastActive ? 'active-a' : ''}"></div>`);
+
+    content.innerHTML = `
+        <div class="veto-wrap">
+            <!-- HEADER -->
+            <div class="veto-header">
+                <div class="veto-header-row">
+                    <div>
+                        <div class="veto-header-label">${phaseLabel}</div>
+                        <div class="veto-header-title team-${currentTurn.toLowerCase()}">
+                            Ход команды <b>${currentTurn}</b>
+                        </div>
                     </div>
-                `).join('')}
-            ` : '';
-        }
+                    <div class="veto-timer team-${currentTurn.toLowerCase()} ${timeLeft <= 10 ? 'warning' : ''}" id="vetoTimer">00:${String(timeLeft).padStart(2, '0')}</div>
+                </div>
+                <div class="veto-progress">
+                    ${progressSteps.join('')}
+                </div>
+            </div>
 
-        async function pickMap(map) {
-            if (!currentMatch) return;
-            try {
-                const res = await mmCall('ban', {
-                    match_id: currentMatch.id,
-                    telegram_id: currentUser.telegram_id,
-                    map
-                });
-                if (res?.ban?.error) { showToast(res.ban.error); return; }
-                haptic('medium');
-                const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
-                if (data) {
-                    currentMatch = data;
-                    if (data.status === 'ready') showMatchScreen();
-                    else renderVeto();
-                }
-            } catch (e) { showToast('Ошибка'); }
-        }
+            <!-- HINT -->
+            <div class="veto-hint team-${currentTurn.toLowerCase()}">
+                <span class="veto-hint-icon">${isMyTurn ? '🎯' : '⏳'}</span>
+                <div>
+                    ${isMyTurn
+                        ? `<b>Твой ход!</b> Забань карту. Осталось банов: <b>${getRemainingBansForCurrent(vetoLog, currentTurn)}</b>`
+                        : `Капитан <b>${escapeHtml(currentCapName)}</b> банит карту. ${myTeam === currentTurn ? 'Подскажи ему!' : 'Ожидай хода.'}`
+                    }
+                </div>
+            </div>
 
-        function startVetoCountdown() {
-            const tick = () => {
-                if (!currentMatch || currentMatch.status !== 'veto') return;
-                const last = new Date(currentMatch.last_action_at || currentMatch.veto_started_at).getTime();
-                const elapsed = Math.floor((Date.now() - last) / 1000);
-                const left = Math.max(0, 30 - elapsed);
-                document.getElementById('vetoTimer').textContent = `00:${String(left).padStart(2, '0')}`;
-                setTimeout(tick, 1000);
-            };
-            tick();
+            <!-- CAPTAINS -->
+            <div class="veto-captains">
+                ${capCard('A')}
+                ${capCard('B')}
+            </div>
+
+            <!-- MAPS -->
+            <div class="veto-maps">
+                ${allMapsHTML}
+            </div>
+
+            <!-- SUGGEST (для не-капитанов текущей команды) -->
+            ${(!iAmCaptain && myTeam === currentTurn) ? `
+                <div class="veto-suggest-bar">
+                    <span style="font-size: 11px; color: var(--hint); font-weight: 700; letter-spacing: 0.5px; align-self: center; margin-right: 6px;">Подсказать:</span>
+                    ${STANDOFF_MAPS.filter(m => !bannedMaps.includes(m)).map(m => `
+                        <button class="veto-suggest-btn ${suggestedMaps.has(m) ? 'selected' : ''}"
+                                onclick="toggleSuggestMap('${m}')">
+                            💡 ${escapeHtml(m)}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : ''}
+
+            <!-- PLAYERS -->
+            <div class="veto-players">
+                <div class="veto-players-title">Игроки матча · ${allPlayers.length}</div>
+                <div class="veto-players-grid">
+                    ${teamA.map(p => playerRow(p, 'A')).join('')}
+                    ${teamB.map(p => playerRow(p, 'B')).join('')}
+                </div>
+            </div>
+
+            <!-- LOG -->
+            ${vetoLog.length > 0 ? `
+                <div class="veto-log">
+                    ${vetoLog.map((v, i) => {
+                        const author = userMap[v.by] || {};
+                        return `
+                            <div class="veto-log-item team-${v.team.toLowerCase()}">
+                                <div class="veto-log-num">${i + 1}</div>
+                                <div class="veto-log-text">
+                                    <span class="veto-log-map">${escapeHtml(v.map)}</span>
+                                    <span class="veto-log-author"> · ${escapeHtml(author.display_name || 'Капитан')}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function getRemainingBansForCurrent(vetoLog, currentTurn) {
+    const totalA = vetoLog.filter(v => v.team === 'A').length;
+    const totalB = vetoLog.filter(v => v.team === 'B').length;
+    if (currentTurn === 'A') {
+        // A банит 2 → 1 → всего 3
+        const totalNeeded = 3; // 2 + 1
+        return totalNeeded - totalA;
+    } else {
+        const totalNeeded = 3;
+        return totalNeeded - totalB;
+    }
+}
+
+async function pickMap(map) {
+    if (!currentMatch) return;
+    try {
+        const res = await mmCall('ban', {
+            match_id: currentMatch.id,
+            telegram_id: currentUser.telegram_id,
+            map
+        });
+        if (res?.ban?.error) { showToast(res.ban.error); return; }
+        haptic('medium');
+
+        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        if (data) {
+            currentMatch = data;
+            if (data.status === 'ready') {
+                renderVeto(); // покажет финал
+            } else {
+                renderVeto();
+            }
         }
+    } catch (e) { showToast('Ошибка'); }
+}
+
+async function toggleSuggestMap(map) {
+    if (!currentMatch) return;
+    const me = Number(currentUser.telegram_id);
+    const myTeam = (currentMatch.team_a_players || []).some(p => p.telegram_id === me) ? 'A'
+                 : (currentMatch.team_b_players || []).some(p => p.telegram_id === me) ? 'B' : null;
+    if (!myTeam) return;
+
+    try {
+        // Проверяем, есть ли уже
+        const { data: existing } = await sb.from('match_veto_suggestions')
+            .select('id').eq('match_id', currentMatch.id)
+            .eq('suggester_id', me).eq('map', map).maybeSingle();
+
+        if (existing) {
+            await sb.from('match_veto_suggestions').delete().eq('id', existing.id);
+        } else {
+            await sb.from('match_veto_suggestions').insert({
+                match_id: currentMatch.id,
+                suggester_id: me,
+                team: myTeam,
+                map,
+                created_at: new Date().toISOString()
+            });
+        }
+        haptic('light');
+        renderVeto();
+    } catch (e) { showToast('Ошибка'); }
+}
+
+function renderVetoFinal(content, match, userMap, allPlayers) {
+    const finalMap = match.final_map || '—';
+    const capAId = match.captain_a_id;
+    const capBId = match.captain_b_id;
+    const me = Number(currentUser.telegram_id);
+    const iAmCapB = me === capBId;
+    const iAmCapA = me === capAId;
+    const iAmCaptain = iAmCapA || iAmCapB;
+    const sideChosen = !!match.side_a;
+
+    // Кто банил последним — кто выбирает сторону (по правилам: сторона достаётся той команде, что НЕ делала последний бан)
+    const vetoLog = match.veto_log || [];
+    const lastBan = vetoLog[vetoLog.length - 1];
+    const sidePickerTeam = lastBan?.team === 'A' ? 'B' : 'A';
+
+    content.innerHTML = `
+        <div class="veto-wrap">
+            <div class="veto-final">
+                <span class="veto-final-icon">🎯</span>
+                <div class="veto-final-label">Карта выбрана</div>
+                <div class="veto-final-map">${escapeHtml(finalMap)}</div>
+                <div class="veto-final-sub">
+                    ${iAmCaptain
+                        ? (sideChosen
+                            ? `Ты выбрал сторону: <b style="color:var(--emerald);">${escapeHtml(match.side_a)}</b>`
+                            : (myTeam === sidePickerTeam ? 'Выбери сторону для своей команды ↓' : 'Ожидаем выбор стороны'))
+                        : 'Капитан выбирает сторону'
+                    }
+                </div>
+            </div>
+
+            ${iAmCaptain && myTeam === sidePickerTeam && !sideChosen ? `
+                <div class="side-choice-grid">
+                    <button class="side-card" onclick="pickSideVeto('Спецназ')">
+                        <div class="side-icon">🛡️</div>
+                        <div class="side-name">Спецназ (CT)</div>
+                    </button>
+                    <button class="side-card" onclick="pickSideVeto('Террорист')">
+                        <div class="side-icon">💣</div>
+                        <div class="side-name">Террорист (T)</div>
+                    </button>
+                </div>
+            ` : ''}
+
+            ${sideChosen ? `
+                <div class="profile-hero" style="text-align: center; padding: 16px;">
+                    <div style="font-size: 12px; color: var(--hint); margin-bottom: 6px;">Стороны</div>
+                    <div style="font-size: 14px; font-weight: 800;">
+                        Команда A: <b style="color: var(--emerald);">${escapeHtml(match.side_a)}</b>
+                        &nbsp;·&nbsp;
+                        Команда B: <b style="color: #ff5470;">${escapeHtml(match.side_b)}</b>
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="veto-log">
+                ${vetoLog.map((v, i) => {
+                    const author = userMap[v.by] || {};
+                    return `
+                        <div class="veto-log-item team-${v.team.toLowerCase()}">
+                            <div class="veto-log-num">${i + 1}</div>
+                            <div class="veto-log-text">
+                                <span class="veto-log-map">${escapeHtml(v.map)}</span>
+                                <span class="veto-log-author"> · ${escapeHtml(author.display_name || 'Капитан')}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+async function pickSideVeto(side) {
+    if (!currentMatch) return;
+    const opposite = side === 'Спецназ' ? 'Террорист' : 'Спецназ';
+    try {
+        await sb.from('game_matches').update({
+            side_a: side,
+            side_b: opposite,
+            status: 'ready'
+        }).eq('id', currentMatch.id);
+
+        haptic('medium');
+        showToast(`✅ Сторона выбрана: ${side}`);
+
+        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        if (data) {
+            currentMatch = data;
+            showMatchScreen();
+        }
+    } catch (e) { showToast('Ошибка'); }
+}
+
+// --- Смена капитана ---
+async function openChangeCaptainSheet(team) {
+    if (!currentMatch) return;
+    const me = Number(currentUser.telegram_id);
+    const capId = team === 'A' ? currentMatch.captain_a_id : currentMatch.captain_b_id;
+    if (me !== capId) { showToast('Только капитан может сменить капитана'); return; }
+
+    const teamPlayers = team === 'A' ? (currentMatch.team_a_players || []) : (currentMatch.team_b_players || []);
+    const ids = teamPlayers.map(p => p.telegram_id);
+
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url, elo')
+        .in('telegram_id', ids);
+    const userMap = {};
+    (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'changeCapOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeChangeCaptainSheet(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'changeCapSheet';
+    sheet.style.zIndex = '802';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🔄 Сменить капитана · Команда ${team}</div>
+        <div style="font-size: 12px; color: var(--hint); margin-bottom: 12px; text-align: center;">
+            Выбери нового капитана из своей команды
+        </div>
+        ${teamPlayers.filter(p => p.telegram_id !== me).map(p => {
+            const u = userMap[p.telegram_id] || {};
+            const av = renderAvatar(u);
+            return `
+                <button class="sheet-option" onclick="doChangeCaptain('${team}', ${p.telegram_id})">
+                    <div style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; color: #04140e; font-weight: 900;">
+                        ${av}
+                    </div>
+                    <div style="flex: 1; min-width: 0; text-align: left;">
+                        <div style="font-weight: 800; color: var(--text);">${escapeHtml(u.display_name || 'Игрок')}</div>
+                        <div style="font-size: 11px; color: var(--hint);">DXP ${u.elo ?? 1000}</div>
+                    </div>
+                </button>
+            `;
+        }).join('')}
+        <button class="sheet-cancel" onclick="closeChangeCaptainSheet()">ОТМЕНА</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    haptic('medium');
+}
+
+function closeChangeCaptainSheet() {
+    document.getElementById('changeCapOverlay')?.remove();
+    document.getElementById('changeCapSheet')?.remove();
+}
+
+async function doChangeCaptain(team, newCapId) {
+    try {
+        const upd = {};
+        if (team === 'A') upd.captain_a_id = newCapId;
+        else upd.captain_b_id = newCapId;
+
+        await sb.from('game_matches').update(upd).eq('id', currentMatch.id);
+
+        // Уведомляем нового капитана
+        await notify(newCapId,
+            `👑 Ты стал капитаном команды ${team}! Твой ход — бан карты.`,
+            'party'
+        );
+
+        showToast('✅ Капитан сменён');
+        closeChangeCaptainSheet();
+
+        const { data } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        if (data) {
+            currentMatch = data;
+            renderVeto();
+        }
+    } catch (e) { showToast('Ошибка: ' + e.message); }
+}
+
+function startVetoCountdown() {
+    const tick = () => {
+        if (!currentMatch || currentMatch.status !== 'veto') return;
+        const last = new Date(currentMatch.last_action_at || currentMatch.veto_started_at).getTime();
+        const elapsed = Math.floor((Date.now() - last) / 1000);
+        const left = Math.max(0, 30 - elapsed);
+        const timerEl = document.getElementById('vetoTimer');
+        if (timerEl) {
+            timerEl.textContent = `00:${String(left).padStart(2, '0')}`;
+            if (left <= 10) timerEl.classList.add('warning');
+        }
+        setTimeout(tick, 1000);
+    };
+    tick();
+}
+
+// Realtime для veto
+let vetoRtChannel = null;
+function subscribeVetoRealtime(matchId) {
+    if (vetoRtChannel) sb.removeChannel(vetoRtChannel);
+    vetoRtChannel = sb.channel('veto_rt_' + matchId)
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'game_matches',
+            filter: `id=eq.${matchId}`
+        }, async (payload) => {
+            currentMatch = payload.new;
+            if (currentMatch.status === 'veto' || currentMatch.status === 'ready') {
+                renderVeto();
+            } else if (currentMatch.status === 'ready') {
+                showMatchScreen();
+            }
+        })
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'match_veto_suggestions',
+            filter: `match_id=eq.${matchId}`
+        }, () => {
+            renderVeto();
+        })
+        .subscribe();
+}
 
         // ============================================================
         // MATCH (ИГРАЕМ)
@@ -12158,7 +13140,7 @@ if (teamA.length < perTeamCount || teamB.length < perTeamCount) {
             // ============================================================
 // VETO (пики/баны карт)
 // ============================================================
-const STANDOFF_MAPS = ['Sandstone', 'Rust', 'Province', 'Zone 9', 'Breeze', 'Dune', 'Hanami', 'Prison', 'Plaza', 'Favela'];
+const STANDOFF_MAPS = ['Hanami', 'Prison', 'Rust', 'Dune', 'Breeze', 'Province', 'Sandstone'];
 
 async function openVetoView(roomId) {
     const content = document.getElementById('playScreenContent');
