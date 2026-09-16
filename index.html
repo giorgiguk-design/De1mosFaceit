@@ -12012,7 +12012,7 @@ async function submitWinner() {
     const isCaptain = me === Number(currentMatch.captain_a_id)
                    || me === Number(currentMatch.captain_b_id);
 
-    // Капитан обязан иметь скриншот
+    // 👇👇👇 ВОТ ЭТОТ БЛОК 👇👇👇
     if (isCaptain) {
         const { data: shots } = await sb.from('match_screenshots')
             .select('id').eq('match_id', currentMatch.id).eq('uploader_id', me);
@@ -12022,6 +12022,7 @@ async function submitWinner() {
             return;
         }
     }
+    // 👆👆👆 КОНЕЦ БЛОКА 👆👆👆
 
     const btn = document.getElementById('submitResultBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
@@ -12123,51 +12124,55 @@ async function finishMatch(matchId, result) {
         const teamB = match.team_b_players || [];
         const winnerTeam = result.winner;
 
-        // Собираем всех игроков
         const allPlayers = [...teamA, ...teamB];
         const userIds = allPlayers.map(p => Number(p.telegram_id));
 
-        // Загружаем текущий ELO
         const { data: users } = await sb.from('users')
             .select('telegram_id, elo, matches_played, wins')
             .in('telegram_id', userIds);
         const userMap = {};
         (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
 
-        // Простой расчёт ELO: победители +25, проигравшие -25
-        // (можешь потом усложнить под свой DXP)
         const WIN_DELTA = 25;
         const LOSE_DELTA = -25;
 
         const updatesA = [];
         const updatesB = [];
 
+        // --- Команда A ---
         for (const p of teamA) {
-    const pid = Number(p.telegram_id);
-    const u = userMap[pid] || { elo: 1000 };
-    ...
-    await sb.from('users').update({
-        elo: after,
-        matches_played: (u.matches_played ?? 0) + 1,
-        wins: (u.wins ?? 0) + (winnerTeam === 'A' ? 1 : 0)
-    }).eq('telegram_id', pid);
-}
+            const pid = Number(p.telegram_id);
+            const u = userMap[pid] || { elo: 1000, matches_played: 0, wins: 0 };
+            const before = u.elo ?? 1000;
+            const delta = winnerTeam === 'A' ? WIN_DELTA : LOSE_DELTA;
+            const after = Math.max(0, before + delta);
 
+            updatesA.push({ ...p, elo_before: before, elo_after: after });
+
+            await sb.from('users').update({
+                elo: after,
+                matches_played: (u.matches_played ?? 0) + 1,
+                wins: (u.wins ?? 0) + (winnerTeam === 'A' ? 1 : 0)
+            }).eq('telegram_id', pid);
+        }
+
+        // --- Команда B ---
         for (const p of teamB) {
-            const u = userMap[Number(p.telegram_id)] || { elo: 1000 };
+            const pid = Number(p.telegram_id);
+            const u = userMap[pid] || { elo: 1000, matches_played: 0, wins: 0 };
             const before = u.elo ?? 1000;
             const delta = winnerTeam === 'B' ? WIN_DELTA : LOSE_DELTA;
             const after = Math.max(0, before + delta);
 
             updatesB.push({ ...p, elo_before: before, elo_after: after });
+
             await sb.from('users').update({
                 elo: after,
                 matches_played: (u.matches_played ?? 0) + 1,
                 wins: (u.wins ?? 0) + (winnerTeam === 'B' ? 1 : 0)
-            }).eq('telegram_id', p.telegram_id);
+            }).eq('telegram_id', pid);
         }
 
-        // Обновляем матч
         await sb.from('game_matches').update({
             status: 'finished',
             result_status: 'confirmed',
@@ -12182,7 +12187,6 @@ async function finishMatch(matchId, result) {
         haptic('heavy');
         showToast('🏆 Матч завершён!');
 
-        // Переходим на экран "Завершено"
         const { data: fresh } = await sb.from('game_matches')
             .select('*').eq('id', matchId).single();
         currentMatch = fresh;
@@ -12208,8 +12212,9 @@ async function finishMatch(matchId, result) {
                           || (currentMatch.winner_team === 'B' && (currentMatch.team_b_players || []).some(p => p.telegram_id === me));
 
             const myTeam = (currentMatch.team_a_players || []).some(p => p.telegram_id === me) ? 'A' : 'B';
-            const myBefore = ((myTeam === 'A' ? currentMatch.team_a_players : currentMatch.team_b_players) || [])
-    .find(p => Number(p.telegram_id) === Number(me))?.elo_before || 1000;
+            const meEntry = ((myTeam === 'A' ? currentMatch.team_a_players : currentMatch.team_b_players) || [])
+    .find(p => Number(p.telegram_id) === Number(me));
+const myBefore = meEntry?.elo_before ?? 1000;
 
             const { data: meData } = await sb.from('users').select('elo').eq('telegram_id', me).single();
             const myAfter = meData?.elo ?? 1000;
