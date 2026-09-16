@@ -6072,6 +6072,15 @@ body::after {
 let sb = null;
 if (window.supabase?.createClient) {
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ============================================================
+// DXP HELPERS — единая точка правды
+// В БД поле называется elo, в UI показываем как DXP
+// ============================================================
+function getDXP(user) {
+    if (!user) return 1000;
+    const v = user.elo ?? user.DXP;
+    return (typeof v === 'number' && !isNaN(v)) ? v : 1000;
+}
 } else {
     console.warn('⚠️ Supabase не загружен при старте скрипта');
 }
@@ -7100,7 +7109,7 @@ async function openPlayerProfile(userId) {
                 <div class="profile-level-badge" style="margin-top: 10px;">⚡ Уровень ${level}</div>
             </div>
             <div class="profile-stats-grid">
-                <div class="profile-stat"><div class="profile-stat-value">${user.DXP?? 1000}</div><div class="profile-stat-label">DXP</div></div>
+                <div class="profi<div class="profile-stat"><div class="profile-stat-value">${user.elo ?? 1000}</div><div class="profile-stat-label">DXP</div></div>le-stat"><div class="profile-stat-value">${user.DXP?? 1000}</div><div class="profile-stat-label">DXP</div></div>
                 <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
                 <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
             </div>
@@ -7986,7 +7995,7 @@ async function loadClubEvents() { /* deprecated */ }
                             <div class="lb-avatar">${av}</div>
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                                <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
+                                <div style="font-size:11px;color:var(--hint);">DXP ${u.elo ?? 1000}</div>
                             </div>
                             <button class="friend-action accept" onclick="acceptClubRequest(${r.id}, ${r.telegram_id})">✓</button>
                             <button class="friend-action decline" onclick="declineClubRequest(${r.id})">✕</button>
@@ -8365,7 +8374,7 @@ async function updateRequestsBadge() {
                                 <div class="lb-avatar">${av}</div>
                                 <div style="flex:1;min-width:0;">
                                     <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
-                                    <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
+                                    <div style="font-size:11px;color:var(--hint);">DXP ${u.elo ?? 1000}</div>
                                 </div>
                             </div>`;
                     }).join('')}
@@ -9124,7 +9133,7 @@ function renderParty() {
                 return `
                     <div class="party-member">
                         <span>${escapeHtml(m.display_name || 'Игрок')}${isLeader ? ' 👑' : ''}</span>
-                        <span style="color:var(--hint);font-size:11px;">${m.DXP|| 1000}</span>
+                        <span style="color:var(--hint);font-size:11px;">${m.elo ?? 1000}</span>
                         ${removeBtn}
                     </div>`;
             }).join('');
@@ -9283,7 +9292,7 @@ function renderParty() {
                                 <div class="lb-avatar">${av}</div>
                                 <div style="flex:1;">
                                     <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${isLeader ? ' 👑' : ''}</div>
-                                    <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
+                                    <div style="font-size:11px;color:var(--hint);">DXP ${u.elo ?? 1000}</div>
                                 </div>
                             </div>
                         `;
@@ -9552,7 +9561,7 @@ async function askJoinRoom(partyId) {
                             <div class="lb-avatar">${av}</div>
                             <div style="flex:1;min-width:0;">
                                 <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                                <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
+                                <div style="font-size:11px;color:var(--hint);">DXP ${u.elo ?? 1000}</div>
                             </div>
                             <button class="friend-action add" onclick="inviteToParty(${u.telegram_id})">Пригласить</button>
                         </div>`;
@@ -10354,7 +10363,7 @@ async function renderAdminPanel() {
                                 <span class="role-tag owner" style="background: rgba(167,139,250,0.18); color: var(--purple); border-color: rgba(167,139,250,0.3);">⭐ MOD</span>
                             </div>
                             <div style="font-size:11px;color:var(--hint);">
-                                ${m.username ? '@' + escapeHtml(m.username) + ' · ' : ''}DXP${m.DXP|| 1000}
+                                ${m.username ? '@' + escapeHtml(m.username) + ' · ' : ''}DXP ${m.elo ?? 1000}
                             </div>
                         </div>
                         <button class="friend-action decline" onclick="event.stopPropagation();revokeModerator(${m.telegram_id})">Снять</button>
@@ -10664,11 +10673,12 @@ async function loadPlayRooms() {
             const isLeader = String(room.leader_id) === String(currentUser.telegram_id);
 
             const leader = leaderMap[room.leader_id] || {};
-            const src = leader.custom_avatar || leader.photo_url;
-            const initial = (leader.display_name || 'U')[0].toUpperCase();
-            const av = src ? `<img src="${src}" alt="">` : initial;
-            const lvl = eloToLevel(leader.DXP|| 1000);
-            const progress = Math.min(100, Math.round((count / room.max_players) * 100));
+const src = leader.custom_avatar || leader.photo_url;
+const initial = (leader.display_name || 'U')[0].toUpperCase();
+const av = src ? `<img src="${src}" alt="">` : initial;
+const leaderElo = leader.elo ?? 1000;
+const lvl = eloToLevel(leaderElo);
+const progress = Math.min(100, Math.round((count / room.max_players) * 100));
 
             let actionHTML;
             if (alreadyInThis) {
@@ -10689,7 +10699,7 @@ async function loadPlayRooms() {
                             <div class="prc-name">${escapeHtml(leader.display_name || 'Игрок')}${isLeader ? ' <span style="color:var(--gold);">👑</span>' : ''}</div>
                             <div class="prc-meta">
                                 <span class="prc-badge">⚡ ${lvl} ур.</span>
-                                <span class="prc-badge gold">${leader.DXP|| 1000} DXP</span>
+                                <span class="prc-badge gold">${leaderElo} DXP</span>
                             </div>
                         </div>
                         <div class="prc-count">
@@ -10903,26 +10913,27 @@ async function renderRoomContent(roomId) {
 
         // Рендер игрока в team-zone
         const renderTZPlayer = (p, teamSide) => {
-            const u = userById[p.telegram_id] || {};
-            const av = renderAvatar(u);
-            const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
-            const isHost = String(p.telegram_id) === String(room.leader_id);
-            const lvl = eloToLevel(u.DXP|| 1000);
-            return `
-                <div class="tz-player ${isMe ? 'you' : ''}"
-                     onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
-                    <div class="tz-avatar">${av}</div>
-                    <div class="tz-info">
-                        <div class="tz-name">
-                    ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
-                    ${isHost ? '👑' : ''}
-                            ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
-                        </div>
-                        <div class="tz-stats">⚡ ${lvl} ур. · ${u.DXP|| 1000} DXP</div>
-                    </div>
+    const u = userById[p.telegram_id] || {};
+    const av = renderAvatar(u);
+    const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
+    const isHost = String(p.telegram_id) === String(room.leader_id);
+    const uElo = u.elo ?? 1000;
+    const lvl = eloToLevel(uElo);
+    return `
+        <div class="tz-player ${isMe ? 'you' : ''}"
+             onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
+            <div class="tz-avatar">${av}</div>
+            <div class="tz-info">
+                <div class="tz-name">
+            ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
+            ${isHost ? '👑' : ''}
+                    ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
                 </div>
-            `;
-        };
+                <div class="tz-stats">⚡ ${lvl} ур. · ${uElo} DXP</div>
+            </div>
+        </div>
+    `;
+};
 
         const renderTeamZone = (team, list, full) => {
             const isMyTeam = myTeam === team;
@@ -13688,7 +13699,7 @@ async function renderRoomInviteList(roomId) {
                     <div class="lb-avatar">${av}</div>
                     <div style="flex:1;min-width:0;">
                         <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
-                        <div style="font-size:11px;color:var(--hint);">DXP${u.DXP|| 1000}</div>
+                        <div style="font-size:11px;color:var(--hint);">DXP ${u.elo ?? 1000}</div>
                     </div>
                     ${btn}
                 </div>
