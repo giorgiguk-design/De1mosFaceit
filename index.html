@@ -3804,11 +3804,11 @@ body::after {
 
 /* Микро-вспышка при обновлении значения */
 .stat-value.bump {
-    animation: statBump 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: statBump 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes statBump {
     0%   { transform: scale(1); filter: brightness(1); }
-    40%  { transform: scale(1.15); filter: brightness(1.6); }
+    35%  { transform: scale(1.25); filter: brightness(1.9); text-shadow: 0 0 24px rgba(var(--emerald-rgb), 1); }
     100% { transform: scale(1); filter: brightness(1); }
 }
 
@@ -4765,10 +4765,307 @@ body::after {
     border: none;
     font-family: inherit;
 }
+
+    .elo-value-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+.elo-value-wrap .elo-value {
+    font-size: 54px;
+    line-height: 1;
+}
+.elo-dxp-label {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--emerald-3);
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.55);
+    opacity: 0.9;
+    align-self: flex-end;
+    padding-bottom: 6px;
+    animation: dxpLabelPulse 3s ease-in-out infinite;
+}
+@keyframes dxpLabelPulse {
+    0%, 100% { text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.55); }
+    50%      { text-shadow: 0 0 22px rgba(var(--emerald-rgb), 0.9); }
+}
+
+    /* ============ ANIMATED BACKGROUND ============ */
+/* Слой 1: пульсирующие орбы */
+body::before {
+    content: ''; position: fixed; inset: -50%;
+    background:
+        radial-gradient(circle at 20% 20%, var(--glow-1), transparent 45%),
+        radial-gradient(circle at 80% 60%, var(--glow-2), transparent 50%),
+        radial-gradient(circle at 50% 100%, var(--glow-3), transparent 55%);
+    animation: bgFloat 24s ease-in-out infinite alternate,
+               bgHueShift 30s linear infinite;
+    z-index: -3; filter: blur(40px);
+}
+
+/* Слой 2: движущиеся частицы */
+.bg-particles {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    overflow: hidden;
+}
+.bg-particles::before,
+.bg-particles::after {
+    content: '';
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow:
+        120px 80px 0 -1px var(--emerald),
+        240px 200px 0 -1.5px var(--emerald-3),
+        360px 120px 0 -1px var(--emerald-2),
+        480px 300px 0 -2px var(--emerald),
+        620px 180px 0 -1px var(--emerald-3),
+        780px 420px 0 -1.5px var(--emerald-2),
+        900px 260px 0 -1px var(--emerald),
+        1050px 540px 0 -2px var(--emerald-3),
+        1180px 380px 0 -1px var(--emerald-2),
+        1320px 620px 0 -1.5px var(--emerald),
+        200px 500px 0 -2px var(--emerald-3),
+        700px 700px 0 -1px var(--emerald-2);
+    animation: particlesFloat 40s linear infinite;
+    opacity: 0.6;
+}
+.bg-particles::after {
+    width: 2px; height: 2px;
+    box-shadow:
+        150px 350px 0 -1px var(--emerald-3),
+        340px 550px 0 -1.5px var(--emerald),
+        520px 420px 0 -1px var(--emerald-2),
+        700px 180px 0 -2px var(--emerald-3),
+        880px 660px 0 -1px var(--emerald),
+        1020px 400px 0 -1.5px var(--emerald-2),
+        1250px 220px 0 -1px var(--emerald-3),
+        1420px 580px 0 -2px var(--emerald);
+    animation: particlesFloat2 55s linear infinite reverse;
+    opacity: 0.4;
+}
+@keyframes particlesFloat {
+    0%   { transform: translateY(0) translateX(0); }
+    100% { transform: translateY(-60vh) translateX(-40px); }
+}
+@keyframes particlesFloat2 {
+    0%   { transform: translateY(0) translateX(0); }
+    100% { transform: translateY(-80vh) translateX(60px); }
+}
+@keyframes bgHueShift {
+    0%   { filter: blur(40px) hue-rotate(0deg); }
+    100% { filter: blur(40px) hue-rotate(360deg); }
+}
+
+/* Слой 3: сетка (усиливаем) */
+body::after {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 75%);
+    z-index: -1; pointer-events: none;
+    animation: gridDrift 60s linear infinite;
+}
+@keyframes gridDrift {
+    0%   { background-position: 0 0, 0 0; }
+    100% { background-position: 40px 40px, 40px 40px; }
+}
+
+/* Плавающие световые лучи */
+.bg-rays {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    overflow: hidden;
+}
+.bg-rays::before,
+.bg-rays::after {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(var(--emerald-rgb), 0.03) 60deg,
+        transparent 120deg,
+        rgba(var(--emerald-rgb), 0.04) 180deg,
+        transparent 240deg,
+        rgba(var(--emerald-rgb), 0.03) 300deg,
+        transparent 360deg
+    );
+    animation: raysRotate 90s linear infinite;
+}
+.bg-rays::after {
+    animation-duration: 140s;
+    animation-direction: reverse;
+    opacity: 0.6;
+}
+@keyframes raysRotate {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+    .onboard-themes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+}
+.onboard-theme {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 6px;
+    background: rgba(var(--emerald-rgb), 0.04);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--text);
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.22s ease,
+                background 0.22s ease;
+}
+.onboard-theme:active { transform: scale(0.95); }
+.onboard-theme.active {
+    border-color: var(--emerald);
+    background: rgba(var(--emerald-rgb), 0.12);
+    box-shadow: 0 0 0 1px rgba(var(--emerald-rgb), 0.25),
+                0 0 20px rgba(var(--emerald-rgb), 0.2);
+}
+.onboard-theme-swatch {
+    width: 32px; height: 32px; border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1),
+                0 4px 12px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.onboard-theme-name {
+    font-size: 11px; font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--hint);
+}
+.onboard-theme.active .onboard-theme-name { color: var(--emerald); }
+
+    .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--hint);
+    margin: 4px 0 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+.section-title::before {
+    content: '';
+    width: 3px; height: 12px;
+    background: linear-gradient(180deg, var(--emerald), var(--emerald-3));
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+}
+.section-title::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--border-strong), transparent);
+}
+
+    .leaderboard-item,
+.menu-item,
+.chat-list-item,
+.play-room-card,
+.club-member-row,
+.mini-stat,
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+.leaderboard-item::after,
+.menu-item::after,
+.chat-list-item::after,
+.play-room-card::after,
+.club-member-row::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -60%;
+    width: 40%; height: 100%;
+    background: linear-gradient(120deg,
+        transparent 0%,
+        rgba(var(--emerald-rgb), 0.10) 50%,
+        transparent 100%);
+    transform: skewX(-20deg);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.leaderboard-item:hover::after,
+.menu-item:hover::after,
+.chat-list-item:hover::after,
+.play-room-card:hover::after,
+.club-member-row:hover::after {
+    opacity: 1;
+    animation: cardShine 0.9s ease-out;
+}
+@keyframes cardShine {
+    0%   { left: -60%; }
+    100% { left: 130%; }
+}
+
+    .nav-item.active .nav-icon {
+    animation: navPulse 2s ease-in-out infinite;
+}
+@keyframes navPulse {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(var(--emerald-rgb), 0)); transform: scale(1); }
+    50%      { filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.8)); transform: scale(1.06); }
+}
+
+    .play-room-card::before {
+    background: linear-gradient(90deg,
+        var(--emerald), var(--emerald-2), var(--emerald-3), var(--emerald-2), var(--emerald));
+    background-size: 200% 100%;
+    animation: barFlow 4s linear infinite;
+}
+@keyframes barFlow {
+    0%   { background-position: 0% 0; }
+    100% { background-position: 200% 0; }
+}
+
+    .page.active {
+    animation: pageFade 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes pageFade {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); filter: blur(4px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+    .club-logo {
+    box-shadow: 0 0 0 1px var(--border-strong),
+                0 0 20px rgba(var(--emerald-rgb), 0.15);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.club-logo:hover {
+    box-shadow: 0 0 0 1px var(--emerald),
+                0 0 28px rgba(var(--emerald-rgb), 0.45);
+    transform: scale(1.03);
+}
     
 </style>
 </head>
 <body>
+    <div class="bg-particles"></div>
+    <div class="bg-rays"></div>
+
         <header class="header">
         <div class="avatar" id="headerAvatar" onclick="switchPage('profile')">?</div>
 <div class="header-title">De1mos <span>Faceit</span></div>
@@ -4788,7 +5085,10 @@ body::after {
     <div class="container page active" id="page-dashboard">
         <div class="elo-card">
             <div class="elo-label">Ваш рейтинг</div>
-            <div class="elo-value" id="eloValue">—</div>
+            <div class="elo-value-wrap">
+    <span class="elo-value" id="eloValue">—</span>
+    <span class="elo-dxp-label">DXP</span>
+</div>
             <div class="elo-level" id="eloLevel">Уровень —</div>
             <div class="elo-progress"><div class="elo-progress-bar" id="eloProgress"></div></div>
         </div>
@@ -5094,6 +5394,24 @@ body::after {
                 <input type="file" id="onboardAvatarInput" accept="image/*" style="display: none;">
             </div>
         </div>
+
+        <div>
+    <label class="field-label" style="margin-top: 14px;">Выбери тему</label>
+    <div class="onboard-themes" id="onboardThemes">
+        <button type="button" class="onboard-theme" data-theme="green" onclick="pickOnboardTheme('green', this)">
+            <span class="onboard-theme-swatch" style="background: linear-gradient(135deg, #00e08a, #00b874);"></span>
+            <span class="onboard-theme-name">Изумруд</span>
+        </button>
+        <button type="button" class="onboard-theme" data-theme="purple" onclick="pickOnboardTheme('purple', this)">
+            <span class="onboard-theme-swatch" style="background: linear-gradient(135deg, #a78bfa, #8b5cf6);"></span>
+            <span class="onboard-theme-name">Аметист</span>
+        </button>
+        <button type="button" class="onboard-theme" data-theme="red" onclick="pickOnboardTheme('red', this)">
+            <span class="onboard-theme-swatch" style="background: linear-gradient(135deg, #ff2e4d, #cc1e38);"></span>
+            <span class="onboard-theme-name">Кровь</span>
+        </button>
+    </div>
+</div>
 
         <button class="profile-action-btn save" id="onboardSaveBtn"
                 style="margin-top: 18px;" onclick="saveOnboarding()">
@@ -5625,6 +5943,13 @@ body::after {
                 btn.disabled = false;
                 btn.textContent = '✅ НАЧАТЬ ИГРАТЬ';
             }
+        }
+
+            function pickOnboardTheme(theme, btn) {
+            applyTheme(theme);
+            document.querySelectorAll('.onboard-theme').forEach(b => b.classList.remove('active'));
+            btn?.classList.add('active');
+            haptic('light');
         }
 
         // ============================================================
@@ -7172,6 +7497,8 @@ function renderMyClub(container) {
                     <div class="club-hero-name">${escapeHtml(club.name)}</div>
                     <div class="club-hero-meta">[${escapeHtml(club.tag)}] · ${members.length}/${club.max_members}</div>
                 </div>
+                <button class="club-gear" onclick="openAllClubsSheet()" title="Все клубы">🔍</button>
+                
                 ${canEdit ? `
                     <button class="club-gear" onclick="openEditClubSheet()" title="Настройки клуба">
                         ⚙️
@@ -7195,6 +7522,65 @@ function renderMyClub(container) {
     `;
 
     if (isOwner) updateRequestsBadge();
+}
+
+            async function openAllClubsSheet() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('allClubsSheet').classList.add('active');
+    document.getElementById('allClubsSearch').value = '';
+    await loadAllClubsSheet('');
+}
+
+let _allClubsTimer = null;
+function debouncedAllClubsSearch() {
+    clearTimeout(_allClubsTimer);
+    _allClubsTimer = setTimeout(() => {
+        const q = document.getElementById('allClubsSearch').value.trim();
+        loadAllClubsSheet(q);
+    }, 300);
+}
+
+async function loadAllClubsSheet(q) {
+    const el = document.getElementById('allClubsList');
+    el.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+        let query = sb.from('clubs')
+            .select('id, name, tag, description, logo_url, max_members')
+            .order('created_at', { ascending: false }).limit(100);
+        if (q.length >= 2) {
+            const safe = q.replace(/[%_]/g, '');
+            query = query.or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`);
+        }
+        const { data: clubs } = await query;
+
+        const clubIds = (clubs || []).map(c => c.id);
+        const { data: members } = await sb.from('club_members').select('club_id').in('club_id', clubIds);
+        const countMap = {};
+        (members || []).forEach(m => countMap[m.club_id] = (countMap[m.club_id] || 0) + 1);
+
+        if (!clubs?.length) { el.innerHTML = '<div class="empty">Клубов не найдено</div>'; return; }
+
+        el.innerHTML = clubs.map(c => {
+            const logoHTML = c.logo_url ? `<img src="${c.logo_url}" alt="">` : c.tag.slice(0, 2).toUpperCase();
+            const count = countMap[c.id] || 0;
+            const isMine = myClub?.club?.id === c.id;
+            return `
+                <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => viewClub(${c.id}), 200);">
+                    <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="leaderboard-name">
+                            ${escapeHtml(c.name)}
+                            ${isMine ? '<span class="role-tag owner" style="margin-left:6px;">ТВОЙ</span>' : ''}
+                        </div>
+                        <div style="font-size:11px;color:var(--hint);">[${escapeHtml(c.tag)}] · ${count}/${c.max_members}</div>
+                    </div>
+                    <button class="friend-action add" onclick="event.stopPropagation();closeAllSheets();setTimeout(() => viewClub(${c.id}), 200);">Открыть</button>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>';
+    }
 }
 
         // ============================================================
@@ -7526,7 +7912,15 @@ async function updateRequestsBadge() {
             } catch (e) { showToast('Ошибка'); }
         }
 
-        function openCreateClubSheet() {
+        async function openCreateClubSheet() {
+            const { data: ban } = await sb.from('club_deletion_bans')
+                .select('banned_until, reason').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+            if (ban && new Date(ban.banned_until) > new Date()) {
+                const left = Math.ceil((new Date(ban.banned_until) - Date.now()) / 3600000);
+                showToast(`🚫 Создание клуба заблокировано на ${left} ч.`);
+                return;
+            }
+
             const name = prompt('Название клуба (2-30):');
             if (!name || name.length < 2 || name.length > 30) return;
             const tag = prompt('Тег (2-5):');
@@ -7705,11 +8099,62 @@ async function updateRequestsBadge() {
                                 </div>
                             </div>`;
                     }).join('')}
+
+                    ${(isModerator(currentUser) && myClub?.club?.id !== clubId) ? `
+                        <button class="profile-action-btn cancel"
+                                style="margin-top: 14px; background: rgba(255,84,112,0.15); border: 1px solid rgba(255,84,112,0.4); color: var(--red);"
+                                onclick="adminDeleteClub(${clubId})">
+                            🗑️ Удалить клуб (модератор)
+                        </button>
+                    ` : ''}
                 `;
             } catch (e) {
                 content.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить</div>';
             }
         }
+
+            async function adminDeleteClub(clubId) {
+    if (!isModerator(currentUser)) return;
+    if (!confirm('Удалить этот клуб по причине нарушений? Игроки получат уведомление.')) return;
+
+    const reason = prompt('Причина удаления (увидят владелец и участники):', 'Нарушение правил клуба');
+    if (!reason) return;
+
+    try {
+        const { data: club } = await sb.from('clubs').select('*').eq('id', clubId).single();
+        const { data: members } = await sb.from('club_members').select('telegram_id').eq('club_id', clubId);
+
+        await sb.from('club_members').delete().eq('club_id', clubId);
+        await sb.from('club_requests').delete().eq('club_id', clubId);
+        await sb.from('club_events').delete().eq('club_id', clubId);
+        await sb.from('club_bans').delete().eq('club_id', clubId);
+        await sb.from('club_invites').delete().eq('club_id', clubId);
+        await sb.from('clubs').delete().eq('id', clubId);
+
+        if (club?.owner_id) {
+            const until = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+            await sb.from('club_deletion_bans').upsert({
+                telegram_id: club.owner_id,
+                banned_until: until,
+                reason: reason
+            }, { onConflict: 'telegram_id' });
+        }
+
+        const msg = `🚫 <b>Ваш клуб удалён по причине нарушений правил</b>\n\n` +
+                    `<b>Клуб:</b> ${escapeHtml(club?.name || '')} [${escapeHtml(club?.tag || '')}]\n` +
+                    `<b>Причина:</b> ${escapeHtml(reason)}\n\n` +
+                    `Повторное создание клуба возможно только <b>через 24 часа</b>.`;
+        for (const m of members || []) {
+            await notify(m.telegram_id, msg, 'club');
+        }
+
+        showToast('✅ Клуб удалён');
+        closePlayerModal();
+        if (myClub?.club?.id === clubId) { myClub = null; openClubPage(); }
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
+}
 
         async function sendClubRequest(clubId, btnEl) {
             if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
@@ -13498,6 +13943,24 @@ registerInterval('notifBadge', setInterval(() => {
     <div class="sheet" id="clubEventsSheet" style="max-height: 88vh;">
     <div class="sheet-title">📜 Недавние события</div>
     <div id="clubEventsSheetContent"><div class="empty">Загрузка...</div></div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
+
+    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
+        <div class="sheet-title">🛡️ Все клубы</div>
+        <input type="text" class="field-input" id="allClubsSearch"
+               placeholder="🔍 Название или тег" autocomplete="off"
+               oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
+        <div id="allClubsList"><div class="empty">Загрузка...</div></div>
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    </div>
+
+    <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
+    <div class="sheet-title">🛡️ Все клубы</div>
+    <input type="text" class="field-input" id="allClubsSearch"
+           placeholder="🔍 Название или тег" autocomplete="off"
+           oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
+    <div id="allClubsList"><div class="empty">Загрузка...</div></div>
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 </body>
