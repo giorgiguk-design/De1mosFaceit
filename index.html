@@ -12314,39 +12314,6 @@ if (Date.now() - last <= 60 * 1000) {   // ← 60 * 1000
     }
 }
 
-function showVetoCancelledScreen(reason) {
-    const content = document.getElementById('vetoContent');
-    if (!content) return;
-
-    const text = reason === 'veto_timeout'
-        ? 'Капитан не сделал выбор за 10 секунд.'
-        : 'Матч отменён.';
-
-    content.innerHTML = `
-        <div class="veto-wrap">
-            <div class="ig-cancelled-box" style="margin-top: 40px;">
-                <span class="ig-cancelled-icon">⏰</span>
-                <div class="ig-cancelled-title">МАТЧ ОТМЕНЁН</div>
-                <div class="ig-cancelled-sub">
-                    ${escapeHtml(text)}<br>
-                    Комната будет закрыта.
-                </div>
-            </div>
-
-            <button class="profile-action-btn save" onclick="returnAfterVetoCancel()">
-                ← ВЕРНУТЬСЯ К КОМНАТАМ
-            </button>
-        </div>
-    `;
-
-    if (vetoTimeoutHandle) {
-        clearTimeout(vetoTimeoutHandle);
-        vetoTimeoutHandle = null;
-    }
-
-    haptic('heavy');
-}
-
 async function returnAfterVetoCancel() {
     if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
     if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
@@ -14292,8 +14259,13 @@ if (room.status === 'result') {
     } catch (e) {}
     return;
 }
-if (room.status === 'open') {
-    await renderRoomContent(roomId);
+        if (room.status === 'open') {
+            await renderRoomContent(roomId);
+        }
+        })
+        .subscribe((status) => {
+            console.log('Room realtime status:', status);
+        });
 }
 
 function unsubscribeRoomRealtime() {
