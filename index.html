@@ -13600,6 +13600,8 @@ async function finishMatch(matchId, result) {
         const updatesA = [];
         const updatesB = [];
 
+                const historyRows = [];
+
         for (const p of teamA) {
             const pid = Number(p.telegram_id);
             if (!pid) continue;
@@ -13609,12 +13611,53 @@ async function finishMatch(matchId, result) {
             const after = Math.max(0, before + delta);
 
             updatesA.push({ ...p, elo_before: before, elo_after: after });
+            historyRows.push({
+                telegram_id: pid,
+                match_id: matchId,
+                elo_before: before,
+                elo_after: after,
+                delta: after - before,
+                won: winnerTeam === 'A'
+            });
 
             await sb.from('users').update({
                 elo: after,
                 matches_played: (u.matches_played ?? 0) + 1,
                 wins: (u.wins ?? 0) + (winnerTeam === 'A' ? 1 : 0)
             }).eq('telegram_id', pid);
+        }
+
+        for (const p of teamB) {
+            const pid = Number(p.telegram_id);
+            if (!pid) continue;
+            const u = userMap[pid] || { elo: 1000, matches_played: 0, wins: 0 };
+            const before = u.elo ?? 1000;
+            const delta = winnerTeam === 'B' ? WIN_DELTA : LOSE_DELTA;
+            const after = Math.max(0, before + delta);
+
+            updatesB.push({ ...p, elo_before: before, elo_after: after });
+            historyRows.push({
+                telegram_id: pid,
+                match_id: matchId,
+                elo_before: before,
+                elo_after: after,
+                delta: after - before,
+                won: winnerTeam === 'B'
+            });
+
+            await sb.from('users').update({
+                elo: after,
+                matches_played: (u.matches_played ?? 0) + 1,
+                wins: (u.wins ?? 0) + (winnerTeam === 'B' ? 1 : 0)
+            }).eq('telegram_id', pid);
+        }
+
+        // Пишем историю
+        if (historyRows.length) {
+            try {
+                const { error: hErr } = await sb.from('dxp_history').insert(historyRows);
+                if (hErr) console.warn('dxp_history insert error:', hErr);
+            } catch (e) { console.warn('dxp_history insert:', e); }
         }
 
         for (const p of teamB) {
@@ -13697,23 +13740,28 @@ async function renderFinishedScreen() {
     const isFinished = currentMatch.status === 'finished';
     const isDisputed = currentMatch.result_status === 'disputed';
     const isConfirmed = currentMatch.result_status === 'confirmed';
+    const isCancelled = currentMatch.status === 'cancelled';
 
     const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
                  : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
 
+    // Загружаем пользователей + голоса
     const allIds = [...teamA, ...teamB].map(p => Number(p.telegram_id)).filter(Boolean);
-    const [usersRes, votesRes] = await Promise.all([
+    const [usersRes, votesRes, shotsRes] = await Promise.all([
         sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url, elo')
             .in('telegram_id', allIds.length ? allIds : [0]),
-        sb.from('match_votes').select('*').eq('match_id', currentMatch.id)
+        sb.from('match_votes').select('*').eq('match_id', currentMatch.id),
+        sb.from('match_screenshots').select('*').eq('match_id', currentMatch.id)
     ]);
     const userMap = {};
     (usersRes.data || []).forEach(u => userMap[Number(u.telegram_id)] = u);
     const votes = votesRes.data || [];
+    const screenshots = shotsRes.data || [];
 
     const capAVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_a_id));
     const capBVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_b_id));
 
+    // Мой ELO
     const meEntry = ((myTeam === 'A' ? teamA : teamB) || [])
         .find(p => Number(p.telegram_id) === me);
     const myBefore = meEntry?.elo_before ?? null;
@@ -13722,15 +13770,19 @@ async function renderFinishedScreen() {
 
     const isWinner = myTeam && currentMatch.winner_team === myTeam;
 
+    // ============================================================
+    // Рендер строки игрока
+    // ============================================================
     const renderRow = (p, team) => {
         const u = userMap[Number(p.telegram_id)] || {};
         const av = renderAvatar(u);
         const pIsCap = Number(p.telegram_id) === (team === 'A' ? currentMatch.captain_a_id : currentMatch.captain_b_id);
         const vote = votes.find(v => Number(v.telegram_id) === Number(p.telegram_id));
         const isMe = Number(p.telegram_id) === me;
-        const eloBefore = p.elo_before ?? u.elo ?? '—';
-        const eloAfter = p.elo_after ?? u.elo ?? '—';
-        const d = (typeof eloBefore === 'number' && typeof eloAfter === 'number') ? eloAfter - eloBefore : null;
+
+        const eloBefore = p.elo_before ?? null;
+        const eloAfter = p.elo_after ?? null;
+        const d = (eloBefore != null && eloAfter != null) ? (eloAfter - eloBefore) : null;
 
         return `
             <div class="ig-player-row team-${team.toLowerCase()} ${isMe ? 'you' : ''}" style="margin-bottom: 6px;">
@@ -13751,6 +13803,9 @@ async function renderFinishedScreen() {
         `;
     };
 
+    // ============================================================
+    // Блок с голосами капитанов
+    // ============================================================
     const votesBlock = `
         <div style="margin-top: 16px; padding: 14px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 14px;">
             <div style="font-size: 10px; color: var(--hint); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 800; margin-bottom: 10px;">
@@ -13779,15 +13834,61 @@ async function renderFinishedScreen() {
         </div>
     `;
 
+    // ============================================================
+    // Блок скриншотов
+    // ============================================================
+    const screenshotsBlock = screenshots.length ? `
+        <div class="ig-section-title" style="margin-top: 20px;">
+            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
+                <path d="M3 7h18v13H3z"/>
+                <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Скриншоты матча
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${screenshots.map(s => {
+                const team = s.team || '—';
+                const isA = team === 'A';
+                return `
+                    <div style="padding: 10px; background: rgba(${isA ? '0,224,138' : '255,84,112'},0.05); border: 1px solid rgba(${isA ? '0,224,138' : '255,84,112'},0.25); border-radius: 12px;">
+                        <div style="font-size: 10px; color: var(--hint); letter-spacing: 1px; text-transform: uppercase; font-weight: 800; margin-bottom: 8px;">
+                            Команда ${team}
+                        </div>
+                        <img src="${s.url}" style="width: 100%; border-radius: 10px; cursor: pointer; display:block;"
+                             onclick="openImageView('${s.url}')">
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    ` : '';
+
+    // ============================================================
+    // Верхний блок
+    // ============================================================
     let headerBlock = '';
-    if (isFinished && isConfirmed) {
+
+    if (isCancelled) {
+        headerBlock = `
+            <div class="ig-cancelled-box">
+                <span class="ig-cancelled-icon">⏰</span>
+                <div class="ig-cancelled-title">МАТЧ ОТМЕНЁН</div>
+                <div class="ig-cancelled-sub">
+                    ${escapeHtml(currentMatch.cancelled_reason === 'veto_timeout'
+                        ? 'Капитан не сделал выбор за 60 секунд.'
+                        : 'Матч отменён.')}
+                </div>
+            </div>
+        `;
+    } else if (isFinished && isConfirmed) {
         headerBlock = `
             <div class="profile-hero" style="text-align:center;">
                 <div style="font-size:64px;margin-bottom:14px;">${isWinner ? '🏆' : '😔'}</div>
                 <div style="font-size:22px;font-weight:800;color:${isWinner ? 'var(--emerald)' : 'var(--red)'};margin-bottom:8px;">
                     ${isWinner ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}
                 </div>
-                <div style="font-size:13px;color:var(--hint);margin-bottom:8px;">Карта: <b>${escapeHtml(currentMatch.final_map || '—')}</b></div>
+                <div style="font-size:13px;color:var(--hint);margin-bottom:8px;">
+                    Карта: <b>${escapeHtml(currentMatch.final_map || '—')}</b>
+                </div>
                 <div style="font-size:36px;font-weight:900;margin-bottom:20px;">
                     <span style="color:${currentMatch.winner_team === 'A' ? 'var(--emerald)' : 'var(--hint)'};">${currentMatch.score_a ?? '?'}</span>
                     <span style="color:var(--hint);font-size:20px;margin:0 12px;">:</span>
@@ -13814,13 +13915,33 @@ async function renderFinishedScreen() {
                 </div>
             </div>
         `;
+    } else {
+        // Матч в процессе (result без второго голоса)
+        headerBlock = `
+            <div class="profile-hero" style="text-align:center;">
+                <div style="font-size:64px;margin-bottom:14px;">⏳</div>
+                <div style="font-size:18px;font-weight:800;margin-bottom:8px;">
+                    Ожидание результата
+                </div>
+                <div style="font-size:13px;color:var(--hint);">
+                    Карта: <b>${escapeHtml(currentMatch.final_map || '—')}</b>
+                </div>
+            </div>
+        `;
     }
 
+    // ============================================================
+    // Может ли переопределить?
+    // ============================================================
     const canOverride = isModerator(currentUser) && (isDisputed || isFinished);
 
+    // ============================================================
+    // Финальный HTML
+    // ============================================================
     container.innerHTML = `
         ${headerBlock}
-        ${votesBlock}
+
+        ${(isFinished || isDisputed) ? votesBlock : ''}
 
         <div class="ig-section-title" style="margin-top: 20px;">
             <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
@@ -13832,8 +13953,11 @@ async function renderFinishedScreen() {
         ${teamA.map(p => renderRow(p, 'A')).join('')}
         ${teamB.map(p => renderRow(p, 'B')).join('')}
 
+        ${screenshotsBlock}
+
         ${canOverride ? `
-            <button class="profile-action-btn save" style="margin-top: 20px; background: rgba(217,171,90,0.9); color:#000;"
+            <button class="profile-action-btn save"
+                    style="margin-top: 20px; background: rgba(217,171,90,0.9); color:#000;"
                     onclick="openOverrideResultSheet()">
                 ⚖️ ПЕРЕОПРЕДЕЛИТЬ РЕЗУЛЬТАТ (МОДЕРАТОР)
             </button>
@@ -13844,10 +13968,20 @@ async function renderFinishedScreen() {
         </button>
 
         <div style="text-align: center; font-size: 11px; color: var(--hint); margin-top: 12px; line-height: 1.5;">
-            Результат окончательный.<br>
-            Изменить может только модератор.
+            ${isFinished || isDisputed
+                ? 'Результат окончательный.<br>Изменить может только модератор.'
+                : 'Ожидаем результат второго капитана.'}
         </div>
     `;
+
+    // ============================================================
+    // Перерисовываем график DXP (если он есть на странице)
+    // ============================================================
+    setTimeout(() => {
+        if (document.getElementById('eloChartCard')) {
+            renderEloChart(currentUser.telegram_id);
+        }
+    }, 300);
 }
 
 function returnToDashboard() {
@@ -18250,8 +18384,133 @@ async function loadMatchesHistory() {
     }
 }
 
-function openMatchDetails(matchId) {
-    showToast('Детали матча в разработке');
+async function openMatchDetails(matchId) {
+    const modal = document.getElementById('playerModal');
+    const content = document.getElementById('playerModalContent');
+    content.innerHTML = '<div class="empty">Загрузка...</div>';
+    modal.classList.add('active');
+
+    try {
+        const { data: m, error } = await sb.from('game_matches')
+            .select('*').eq('id', matchId).single();
+        if (error) throw error;
+        if (!m) { content.innerHTML = '<div class="empty">Матч не найден</div>'; return; }
+
+        const teamA = m.team_a_players || [];
+        const teamB = m.team_b_players || [];
+        const allIds = [...teamA, ...teamB].map(p => Number(p.telegram_id)).filter(Boolean);
+
+        const [usersRes, votesRes, shotsRes] = await Promise.all([
+            sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url, elo')
+                .in('telegram_id', allIds.length ? allIds : [0]),
+            sb.from('match_votes').select('*').eq('match_id', matchId),
+            sb.from('match_screenshots').select('*').eq('match_id', matchId)
+        ]);
+
+        const userMap = {};
+        (usersRes.data || []).forEach(u => userMap[Number(u.telegram_id)] = u);
+        const votes = votesRes.data || [];
+        const screenshots = shotsRes.data || [];
+
+        const me = Number(currentUser.telegram_id);
+        const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
+                     : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
+        const isWinner = myTeam && m.winner_team === myTeam;
+        const isFinished = m.status === 'finished';
+        const isDisputed = m.result_status === 'disputed';
+        const isCancelled = m.status === 'cancelled';
+
+        // Статус
+        let statusBlock = '';
+        if (isCancelled) {
+            statusBlock = `<div style="text-align:center; color: var(--red); font-weight:800; font-size:14px; margin-bottom:14px;">❌ МАТЧ ОТМЕНЁН</div>`;
+        } else if (isDisputed) {
+            statusBlock = `<div style="text-align:center; color: var(--gold); font-weight:800; font-size:14px; margin-bottom:14px;">⚖️ НА ПРОВЕРКЕ У МОДЕРАТОРА</div>`;
+        } else if (isFinished) {
+            statusBlock = `<div style="text-align:center; color:${isWinner ? 'var(--emerald)' : 'var(--red)'}; font-weight:900; font-size:18px; margin-bottom:14px;">${isWinner ? '🏆 ПОБЕДА' : '💀 ПОРАЖЕНИЕ'}</div>`;
+        } else {
+            statusBlock = `<div style="text-align:center; color: var(--hint); font-weight:800; font-size:14px; margin-bottom:14px;">⏳ ${escapeHtml(m.status)}</div>`;
+        }
+
+        const renderPlayer = (p, team) => {
+            const u = userMap[Number(p.telegram_id)] || {};
+            const av = renderAvatar(u);
+            const isCap = Number(p.telegram_id) === (team === 'A' ? m.captain_a_id : m.captain_b_id);
+            const vote = votes.find(v => Number(v.telegram_id) === Number(p.telegram_id));
+            const isMe = Number(p.telegram_id) === me;
+
+            const before = p.elo_before ?? null;
+            const after = p.elo_after ?? null;
+            const delta = (before != null && after != null) ? after - before : null;
+
+            return `
+                <div class="ig-player-row team-${team.toLowerCase()} ${isMe ? 'you' : ''}" style="margin-bottom: 6px;">
+                    <div class="ig-player-avatar">${av}</div>
+                    <div class="ig-player-info">
+                        <div class="ig-player-name">
+                            ${escapeHtml(u.display_name || 'Игрок')}
+                            ${isCap ? '<span style="color: var(--gold);">👑</span>' : ''}
+                            ${isMe ? '<span style="color: var(--emerald); font-size: 10px; font-weight: 800; margin-left: 4px;">ТЫ</span>' : ''}
+                        </div>
+                        <div class="ig-player-team-tag team-${team.toLowerCase()}" style="display:flex; justify-content:space-between; gap:8px;">
+                            <span>Команда ${team}${isCap ? ' · Капитан' : ''}</span>
+                            ${delta != null ? `<span style="color:${delta >= 0 ? 'var(--emerald)' : 'var(--red)'}; font-weight:800;">${delta >= 0 ? '+' : ''}${delta} DXP</span>` : ''}
+                        </div>
+                        ${vote && vote.score_a != null ? `<div style="font-size: 11px; color: var(--hint); margin-top: 4px;">Голос: <b style="color: var(--emerald);">${vote.score_a} : ${vote.score_b}</b> → ${vote.winner}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        };
+
+        const screenshotsHTML = screenshots.length ? `
+            <div class="ig-section-title" style="margin-top: 16px;">📸 Скриншоты</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${screenshots.map(s => `
+                    <div>
+                        <div style="font-size: 11px; color: var(--hint); margin-bottom: 4px;">Команда ${s.team || '—'}</div>
+                        <img src="${s.url}" style="width: 100%; border-radius: 12px; cursor: pointer;"
+                             onclick="openImageView('${s.url}')">
+                    </div>
+                `).join('')}
+            </div>
+        ` : '';
+
+        const scoreText = (m.score_a != null && m.score_b != null)
+            ? `${m.score_a} : ${m.score_b}` : '— : —';
+
+        content.innerHTML = `
+            <div style="text-align:center; margin-bottom: 16px;">
+                <div style="font-size: 12px; color: var(--hint); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 800; margin-bottom: 6px;">
+                    Матч #${String(m.id).padStart(6, '0')}
+                </div>
+                <div style="font-size: 26px; font-weight: 900; color: var(--emerald); margin-bottom: 6px;">
+                    ${escapeHtml(m.final_map || '—')}
+                </div>
+                <div style="font-size: 36px; font-weight: 900; margin: 10px 0;">
+                    <span style="color:${m.winner_team === 'A' ? 'var(--emerald)' : 'var(--hint)'};">${m.score_a ?? '?'}</span>
+                    <span style="color: var(--hint); font-size: 20px; margin: 0 10px;">:</span>
+                    <span style="color:${m.winner_team === 'B' ? 'var(--emerald)' : 'var(--hint)'};">${m.score_b ?? '?'}</span>
+                </div>
+                ${statusBlock}
+                <div style="font-size: 11px; color: var(--hint);">
+                    ${new Date(m.created_at).toLocaleString('ru-RU')} · ${m.mode || '5x5'}
+                </div>
+            </div>
+
+            <div class="ig-section-title">Состав</div>
+            ${teamA.map(p => renderPlayer(p, 'A')).join('')}
+            ${teamB.map(p => renderPlayer(p, 'B')).join('')}
+
+            ${screenshotsHTML}
+
+            <button class="profile-action-btn cancel" style="margin-top: 20px;" onclick="closePlayerModal()">
+                ЗАКРЫТЬ
+            </button>
+        `;
+    } catch (e) {
+        console.error('openMatchDetails:', e);
+        content.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка загрузки</div>';
+    }
 }
 
             // ============================================================
@@ -18731,7 +18990,6 @@ async function renderEloChart(userId) {
     const card = document.getElementById('eloChartCard');
     if (!card) return;
 
-    const svgEl = document.getElementById('eloChartSvg');
     const areaEl = document.getElementById('eloAreaPath');
     const lineEl = document.getElementById('eloLinePath');
     const dotEl = document.getElementById('eloLastDot');
@@ -18742,66 +19000,31 @@ async function renderEloChart(userId) {
     const lossesEl = document.getElementById('eloChartLosses');
 
     try {
-        // 1. Тянем последние 15 матчей пользователя
-        const { data: matches, error } = await sb
-            .from('game_matches')
-            .select('id, created_at, team_a_players, team_b_players, winner_team, status')
-            .eq('status', 'finished')
+        // Берём последние 30 матчей игрока из dxp_history
+        const { data: history, error } = await sb
+            .from('dxp_history')
+            .select('elo_before, elo_after, delta, won, created_at')
+            .eq('telegram_id', Number(userId))
             .order('created_at', { ascending: false })
             .limit(30);
 
         if (error) throw error;
 
-        const uid = String(userId);
-        const history = [];
+        // Хронологический порядок + последние 15
+        const ordered = (history || []).slice().reverse();
+        const recent = ordered.slice(-15);
 
-        (matches || []).forEach(m => {
-            const inA = (m.team_a_players || []).some(p => String(p.telegram_id) === uid);
-            const inB = (m.team_b_players || []).some(p => String(p.telegram_id) === uid);
-            if (!inA && !inB) return;
-
-            const me = inA
-                ? (m.team_a_players || []).find(p => String(p.telegram_id) === uid)
-                : (m.team_b_players || []).find(p => String(p.telegram_id) === uid);
-
-            const myTeam = inA ? 'A' : 'B';
-            const isWin = m.winner_team === myTeam;
-
-            const eloAfter = me?.elo_after;
-            const eloBefore = me?.elo_before;
-
-            if (typeof eloAfter === 'number') {
-                history.push({
-                    elo: eloAfter,
-                    win: isWin,
-                    date: m.created_at,
-                });
-            } else if (typeof eloBefore === 'number') {
-                history.push({
-                    elo: eloBefore,
-                    win: isWin,
-                    date: m.created_at,
-                });
-            }
-        });
-
-        // Хронологический порядок
-        history.reverse();
-        const recent = history.slice(-15);
-
-        // 2. Если данных нет — рисуем «пустую» плашку
         if (recent.length < 2) {
             card.classList.add('empty');
-            areaEl.setAttribute('d', '');
-            lineEl.setAttribute('d', '');
-            dotEl.setAttribute('cx', '-10');
-            dotEl.setAttribute('cy', '-10');
-            yAxisEl.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
-            deltaEl.textContent = '—';
-            deltaEl.classList.remove('negative');
-            streakEl.innerHTML = '';
-            winsEl.textContent = '0';
-            lossesEl.textContent = '0';
+            areaEl?.setAttribute('d', '');
+            lineEl?.setAttribute('d', '');
+            dotEl?.setAttribute('cx', '-10');
+            dotEl?.setAttribute('cy', '-10');
+            if (yAxisEl) yAxisEl.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
+            if (deltaEl) { deltaEl.textContent = '—'; deltaEl.classList.remove('negative'); }
+            if (streakEl) streakEl.innerHTML = '';
+            if (winsEl) winsEl.textContent = '0';
+            if (lossesEl) lossesEl.textContent = '0';
             if (!card.querySelector('.ech-empty-msg')) {
                 const msg = document.createElement('div');
                 msg.className = 'ech-empty-msg';
@@ -18812,11 +19035,17 @@ async function renderEloChart(userId) {
         }
 
         card.classList.remove('empty');
-        const emptyMsg = card.querySelector('.ech-empty-msg');
-        if (emptyMsg) emptyMsg.remove();
+        card.querySelector('.ech-empty-msg')?.remove();
 
-        // 3. Расчёт осей
-        const elos = recent.map(h => h.elo);
+        // Точки: используем elo_after (актуальное после матча)
+        const points = recent.map(h => ({
+            elo: h.elo_after ?? h.elo_before ?? 1000,
+            win: h.won === true,
+            delta: h.delta ?? 0
+        }));
+
+        // Оси
+        const elos = points.map(p => p.elo);
         const min = Math.min(...elos);
         const max = Math.max(...elos);
         const range = Math.max(50, max - min);
@@ -18824,59 +19053,58 @@ async function renderEloChart(userId) {
         const yMin = min - pad;
         const yMax = max + pad;
 
-        // 4. Геометрия SVG
+        // Геометрия SVG
         const W = 320, H = 140;
         const padL = 6, padR = 6, padT = 10, padB = 12;
         const innerW = W - padL - padR;
         const innerH = H - padT - padB;
-        const stepX = recent.length > 1 ? innerW / (recent.length - 1) : 0;
+        const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
 
-        const points = recent.map((h, i) => {
+        const xy = points.map((p, i) => {
             const x = padL + i * stepX;
-            const y = padT + innerH - ((h.elo - yMin) / (yMax - yMin)) * innerH;
-            return { x, y, ...h };
+            const y = padT + innerH - ((p.elo - yMin) / (yMax - yMin)) * innerH;
+            return { ...p, x, y };
         });
 
-        // 5. Path линии и области
-        const dLine = points.map((p, i) =>
+        const dLine = xy.map((p, i) =>
             (i === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
         ).join(' ');
 
-        const dArea = `${dLine} L ${points[points.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${points[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`;
+        const dArea = `${dLine} L ${xy[xy.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${xy[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`;
 
-        lineEl.setAttribute('d', dLine);
-        areaEl.setAttribute('d', dArea);
+        lineEl?.setAttribute('d', dLine);
+        areaEl?.setAttribute('d', dArea);
 
-        // 6. Последняя точка
-        const last = points[points.length - 1];
-        dotEl.setAttribute('cx', last.x.toFixed(1));
-        dotEl.setAttribute('cy', last.y.toFixed(1));
+        const last = xy[xy.length - 1];
+        dotEl?.setAttribute('cx', last.x.toFixed(1));
+        dotEl?.setAttribute('cy', last.y.toFixed(1));
 
-        // 7. Ось Y — 4 значения
+        // Y-ось
         const labels = [yMax, yMax - (yMax - yMin) / 3, yMax - 2 * (yMax - yMin) / 3, yMin];
-        yAxisEl.innerHTML = labels.map(v => `<span>${Math.round(v)}</span>`).join('');
+        if (yAxisEl) yAxisEl.innerHTML = labels.map(v => `<span>${Math.round(v)}</span>`).join('');
 
-        // 8. Delta
-        const firstElo = recent[0].elo;
-        const lastElo = recent[recent.length - 1].elo;
-        const delta = lastElo - firstElo;
-        deltaEl.textContent = (delta >= 0 ? '+' : '') + delta;
-        deltaEl.classList.toggle('negative', delta < 0);
+        // Delta = сумма дельт на графике
+        const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
+        if (deltaEl) {
+            deltaEl.textContent = (totalDelta >= 0 ? '+' : '') + totalDelta;
+            deltaEl.classList.toggle('negative', totalDelta < 0);
+        }
 
-        // 9. Streak — полоски по 15 последним матчам
-        const wins = recent.filter(h => h.win).length;
-        const losses = recent.length - wins;
-        winsEl.textContent = wins;
-        lossesEl.textContent = losses;
+        // W/L
+        const wins = points.filter(p => p.win).length;
+        const losses = points.length - wins;
+        if (winsEl) winsEl.textContent = wins;
+        if (lossesEl) lossesEl.textContent = losses;
 
-        streakEl.innerHTML = recent.map(h =>
-            `<span class="sr ${h.win ? 'win' : 'loss'}"></span>`
-        ).join('');
-
+        if (streakEl) {
+            streakEl.innerHTML = points.map(p =>
+                `<span class="sr ${p.win ? 'win' : 'loss'}"></span>`
+            ).join('');
+        }
     } catch (e) {
         console.warn('renderEloChart:', e);
     }
-}   
+}
 
     // ============================================================
 // CLUB INVITES (Owner / Elder)
