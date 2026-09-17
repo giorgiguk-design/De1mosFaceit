@@ -13249,25 +13249,146 @@ async function openAppealDialog() {
         // ============================================================
         // CHECK ACTIVE MATCH (при входе)
         // ============================================================
-        async function checkActiveMatch() {
-            if (!currentUser) return;
-            try {
-                const me = currentUser.telegram_id;
-                const { data: matches } = await sb.from('game_matches')
-                    .select('*')
-                    .in('status', ['confirm', 'veto', 'ready', 'result'])
-                    .order('created_at', { ascending: false }).limit(10);
+async function checkActiveMatch() {
+    if (!currentUser) return;
+    try {
+        const me = currentUser.telegram_id;
 
-                for (const m of matches || []) {
-                    const allIds = [...(m.team_a_players || []), ...(m.team_b_players || [])].map(p => p.telegram_id);
-                    if (allIds.includes(me)) {
-                        currentMatch = m;
-                        onMatchFound(m);
-                        return;
-                    }
-                }
-            } catch (e) {}
+        // 1. Сначала — я в комнате?
+        const { data: player } = await sb.from('room_players')
+            .select('room_id, is_ready, team')
+            .eq('telegram_id', me)
+            .maybeSingle();
+
+        if (player) {
+            const { data: room } = await sb.from('rooms')
+                .select('*').eq('id', player.room_id).maybeSingle();
+
+            if (room && room.status !== 'cancelled') {
+                await restoreRoomScreen(room, player);
+                return;
+            }
+
+            // Комната отменена / не существует — чистим себя
+            if (!room || room.status === 'cancelled') {
+                try {
+                    await sb.from('room_players').delete()
+                        .eq('telegram_id', me);
+                } catch (e) {}
+                if (room) showCancelledOnce(room.id);
+                return;
+            }
         }
+
+        // 2. Если в комнате нет — ищем активный game_match
+        const { data: matches } = await sb.from('game_matches')
+            .select('*')
+            .in('status', ['confirm', 'veto', 'side_pick', 'ready', 'in_game', 'result'])
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        for (const m of matches || []) {
+            const ids = [...(m.team_a_players || []), ...(m.team_b_players || [])]
+                .map(p => Number(p.telegram_id));
+            if (ids.includes(Number(me))) {
+                currentMatch = m;
+
+                if (m.status === 'confirm')      showConfirmScreen();
+                else if (m.status === 'veto')    { showVetoScreen(); subscribeVetoRealtime(m.id); }
+                else if (m.status === 'side_pick') { showVetoScreen(); subscribeVetoRealtime(m.id); }
+                else if (m.status === 'ready')   showMatchScreen();
+                else if (m.status === 'in_game') { showInGameScreen(m.room_id, m); }
+                else if (m.status === 'result')  showResultScreen();
+                else if (m.status === 'finished') showFinishedScreen();
+
+                subscribeMatchRealtime();
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('checkActiveMatch:', e);
+    }
+}
+
+// Восстанавливает экран в зависимости от статуса комнаты
+async function restoreRoomScreen(room, player) {
+    currentPlayRoomId = room.id;
+
+    switch (room.status) {
+        case 'open':
+            // Открываем play-screen и комнату
+            const screen = document.getElementById('playScreen');
+            if (screen) screen.classList.add('active');
+            openRoomView(room.id);
+            break;
+
+        case 'veto':
+        case 'side_pick': {
+            // Загружаем сам game_match, чтобы renderVeto работал
+            const { data: match } = await sb.from('game_matches')
+                .select('*')
+                .eq('room_id', room.id)
+                .order('created_at', { ascending: false })
+                .limit(1).maybeSingle();
+            if (match) {
+                currentMatch = match;
+                showVetoScreen();
+                subscribeVetoRealtime(match.id);
+                subscribeMatchRealtime();
+            }
+            break;
+        }
+
+        case 'waiting_link': {
+            const { data: match } = await sb.from('game_matches')
+                .select('*')
+                .eq('room_id', room.id)
+                .order('created_at', { ascending: false })
+                .limit(1).maybeSingle();
+            if (match) currentMatch = match;
+            showWaitingLinkScreen(room.id, room);
+            break;
+        }
+
+        case 'in_game': {
+            const { data: match } = await sb.from('game_matches')
+                .select('*')
+                .eq('room_id', room.id)
+                .order('created_at', { ascending: false })
+                .limit(1).maybeSingle();
+            if (match) {
+                currentMatch = match;
+                subscribeMatchRealtime();
+            }
+            showInGameScreen(room.id, room);
+            break;
+        }
+
+        case 'result': {
+            const { data: match } = await sb.from('game_matches')
+                .select('*')
+                .eq('room_id', room.id)
+                .order('created_at', { ascending: false })
+                .limit(1).maybeSingle();
+            if (match) {
+                currentMatch = match;
+                showResultScreen();
+                subscribeMatchRealtime();
+            }
+            break;
+        }
+
+        case 'cancelled':
+            showCancelledOnce(room.id);
+            break;
+
+        default:
+            // fallback
+            const s = document.getElementById('playScreen');
+            if (s) s.classList.add('active');
+            openRoomView(room.id);
+    }
+}
                     // ============================================================
         // ADMIN PANEL
         // ============================================================
@@ -13893,8 +14014,46 @@ async function renderRoomContent(roomId) {
 
         if (!room) { content.innerHTML = '<div class="empty-rooms">Комната не найдена</div>'; return; }
 
-if (room.status === 'waiting_link' || room.status === 'in_game') {
-    showLobbyScreen(roomId, room);
+if (room.status === 'cancelled') {
+    showCancelledOnce(roomId);
+    return;
+}
+if (room.status === 'veto' || room.status === 'side_pick') {
+    const { data: match } = await sb.from('game_matches')
+        .select('*').eq('room_id', roomId)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (match) {
+        currentMatch = match;
+        showVetoScreen();
+        subscribeVetoRealtime(match.id);
+        subscribeMatchRealtime();
+    }
+    return;
+}
+if (room.status === 'waiting_link') {
+    showWaitingLinkScreen(roomId, room);
+    return;
+}
+if (room.status === 'in_game') {
+    const { data: match } = await sb.from('game_matches')
+        .select('*').eq('room_id', roomId)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (match) {
+        currentMatch = match;
+        subscribeMatchRealtime();
+    }
+    showInGameScreen(roomId, room);
+    return;
+}
+if (room.status === 'result') {
+    const { data: match } = await sb.from('game_matches')
+        .select('*').eq('room_id', roomId)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (match) {
+        currentMatch = match;
+        showResultScreen();
+        subscribeMatchRealtime();
+    }
     return;
 }
 
