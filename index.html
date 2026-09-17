@@ -13134,6 +13134,30 @@ async function renderResultScreen() {
 
     // --- Поллинг для live-обновления ---
 // --- Поллинг для live-обновления ---
+// Убираем старый поллинг
+if (matchPollTimer) clearInterval(matchPollTimer);
+
+// Realtime на голоса и скрины
+const votesCh = sb.channel('res_votes_' + currentMatch.id)
+    .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'match_votes',
+        filter: 'match_id=eq.' + currentMatch.id
+    }, async () => {
+        const { data } = await sb.from('game_matches').select('status, result_status').eq('id', currentMatch.id).single();
+        if (data?.status === 'finished') {
+            sb.removeChannel(votesCh);
+            showFinishedScreen();
+        } else {
+            renderResultScreen();
+        }
+    })
+    .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'match_screenshots',
+        filter: 'match_id=eq.' + currentMatch.id
+    }, () => renderResultScreen())
+    .subscribe();
+
+// Fallback polling каждые 4 сек
 matchPollTimer = setInterval(async () => {
     try {
         const { data } = await sb.from('game_matches')
@@ -13141,47 +13165,24 @@ matchPollTimer = setInterval(async () => {
         if (!data) return;
         currentMatch = data;
 
-        // 🔥 Матч завершён (кто-то другой его закончил, или мы сами)
         if (data.status === 'finished') {
             clearInterval(matchPollTimer);
+            sb.removeChannel(votesCh);
             showFinishedScreen();
             return;
         }
 
-        // 🔥 Спор → показываем баннер
         if (data.result_status === 'disputed') {
             clearInterval(matchPollTimer);
+            sb.removeChannel(votesCh);
             renderResultScreen();
             return;
         }
 
-        // 🔥 Отменён → выходим
-        if (data.status === 'cancelled') {
-            clearInterval(matchPollTimer);
-            showToast('❌ Матч отменён');
-            showResultScreen();
-            return;
-        }
-
-        // Проверяем, не появились ли новые голоса/скрины
-        const { data: freshVotes } = await sb.from('match_votes')
-            .select('id').eq('match_id', currentMatch.id);
-        const { data: freshShots } = await sb.from('match_screenshots')
-            .select('id').eq('match_id', currentMatch.id);
-        const oldCount = votes.length + screenshots.length;
-        const newCount = (freshVotes || []).length + (freshShots || []).length;
-
-        if (newCount !== oldCount) {
-            clearInterval(matchPollTimer);
-            renderResultScreen();
-        }
-
-        // 🔥 Пытаемся завершить матч, если оба капитана проголосовали
+        // Пытаемся финализировать
         await tryFinishMatch(currentMatch.id);
-    } catch (e) {
-        console.warn('poll:', e);
-    }
-}, 5000);
+    } catch (e) {}
+}, 4000);
 }
 
 // Показать, что матч ушёл на проверку
@@ -13244,7 +13245,7 @@ async function submitWinner() {
     const isCaptain = me === Number(currentMatch.captain_a_id)
                    || me === Number(currentMatch.captain_b_id);
 
-    // 👇👇👇 ВОТ ЭТОТ БЛОК 👇👇👇
+    // Капитан обязан приложить скриншот
     if (isCaptain) {
         const { data: shots } = await sb.from('match_screenshots')
             .select('id').eq('match_id', currentMatch.id).eq('uploader_id', me);
@@ -13254,7 +13255,6 @@ async function submitWinner() {
             return;
         }
     }
-    // 👆👆👆 КОНЕЦ БЛОКА 👆👆👆
 
     const btn = document.getElementById('submitResultBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
@@ -13266,7 +13266,7 @@ async function submitWinner() {
                      : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
 
         // 1. Пишем голос
-        await sb.from('match_votes').upsert({
+        const { error: voteErr } = await sb.from('match_votes').upsert({
             match_id: currentMatch.id,
             telegram_id: me,
             team: myTeam,
@@ -13277,17 +13277,50 @@ async function submitWinner() {
             created_at: new Date().toISOString()
         }, { onConflict: 'match_id,telegram_id' });
 
+        if (voteErr) {
+            console.warn('vote upsert error:', voteErr);
+            throw voteErr;
+        }
+
         haptic('medium');
         showToast('✅ Результат отправлен');
 
-        // 2. Проверяем, все ли проголосовали
+        // 2. Пытаемся финализировать матч (если оба капитана проголосовали одинаково)
         await tryFinishMatch(currentMatch.id);
 
+        // 3. Проверяем статус матча и роутим
+        setTimeout(async () => {
+            try {
+                const { data: fresh } = await sb.from('game_matches')
+                    .select('*').eq('id', currentMatch.id).single();
+
+                if (!fresh) return;
+                currentMatch = fresh;
+
+                if (fresh.status === 'finished') {
+                    showFinishedScreen();
+                } else if (fresh.result_status === 'disputed') {
+                    showToast('⚖️ Результаты расходятся — матч у модераторов');
+                    renderResultScreen();
+                } else {
+                    // Просто перерисуем экран — ждём второго капитана
+                    renderResultScreen();
+                }
+            } catch (e) {
+                console.warn('post-vote check:', e);
+                renderResultScreen();
+            }
+        }, 800);
+
         selectedWinner = null;
-        renderResultScreen();
+
     } catch (e) {
-        showToast('Ошибка: ' + e.message);
-        if (btn) { btn.disabled = false; btn.textContent = '📤 ОТПРАВИТЬ РЕЗУЛЬТАТ'; }
+        console.error('submitWinner:', e);
+        showToast('Ошибка: ' + (e?.message || e));
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📤 ОТПРАВИТЬ РЕЗУЛЬТАТ';
+        }
     }
 }
 
@@ -13296,28 +13329,20 @@ async function submitWinner() {
 // ============================================================
 async function tryFinishMatch(matchId) {
     try {
-        // 1. Голоса от капитанов
-        const { data: match } = await sb.from('game_matches')
-            .select('*').eq('id', matchId).single();
+        const { data: match } = await sb.from('game_matches').select('*').eq('id', matchId).single();
         if (!match) return;
 
-        const { data: votes } = await sb.from('match_votes')
-            .select('*').eq('match_id', matchId);
+        const { data: votes } = await sb.from('match_votes').select('*').eq('match_id', matchId);
 
-        const capAVote = (votes || []).find(v =>
-            Number(v.telegram_id) === Number(match.captain_a_id));
-        const capBVote = (votes || []).find(v =>
-            Number(v.telegram_id) === Number(match.captain_b_id));
+        const capAVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_a_id));
+        const capBVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_b_id));
 
-        // 2. Оба капитана проголосовали?
         if (capAVote && capBVote) {
-            // Проверяем, совпадают ли результаты
             const same = capAVote.winner === capBVote.winner
                       && capAVote.score_a === capBVote.score_a
                       && capAVote.score_b === capBVote.score_b;
 
             if (same) {
-                // ✅ Согласие → завершаем матч
                 await finishMatch(matchId, {
                     winner: capAVote.winner,
                     score_a: capAVote.score_a,
@@ -13325,18 +13350,14 @@ async function tryFinishMatch(matchId) {
                 });
                 return;
             } else {
-                // ⚖️ Конфликт → disputed
                 await sb.from('game_matches').update({
                     result_status: 'disputed',
                     disputed_at: new Date().toISOString()
                 }).eq('id', matchId);
-
                 showToast('⚖️ Результаты расходятся — матч у модераторов');
                 return;
             }
         }
-
-        // 3. Один капитан молчит — ничего не делаем, ждём
         showToast('⏳ Ожидание второго капитана...');
     } catch (e) {
         console.error('tryFinishMatch:', e);
@@ -13348,16 +13369,15 @@ async function tryFinishMatch(matchId) {
 // ============================================================
 async function finishMatch(matchId, result) {
     try {
-        const { data: match } = await sb.from('game_matches')
-            .select('*').eq('id', matchId).single();
-        if (!match) return;
+        const { data: match } = await sb.from('game_matches').select('*').eq('id', matchId).single();
+        if (!match) { showToast('Матч не найден'); return; }
 
         const teamA = match.team_a_players || [];
         const teamB = match.team_b_players || [];
         const winnerTeam = result.winner;
 
         const allPlayers = [...teamA, ...teamB];
-        const userIds = allPlayers.map(p => Number(p.telegram_id));
+        const userIds = allPlayers.map(p => Number(p.telegram_id)).filter(Boolean);
 
         const { data: users } = await sb.from('users')
             .select('telegram_id, elo, matches_played, wins')
@@ -13374,6 +13394,7 @@ async function finishMatch(matchId, result) {
         // --- Команда A ---
         for (const p of teamA) {
             const pid = Number(p.telegram_id);
+            if (!pid) continue;
             const u = userMap[pid] || { elo: 1000, matches_played: 0, wins: 0 };
             const before = u.elo ?? 1000;
             const delta = winnerTeam === 'A' ? WIN_DELTA : LOSE_DELTA;
@@ -13391,6 +13412,7 @@ async function finishMatch(matchId, result) {
         // --- Команда B ---
         for (const p of teamB) {
             const pid = Number(p.telegram_id);
+            if (!pid) continue;
             const u = userMap[pid] || { elo: 1000, matches_played: 0, wins: 0 };
             const before = u.elo ?? 1000;
             const delta = winnerTeam === 'B' ? WIN_DELTA : LOSE_DELTA;
@@ -13405,7 +13427,8 @@ async function finishMatch(matchId, result) {
             }).eq('telegram_id', pid);
         }
 
-        await sb.from('game_matches').update({
+        // Обновляем матч
+        const { error: matchErr } = await sb.from('game_matches').update({
             status: 'finished',
             result_status: 'confirmed',
             winner_team: result.winner,
@@ -13416,16 +13439,36 @@ async function finishMatch(matchId, result) {
             finished_at: new Date().toISOString()
         }).eq('id', matchId);
 
+        if (matchErr) {
+            console.warn('finishMatch update error:', matchErr);
+            // Пробуем без team_a/b_players
+            await sb.from('game_matches').update({
+                status: 'finished',
+                result_status: 'confirmed',
+                winner_team: result.winner,
+                score_a: result.score_a,
+                score_b: result.score_b,
+                finished_at: new Date().toISOString()
+            }).eq('id', matchId);
+        }
+
+        // Обновляем комнату — статус finished
+        if (match.room_id) {
+            try {
+                await sb.from('rooms').update({ status: 'finished' }).eq('id', match.room_id);
+            } catch (e) {}
+        }
+
         haptic('heavy');
         showToast('🏆 Матч завершён!');
 
-        const { data: fresh } = await sb.from('game_matches')
-            .select('*').eq('id', matchId).single();
+        const { data: fresh } = await sb.from('game_matches').select('*').eq('id', matchId).single();
         currentMatch = fresh;
         showFinishedScreen();
+
     } catch (e) {
         console.error('finishMatch:', e);
-        showToast('Ошибка завершения: ' + e.message);
+        showToast('Ошибка завершения: ' + (e?.message || e));
     }
 }
 
@@ -14625,7 +14668,7 @@ function subscribeRoomRealtime(roomId) {
 
     roomRealtimeChannel = sb.channel('room_rt_' + roomId)
         // ============================================================
-        // 1. Изменения КОМНАТЫ (status, kicked_users, host_link и т.д.)
+        // 1. Изменения комнаты
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -14636,7 +14679,7 @@ function subscribeRoomRealtime(roomId) {
             const room = payload.new;
             if (!room) return;
 
-            // ⬇️ ПРОВЕРКА: не кикнули ли меня
+            // Меня кикнули?
             const kicked = room.kicked_users || [];
             if (kicked.includes(Number(currentUser.telegram_id))) {
                 showToast('🚪 Тебя исключили из комнаты');
@@ -14649,25 +14692,18 @@ function subscribeRoomRealtime(roomId) {
                 return;
             }
 
-            // Обновляем баннер
-            if (activeRoomId === roomId) {
-                showActiveRoomBanner(room);
-            }
+            if (activeRoomId === roomId) showActiveRoomBanner(room);
 
-            // ============================================================
-            // РОУТИНГ ПО СТАТУСУ
-            // ============================================================
+            // Роутинг
             if (room.status === 'cancelled') {
                 unsubscribeRoomRealtime();
                 unsubscribeInGameRealtime();
-
                 activeRoomId = null;
                 hideActiveRoomBanner();
                 const _ind = document.getElementById('headerRoomIndicator');
                 if (_ind) _ind.style.display = 'none';
                 const _flt = document.getElementById('playEnterFloat');
                 if (_flt) _flt.classList.remove('active');
-
                 showCancelledOnce(roomId);
                 return;
             }
@@ -14675,7 +14711,6 @@ function subscribeRoomRealtime(roomId) {
             if (room.status === 'veto' || room.status === 'side_pick') {
                 const screen = document.getElementById('playScreen');
                 if (screen) screen.classList.remove('active');
-
                 const { data: match } = await sb.from('game_matches')
                     .select('*').eq('room_id', roomId)
                     .order('created_at', { ascending: false }).limit(1).maybeSingle();
@@ -14683,6 +14718,7 @@ function subscribeRoomRealtime(roomId) {
                     currentMatch = match;
                     showVetoScreen();
                     subscribeVetoRealtime(match.id);
+                    subscribeMatchRealtime();
                 }
                 return;
             }
@@ -14722,7 +14758,7 @@ function subscribeRoomRealtime(roomId) {
         })
 
         // ============================================================
-        // 2. Изменения СОСТАВА ИГРОКОВ (team, is_ready)
+        // 2. Изменения состава игроков (ВОТ ЭТОГО НЕ ХВАТАЛО!)
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -14730,21 +14766,44 @@ function subscribeRoomRealtime(roomId) {
             table: 'room_players',
             filter: 'room_id=eq.' + roomId
         }, async () => {
-            const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).maybeSingle();
+            const { data: rooms } = await sb.from('rooms')
+                .select('*').eq('id', roomId).limit(1);
+            const room = rooms && rooms[0];
             if (!room) return;
 
-            // Проверяем, все ли игроки собрались
-            await checkTeamsReady(roomId, room);
-
-            // Перерисовываем нужный экран
+            // Проверка «все собрались»
             if (room.status === 'open') {
+                await checkTeamsReady(roomId, room);
                 await renderRoomContent(roomId);
-            } else if (room.status === 'veto' || room.status === 'side_pick') {
-                // Veto обновится через свой realtime (game_matches)
-            } else if (room.status === 'waiting_link') {
-                showWaitingLinkScreen(roomId, room);
-            } else if (room.status === 'in_game') {
-                showInGameScreen(roomId, room);
+            }
+        })
+
+        // ============================================================
+        // 3. Realtime на game_matches (для этого match_id)
+        // ============================================================
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'game_matches'
+        }, async (payload) => {
+            const m = payload.new;
+            if (!m || String(m.room_id) !== String(roomId)) return;
+
+            currentMatch = m;
+
+            // Автоматически роутим в зависимости от статуса матча
+            if (m.status === 'veto' || m.status === 'side_pick') {
+                showVetoScreen();
+                subscribeVetoRealtime(m.id);
+            } else if (m.status === 'in_game') {
+                const { data: rr } = await sb.from('rooms').select('*').eq('id', roomId).limit(1);
+                if (rr && rr[0]) showInGameScreen(roomId, rr[0]);
+            } else if (m.status === 'result') {
+                showResultScreen();
+            } else if (m.status === 'finished') {
+                showFinishedScreen();
+            } else if (m.status === 'cancelled') {
+                showCancelledOnce(roomId);
             }
         })
 
@@ -15270,8 +15329,13 @@ async function submitHostLink(roomId) {
     if (!input) return;
     const link = input.value.trim();
     
-    if (!link || !link.includes('link.standoff2.com')) {
-        showToast('Вставь корректную ссылку из Standoff 2');
+    // 🔥 Более мягкая валидация — просто не пустая и похожа на URL/схему
+    if (!link || link.length < 5) {
+        showToast('Вставь ссылку из Standoff 2');
+        return;
+    }
+    if (!/^https?:\/\/|^standoff/i.test(link)) {
+        showToast('Ссылка должна начинаться с https:// или standoff2://');
         return;
     }
     
@@ -15279,21 +15343,47 @@ async function submitHostLink(roomId) {
     if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
     
     try {
-        await sb.from('rooms').update({
+        // 🔥 Пробуем обновить — с полями, которые точно есть
+        const updatePayload = {
             host_link: link,
-            link_added_at: new Date().toISOString(),
             status: 'in_game'
-        }).eq('id', roomId);
+        };
+        
+        // Пробуем добавить link_added_at (если колонка есть)
+        try {
+            updatePayload.link_added_at = new Date().toISOString();
+        } catch (e) {}
+        
+        const { error } = await sb.from('rooms').update(updatePayload).eq('id', roomId);
+        
+        if (error) {
+            console.warn('submitHostLink update error:', error);
+            
+            // Fallback — только host_link и status
+            const { error: e2 } = await sb.from('rooms').update({
+                host_link: link,
+                status: 'in_game'
+            }).eq('id', roomId);
+            
+            if (e2) throw e2;
+        }
+        
         await touchRoom(roomId);
         
         showToast('✅ Ссылка отправлена игрокам');
         haptic('medium');
 
-// 🔥 ЯВНО перерисовываем экран
-const { data: freshRoom } = await sb.from('rooms').select('*').eq('id', roomId).single();
-if (freshRoom) showInGameScreen(roomId, freshRoom);
+        // 🔥 Перерисовываем экран — используем showInGameScreen, а не renderInGameScreen
+        const { data: freshRoom } = await sb.from('rooms').select('*').eq('id', roomId).single();
+        if (freshRoom) {
+            showInGameScreen(roomId, freshRoom);
+        } else {
+            // Fallback
+            switchPage('veto');
+        }
     } catch (e) {
-        showToast('Ошибка: ' + e.message);
+        console.error('submitHostLink:', e);
+        showToast('Ошибка: ' + (e?.message || e));
         if (btn) { btn.disabled = false; btn.textContent = '✅ Отправить ссылку'; }
     }
 }
