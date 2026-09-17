@@ -12937,51 +12937,66 @@ async function renderResultScreen() {
     };
 
     // --- Блок скриншота ---
-    const renderScreenshotBlock = () => {
-        // Если у меня уже есть скриншот — показываем
-        if (myShot) {
-            return `
-                <div class="ig-link-block" style="border-color: rgba(0,224,138,0.4);">
-                    <div class="ig-link-label">📸 Твой скриншот · Команда ${myShot.team}</div>
-                    <img src="${myShot.url}" style="width: 100%; border-radius: 12px; cursor: pointer; margin-top: 8px;"
-                         onclick="openImageView('${myShot.url}')">
-                </div>
-            `;
-        }
-
-        // Могу ли я загрузить?
-        // Капитан — всегда может. Игрок — только если у его команды ещё нет скрина.
-        const teamShot = myTeam === 'A' ? shotA : shotB;
-        const canUpload = isCaptain || !teamShot;
-
-        if (!canUpload) {
-            return `
-                <div class="ig-link-block">
-                    <div class="ig-link-label">📸 Скриншот команды</div>
-                    <div style="text-align: center; padding: 16px; color: var(--hint); font-size: 12px;">
-                        Скриншот уже загружен ${isCaptain ? 'сокомандником' : 'капитаном'}
-                    </div>
-                    ${teamShot ? `<img src="${teamShot.url}" style="width: 100%; border-radius: 12px; margin-top: 8px; cursor: pointer;" onclick="openImageView('${teamShot.url}')">` : ''}
-                </div>
-            `;
-        }
-
-        const hintText = isCaptain
-            ? 'Загрузи скриншот с результатом матча. Это <b>обязательно</b>.'
-            : 'Капитан не загрузил скриншот. Ты можешь загрузить его за свою команду.';
-
+const renderScreenshotBlock = () => {
+    // Если у меня уже есть скриншот — показываем + кнопки управления
+    if (myShot) {
         return `
-            <div class="ig-link-block" style="border-color: rgba(255,84,112,0.4);">
-                <div class="ig-link-label">📸 Скриншот матча · Обязательно</div>
-                <div style="font-size: 12px; color: var(--hint); margin: 8px 0 12px; line-height: 1.5;">
-                    ${hintText}
+            <div class="ig-link-block" style="border-color: rgba(0,224,138,0.4);">
+                <div class="ig-link-label">📸 Твой скриншот · Команда ${myShot.team}</div>
+                <img src="${myShot.url}" style="width: 100%; border-radius: 12px; cursor: pointer; margin-top: 8px;"
+                     onclick="openImageView('${myShot.url}')">
+
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button class="profile-action-btn cancel"
+                            style="flex: 1; padding: 10px; font-size: 12px;"
+                            onclick="document.getElementById('screenshotInput').click()">
+                        🔄 Заменить
+                    </button>
+                    <button class="profile-action-btn cancel"
+                            style="flex: 1; padding: 10px; font-size: 12px; color: var(--red); border-color: rgba(255,84,112,0.4);"
+                            onclick="deleteMyScreenshot()">
+                        🗑️ Удалить
+                    </button>
                 </div>
-                <button class="ig-enter-btn" onclick="document.getElementById('screenshotInput').click()">
-                    📤 ЗАГРУЗИТЬ СКРИНШОТ
-                </button>
+
+                <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
             </div>
         `;
-    };
+    }
+
+    // Могу ли я загрузить? (ваша старая логика)
+    const teamShot = myTeam === 'A' ? shotA : shotB;
+    const canUpload = isCaptain || !teamShot;
+
+    if (!canUpload) {
+        return `
+            <div class="ig-link-block">
+                <div class="ig-link-label">📸 Скриншот команды</div>
+                <div style="text-align: center; padding: 16px; color: var(--hint); font-size: 12px;">
+                    Скриншот уже загружен ${isCaptain ? 'сокомандником' : 'капитаном'}
+                </div>
+                ${teamShot ? `<img src="${teamShot.url}" style="width: 100%; border-radius: 12px; margin-top: 8px; cursor: pointer;" onclick="openImageView('${teamShot.url}')">` : ''}
+            </div>
+        `;
+    }
+
+    const hintText = isCaptain
+        ? 'Загрузи скриншот с результатом матча. Это <b>обязательно</b>.'
+        : 'Капитан не загрузил скриншот. Ты можешь загрузить его за свою команду.';
+
+    return `
+        <div class="ig-link-block" style="border-color: rgba(255,84,112,0.4);">
+            <div class="ig-link-label">📸 Скриншот матча · Обязательно</div>
+            <div style="font-size: 12px; color: var(--hint); margin: 8px 0 12px; line-height: 1.5;">
+                ${hintText}
+            </div>
+            <button class="ig-enter-btn" onclick="document.getElementById('screenshotInput').click()">
+                📤 ЗАГРУЗИТЬ СКРИНШОТ
+            </button>
+            <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
+        </div>
+    `;
+};
 
     // --- Блок ввода счёта ---
     const renderScoreBlock = () => {
@@ -13185,6 +13200,27 @@ matchPollTimer = setInterval(async () => {
 }, 4000);
 }
 
+            async function deleteMyScreenshot() {
+    if (!currentMatch || !currentUser) return;
+    if (!confirm('Удалить скриншот? Можно будет загрузить новый.')) return;
+
+    const me = Number(currentUser.telegram_id);
+
+    try {
+        // Удаляем запись из БД
+        await sb.from('match_screenshots')
+            .delete()
+            .eq('match_id', currentMatch.id)
+            .eq('uploader_id', me);
+
+        showToast('🗑️ Скриншот удалён');
+        renderResultScreen();
+    } catch (e) {
+        console.error('deleteMyScreenshot:', e);
+        showToast('Ошибка: ' + e.message);
+    }
+}
+
 // Показать, что матч ушёл на проверку
 function renderDisputedInfo() {
     const container = document.getElementById('resultContent');
@@ -13220,24 +13256,60 @@ function copyToClipboard(text) {
         function syncScores() {}
 
 async function submitWinner() {
-    if (!selectedWinner) {
-        showToast('⚠️ Выбери победителя');
+    // 🔥 Проверка: матч активен?
+    if (!currentMatch) {
+        showToast('⚠️ Матч не активен');
         return;
     }
 
-    const scoreA = parseInt(document.getElementById('scoreA').value) || 0;
-    const scoreB = parseInt(document.getElementById('scoreB').value) || 0;
+    // 🔥 Проверка: победитель выбран?
+    if (!selectedWinner) {
+        showToast('⚠️ Выбери победителя');
+        haptic('heavy');
+        return;
+    }
+
+    // 🔥 Проверка: счёт заполнен?
+    const scoreAEl = document.getElementById('scoreA');
+    const scoreBEl = document.getElementById('scoreB');
+    if (!scoreAEl || !scoreBEl) {
+        showToast('⚠️ Ошибка: поля счёта не найдены');
+        return;
+    }
+
+    const rawA = scoreAEl.value.trim();
+    const rawB = scoreBEl.value.trim();
+
+    if (rawA === '' || rawB === '') {
+        showToast('⚠️ Введи счёт обеих команд');
+        haptic('heavy');
+        return;
+    }
+
+    const scoreA = parseInt(rawA);
+    const scoreB = parseInt(rawB);
+
+    if (isNaN(scoreA) || isNaN(scoreB)) {
+        showToast('⚠️ Счёт должен быть числом');
+        haptic('heavy');
+        return;
+    }
 
     if (scoreA === scoreB) {
         showToast('⚠️ Счёт не может быть равным');
+        haptic('heavy');
         return;
     }
+
     if (selectedWinner === 'A' && scoreA <= scoreB) {
         showToast('⚠️ Команда A победила, но счёт не совпадает');
+        haptic('heavy');
         return;
     }
+
     if (selectedWinner === 'B' && scoreB <= scoreA) {
         showToast('⚠️ Команда B победила, но счёт не совпадает');
+        haptic('heavy');
         return;
     }
 
@@ -13245,12 +13317,15 @@ async function submitWinner() {
     const isCaptain = me === Number(currentMatch.captain_a_id)
                    || me === Number(currentMatch.captain_b_id);
 
-    // Капитан обязан приложить скриншот
+    // 🔥 Проверка: капитан обязан иметь скриншот
     if (isCaptain) {
         const { data: shots } = await sb.from('match_screenshots')
-            .select('id').eq('match_id', currentMatch.id).eq('uploader_id', me);
-        if (!shots?.length) {
-            showToast('⚠️ Сначала загрузи скриншот матча');
+            .select('id')
+            .eq('match_id', currentMatch.id)
+            .eq('uploader_id', me);
+
+        if (!shots || !shots.length) {
+            showToast('⚠️ Загрузи скриншот матча перед отправкой');
             haptic('heavy');
             return;
         }
@@ -13285,32 +13360,44 @@ async function submitWinner() {
         haptic('medium');
         showToast('✅ Результат отправлен');
 
-        // 2. Пытаемся финализировать матч (если оба капитана проголосовали одинаково)
+        // 2. Пытаемся финализировать матч
         await tryFinishMatch(currentMatch.id);
 
-        // 3. Проверяем статус матча и роутим
-        setTimeout(async () => {
-            try {
-                const { data: fresh } = await sb.from('game_matches')
-                    .select('*').eq('id', currentMatch.id).single();
+        // 3. Проверяем статус — что делать дальше
+        const { data: fresh } = await sb.from('game_matches')
+            .select('*').eq('id', currentMatch.id).single();
 
-                if (!fresh) return;
-                currentMatch = fresh;
+        if (fresh) currentMatch = fresh;
 
-                if (fresh.status === 'finished') {
-                    showFinishedScreen();
-                } else if (fresh.result_status === 'disputed') {
-                    showToast('⚖️ Результаты расходятся — матч у модераторов');
-                    renderResultScreen();
-                } else {
-                    // Просто перерисуем экран — ждём второго капитана
-                    renderResultScreen();
+        if (fresh?.status === 'finished') {
+            // 🔥 ФИНАЛ — показываем экран завершения, потом на главную
+            showFinishedScreen();
+
+            // Через 3 сек — на главную
+            setTimeout(() => {
+                if (typeof cleanupAfterCancel === 'function') {
+                    cleanupAfterCancel(currentMatch.room_id);
                 }
-            } catch (e) {
-                console.warn('post-vote check:', e);
-                renderResultScreen();
-            }
-        }, 800);
+                currentMatch = null;
+                switchPage('dashboard');
+                checkActiveRoom();
+            }, 3500);
+
+        } else if (fresh?.result_status === 'disputed') {
+            // Спор — оставляем на экране, объясняем
+            showToast('⚖️ Результаты расходятся — матч у модераторов');
+            renderResultScreen();
+
+            // Через 3 сек — на главную (но матч у модератора)
+            setTimeout(() => {
+                switchPage('dashboard');
+                checkActiveRoom();
+            }, 4000);
+
+        } else {
+            // Второй капитан ещё не проголосовал — оставляем на экране
+            renderResultScreen();
+        }
 
         selectedWinner = null;
 
@@ -14963,7 +15050,13 @@ async function closeRoom(roomId) {
 
 async function startMatch(roomId) {
     haptic('heavy');
+
     const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+    if (!room) {
+        showToast('Комната не найдена');
+        return;
+    }
+
     const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
 
     const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
@@ -14974,6 +15067,7 @@ async function startMatch(roomId) {
         showToast(`Нужно по ${perTeamCount} игроков в каждой команде`);
         return;
     }
+
     if (!confirm('Начать матч? Сначала — пики карт.')) return;
 
     try {
@@ -14983,28 +15077,30 @@ async function startMatch(roomId) {
 
         // 🎲 50/50 — кто первый банит
         const vetoFirstTeam = Math.random() < 0.5 ? 'A' : 'B';
-        // Кто выбирает сторону = та команда, что НЕ банила последней (последний бан делает первая)
+        // Кто выбирает сторону = та команда, что НЕ банила последней
         const sidePickerTeam = vetoFirstTeam === 'A' ? 'B' : 'A';
 
+        // 1. Создаём матч
         const { data: match, error } = await sb.from('game_matches').insert({
-    status: 'veto',
-    mode: room.mode,
-    host_id: host,
-    room_id: roomId,                 // ← ДОБАВИТЬ
-    captain_a_id: captainA,
-    captain_b_id: captainB,
-    team_a_players: teamA.map(p => ({ telegram_id: p.telegram_id })),
-    team_b_players: teamB.map(p => ({ telegram_id: p.telegram_id })),
-    veto_log: [],
-    veto_first_team: vetoFirstTeam,
-    side_picker_team: sidePickerTeam,
-    current_turn: vetoFirstTeam,
-    veto_started_at: new Date().toISOString(),
-    last_action_at: new Date().toISOString()
-}).select().single();
+            status: 'veto',
+            mode: room.mode,
+            host_id: host,
+            room_id: roomId,
+            captain_a_id: captainA,
+            captain_b_id: captainB,
+            team_a_players: teamA.map(p => ({ telegram_id: p.telegram_id })),
+            team_b_players: teamB.map(p => ({ telegram_id: p.telegram_id })),
+            veto_log: [],
+            veto_first_team: vetoFirstTeam,
+            side_picker_team: sidePickerTeam,
+            current_turn: vetoFirstTeam,
+            veto_started_at: new Date().toISOString(),
+            last_action_at: new Date().toISOString()
+        }).select().single();
 
         if (error) throw error;
 
+        // 2. Обновляем комнату → veto
         await sb.from('rooms').update({
             status: 'veto',
             game_match_id: match.id,
@@ -15015,14 +15111,29 @@ async function startMatch(roomId) {
 
         currentMatch = match;
 
+        // 🔥 3. ГАСИМ баннер + геймпад + floating кнопку — теперь подсказки не горят
+        activeRoomId = null;
+        hideActiveRoomBanner();
+        const _ind = document.getElementById('headerRoomIndicator');
+        if (_ind) _ind.style.display = 'none';
+        const _flt = document.getElementById('playEnterFloat');
+        if (_flt) _flt.classList.remove('active');
+
+        // 🔥 4. Закрываем play-screen (если открыт)
+        const _screen = document.getElementById('playScreen');
+        if (_screen) _screen.classList.remove('active');
+
         showToast(`🎲 Первой банит команда ${vetoFirstTeam}`);
         haptic('heavy');
 
+        // 5. Открываем экран пиков карт
         showVetoScreen();
         subscribeVetoRealtime(match.id);
+        subscribeMatchRealtime();
+
     } catch (e) {
         console.error('startMatch:', e);
-        showToast('Ошибка: ' + e.message);
+        showToast('Ошибка: ' + (e?.message || e));
     }
 }
 
@@ -16291,21 +16402,31 @@ async function checkActiveRoom() {
             }
         }
 
-        // 4. Всё ок — показываем баннер
-        activeRoomId = player.room_id;
-        showActiveRoomBanner(room);
-        const indicator = document.getElementById('headerRoomIndicator');
-        if (indicator) indicator.style.display = 'flex';
-
-    } catch (e) {
-        console.error('checkActiveRoom exception:', e);
-        killAllRoomUI();
-    }
+// 4. Показываем баннер + индикатор ТОЛЬКО если комната в статусе open
+if (room.status === 'open' && player.is_ready) {
+    activeRoomId = player.room_id;
+    showActiveRoomBanner(room);
+    const indicator = document.getElementById('headerRoomIndicator');
+    if (indicator) indicator.style.display = 'flex';
+} else {
+    // Все остальные статусы — гасим
+    activeRoomId = null;
+    hideActiveRoomBanner();
+    const indicator = document.getElementById('headerRoomIndicator');
+    if (indicator) indicator.style.display = 'none';
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
 }
             
 function showActiveRoomBanner(room) {
     const banner = document.getElementById('activeRoomBanner');
     if (!banner) return;
+
+    // 🔥 Показываем баннер ТОЛЬКО для статуса open
+    if (!room || room.status !== 'open') {
+        banner.classList.remove('active');
+        return;
+    }
 
     const titleEl = document.getElementById('activeRoomTitle');
     const subEl = document.getElementById('activeRoomSub');
