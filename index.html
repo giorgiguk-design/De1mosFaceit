@@ -12297,20 +12297,25 @@ if (Date.now() - last <= 60 * 1000) {   // ← 60 * 1000
 }
 
         // Атомарно отменяем: только если статус всё ещё veto/side_pick
-        const { error } = await sb.from('game_matches')
-            .update({
-                status: 'cancelled',
-                cancelled_reason: 'veto_timeout',
-                cancelled_at: new Date().toISOString()
-            })
-            .eq('id', data.id)
-            .in('status', ['veto', 'side_pick']);
+const { error } = await sb.from('game_matches')
+    .update({
+        status: 'cancelled',
+        cancelled_reason: 'veto_timeout',
+        cancelled_at: new Date().toISOString()
+    })
+    .eq('id', data.id)
+    .in('status', ['veto', 'side_pick']);
 
-        if (error) {
-            console.warn('tryCancelByTimeout update:', error);
-        }
+if (error) {
+    console.warn('tryCancelByTimeout update:', error);
+}
 
-        showVetoCancelledScreen('veto_timeout');
+// Отменяем комнату и уведомляем всех
+if (data.room_id) {
+    await cancelMatch(data.room_id, 'veto_timeout');
+}
+
+showVetoCancelledScreen('veto_timeout');
     } catch (e) {
         console.warn('tryCancelByTimeout:', e);
     }
@@ -12363,13 +12368,17 @@ async function checkVetoTimeout() {
         const last = new Date(data.last_action_at || data.veto_started_at).getTime();
         if (Date.now() - last > 60 * 1000) {
             // Отменяем (атомарно — если несколько клиентов попытаются, не страшно)
-            await sb.from('game_matches').update({
-                status: 'cancelled',
-                cancelled_reason: 'veto_timeout',
-                cancelled_at: new Date().toISOString()
-            }).eq('id', data.id).eq('status', 'veto');
+await sb.from('game_matches').update({
+    status: 'cancelled',
+    cancelled_reason: 'veto_timeout',
+    cancelled_at: new Date().toISOString()
+}).eq('id', data.id).eq('status', 'veto');
 
-            showVetoCancelledScreen('veto_timeout');
+if (data.room_id) {
+    await cancelMatch(data.room_id, 'veto_timeout');
+}
+
+showVetoCancelledScreen('veto_timeout');
         }
     } catch (e) {
         console.warn('checkVetoTimeout:', e);
@@ -14604,20 +14613,21 @@ async function startMatch(roomId) {
         const sidePickerTeam = vetoFirstTeam === 'A' ? 'B' : 'A';
 
         const { data: match, error } = await sb.from('game_matches').insert({
-            status: 'veto',
-            mode: room.mode,
-            host_id: host,
-            captain_a_id: captainA,
-            captain_b_id: captainB,
-            team_a_players: teamA.map(p => ({ telegram_id: p.telegram_id })),
-            team_b_players: teamB.map(p => ({ telegram_id: p.telegram_id })),
-            veto_log: [],
-            veto_first_team: vetoFirstTeam,
-            side_picker_team: sidePickerTeam,
-            current_turn: vetoFirstTeam,
-            veto_started_at: new Date().toISOString(),
-            last_action_at: new Date().toISOString()
-        }).select().single();
+    status: 'veto',
+    mode: room.mode,
+    host_id: host,
+    room_id: roomId,                 // ← ДОБАВИТЬ
+    captain_a_id: captainA,
+    captain_b_id: captainB,
+    team_a_players: teamA.map(p => ({ telegram_id: p.telegram_id })),
+    team_b_players: teamB.map(p => ({ telegram_id: p.telegram_id })),
+    veto_log: [],
+    veto_first_team: vetoFirstTeam,
+    side_picker_team: sidePickerTeam,
+    current_turn: vetoFirstTeam,
+    veto_started_at: new Date().toISOString(),
+    last_action_at: new Date().toISOString()
+}).select().single();
 
         if (error) throw error;
 
@@ -15070,50 +15080,75 @@ async function voteCancelMatch(roomId) {
     }
 }
 
-async function cancelMatchByVote(roomId) {
-    try {
-        // 1. Получаем список игроков ДО удаления
-        const { data: players } = await sb.from('room_players')
-            .select('telegram_id').eq('room_id', roomId);
+         /**
+ * Единая отмена матча
+ * @param {number} roomId
+ * @param {'veto_timeout' | 'vote' | 'host_closed' | 'other'} reason
+ */
+async function cancelMatch(roomId, reason = 'other') {
+    if (!roomId) return;
 
-        // 2. Меняем статус — все увидят экран "Матч отменён"
+    try {
+        // 1. Сразу собираем СПИСОК ВСЕХ игроков ДО любых удалений
+        const { data: players } = await sb.from('room_players')
+            .select('telegram_id')
+            .eq('room_id', roomId);
+
+        const allIds = (players || []).map(p => Number(p.telegram_id));
+        if (!allIds.length) return;
+
+        // 2. Проверяем — не отменён ли уже (защита от двойных вызовов)
+        const { data: room } = await sb.from('rooms')
+            .select('status').eq('id', roomId).maybeSingle();
+        if (!room || room.status === 'cancelled') return;
+
+        // 3. Меняем статус
         await sb.from('rooms').update({
             status: 'cancelled',
             cancelled_at: new Date().toISOString(),
-            cancelled_by: 'vote'
+            cancelled_reason: reason,
+            cancelled_by: String(currentUser?.telegram_id || 'system')
         }).eq('id', roomId);
 
-        // 3. Уведомляем всех игроков через бота
-        for (const p of players || []) {
-            notify(p.telegram_id,
-                `🚫 Матч отменён по голосованию игроков. Комната закрыта.`,
-                'party'
-            );
+        // 4. Отправляем уведомление ВСЕМ (кроме себя)
+        const texts = {
+            'veto_timeout': '⏰ Матч отменён: капитан не успел забрать карту вовремя.',
+            'vote':         '🚫 Матч отменён по голосованию игроков.',
+            'host_closed':  '🚪 Хост закрыл комнату. Матч отменён.',
+            'other':        '🚫 Матч отменён.'
+        };
+        const msg = texts[reason] || texts['other'];
+
+        for (const id of allIds) {
+            if (String(id) === String(currentUser?.telegram_id)) continue;
+            try {
+                await notify(id, msg, 'party');
+            } catch (e) {}
         }
 
-        // 4. Сразу удаляем участников — геймпад и баннер пропадут
-        await sb.from('room_players').delete().eq('room_id', roomId);
-
-        // 5. Через 5 секунд (чтобы все успели увидеть экран) удаляем комнату
+        // 5. Через 2 секунды удаляем участников и комнату
         setTimeout(async () => {
             try {
+                await sb.from('room_players').delete().eq('room_id', roomId);
                 await sb.from('room_messages').delete().eq('room_id', roomId);
                 await sb.from('match_cancel_votes').delete().eq('match_id', roomId);
                 await sb.from('rooms').delete().eq('id', roomId);
-                // Принудительно чистим баннер и индикатор у себя
-if (activeRoomId === roomId) {
-    activeRoomId = null;
-    hideActiveRoomBanner();
-    const indicator = document.getElementById('headerRoomIndicator');
-    if (indicator) indicator.style.display = 'none';
-    const enterFloat = document.getElementById('playEnterFloat');
-    if (enterFloat) enterFloat.classList.remove('active');
-}
+
+                if (activeRoomId === roomId) {
+                    activeRoomId = null;
+                    hideActiveRoomBanner();
+                    const indicator = document.getElementById('headerRoomIndicator');
+                    if (indicator) indicator.style.display = 'none';
+                }
             } catch (e) {}
-        }, 5000);
+        }, 2000);
     } catch (e) {
-        console.error('cancelMatchByVote:', e);
+        console.error('cancelMatch:', e);
     }
+}   
+
+async function cancelMatchByVote(roomId) {
+    await cancelMatch(roomId, 'vote');
 }
 
 const CANCELLED_SHOWN_KEY = 'cancelledShownFor';
