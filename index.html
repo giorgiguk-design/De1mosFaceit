@@ -14023,7 +14023,24 @@ async function renderRoomContent(roomId) {
         const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
         const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
 
-        if (!room) { content.innerHTML = '<div class="empty-rooms">Комната не найдена</div>'; return; }
+if (!room) {
+    // Комнаты нет — гасим и чистим
+    activeRoomId = null;
+    hideActiveRoomBanner();
+    const indicator = document.getElementById('headerRoomIndicator');
+    if (indicator) indicator.style.display = 'none';
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
+
+    try {
+        await sb.from('room_players').delete()
+            .eq('telegram_id', currentUser.telegram_id);
+    } catch (e) {}
+
+    closePlayScreen();
+    showToast('Комната больше не существует');
+    return;
+}
 
 if (room.status === 'cancelled') {
     showCancelledOnce(roomId);
@@ -15154,20 +15171,17 @@ async function cancelMatchByVote(roomId) {
 const CANCELLED_SHOWN_KEY = 'cancelledShownFor';
 
 function showCancelledOnce(roomId) {
-    // Проверяем — показывали ли уже для этой комнаты
     const shown = localStorage.getItem(CANCELLED_SHOWN_KEY);
     if (shown === String(roomId)) {
-        // Уже показывали — просто чистим и уходим на главную
         cleanupAfterCancel(roomId);
         return;
     }
     localStorage.setItem(CANCELLED_SHOWN_KEY, String(roomId));
 
-    // Показываем один раз
     showToast('🚫 Матч отменён');
     haptic('heavy');
 
-    // Очищаем play-screen, баннеры, индикаторы
+    // Гасим ВСЁ
     const screen = document.getElementById('playScreen');
     if (screen) screen.classList.remove('active');
     const enterFloat = document.getElementById('playEnterFloat');
@@ -15177,7 +15191,6 @@ function showCancelledOnce(roomId) {
     const indicator = document.getElementById('headerRoomIndicator');
     if (indicator) indicator.style.display = 'none';
 
-    // Через секунду — на главную
     setTimeout(() => {
         cleanupAfterCancel(roomId);
     }, 1500);
@@ -15767,16 +15780,19 @@ let lastRoomReadAt = localStorage.getItem('roomLastReadAt') ? new Date(localStor
 async function checkActiveRoom() {
     if (!currentUser) return;
     try {
-        const { data: players } = await sb.from('room_players')
+        const me = currentUser.telegram_id;
+
+        // 1. Игрок всё ещё в комнате?
+        const { data: player } = await sb.from('room_players')
             .select('room_id, is_ready')
-            .eq('telegram_id', currentUser.telegram_id)
-            .limit(1);
-        const player = players?.[0];
+            .eq('telegram_id', me)
+            .maybeSingle();
 
         const indicator = document.getElementById('headerRoomIndicator');
         const enterFloat = document.getElementById('playEnterFloat');
 
-        if (!player || !player.is_ready) {
+        // 2. Нет записи — гасим ВСЁ
+        if (!player) {
             activeRoomId = null;
             hideActiveRoomBanner();
             if (indicator) indicator.style.display = 'none';
@@ -15784,17 +15800,36 @@ async function checkActiveRoom() {
             return;
         }
 
-        // Проверяем статус комнаты
+        // 3. Загружаем комнату
         const { data: room } = await sb.from('rooms')
             .select('name, mode, status')
             .eq('id', player.room_id)
             .maybeSingle();
 
-        // 🔥 Комнаты нет или она отменена → чистим всё
+        // 4. Комната удалена / отменена → чистим себя и гасим UI
         if (!room || room.status === 'cancelled') {
             try {
                 await sb.from('room_players').delete()
-                    .eq('telegram_id', currentUser.telegram_id);
+                    .eq('telegram_id', me);
+            } catch (e) {}
+
+            activeRoomId = null;
+            hideActiveRoomBanner();
+            if (indicator) indicator.style.display = 'none';
+            if (enterFloat) enterFloat.classList.remove('active');
+
+            // Однократно показываем «Матч отменён» (если ещё не показывали)
+            if (room && room.status === 'cancelled') {
+                showCancelledOnce(room.id);
+            }
+            return;
+        }
+
+        // 5. Комната завершена (finished) или результат сдан → тоже гасим
+        if (room.status === 'finished') {
+            try {
+                await sb.from('room_players').delete()
+                    .eq('telegram_id', me);
             } catch (e) {}
 
             activeRoomId = null;
@@ -15804,6 +15839,7 @@ async function checkActiveRoom() {
             return;
         }
 
+        // 6. Всё ок — показываем баннер
         activeRoomId = player.room_id;
         showActiveRoomBanner(room);
         if (indicator) indicator.style.display = 'flex';
@@ -15842,40 +15878,99 @@ function hideActiveRoomBanner() {
 }
 
 async function reopenActiveRoom() {
+    // 1. Если activeRoomId нет — сразу намекаем
     if (!activeRoomId) {
         showToast('Комната не найдена');
         return;
     }
 
-    // Проверяем, что комната ещё существует
-    const { data: room } = await sb
-        .from('rooms')
-        .select('status')
+    // 2. Проверяем, что комната ещё существует и не отменена
+    const { data: room } = await sb.from('rooms')
+        .select('*')
         .eq('id', activeRoomId)
         .maybeSingle();
 
-    if (!room) {
+    if (!room || room.status === 'cancelled' || room.status === 'finished') {
+        // Погасить всё
         activeRoomId = null;
         hideActiveRoomBanner();
-        showToast('Комната больше не существует');
+        const indicator = document.getElementById('headerRoomIndicator');
+        if (indicator) indicator.style.display = 'none';
+        const enterFloat = document.getElementById('playEnterFloat');
+        if (enterFloat) enterFloat.classList.remove('active');
+
+        // Очищаем себя из комнат
+        try {
+            await sb.from('room_players').delete()
+                .eq('telegram_id', currentUser.telegram_id);
+        } catch (e) {}
+
+        // Показать «Матч отменён» (если ещё не показывали)
+        if (room && room.status === 'cancelled') {
+            showCancelledOnce(room.id);
+        } else {
+            showToast('Комната больше не существует');
+        }
         return;
     }
 
-    // Открываем экран Играть и сразу нужную комнату
+    // 3. Открываем play-screen
     const screen = document.getElementById('playScreen');
     if (screen) screen.classList.add('active');
     haptic();
 
-if (room.status === 'waiting_link') {
-    const { data: fullRoom } = await sb.from('rooms').select('*').eq('id', activeRoomId).single();
-    showLobbyScreen(activeRoomId, fullRoom);
-    return;
-}
-if (room.status === 'in_game' || room.status === 'cancelled') {
-    renderInGameScreen(activeRoomId);
-    return;
-}
-openRoomView(activeRoomId);
+    // 4. Роутинг по статусу
+    if (room.status === 'veto' || room.status === 'side_pick') {
+        const { data: match } = await sb.from('game_matches')
+            .select('*').eq('room_id', room.id)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (match) {
+            currentMatch = match;
+            showVetoScreen();
+            subscribeVetoRealtime(match.id);
+            subscribeMatchRealtime();
+        } else {
+            // Матч потерян — считаем, что нечего открывать
+            showToast('Матч потерян');
+            closePlayScreen();
+        }
+        return;
+    }
+
+    if (room.status === 'waiting_link') {
+        showWaitingLinkScreen(room.id, room);
+        return;
+    }
+
+    if (room.status === 'in_game') {
+        const { data: match } = await sb.from('game_matches')
+            .select('*').eq('room_id', room.id)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (match) {
+            currentMatch = match;
+            subscribeMatchRealtime();
+        }
+        showInGameScreen(room.id, room);
+        return;
+    }
+
+    if (room.status === 'result') {
+        const { data: match } = await sb.from('game_matches')
+            .select('*').eq('room_id', room.id)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (match) {
+            currentMatch = match;
+            showResultScreen();
+            subscribeMatchRealtime();
+        } else {
+            showToast('Матч потерян');
+            closePlayScreen();
+        }
+        return;
+    }
+
+    // 5. Открытая комната → обычный room view
+    openRoomView(room.id);
 }
 
 // Запускаем проверку при старте и периодически
