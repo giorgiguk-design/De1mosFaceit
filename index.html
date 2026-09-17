@@ -12638,6 +12638,17 @@ if (error) {
 }
 
 // Отменяем комнату и уведомляем всех
+// Гарантированно закрываем комнату
+try {
+    if (data.room_id) {
+        await sb.from('rooms').update({
+            status: 'cancelled',
+            cancelled_reason: 'veto_timeout',
+            cancelled_at: new Date().toISOString()
+        }).eq('id', data.room_id);
+        await sb.from('room_players').delete().eq('room_id', data.room_id);
+    }
+} catch (e) {}
 if (data.room_id) {
     await cancelMatch(data.room_id, 'veto_timeout');
 }
@@ -15391,6 +15402,16 @@ async function voteCancelMatch(roomId) {
  * @param {'veto_timeout' | 'vote' | 'host_closed' | 'other'} reason
  */
 async function cancelMatch(roomId, reason = 'other') {
+    if (!roomId) {
+        // 🔥 Пробуем найти комнату через game_match
+        try {
+            const { data: match } = await sb.from('game_matches')
+                .select('room_id')
+                .eq('id', window._currentCancellingMatchId || 0)
+                .maybeSingle();
+            if (match?.room_id) roomId = match.room_id;
+        } catch (e) {}
+    }
     if (!roomId) return;
 
     try {
@@ -16091,7 +16112,7 @@ async function checkActiveRoom() {
 
     const me = currentUser.telegram_id;
 
-    // Вспомогательная — жёстко гасит всё
+    // Жёсткое гашение всего UI комнаты
     const killAllRoomUI = () => {
         activeRoomId = null;
         const banner = document.getElementById('activeRoomBanner');
@@ -16103,19 +16124,12 @@ async function checkActiveRoom() {
     };
 
     try {
-        // 🔥 .limit(1) — берём ОДНУ запись, даже если их несколько
-        const { data: players, error: playerErr } = await sb.from('room_players')
+        // 1. Я в комнате?
+        const { data: players } = await sb.from('room_players')
             .select('room_id, is_ready')
             .eq('telegram_id', me)
             .limit(1);
 
-        if (playerErr) {
-            console.warn('checkActiveRoom playerErr:', playerErr);
-            killAllRoomUI();
-            return;
-        }
-
-        // Нет записи → гасим всё
         if (!players || !players.length) {
             killAllRoomUI();
             return;
@@ -16123,38 +16137,71 @@ async function checkActiveRoom() {
 
         const player = players[0];
 
-        // 🔥 Проверяем комнату — без .maybeSingle, чтобы не падать
-        const { data: rooms, error: roomErr } = await sb.from('rooms')
+        // 2. Статус комнаты
+        const { data: rooms } = await sb.from('rooms')
             .select('id, name, mode, status')
             .eq('id', player.room_id)
             .limit(1);
 
-        if (roomErr) {
-            console.warn('checkActiveRoom roomErr:', roomErr);
-            killAllRoomUI();
-            return;
-        }
-
         const room = rooms && rooms[0];
 
-        // Комната удалена или отменена/завершена → чистим всё
+        // Комната не найдена / отменена / завершена → чистим себя
         if (!room || room.status === 'cancelled' || room.status === 'finished') {
-            // Удаляем ВСЕ записи этого игрока из room_players
             try {
                 await sb.from('room_players').delete().eq('telegram_id', me);
             } catch (e) {}
-
             killAllRoomUI();
-
             if (room && room.status === 'cancelled') {
                 showCancelledOnce(room.id);
-            } else if (!room) {
-                // Комната удалена — ничего не показываем
             }
             return;
         }
 
-        // Всё ок — показываем баннер
+        // 3. 🔥 ГЛАВНОЕ: если комната в статусе veto / side_pick / in_game / waiting_link —
+        //    проверяем привязанный game_match. Если он отменён/завершён → комната мёртвая.
+        if (['veto', 'side_pick', 'waiting_link', 'in_game', 'result'].includes(room.status)) {
+
+            const { data: matches } = await sb.from('game_matches')
+                .select('id, status, result_status')
+                .eq('room_id', room.id)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            const match = matches && matches[0];
+
+            // Нет матча — комната мёртвая
+            if (!match) {
+                try {
+                    await sb.from('room_players').delete().eq('telegram_id', me);
+                    await sb.from('rooms').update({ status: 'cancelled', cancelled_reason: 'no_match' }).eq('id', room.id);
+                } catch (e) {}
+                killAllRoomUI();
+                return;
+            }
+
+            // Матч отменён → гасим
+            if (match.status === 'cancelled') {
+                try {
+                    await sb.from('room_players').delete().eq('telegram_id', me);
+                    await sb.from('rooms').update({ status: 'cancelled' }).eq('id', room.id);
+                } catch (e) {}
+                killAllRoomUI();
+                showCancelledOnce(room.id);
+                return;
+            }
+
+            // Матч завершён → гасим
+            if (match.status === 'finished') {
+                try {
+                    await sb.from('room_players').delete().eq('telegram_id', me);
+                    await sb.from('rooms').update({ status: 'finished' }).eq('id', room.id);
+                } catch (e) {}
+                killAllRoomUI();
+                return;
+            }
+        }
+
+        // 4. Всё ок — показываем баннер
         activeRoomId = player.room_id;
         showActiveRoomBanner(room);
         const indicator = document.getElementById('headerRoomIndicator');
@@ -16162,7 +16209,6 @@ async function checkActiveRoom() {
 
     } catch (e) {
         console.error('checkActiveRoom exception:', e);
-        // 🔥 Даже при ошибке — гасим, чтобы не висело
         killAllRoomUI();
     }
 }
