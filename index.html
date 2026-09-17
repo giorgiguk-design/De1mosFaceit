@@ -12449,34 +12449,6 @@ showVetoCancelledScreen('veto_timeout');
     }
 }
 
-async function returnAfterVetoCancel() {
-    if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
-    if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
-
-    // Убираемся из комнаты
-    try {
-        await sb.from('room_players').delete()
-            .eq('telegram_id', currentUser.telegram_id);
-    } catch (e) {}
-
-    // Если я был хостом — удаляем комнату
-    try {
-        const { data: room } = await sb.from('rooms')
-            .select('id, leader_id')
-            .eq('id', currentMatch?.room_id)
-            .maybeSingle();
-        if (room && String(room.leader_id) === String(currentUser.telegram_id)) {
-            await sb.from('room_players').delete().eq('room_id', room.id);
-            await sb.from('rooms').delete().eq('id', room.id);
-        }
-    } catch (e) {}
-
-    currentMatch = null;
-    switchPage('play');
-    await loadOpenRooms();
-    checkActiveRoom();
-}
-
 async function checkVetoTimeout() {
     if (!currentMatch) return;
     try {
