@@ -16083,63 +16083,81 @@ let lastRoomReadAt = localStorage.getItem('roomLastReadAt') ? new Date(localStor
 async function checkActiveRoom() {
     if (!currentUser) return;
 
-    const indicator = document.getElementById('headerRoomIndicator');
-    const enterFloat = document.getElementById('playEnterFloat');
-    const banner = document.getElementById('activeRoomBanner');
+    const me = currentUser.telegram_id;
 
-    // Функция жёсткого гашения всего UI комнаты
-    const killRoomUI = () => {
+    // Вспомогательная — жёстко гасит всё
+    const killAllRoomUI = () => {
         activeRoomId = null;
+        const banner = document.getElementById('activeRoomBanner');
         if (banner) banner.classList.remove('active');
+        const indicator = document.getElementById('headerRoomIndicator');
         if (indicator) indicator.style.display = 'none';
+        const enterFloat = document.getElementById('playEnterFloat');
         if (enterFloat) enterFloat.classList.remove('active');
     };
 
     try {
-        const me = currentUser.telegram_id;
-
-        // 1. Есть ли я в комнате?
-        const { data: player } = await sb.from('room_players')
+        // 🔥 .limit(1) — берём ОДНУ запись, даже если их несколько
+        const { data: players, error: playerErr } = await sb.from('room_players')
             .select('room_id, is_ready')
             .eq('telegram_id', me)
-            .maybeSingle();
+            .limit(1);
 
-        // 2. Меня нет в room_players → ГАСИМ всё и выходим
-        if (!player) {
-            killRoomUI();
+        if (playerErr) {
+            console.warn('checkActiveRoom playerErr:', playerErr);
+            killAllRoomUI();
             return;
         }
 
-        // 3. Загружаем комнату
-        const { data: room } = await sb.from('rooms')
-            .select('name, mode, status')
-            .eq('id', player.room_id)
-            .maybeSingle();
+        // Нет записи → гасим всё
+        if (!players || !players.length) {
+            killAllRoomUI();
+            return;
+        }
 
-        // 4. Комната удалена / отменена / завершена → чистим себя + гасим UI
+        const player = players[0];
+
+        // 🔥 Проверяем комнату — без .maybeSingle, чтобы не падать
+        const { data: rooms, error: roomErr } = await sb.from('rooms')
+            .select('id, name, mode, status')
+            .eq('id', player.room_id)
+            .limit(1);
+
+        if (roomErr) {
+            console.warn('checkActiveRoom roomErr:', roomErr);
+            killAllRoomUI();
+            return;
+        }
+
+        const room = rooms && rooms[0];
+
+        // Комната удалена или отменена/завершена → чистим всё
         if (!room || room.status === 'cancelled' || room.status === 'finished') {
+            // Удаляем ВСЕ записи этого игрока из room_players
             try {
-                await sb.from('room_players').delete()
-                    .eq('telegram_id', me);
+                await sb.from('room_players').delete().eq('telegram_id', me);
             } catch (e) {}
 
-            killRoomUI();
+            killAllRoomUI();
 
-            // Однократно показываем «Матч отменён»
             if (room && room.status === 'cancelled') {
                 showCancelledOnce(room.id);
+            } else if (!room) {
+                // Комната удалена — ничего не показываем
             }
             return;
         }
 
-        // 5. Всё ок — показываем баннер
+        // Всё ок — показываем баннер
         activeRoomId = player.room_id;
         showActiveRoomBanner(room);
+        const indicator = document.getElementById('headerRoomIndicator');
         if (indicator) indicator.style.display = 'flex';
+
     } catch (e) {
-        console.error('checkActiveRoom error:', e);
-        // При любой ошибке — гасим, чтобы не висело
-        killRoomUI();
+        console.error('checkActiveRoom exception:', e);
+        // 🔥 Даже при ошибке — гасим, чтобы не висело
+        killAllRoomUI();
     }
 }
             
