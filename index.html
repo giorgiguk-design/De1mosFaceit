@@ -12866,7 +12866,6 @@ async function renderResultScreen() {
     const myVote = votes.find(v => Number(v.telegram_id) === me);
     const myShot = screenshots.find(s => Number(s.uploader_id) === me);
 
-    // Скриншоты команды A и B (для показа капитанам)
     const shotA = screenshots.find(s => s.team === 'A');
     const shotB = screenshots.find(s => s.team === 'B');
 
@@ -12878,7 +12877,6 @@ async function renderResultScreen() {
          capAVote.score_a !== capBVote.score_a ||
          capAVote.score_b !== capBVote.score_b);
 
-    // Если конфликт — показываем баннер "на проверке"
     let conflictBanner = '';
     if (hasConflict) {
         conflictBanner = `
@@ -12905,7 +12903,6 @@ async function renderResultScreen() {
         `;
     }
 
-    // --- Рендер игрока ---
     const renderPlayerRow = (p, team) => {
         const u = userMap[p.telegram_id] || {};
         const av = renderAvatar(u);
@@ -12914,7 +12911,7 @@ async function renderResultScreen() {
         const playerVote = votes.find(v => Number(v.telegram_id) === Number(p.telegram_id));
 
         let voteTag = '';
-        if (playerVote) {
+        if (playerVote && playerVote.score_a != null) {
             voteTag = `<span style="font-size: 10px; color: var(--emerald); font-weight: 800; margin-left: 6px;">✓ ${playerVote.score_a}:${playerVote.score_b}</span>`;
         }
 
@@ -12936,71 +12933,64 @@ async function renderResultScreen() {
         `;
     };
 
-    // --- Блок скриншота ---
-const renderScreenshotBlock = () => {
-    // Если у меня уже есть скриншот — показываем + кнопки управления
-    if (myShot) {
-        return `
-            <div class="ig-link-block" style="border-color: rgba(0,224,138,0.4);">
-                <div class="ig-link-label">📸 Твой скриншот · Команда ${myShot.team}</div>
-                <img src="${myShot.url}" style="width: 100%; border-radius: 12px; cursor: pointer; margin-top: 8px;"
-                     onclick="openImageView('${myShot.url}')">
-
-                <div style="display: flex; gap: 8px; margin-top: 10px;">
-                    <button class="profile-action-btn cancel"
-                            style="flex: 1; padding: 10px; font-size: 12px;"
-                            onclick="document.getElementById('screenshotInput').click()">
-                        🔄 Заменить
-                    </button>
-                    <button class="profile-action-btn cancel"
-                            style="flex: 1; padding: 10px; font-size: 12px; color: var(--red); border-color: rgba(255,84,112,0.4);"
-                            onclick="deleteMyScreenshot()">
-                        🗑️ Удалить
-                    </button>
+    const renderScreenshotBlock = () => {
+        if (myShot) {
+            return `
+                <div class="ig-link-block" style="border-color: rgba(0,224,138,0.4);">
+                    <div class="ig-link-label">📸 Твой скриншот · Команда ${myShot.team}</div>
+                    <img src="${myShot.url}" style="width: 100%; border-radius: 12px; cursor: pointer; margin-top: 8px;"
+                         onclick="openImageView('${myShot.url}')">
+                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                        <button class="profile-action-btn cancel"
+                                style="flex: 1; padding: 10px; font-size: 12px;"
+                                onclick="document.getElementById('screenshotInput').click()">
+                            🔄 Заменить
+                        </button>
+                        <button class="profile-action-btn cancel"
+                                style="flex: 1; padding: 10px; font-size: 12px; color: var(--red); border-color: rgba(255,84,112,0.4);"
+                                onclick="deleteMyScreenshot()">
+                            🗑️ Удалить
+                        </button>
+                    </div>
+                    <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
                 </div>
+            `;
+        }
 
+        const teamShot = myTeam === 'A' ? shotA : shotB;
+        const canUpload = isCaptain || !teamShot;
+
+        if (!canUpload) {
+            return `
+                <div class="ig-link-block">
+                    <div class="ig-link-label">📸 Скриншот команды</div>
+                    <div style="text-align: center; padding: 16px; color: var(--hint); font-size: 12px;">
+                        Скриншот уже загружен ${isCaptain ? 'сокомандником' : 'капитаном'}
+                    </div>
+                    ${teamShot ? `<img src="${teamShot.url}" style="width: 100%; border-radius: 12px; margin-top: 8px; cursor: pointer;" onclick="openImageView('${teamShot.url}')">` : ''}
+                </div>
+            `;
+        }
+
+        const hintText = isCaptain
+            ? 'Загрузи скриншот с результатом матча. Это <b>обязательно</b>.'
+            : 'Капитан не загрузил скриншот. Ты можешь загрузить его за свою команду.';
+
+        return `
+            <div class="ig-link-block" style="border-color: rgba(255,84,112,0.4);">
+                <div class="ig-link-label">📸 Скриншот матча · Обязательно</div>
+                <div style="font-size: 12px; color: var(--hint); margin: 8px 0 12px; line-height: 1.5;">
+                    ${hintText}
+                </div>
+                <button class="ig-enter-btn" onclick="document.getElementById('screenshotInput').click()">
+                    📤 ЗАГРУЗИТЬ СКРИНШОТ
+                </button>
                 <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
             </div>
         `;
-    }
+    };
 
-    // Могу ли я загрузить? (ваша старая логика)
-    const teamShot = myTeam === 'A' ? shotA : shotB;
-    const canUpload = isCaptain || !teamShot;
-
-    if (!canUpload) {
-        return `
-            <div class="ig-link-block">
-                <div class="ig-link-label">📸 Скриншот команды</div>
-                <div style="text-align: center; padding: 16px; color: var(--hint); font-size: 12px;">
-                    Скриншот уже загружен ${isCaptain ? 'сокомандником' : 'капитаном'}
-                </div>
-                ${teamShot ? `<img src="${teamShot.url}" style="width: 100%; border-radius: 12px; margin-top: 8px; cursor: pointer;" onclick="openImageView('${teamShot.url}')">` : ''}
-            </div>
-        `;
-    }
-
-    const hintText = isCaptain
-        ? 'Загрузи скриншот с результатом матча. Это <b>обязательно</b>.'
-        : 'Капитан не загрузил скриншот. Ты можешь загрузить его за свою команду.';
-
-    return `
-        <div class="ig-link-block" style="border-color: rgba(255,84,112,0.4);">
-            <div class="ig-link-label">📸 Скриншот матча · Обязательно</div>
-            <div style="font-size: 12px; color: var(--hint); margin: 8px 0 12px; line-height: 1.5;">
-                ${hintText}
-            </div>
-            <button class="ig-enter-btn" onclick="document.getElementById('screenshotInput').click()">
-                📤 ЗАГРУЗИТЬ СКРИНШОТ
-            </button>
-            <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
-        </div>
-    `;
-};
-
-    // --- Блок ввода счёта ---
     const renderScoreBlock = () => {
-        // Уже голосовал — показываем результат
         if (myVote) {
             return `
                 <div class="ig-vote-card" style="border-color: rgba(0,224,138,0.4);">
@@ -13024,8 +13014,6 @@ const renderScreenshotBlock = () => {
             `;
         }
 
-        // Проверка: могу ли я вообще голосовать?
-        // Игрок (не капитан) может голосовать только если его команда уже загрузила скрин
         const teamShot = myTeam === 'A' ? shotA : shotB;
         const canVote = isCaptain || !!teamShot;
 
@@ -13040,14 +13028,13 @@ const renderScreenshotBlock = () => {
             `;
         }
 
-        // Форма ввода
         return `
             <div class="ig-vote-card" style="border-color: rgba(0,224,138,0.35);">
                 <div class="ig-vote-title" style="color: var(--emerald);">
                     ${isCaptain ? '👑 ТВОЙ РЕЗУЛЬТАТ (КАПИТАН)' : '🎯 ТВОЙ РЕЗУЛЬТАТ (ИГРОК)'}
                 </div>
                 <div class="ig-vote-desc">
-                    ${isCaptain 
+                    ${isCaptain
                         ? 'Введи итоговый счёт матча и выбери победителя'
                         : 'Введи счёт как ты его видишь (необязательно)'}
                 </div>
@@ -13079,7 +13066,6 @@ const renderScreenshotBlock = () => {
         `;
     };
 
-    // --- Собираем итоговый HTML ---
     container.innerHTML = `
         <div class="ig-match-header">
             <div class="ig-match-row">
@@ -13147,57 +13133,58 @@ const renderScreenshotBlock = () => {
         scoreBEl.addEventListener('input', updateWinner);
     }
 
-    // --- Поллинг для live-обновления ---
-// --- Поллинг для live-обновления ---
-// Убираем старый поллинг
-if (matchPollTimer) clearInterval(matchPollTimer);
+    // ============================================================
+    // REALTIME + FALLBACK POLLING
+    // ============================================================
+    const votesCh = sb.channel('res_votes_' + currentMatch.id)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'match_votes',
+            filter: 'match_id=eq.' + currentMatch.id
+        }, async () => {
+            const { data } = await sb.from('game_matches')
+                .select('status, result_status').eq('id', currentMatch.id).single();
+            if (data?.status === 'finished') {
+                sb.removeChannel(votesCh);
+                if (matchPollTimer) { clearInterval(matchPollTimer); matchPollTimer = null; }
+                showFinishedScreen();
+            } else {
+                renderResultScreen();
+            }
+        })
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'match_screenshots',
+            filter: 'match_id=eq.' + currentMatch.id
+        }, () => renderResultScreen())
+        .subscribe();
 
-// Realtime на голоса и скрины
-const votesCh = sb.channel('res_votes_' + currentMatch.id)
-    .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'match_votes',
-        filter: 'match_id=eq.' + currentMatch.id
-    }, async () => {
-        const { data } = await sb.from('game_matches').select('status, result_status').eq('id', currentMatch.id).single();
-        if (data?.status === 'finished') {
-            sb.removeChannel(votesCh);
-            showFinishedScreen();
-        } else {
-            renderResultScreen();
-        }
-    })
-    .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'match_screenshots',
-        filter: 'match_id=eq.' + currentMatch.id
-    }, () => renderResultScreen())
-    .subscribe();
+    // Fallback polling каждые 4 сек — на случай, если realtime не сработал
+    matchPollTimer = setInterval(async () => {
+        try {
+            const { data } = await sb.from('game_matches')
+                .select('*').eq('id', currentMatch.id).single();
+            if (!data) return;
+            currentMatch = data;
 
-// Fallback polling каждые 4 сек
-matchPollTimer = setInterval(async () => {
-    try {
-        const { data } = await sb.from('game_matches')
-            .select('*').eq('id', currentMatch.id).single();
-        if (!data) return;
-        currentMatch = data;
+            if (data.status === 'finished') {
+                clearInterval(matchPollTimer);
+                matchPollTimer = null;
+                sb.removeChannel(votesCh);
+                showFinishedScreen();
+                return;
+            }
 
-        if (data.status === 'finished') {
-            clearInterval(matchPollTimer);
-            sb.removeChannel(votesCh);
-            showFinishedScreen();
-            return;
-        }
+            if (data.result_status === 'disputed') {
+                clearInterval(matchPollTimer);
+                matchPollTimer = null;
+                sb.removeChannel(votesCh);
+                renderResultScreen();
+                return;
+            }
 
-        if (data.result_status === 'disputed') {
-            clearInterval(matchPollTimer);
-            sb.removeChannel(votesCh);
-            renderResultScreen();
-            return;
-        }
-
-        // Пытаемся финализировать
-        await tryFinishMatch(currentMatch.id);
-    } catch (e) {}
-}, 4000);
+            // Пытаемся финализировать, если оба капитана проголосовали
+            await tryFinishMatch(currentMatch.id);
+        } catch (e) {}
+    }, 4000);
 }
 
             async function deleteMyScreenshot() {
@@ -13363,40 +13350,43 @@ async function submitWinner() {
         // 2. Пытаемся финализировать матч
         await tryFinishMatch(currentMatch.id);
 
-        // 3. Проверяем статус — что делать дальше
+        // 3. Перечитываем свежий матч
         const { data: fresh } = await sb.from('game_matches')
             .select('*').eq('id', currentMatch.id).single();
 
         if (fresh) currentMatch = fresh;
 
+        // 4. 🔥 ГЛАВНОЕ: роутинг по статусу — что показывать
         if (fresh?.status === 'finished') {
-            // 🔥 ФИНАЛ — показываем экран завершения, потом на главную
+            // ФИНАЛ — победный экран
             showFinishedScreen();
 
-            // Через 3 сек — на главную
+            // Через 4 сек — на главную
             setTimeout(() => {
                 if (typeof cleanupAfterCancel === 'function') {
-                    cleanupAfterCancel(currentMatch.room_id);
+                    cleanupAfterCancel(currentMatch?.room_id);
                 }
                 currentMatch = null;
                 switchPage('dashboard');
                 checkActiveRoom();
-            }, 3500);
+                loadLeaderboard();
+            }, 4000);
 
         } else if (fresh?.result_status === 'disputed') {
             // Спор — оставляем на экране, объясняем
             showToast('⚖️ Результаты расходятся — матч у модераторов');
             renderResultScreen();
 
-            // Через 3 сек — на главную (но матч у модератора)
+            // Через 5 сек — на главную
             setTimeout(() => {
                 switchPage('dashboard');
                 checkActiveRoom();
-            }, 4000);
+            }, 5000);
 
         } else {
-            // Второй капитан ещё не проголосовал — оставляем на экране
+            // Второй капитан ещё не проголосовал — перерисовываем
             renderResultScreen();
+            showToast('⏳ Ждём результат второго капитана...');
         }
 
         selectedWinner = null;
@@ -13416,38 +13406,47 @@ async function submitWinner() {
 // ============================================================
 async function tryFinishMatch(matchId) {
     try {
-        const { data: match } = await sb.from('game_matches').select('*').eq('id', matchId).single();
+        const { data: match, error: mErr } = await sb.from('game_matches')
+            .select('*').eq('id', matchId).single();
+        if (mErr) { console.warn('tryFinishMatch match load:', mErr); return; }
         if (!match) return;
 
-        const { data: votes } = await sb.from('match_votes').select('*').eq('match_id', matchId);
+        // Уже завершён — ничего не делаем
+        if (match.status === 'finished') return;
+
+        const { data: votes, error: vErr } = await sb.from('match_votes')
+            .select('*').eq('match_id', matchId);
+        if (vErr) { console.warn('tryFinishMatch votes load:', vErr); return; }
 
         const capAVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_a_id));
         const capBVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_b_id));
 
+        // Оба капитана проголосовали?
         if (capAVote && capBVote) {
             const same = capAVote.winner === capBVote.winner
                       && capAVote.score_a === capBVote.score_a
+                      && capBVote.score_a === capAVote.score_a   // защита от undefined
                       && capAVote.score_b === capBVote.score_b;
 
             if (same) {
                 await finishMatch(matchId, {
                     winner: capAVote.winner,
                     score_a: capAVote.score_a,
-                    score_b: capBVote.score_b
+                    score_b: capAVote.score_b
                 });
                 return;
             } else {
+                // Спор — обновляем статус
                 await sb.from('game_matches').update({
                     result_status: 'disputed',
                     disputed_at: new Date().toISOString()
                 }).eq('id', matchId);
-                showToast('⚖️ Результаты расходятся — матч у модераторов');
                 return;
             }
         }
-        showToast('⏳ Ожидание второго капитана...');
+        // Иначе — ждём второго капитана (ничего не делаем)
     } catch (e) {
-        console.error('tryFinishMatch:', e);
+        console.warn('tryFinishMatch:', e);
     }
 }
 
@@ -13456,7 +13455,14 @@ async function tryFinishMatch(matchId) {
 // ============================================================
 async function finishMatch(matchId, result) {
     try {
-        const { data: match } = await sb.from('game_matches').select('*').eq('id', matchId).single();
+        // Защита: не завершаем дважды
+        const { data: fresh } = await sb.from('game_matches')
+            .select('status').eq('id', matchId).single();
+        if (fresh?.status === 'finished') return;
+
+        const { data: match, error: mErr } = await sb.from('game_matches')
+            .select('*').eq('id', matchId).single();
+        if (mErr) throw mErr;
         if (!match) { showToast('Матч не найден'); return; }
 
         const teamA = match.team_a_players || [];
@@ -13478,7 +13484,6 @@ async function finishMatch(matchId, result) {
         const updatesA = [];
         const updatesB = [];
 
-        // --- Команда A ---
         for (const p of teamA) {
             const pid = Number(p.telegram_id);
             if (!pid) continue;
@@ -13496,7 +13501,6 @@ async function finishMatch(matchId, result) {
             }).eq('telegram_id', pid);
         }
 
-        // --- Команда B ---
         for (const p of teamB) {
             const pid = Number(p.telegram_id);
             if (!pid) continue;
@@ -13514,7 +13518,6 @@ async function finishMatch(matchId, result) {
             }).eq('telegram_id', pid);
         }
 
-        // Обновляем матч
         const { error: matchErr } = await sb.from('game_matches').update({
             status: 'finished',
             result_status: 'confirmed',
@@ -13528,7 +13531,7 @@ async function finishMatch(matchId, result) {
 
         if (matchErr) {
             console.warn('finishMatch update error:', matchErr);
-            // Пробуем без team_a/b_players
+            // Пробуем без обновления players-массивов
             await sb.from('game_matches').update({
                 status: 'finished',
                 result_status: 'confirmed',
@@ -13539,7 +13542,6 @@ async function finishMatch(matchId, result) {
             }).eq('id', matchId);
         }
 
-        // Обновляем комнату — статус finished
         if (match.room_id) {
             try {
                 await sb.from('rooms').update({ status: 'finished' }).eq('id', match.room_id);
@@ -13549,8 +13551,9 @@ async function finishMatch(matchId, result) {
         haptic('heavy');
         showToast('🏆 Матч завершён!');
 
-        const { data: fresh } = await sb.from('game_matches').select('*').eq('id', matchId).single();
-        currentMatch = fresh;
+        const { data: refreshed } = await sb.from('game_matches')
+            .select('*').eq('id', matchId).single();
+        currentMatch = refreshed;
         showFinishedScreen();
 
     } catch (e) {
