@@ -15431,22 +15431,28 @@ async function cancelMatch(roomId, reason = 'other') {
             } catch (e) {}
         }
 
-        // 5. Через 2 секунды удаляем участников и комнату
-        setTimeout(async () => {
-            try {
-                await sb.from('room_players').delete().eq('room_id', roomId);
-                await sb.from('room_messages').delete().eq('room_id', roomId);
-                await sb.from('match_cancel_votes').delete().eq('match_id', roomId);
-                await sb.from('rooms').delete().eq('id', roomId);
+        // 5. Сразу удаляем участников, но комнату — через 3 сек
+try {
+    await sb.from('room_players').delete().eq('room_id', roomId);
+} catch (e) { console.warn('delete room_players:', e); }
 
-                if (activeRoomId === roomId) {
-                    activeRoomId = null;
-                    hideActiveRoomBanner();
-                    const indicator = document.getElementById('headerRoomIndicator');
-                    if (indicator) indicator.style.display = 'none';
-                }
-            } catch (e) {}
-        }, 2000);
+setTimeout(async () => {
+    try {
+        await sb.from('room_messages').delete().eq('room_id', roomId);
+        await sb.from('match_cancel_votes').delete().eq('match_id', roomId);
+        await sb.from('rooms').delete().eq('id', roomId);
+    } catch (e) {}
+}, 3000);
+
+// Гасим UI немедленно
+if (activeRoomId === roomId) {
+    activeRoomId = null;
+    hideActiveRoomBanner();
+    const indicator = document.getElementById('headerRoomIndicator');
+    if (indicator) indicator.style.display = 'none';
+    const flt = document.getElementById('playEnterFloat');
+    if (flt) flt.classList.remove('active');
+}
     } catch (e) {
         console.error('cancelMatch:', e);
     }
