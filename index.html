@@ -14754,8 +14754,9 @@ function subscribeRoomRealtime(roomId) {
     if (roomRealtimeChannel) sb.removeChannel(roomRealtimeChannel);
 
     roomRealtimeChannel = sb.channel('room_rt_' + roomId)
+
         // ============================================================
-        // 1. Изменения комнаты
+        // 1. Изменения КОМНАТЫ
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -14766,7 +14767,7 @@ function subscribeRoomRealtime(roomId) {
             const room = payload.new;
             if (!room) return;
 
-            // Меня кикнули?
+            // Проверка: не кикнули ли меня
             const kicked = room.kicked_users || [];
             if (kicked.includes(Number(currentUser.telegram_id))) {
                 showToast('🚪 Тебя исключили из комнаты');
@@ -14779,28 +14780,51 @@ function subscribeRoomRealtime(roomId) {
                 return;
             }
 
-            if (activeRoomId === roomId) showActiveRoomBanner(room);
+            // Обновляем баннер (только если статус open)
+            if (activeRoomId === roomId && room.status === 'open') {
+                showActiveRoomBanner(room);
+            }
 
-            // Роутинг
+            // ============================================================
+            // РОУТИНГ ПО СТАТУСУ
+            // ============================================================
+
+            // --- CANCELLED ---
             if (room.status === 'cancelled') {
                 unsubscribeRoomRealtime();
                 unsubscribeInGameRealtime();
+
                 activeRoomId = null;
                 hideActiveRoomBanner();
                 const _ind = document.getElementById('headerRoomIndicator');
                 if (_ind) _ind.style.display = 'none';
                 const _flt = document.getElementById('playEnterFloat');
                 if (_flt) _flt.classList.remove('active');
+                const _scr = document.getElementById('playScreen');
+                if (_scr) _scr.classList.remove('active');
+
                 showCancelledOnce(roomId);
                 return;
             }
 
+            // --- VETO / SIDE_PICK ---
             if (room.status === 'veto' || room.status === 'side_pick') {
-                const screen = document.getElementById('playScreen');
-                if (screen) screen.classList.remove('active');
+                // 🔥 ГАСИМ баннер + геймпад + floating + play-screen
+                activeRoomId = null;
+                hideActiveRoomBanner();
+                const _ind = document.getElementById('headerRoomIndicator');
+                if (_ind) _ind.style.display = 'none';
+                const _flt = document.getElementById('playEnterFloat');
+                if (_flt) _flt.classList.remove('active');
+                const _scr = document.getElementById('playScreen');
+                if (_scr) _scr.classList.remove('active');
+
+                // Загружаем матч
                 const { data: match } = await sb.from('game_matches')
                     .select('*').eq('room_id', roomId)
-                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                    .order('created_at', { ascending: false })
+                    .limit(1).maybeSingle();
+
                 if (match) {
                     currentMatch = match;
                     showVetoScreen();
@@ -14810,15 +14834,45 @@ function subscribeRoomRealtime(roomId) {
                 return;
             }
 
+            // --- WAITING_LINK ---
             if (room.status === 'waiting_link') {
+                // 🔥 ГАСИМ баннер + геймпад + floating + play-screen
+                activeRoomId = null;
+                hideActiveRoomBanner();
+                const _ind = document.getElementById('headerRoomIndicator');
+                if (_ind) _ind.style.display = 'none';
+                const _flt = document.getElementById('playEnterFloat');
+                if (_flt) _flt.classList.remove('active');
+                const _scr = document.getElementById('playScreen');
+                if (_scr) _scr.classList.remove('active');
+
+                // Загружаем матч
+                const { data: match } = await sb.from('game_matches')
+                    .select('*').eq('room_id', roomId)
+                    .order('created_at', { ascending: false })
+                    .limit(1).maybeSingle();
+                if (match) currentMatch = match;
+
                 showWaitingLinkScreen(roomId, room);
                 return;
             }
 
+            // --- IN_GAME ---
             if (room.status === 'in_game') {
+                // 🔥 ГАСИМ баннер + геймпад + floating + play-screen
+                activeRoomId = null;
+                hideActiveRoomBanner();
+                const _ind = document.getElementById('headerRoomIndicator');
+                if (_ind) _ind.style.display = 'none';
+                const _flt = document.getElementById('playEnterFloat');
+                if (_flt) _flt.classList.remove('active');
+                const _scr = document.getElementById('playScreen');
+                if (_scr) _scr.classList.remove('active');
+
                 const { data: match } = await sb.from('game_matches')
                     .select('*').eq('room_id', roomId)
-                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                    .order('created_at', { ascending: false })
+                    .limit(1).maybeSingle();
                 if (match) {
                     currentMatch = match;
                     subscribeMatchRealtime();
@@ -14827,10 +14881,22 @@ function subscribeRoomRealtime(roomId) {
                 return;
             }
 
+            // --- RESULT ---
             if (room.status === 'result') {
+                // 🔥 ГАСИМ баннер + геймпад + floating + play-screen
+                activeRoomId = null;
+                hideActiveRoomBanner();
+                const _ind = document.getElementById('headerRoomIndicator');
+                if (_ind) _ind.style.display = 'none';
+                const _flt = document.getElementById('playEnterFloat');
+                if (_flt) _flt.classList.remove('active');
+                const _scr = document.getElementById('playScreen');
+                if (_scr) _scr.classList.remove('active');
+
                 const { data: match } = await sb.from('game_matches')
                     .select('*').eq('room_id', roomId)
-                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                    .order('created_at', { ascending: false })
+                    .limit(1).maybeSingle();
                 if (match) {
                     currentMatch = match;
                     showResultScreen();
@@ -14839,10 +14905,92 @@ function subscribeRoomRealtime(roomId) {
                 return;
             }
 
+            // --- FINISHED ---
+            if (room.status === 'finished') {
+                // 🔥 ГАСИМ всё
+                activeRoomId = null;
+                hideActiveRoomBanner();
+                const _ind = document.getElementById('headerRoomIndicator');
+                if (_ind) _ind.style.display = 'none';
+                const _flt = document.getElementById('playEnterFloat');
+                if (_flt) _flt.classList.remove('active');
+                const _scr = document.getElementById('playScreen');
+                if (_scr) _scr.classList.remove('active');
+
+                showFinishedScreen();
+                return;
+            }
+
+            // --- OPEN ---
             if (room.status === 'open') {
                 await renderRoomContent(roomId);
             }
         })
+
+        // ============================================================
+        // 2. Изменения состава игроков
+        // ============================================================
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'room_players',
+            filter: 'room_id=eq.' + roomId
+        }, async () => {
+            const { data: rooms } = await sb.from('rooms')
+                .select('*').eq('id', roomId).limit(1);
+            const room = rooms && rooms[0];
+            if (!room) return;
+
+            if (room.status === 'open') {
+                await checkTeamsReady(roomId, room);
+                await renderRoomContent(roomId);
+            }
+        })
+
+        // ============================================================
+        // 3. Изменения МАТЧА (по room_id)
+        // ============================================================
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'game_matches'
+        }, async (payload) => {
+            const m = payload.new;
+            if (!m || String(m.room_id) !== String(roomId)) return;
+
+            currentMatch = m;
+
+            // 🔥 ГАСИМ баннер + геймпад при ЛЮБОМ переходе статуса матча
+            if (m.status !== 'confirm') {
+                activeRoomId = null;
+                hideActiveRoomBanner();
+                const _ind = document.getElementById('headerRoomIndicator');
+                if (_ind) _ind.style.display = 'none';
+                const _flt = document.getElementById('playEnterFloat');
+                if (_flt) _flt.classList.remove('active');
+                const _scr = document.getElementById('playScreen');
+                if (_scr) _scr.classList.remove('active');
+            }
+
+            if (m.status === 'veto' || m.status === 'side_pick') {
+                showVetoScreen();
+                subscribeVetoRealtime(m.id);
+            } else if (m.status === 'in_game') {
+                const { data: rr } = await sb.from('rooms').select('*').eq('id', roomId).limit(1);
+                if (rr && rr[0]) showInGameScreen(roomId, rr[0]);
+            } else if (m.status === 'result') {
+                showResultScreen();
+            } else if (m.status === 'finished') {
+                showFinishedScreen();
+            } else if (m.status === 'cancelled') {
+                showCancelledOnce(roomId);
+            }
+        })
+
+        .subscribe((status) => {
+            console.log('Room realtime status:', status);
+        });
+}
 
         // ============================================================
         // 2. Изменения состава игроков (ВОТ ЭТОГО НЕ ХВАТАЛО!)
