@@ -16422,21 +16422,25 @@ async function checkActiveRoom() {
             }
         }
 
-// 4. Показываем баннер + индикатор ТОЛЬКО если комната в статусе open
-if (room.status === 'open' && player.is_ready) {
-    activeRoomId = player.room_id;
-    showActiveRoomBanner(room);
-    const indicator = document.getElementById('headerRoomIndicator');
-    if (indicator) indicator.style.display = 'flex';
-} else {
-    // Все остальные статусы — гасим
-    activeRoomId = null;
-    hideActiveRoomBanner();
-    const indicator = document.getElementById('headerRoomIndicator');
-    if (indicator) indicator.style.display = 'none';
-    const enterFloat = document.getElementById('playEnterFloat');
-    if (enterFloat) enterFloat.classList.remove('active');
-}
+        // 4. Показываем баннер + индикатор ТОЛЬКО если комната в статусе open
+        if (room.status === 'open' && player.is_ready) {
+            activeRoomId = player.room_id;
+            showActiveRoomBanner(room);
+            const indicator = document.getElementById('headerRoomIndicator');
+            if (indicator) indicator.style.display = 'flex';
+        } else {
+            // Все остальные статусы — гасим
+            activeRoomId = null;
+            hideActiveRoomBanner();
+            const indicator = document.getElementById('headerRoomIndicator');
+            if (indicator) indicator.style.display = 'none';
+            const enterFloat = document.getElementById('playEnterFloat');
+            if (enterFloat) enterFloat.classList.remove('active');
+        }
+    } catch (e) {
+        console.warn('checkActiveRoom:', e);
+    }
+}  // ✅ ВОТ ЭТА СКОБКА БЫЛА ПРОПУЩЕНА
             
 function showActiveRoomBanner(room) {
     const banner = document.getElementById('activeRoomBanner');
