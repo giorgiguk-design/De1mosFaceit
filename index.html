@@ -6875,22 +6875,37 @@ body::after {
     50%      { transform: scale(1.08); }
 }
 
-    /* ============ LITE MODE (для слабых устройств) ============ */
+/* ============ LITE MODE v2 — красивый и лёгкий ============ */
+html.lite-mode {
+    /* Меняем переменные — половина стилей сама упростится */
+    --glow-1: transparent;
+    --glow-2: transparent;
+    --glow-3: transparent;
+}
+
+/* Убираем ТОЛЬКО тяжёлые бесконечные анимации */
 html.lite-mode *,
 html.lite-mode *::before,
 html.lite-mode *::after {
-    animation-duration: 0.001ms !important;
+    animation-duration: 0ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.05s !important;
-    transition-delay: 0ms !important;
+    animation-delay: 0ms !important;
     filter: none !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 
-/* Убираем тяжёлые фоновые слои */
+/* Оставляем короткие transition — UI остаётся отзывчивым, но не плавным */
+html.lite-mode .play-room-card,
+html.lite-mode .menu-item,
+html.lite-mode .stat-card,
+html.lite-mode .leaderboard-item,
+html.lite-mode .profile-action-btn,
+html.lite-mode button {
+    transition-duration: 0.08s !important;
+}
+
+/* Прячем фоновые слои — они самые тяжёлые */
 html.lite-mode body::before,
 html.lite-mode body::after,
 html.lite-mode .bg-particles,
@@ -6898,7 +6913,7 @@ html.lite-mode .bg-rays {
     display: none !important;
 }
 
-/* Упрощаем градиенты карточек */
+/* У карточек оставляем градиент, но снимаем свечения */
 html.lite-mode .elo-card,
 html.lite-mode .profile-hero,
 html.lite-mode .stat-card,
@@ -6913,12 +6928,26 @@ html.lite-mode .veto-header-v2,
 html.lite-mode .veto-final-v2,
 html.lite-mode .ig-match-header,
 html.lite-mode .ig-vote-card,
-html.lite-mode .choose-team-hint {
-    background: #0e1a16 !important;
-    backdrop-filter: none !important;
+html.lite-mode .choose-team-hint,
+html.lite-mode .player-modal-inner,
+html.lite-mode .sheet {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Убираем анимации, но не ломаем layout */
+/* Свечения убираем */
+html.lite-mode .elo-value,
+html.lite-mode .stat-value,
+html.lite-mode .pbc-title,
+html.lite-mode .pbc-arrow,
+html.lite-mode .echo-title,
+html.lite-mode .ech-title,
+html.lite-mode .club-hero-name,
+html.lite-mode .mini-stat-value,
+html.lite-mode .ig-map-name {
+    text-shadow: none !important;
+}
+
+/* Скрываем декоративные элементы */
 html.lite-mode .pbc-scan,
 html.lite-mode .pbc-corner,
 html.lite-mode .sc-corner,
@@ -6926,11 +6955,15 @@ html.lite-mode .sc-glow,
 html.lite-mode .ech-corner,
 html.lite-mode .cth-corner,
 html.lite-mode .cth-glow,
-html.lite-mode .hri-dot {
+html.lite-mode .hri-dot,
+html.lite-mode .notif-btn.has-notif::before,
+html.lite-mode .nav-item.active .nav-icon::before,
+html.lite-mode .avatar::before,
+html.lite-mode .avatar::after {
     display: none !important;
 }
 
-/* Отключаем пульсации */
+/* Убираем бесконечные пульсации — заменяем на статичные состояния */
 html.lite-mode .notif-btn.has-notif,
 html.lite-mode .nav-item.active .nav-icon,
 html.lite-mode .club-play-main,
@@ -6939,18 +6972,79 @@ html.lite-mode .active-room-banner,
 html.lite-mode .mm-timer,
 html.lite-mode .veto-timer-v2,
 html.lite-mode .ig-status-badge,
-html.lite-mode .play-enter-float {
+html.lite-mode .play-enter-float,
+html.lite-mode .mm-radar-ring,
+html.lite-mode .mm-radar-dot,
+html.lite-mode .pbc-scan,
+html.lite-mode .avatar,
+html.lite-mode .dxp-label,
+html.lite-mode .elo-dxp-label,
+html.lite-mode .mode-icon,
+html.lite-mode .sc-icon,
+html.lite-mode .cth-icon,
+html.lite-mode .room-chat-btn.has-unread,
+html.lite-mode .room-icon-btn.has-unread,
+html.lite-mode .dev-tag,
+html.lite-mode .dev-tag::before,
+html.lite-mode .club-logo,
+html.lite-mode .club-logo:hover,
+html.lite-mode .header-title,
+html.lite-mode .profile-avatar {
     animation: none !important;
+    transform: none !important;
 }
 
-/* Ускоряем "стеклянные" поверхности — делаем непрозрачными */
+/* Уведомления на бадже — статичная точка */
+html.lite-mode .notif-btn.has-notif {
+    color: var(--red) !important;
+}
+
+/* "Стеклянные" поверхности делаем плотными */
 html.lite-mode .header,
 html.lite-mode .bottom-nav,
 html.lite-mode .chat-view-header,
 html.lite-mode .chat-input-bar,
-html.lite-mode .room-chat-header {
-    background: #050807 !important;
+html.lite-mode .room-chat-header,
+html.lite-mode .play-close-float {
+    background: var(--bg) !important;
     backdrop-filter: none !important;
+}
+
+/* Дэшборд — сохраняем градиент, но без вспышек */
+html.lite-mode .elo-card {
+    background: linear-gradient(140deg,
+        rgba(var(--emerald-rgb), 0.08),
+        rgba(5, 10, 8, 0.85)) !important;
+}
+
+html.lite-mode .play-btn-cyber {
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.12) 0%,
+        rgba(var(--emerald-rgb), 0.03) 50%,
+        rgba(0, 0, 0, 0.6) 100%) !important;
+}
+
+/* Hover — чуть-чуть */
+html.lite-mode .menu-item:hover,
+html.lite-mode .stat-card:hover,
+html.lite-mode .leaderboard-item:hover,
+html.lite-mode .play-room-card:hover {
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Не мигаем при нажатии */
+html.lite-mode .profile-action-btn:active,
+html.lite-mode button:active,
+html.lite-mode .menu-item:active,
+html.lite-mode .stat-card:active {
+    transform: none !important;
+    opacity: 0.85 !important;
+}
+
+/* Скролл — без smooth */
+html.lite-mode * {
+    scroll-behavior: auto !important;
 }
     
 </style>
@@ -8578,18 +8672,54 @@ async function notify(telegramId, text, type = null) {
                 if (error) throw error;
 
                 currentUser = data;
-                applyHeaderAvatar(currentUser);
-                renderDashboard(currentUser);
-                loadProfile(currentUser);
-                loadLeaderboard();
+applyHeaderAvatar(currentUser);
+renderDashboard(currentUser);
+loadProfile(currentUser);
+loadLeaderboard();
 
-                // 👇 1. Сначала ГАСИМ все UI комнаты — до любой логики
-                activeRoomId = null;
-                hideActiveRoomBanner();
-                const _ind = document.getElementById('headerRoomIndicator');
-                if (_ind) _ind.style.display = 'none';
-                const _flt = document.getElementById('playEnterFloat');
-                if (_flt) _flt.classList.remove('active');
+// 👇 1. Сначала ГАСИМ все UI комнаты — до любой логики
+activeRoomId = null;
+hideActiveRoomBanner();
+const _ind = document.getElementById('headerRoomIndicator');
+if (_ind) _ind.style.display = 'none';
+const _flt = document.getElementById('playEnterFloat');
+if (_flt) _flt.classList.remove('active');
+
+// 🔥 ЖЁСТКАЯ ЗАЧИСТКА: убираем себя из всех мёртвых комнат + сбрасываем localStorage
+try {
+    // Удаляем себя из всех комнат со статусом cancelled/finished/не существует
+    const { data: myRooms } = await sb.from('room_players')
+        .select('room_id, rooms(id, status)')
+        .eq('telegram_id', currentUser.telegram_id);
+
+    for (const r of myRooms || []) {
+        const roomStatus = r.rooms?.status;
+        if (!r.rooms || roomStatus === 'cancelled' || roomStatus === 'finished') {
+            try {
+                await sb.from('room_players').delete()
+                    .eq('telegram_id', currentUser.telegram_id)
+                    .eq('room_id', r.room_id);
+            } catch (e) {}
+        }
+    }
+
+    // Сбрасываем флаг показа "Матч отменён" для старых комнат
+    // (чтобы новые отменённые комнаты показывались)
+    // localStorage.removeItem('cancelledShownFor'); // ← оставьте закомментированным, работает ниже
+
+} catch (e) { console.warn('init cleanup:', e); }
+
+// 🔥 Скрываем ЛЮБОЙ возможный баннер (даже если он "застрял" в DOM)
+setTimeout(() => {
+    const banner = document.getElementById('activeRoomBanner');
+    if (banner) banner.classList.remove('active');
+    const ind = document.getElementById('headerRoomIndicator');
+    if (ind) ind.style.display = 'none';
+    const flt = document.getElementById('playEnterFloat');
+    if (flt) flt.classList.remove('active');
+    const scr = document.getElementById('playScreen');
+    // НЕ трогаем playScreen — вдруг игрок реально в комнате
+}, 300);
 
                 // 👇 2. Чистим себя из отменённых/удалённых комнат (перед проверками!)
                 try {
@@ -8628,7 +8758,7 @@ async function notify(telegramId, text, type = null) {
                 setInterval(cleanupStaleRooms, 60000);
 
                 // === ПЕРИОДИЧЕСКАЯ ПРОВЕРКА КОМНАТЫ ===
-                setInterval(checkActiveRoom, 8000);
+                setInterval(checkActiveRoom, 4000);   // было 8000 — теперь 4 сек
 
                 // === ПОКАЗ МОДЕРАТОР-КНОПКИ ===
                 if (isModerator(currentUser) && !currentUser.is_admin) {
@@ -8655,8 +8785,18 @@ function applyHeaderAvatar(user) {
 }
 
                 function switchPage(page) {
-            // Показываем тонкую полоску сверху на время перехода
-            const bar = document.getElementById('pageLoadingBar');
+    // 🔥 Если переходим на главную — гасим UI комнаты
+    if (page === 'dashboard') {
+        const banner = document.getElementById('activeRoomBanner');
+        const indicator = document.getElementById('headerRoomIndicator');
+        const enterFloat = document.getElementById('playEnterFloat');
+        // НЕ гасим тут — оно должно гаснуть только когда реально нет комнаты
+        // Просто дёргаем проверку
+        setTimeout(() => checkActiveRoom(), 100);
+    }
+
+    // Показываем тонкую полоску сверху на время перехода
+    const bar = document.getElementById('pageLoadingBar');
             if (bar) {
                 bar.classList.add('active');
                 setTimeout(() => bar.classList.remove('active'), 600);
@@ -9779,13 +9919,13 @@ function renderMyClub(container) {
                     <div class="club-hero-name">${escapeHtml(club.name)}</div>
                     <div class="club-hero-meta">[${escapeHtml(club.tag)}] · ${members.length}/${club.max_members}</div>
                 </div>
-                <button class="club-gear" onclick="openAllClubsSheet()" title="Все клубы">🔍</button>
-                
-                ${canEdit ? `
-                    <button class="club-gear" onclick="openEditClubSheet()" title="Настройки клуба">
-                        ⚙️
-                    </button>
-                ` : ''}
+                <button class="club-gear" type="button" onclick="event.stopPropagation(); openAllClubsSheet();" title="Все клубы">🔍</button>
+
+${canEdit ? `
+    <button class="club-gear" type="button" onclick="event.stopPropagation(); openEditClubSheet();" title="Настройки клуба">
+        ⚙️
+    </button>
+` : ''}
             </div>
             ${club.description ? `<div class="club-hero-desc">${escapeHtml(club.description)}</div>` : ''}
         </div>
@@ -10076,17 +10216,55 @@ async function updateRequestsBadge() {
         // CLUB ACTIONS
         // ============================================================
         async function acceptClubRequest(requestId, userId) {
-            try {
-                if (myClub.members.length >= myClub.club.max_members) { showToast('Клуб заполнен'); return; }
-                await sb.from('club_members').insert({ club_id: myClub.club.id, telegram_id: userId, role: 'member' });
-                await sb.from('club_requests').update({ status: 'accepted' }).eq('id', requestId);
-                await logClubEvent('member_joined', currentUser.telegram_id, userId, {});
-                notify(userId, `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
-                showToast('✅ Принят');
-                closeAllSheets();
-                openClubPage();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
+    try {
+        if (myClub.members.length >= myClub.club.max_members) {
+            showToast('Клуб заполнен');
+            return;
         }
+
+        // 🔥 Проверяем — не в клубе ли уже игрок
+        const { data: existingMembership } = await sb.from('club_members')
+            .select('club_id, clubs(name, tag)')
+            .eq('telegram_id', userId)
+            .maybeSingle();
+
+        if (existingMembership) {
+            showToast('🚫 Игрок уже находится в другом клубе');
+            // Помечаем заявку как declined (или rejected)
+            await sb.from('club_requests').update({ status: 'declined' }).eq('id', requestId);
+            // Уведомляем игрока
+            notify(userId,
+                `🚫 Твоя заявка в клуб <b>${escapeHtml(myClub.club.name)}</b> отклонена — ты уже в другом клубе.`,
+                'club'
+            );
+            renderRequestsSheet();
+            updateRequestsBadge();
+            return;
+        }
+
+        // Также — удаляем ВСЕ другие pending-заявки этого игрока в другие клубы
+        await sb.from('club_requests')
+            .update({ status: 'declined' })
+            .eq('telegram_id', userId)
+            .neq('club_id', myClub.club.id)
+            .eq('status', 'pending');
+
+        // Принимаем
+        await sb.from('club_members').insert({
+            club_id: myClub.club.id,
+            telegram_id: userId,
+            role: 'member'
+        });
+        await sb.from('club_requests').update({ status: 'accepted' }).eq('id', requestId);
+        await logClubEvent('member_joined', currentUser.telegram_id, userId, {});
+        notify(userId, `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
+        showToast('✅ Принят');
+        closeAllSheets();
+        openClubPage();
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+    }
+}
 
         async function declineClubRequest(requestId) {
             try {
@@ -10445,6 +10623,22 @@ async function updateRequestsBadge() {
                 const { data: ban } = await sb.from('club_bans')
                     .select('id').eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
                 if (ban) { showToast('🚫 Ты забанен'); if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Бан'; } return; }
+
+                        // 🔥 Проверяем — не в клубе ли уже
+        const { data: existingMembership } = await sb.from('club_members')
+            .select('club_id, clubs(name, tag)')
+            .eq('telegram_id', currentUser.telegram_id)
+            .maybeSingle();
+
+        if (existingMembership) {
+            const clubName = existingMembership.clubs?.name || 'другом клубе';
+            showToast(`🚫 Ты уже в клубе «${clubName}»`);
+            if (btnEl) {
+                btnEl.className = 'friend-action decline';
+                btnEl.textContent = '🚫 Уже в клубе';
+            }
+            return;
+        }
 
                 const { data: club } = await sb.from('clubs').select('name, owner_id, max_members').eq('id', clubId).single();
                 const { data: members } = await sb.from('club_members').select('telegram_id').eq('club_id', clubId);
@@ -16082,8 +16276,18 @@ setTimeout(checkActiveRoom, 3000);
 setInterval(checkActiveRoom, 8000);   // каждые 8 сек
 
 // Также проверяем, когда приложение возвращается в фокус
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) checkActiveRoom();
+document.addEventListener('visibilitychange', async () => {
+    if (!document.hidden) {
+        // Жёстко гасим UI — потом checkActiveRoom восстановит, если нужно
+        const banner = document.getElementById('activeRoomBanner');
+        if (banner) banner.classList.remove('active');
+        const indicator = document.getElementById('headerRoomIndicator');
+        if (indicator) indicator.style.display = 'none';
+        const enterFloat = document.getElementById('playEnterFloat');
+        if (enterFloat) enterFloat.classList.remove('active');
+
+        await checkActiveRoom();
+    }
 });
 window.addEventListener('focus', checkActiveRoom);
 
