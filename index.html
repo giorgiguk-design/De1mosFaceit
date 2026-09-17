@@ -8582,23 +8582,35 @@ async function notify(telegramId, text, type = null) {
                 renderDashboard(currentUser);
                 loadProfile(currentUser);
                 loadLeaderboard();
-                checkActiveMatch();
-                // === АВТОВОССТАНОВЛЕНИЕ СЕССИИ ===
-                setTimeout(() => checkActiveMatch(), 500);                
-                // 🔥 Убираем игрока из всех отменённых/удалённых комнат
-try {
-    const { data: myRooms } = await sb.from('room_players')
-        .select('room_id, rooms(status)')
-        .eq('telegram_id', currentUser.telegram_id);
 
-    for (const r of myRooms || []) {
-        if (!r.rooms || r.rooms.status === 'cancelled') {
-            await sb.from('room_players').delete()
-                .eq('telegram_id', currentUser.telegram_id)
-                .eq('room_id', r.room_id);
-        }
-    }
-} catch (e) {}
+                // 👇 1. Сначала ГАСИМ все UI комнаты — до любой логики
+                activeRoomId = null;
+                hideActiveRoomBanner();
+                const _ind = document.getElementById('headerRoomIndicator');
+                if (_ind) _ind.style.display = 'none';
+                const _flt = document.getElementById('playEnterFloat');
+                if (_flt) _flt.classList.remove('active');
+
+                // 👇 2. Чистим себя из отменённых/удалённых комнат (перед проверками!)
+                try {
+                    const { data: myRooms } = await sb.from('room_players')
+                        .select('room_id, rooms(status)')
+                        .eq('telegram_id', currentUser.telegram_id);
+
+                    for (const r of myRooms || []) {
+                        if (!r.rooms || r.rooms.status === 'cancelled' || r.rooms.status === 'finished') {
+                            await sb.from('room_players').delete()
+                                .eq('telegram_id', currentUser.telegram_id)
+                                .eq('room_id', r.room_id);
+                        }
+                    }
+                } catch (e) {}
+
+                // 👇 3. Теперь восстанавливаем актуальное состояние
+                checkActiveMatch();     // ← только ОДИН раз
+                checkActiveRoom();      // ← проверка баннера/индикатора
+
+                // === ПОДПИСКИ ===
                 updateNotifBadge();
                 subscribeNotificationsRealtime();
                 loadAllCovers();
@@ -8615,16 +8627,14 @@ try {
                 cleanupStaleRooms();
                 setInterval(cleanupStaleRooms, 60000);
 
-                // === ПОКАЗ МОДЕРАТОР-КНОПКИ (только если НЕ админ) ===
+                // === ПЕРИОДИЧЕСКАЯ ПРОВЕРКА КОМНАТЫ ===
+                setInterval(checkActiveRoom, 8000);
+
+                // === ПОКАЗ МОДЕРАТОР-КНОПКИ ===
                 if (isModerator(currentUser) && !currentUser.is_admin) {
                     const modBtn = document.getElementById('moderatorMenuBtn');
                     if (modBtn) modBtn.style.display = 'flex';
                 }
-            } catch (e) {
-                console.error('Init error:', e);
-                showToast('Ошибка: ' + (e?.message || e));
-            }
-        }
 
 function applyHeaderAvatar(user) {
     const src = user.custom_avatar || user.photo_url;
@@ -14528,6 +14538,15 @@ function subscribeRoomRealtime(roomId) {
 if (room.status === 'cancelled') {
     unsubscribeRoomRealtime();
     unsubscribeInGameRealtime();
+
+    // Гасим всё немедленно
+    activeRoomId = null;
+    hideActiveRoomBanner();
+    const _ind = document.getElementById('headerRoomIndicator');
+    if (_ind) _ind.style.display = 'none';
+    const _flt = document.getElementById('playEnterFloat');
+    if (_flt) _flt.classList.remove('active');
+
     showCancelledOnce(roomId);
     return;
 }
@@ -15299,13 +15318,16 @@ function showCancelledOnce(roomId) {
     showToast('🚫 Матч отменён');
     haptic('heavy');
 
-    // Гасим ВСЁ
+    // 👇 ГАСИМ ВСЁ
     const screen = document.getElementById('playScreen');
     if (screen) screen.classList.remove('active');
+
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
+
     const banner = document.getElementById('activeRoomBanner');
     if (banner) banner.classList.remove('active');
+
     const indicator = document.getElementById('headerRoomIndicator');
     if (indicator) indicator.style.display = 'none';
 
@@ -15325,10 +15347,20 @@ async function cleanupAfterCancel(roomId) {
     if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
     if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
     if (matchPollTimer) clearInterval(matchPollTimer);
+    if (currentMatchChannel) { sb.removeChannel(currentMatchChannel); currentMatchChannel = null; }
 
     activeRoomId = null;
     currentPlayRoomId = null;
     currentMatch = null;
+
+    // 👇 ГАСИМ ВСЁ
+    hideActiveRoomBanner();
+    const indicator = document.getElementById('headerRoomIndicator');
+    if (indicator) indicator.style.display = 'none';
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
+    const screen = document.getElementById('playScreen');
+    if (screen) screen.classList.remove('active');
 
     switchPage('dashboard');
     checkActiveRoom();
@@ -15897,24 +15929,31 @@ let lastRoomReadAt = localStorage.getItem('roomLastReadAt') ? new Date(localStor
 
 async function checkActiveRoom() {
     if (!currentUser) return;
+
+    const indicator = document.getElementById('headerRoomIndicator');
+    const enterFloat = document.getElementById('playEnterFloat');
+    const banner = document.getElementById('activeRoomBanner');
+
+    // Функция жёсткого гашения всего UI комнаты
+    const killRoomUI = () => {
+        activeRoomId = null;
+        if (banner) banner.classList.remove('active');
+        if (indicator) indicator.style.display = 'none';
+        if (enterFloat) enterFloat.classList.remove('active');
+    };
+
     try {
         const me = currentUser.telegram_id;
 
-        // 1. Игрок всё ещё в комнате?
+        // 1. Есть ли я в комнате?
         const { data: player } = await sb.from('room_players')
             .select('room_id, is_ready')
             .eq('telegram_id', me)
             .maybeSingle();
 
-        const indicator = document.getElementById('headerRoomIndicator');
-        const enterFloat = document.getElementById('playEnterFloat');
-
-        // 2. Нет записи — гасим ВСЁ
+        // 2. Меня нет в room_players → ГАСИМ всё и выходим
         if (!player) {
-            activeRoomId = null;
-            hideActiveRoomBanner();
-            if (indicator) indicator.style.display = 'none';
-            if (enterFloat) enterFloat.classList.remove('active');
+            killRoomUI();
             return;
         }
 
@@ -15924,48 +15963,33 @@ async function checkActiveRoom() {
             .eq('id', player.room_id)
             .maybeSingle();
 
-        // 4. Комната удалена / отменена → чистим себя и гасим UI
-        if (!room || room.status === 'cancelled') {
+        // 4. Комната удалена / отменена / завершена → чистим себя + гасим UI
+        if (!room || room.status === 'cancelled' || room.status === 'finished') {
             try {
                 await sb.from('room_players').delete()
                     .eq('telegram_id', me);
             } catch (e) {}
 
-            activeRoomId = null;
-            hideActiveRoomBanner();
-            if (indicator) indicator.style.display = 'none';
-            if (enterFloat) enterFloat.classList.remove('active');
+            killRoomUI();
 
-            // Однократно показываем «Матч отменён» (если ещё не показывали)
+            // Однократно показываем «Матч отменён»
             if (room && room.status === 'cancelled') {
                 showCancelledOnce(room.id);
             }
             return;
         }
 
-        // 5. Комната завершена (finished) или результат сдан → тоже гасим
-        if (room.status === 'finished') {
-            try {
-                await sb.from('room_players').delete()
-                    .eq('telegram_id', me);
-            } catch (e) {}
-
-            activeRoomId = null;
-            hideActiveRoomBanner();
-            if (indicator) indicator.style.display = 'none';
-            if (enterFloat) enterFloat.classList.remove('active');
-            return;
-        }
-
-        // 6. Всё ок — показываем баннер
+        // 5. Всё ок — показываем баннер
         activeRoomId = player.room_id;
         showActiveRoomBanner(room);
         if (indicator) indicator.style.display = 'flex';
     } catch (e) {
         console.error('checkActiveRoom error:', e);
+        // При любой ошибке — гасим, чтобы не висело
+        killRoomUI();
     }
 }
-
+            
 function showActiveRoomBanner(room) {
     const banner = document.getElementById('activeRoomBanner');
     if (!banner) return;
@@ -16093,8 +16117,10 @@ async function reopenActiveRoom() {
 
 // Запускаем проверку при старте и периодически
 // (после init — через 2 секунды и каждые 15 сек)
-setTimeout(checkActiveRoom, 2000);
-setInterval(checkActiveRoom, 15000);
+// Запускаем сразу и часто
+setTimeout(checkActiveRoom, 500);
+setTimeout(checkActiveRoom, 3000);
+setInterval(checkActiveRoom, 8000);   // каждые 8 сек
 
 // Также проверяем, когда приложение возвращается в фокус
 document.addEventListener('visibilitychange', () => {
