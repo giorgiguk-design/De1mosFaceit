@@ -8015,6 +8015,22 @@ function getDXP(user) {
         let currentMsgMenuId = null;
         let wasKickedFromClub = null;
 
+        // ============================================================
+// ФЛАГИ ПОКАЗА РЕЗУЛЬТАТА (чтобы не всплывало после перезагрузки)
+// ============================================================
+const RESULT_SHOWN_KEY = 'resultShownForMatch';
+const RESULT_SHOWN_VERSION = 'v1';
+
+function markResultShown(matchId) {
+    try { localStorage.setItem(RESULT_SHOWN_KEY, `${matchId}_${RESULT_SHOWN_VERSION}`); } catch (e) {}
+}
+function wasResultShown(matchId) {
+    try { return localStorage.getItem(RESULT_SHOWN_KEY) === `${matchId}_${RESULT_SHOWN_VERSION}`; } catch (e) { return false; }
+}
+function clearResultShown() {
+    try { localStorage.removeItem(RESULT_SHOWN_KEY); } catch (e) {}
+}
+
         let myParty = null;
         let selectedMode = '5x5';
         let searchTimer = null;
@@ -8462,6 +8478,163 @@ if (!reports.length) {
                 renderModeratorPanel();
             } catch (e) { showToast('Ошибка: ' + e.message); }
         }
+
+            // ============================================================
+// ПЕРЕОПРЕДЕЛЕНИЕ РЕЗУЛЬТАТА МОДЕРАТОРОМ
+// ============================================================
+function openOverrideResultSheet() {
+    if (!isModerator(currentUser)) { showToast('Только модератор'); return; }
+    if (!currentMatch) return;
+
+    document.getElementById('overrideOverlay')?.remove();
+    document.getElementById('overrideSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'overrideOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeOverrideSheet(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'overrideSheet';
+    sheet.style.zIndex = '802';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">⚖️ Переопределить результат</div>
+        <div style="font-size: 12px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+            Новый результат перезапишет старый и пересчитает DXP
+        </div>
+
+        <div class="score-input-row">
+            <div class="score-input-col">
+                <label>Команда A</label>
+                <input type="number" id="ovScoreA" min="0" max="30" value="${currentMatch.score_a ?? 13}">
+            </div>
+            <div class="score-input-col">
+                <label>Команда B</label>
+                <input type="number" id="ovScoreB" min="0" max="30" value="${currentMatch.score_b ?? 0}">
+            </div>
+        </div>
+
+        <div class="winner-choice">
+            <button class="winner-btn" id="ovWinA" onclick="ovSelectWinner('A')">🏆 КОМАНДА A</button>
+            <button class="winner-btn" id="ovWinB" onclick="ovSelectWinner('B')">🏆 КОМАНДА B</button>
+        </div>
+
+        <button class="profile-action-btn save" onclick="submitOverride()">
+            💾 СОХРАНИТЬ РЕШЕНИЕ
+        </button>
+        <button class="sheet-cancel" onclick="closeOverrideSheet()">ОТМЕНА</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    window._ovWinner = currentMatch.winner_team || null;
+    if (window._ovWinner === 'A') document.getElementById('ovWinA')?.classList.add('active');
+    if (window._ovWinner === 'B') document.getElementById('ovWinB')?.classList.add('active');
+}
+
+function ovSelectWinner(team) {
+    window._ovWinner = team;
+    document.getElementById('ovWinA')?.classList.toggle('active', team === 'A');
+    document.getElementById('ovWinB')?.classList.toggle('active', team === 'B');
+}
+
+function closeOverrideSheet() {
+    document.getElementById('overrideOverlay')?.remove();
+    document.getElementById('overrideSheet')?.remove();
+    window._ovWinner = null;
+}
+
+async function submitOverride() {
+    if (!isModerator(currentUser)) return;
+    if (!currentMatch) return;
+    if (!window._ovWinner) { showToast('Выбери победителя'); return; }
+
+    const scoreA = parseInt(document.getElementById('ovScoreA').value) || 0;
+    const scoreB = parseInt(document.getElementById('ovScoreB').value) || 0;
+
+    if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
+    if (window._ovWinner === 'A' && scoreA <= scoreB) { showToast('Счёт не совпадает с победителем'); return; }
+    if (window._ovWinner === 'B' && scoreB <= scoreA) { showToast('Счёт не совпадает с победителем'); return; }
+
+    try {
+        // 1. Откатываем старые дельты, если матч уже был завершён
+        if (currentMatch.status === 'finished') {
+            const allP = [...(currentMatch.team_a_players || []), ...(currentMatch.team_b_players || [])];
+            for (const p of allP) {
+                const pid = Number(p.telegram_id);
+                if (!pid || p.elo_before == null) continue;
+                const wasInA = (currentMatch.team_a_players || []).some(x => Number(x.telegram_id) === pid);
+                const wasWinner = currentMatch.winner_team === (wasInA ? 'A' : 'B');
+
+                const { data: u } = await sb.from('users')
+                    .select('elo, matches_played, wins').eq('telegram_id', pid).single();
+                if (u) {
+                    await sb.from('users').update({
+                        elo: p.elo_before,
+                        matches_played: Math.max(0, (u.matches_played ?? 1) - 1),
+                        wins: Math.max(0, (u.wins ?? 0) - (wasWinner ? 1 : 0))
+                    }).eq('telegram_id', pid);
+                }
+            }
+        }
+
+        // 2. Сбрасываем флаги
+        await sb.from('game_matches').update({
+            status: 'result',
+            result_status: null,
+            winner_team: null,
+            score_a: null,
+            score_b: null,
+            finished_at: null,
+            disputed_at: null,
+            resolved_by: currentUser.telegram_id
+        }).eq('id', currentMatch.id);
+
+        // 3. Записываем новые голоса от имени обоих капитанов
+        await sb.from('match_votes').upsert({
+            match_id: currentMatch.id,
+            telegram_id: Number(currentMatch.captain_a_id),
+            team: 'A', is_captain: true,
+            winner: window._ovWinner,
+            score_a: scoreA, score_b: scoreB,
+            created_at: new Date().toISOString()
+        }, { onConflict: 'match_id,telegram_id' });
+
+        await sb.from('match_votes').upsert({
+            match_id: currentMatch.id,
+            telegram_id: Number(currentMatch.captain_b_id),
+            team: 'B', is_captain: true,
+            winner: window._ovWinner,
+            score_a: scoreA, score_b: scoreB,
+            created_at: new Date().toISOString()
+        }, { onConflict: 'match_id,telegram_id' });
+
+        // 4. Финализируем заново
+        closeOverrideSheet();
+        await tryFinishMatch(currentMatch.id);
+
+        const { data: fresh } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        if (fresh) currentMatch = fresh;
+
+        showToast('✅ Результат переопределён');
+        renderFinishedScreen();
+
+        // 5. Уведомляем участников
+        const teamA = currentMatch.team_a_players || [];
+        const teamB = currentMatch.team_b_players || [];
+        for (const p of [...teamA, ...teamB]) {
+            await notify(Number(p.telegram_id),
+                `⚖️ Модератор переопределил результат матча. Новый счёт: <b>${scoreA} : ${scoreB}</b>, победитель — команда <b>${window._ovWinner}</b>.`,
+                'party'
+            );
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка: ' + e.message);
+    }
+}
 
         async function closeReport(reportId) {
             if (!confirm('Закрыть апелляцию?')) return;
@@ -13243,68 +13416,43 @@ function copyToClipboard(text) {
         function syncScores() {}
 
 async function submitWinner() {
-    // 🔥 Проверка: матч активен?
     if (!currentMatch) {
         showToast('⚠️ Матч не активен');
         return;
     }
 
-    // 🔥 Проверка: победитель выбран?
+    if (currentMatch.status === 'finished' || currentMatch.result_status === 'disputed' || currentMatch.result_status === 'confirmed') {
+        showToast('⚠️ Результат уже объявлен — изменения невозможны');
+        return;
+    }
+
     if (!selectedWinner) {
         showToast('⚠️ Выбери победителя');
         haptic('heavy');
         return;
     }
 
-    // 🔥 Проверка: счёт заполнен?
     const scoreAEl = document.getElementById('scoreA');
     const scoreBEl = document.getElementById('scoreB');
-    if (!scoreAEl || !scoreBEl) {
-        showToast('⚠️ Ошибка: поля счёта не найдены');
-        return;
-    }
+    if (!scoreAEl || !scoreBEl) { showToast('⚠️ Ошибка: поля счёта не найдены'); return; }
 
     const rawA = scoreAEl.value.trim();
     const rawB = scoreBEl.value.trim();
 
-    if (rawA === '' || rawB === '') {
-        showToast('⚠️ Введи счёт обеих команд');
-        haptic('heavy');
-        return;
-    }
+    if (rawA === '' || rawB === '') { showToast('⚠️ Введи счёт обеих команд'); haptic('heavy'); return; }
 
     const scoreA = parseInt(rawA);
     const scoreB = parseInt(rawB);
 
-    if (isNaN(scoreA) || isNaN(scoreB)) {
-        showToast('⚠️ Счёт должен быть числом');
-        haptic('heavy');
-        return;
-    }
-
-    if (scoreA === scoreB) {
-        showToast('⚠️ Счёт не может быть равным');
-        haptic('heavy');
-        return;
-    }
-
-    if (selectedWinner === 'A' && scoreA <= scoreB) {
-        showToast('⚠️ Команда A победила, но счёт не совпадает');
-        haptic('heavy');
-        return;
-    }
-
-    if (selectedWinner === 'B' && scoreB <= scoreA) {
-        showToast('⚠️ Команда B победила, но счёт не совпадает');
-        haptic('heavy');
-        return;
-    }
+    if (isNaN(scoreA) || isNaN(scoreB)) { showToast('⚠️ Счёт должен быть числом'); haptic('heavy'); return; }
+    if (scoreA === scoreB) { showToast('⚠️ Счёт не может быть равным'); haptic('heavy'); return; }
+    if (selectedWinner === 'A' && scoreA <= scoreB) { showToast('⚠️ Команда A победила, но счёт не совпадает'); haptic('heavy'); return; }
+    if (selectedWinner === 'B' && scoreB <= scoreA) { showToast('⚠️ Команда B победила, но счёт не совпадает'); haptic('heavy'); return; }
 
     const me = Number(currentUser.telegram_id);
     const isCaptain = me === Number(currentMatch.captain_a_id)
                    || me === Number(currentMatch.captain_b_id);
 
-    // 🔥 Проверка: капитан обязан иметь скриншот
     if (isCaptain) {
         const { data: shots } = await sb.from('match_screenshots')
             .select('id')
@@ -13327,7 +13475,6 @@ async function submitWinner() {
         const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
                      : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
 
-        // 1. Пишем голос
         const { error: voteErr } = await sb.from('match_votes').upsert({
             match_id: currentMatch.id,
             telegram_id: me,
@@ -13339,56 +13486,25 @@ async function submitWinner() {
             created_at: new Date().toISOString()
         }, { onConflict: 'match_id,telegram_id' });
 
-        if (voteErr) {
-            console.warn('vote upsert error:', voteErr);
-            throw voteErr;
-        }
+        if (voteErr) throw voteErr;
 
         haptic('medium');
         showToast('✅ Результат отправлен');
 
-        // 2. Пытаемся финализировать матч
         await tryFinishMatch(currentMatch.id);
 
-        // 3. Перечитываем свежий матч
         const { data: fresh } = await sb.from('game_matches')
             .select('*').eq('id', currentMatch.id).single();
-
         if (fresh) currentMatch = fresh;
 
-        // 4. 🔥 ГЛАВНОЕ: роутинг по статусу — что показывать
-        if (fresh?.status === 'finished') {
-            // ФИНАЛ — победный экран
+        if (fresh?.status === 'finished' || fresh?.result_status === 'disputed') {
+            markResultShown(currentMatch.id);
             showFinishedScreen();
-
-            // Через 4 сек — на главную
-            setTimeout(() => {
-                if (typeof cleanupAfterCancel === 'function') {
-                    cleanupAfterCancel(currentMatch?.room_id);
-                }
-                currentMatch = null;
-                switchPage('dashboard');
-                checkActiveRoom();
-                loadLeaderboard();
-            }, 4000);
-
-        } else if (fresh?.result_status === 'disputed') {
-            // Спор — оставляем на экране, объясняем
-            showToast('⚖️ Результаты расходятся — матч у модераторов');
-            renderResultScreen();
-
-            // Через 5 сек — на главную
-            setTimeout(() => {
-                switchPage('dashboard');
-                checkActiveRoom();
-            }, 5000);
-
-        } else {
-            // Второй капитан ещё не проголосовал — перерисовываем
-            renderResultScreen();
-            showToast('⏳ Ждём результат второго капитана...');
+            selectedWinner = null;
+            return;
         }
 
+        renderResultScreen();
         selectedWinner = null;
 
     } catch (e) {
@@ -13411,8 +13527,8 @@ async function tryFinishMatch(matchId) {
         if (mErr) { console.warn('tryFinishMatch match load:', mErr); return; }
         if (!match) return;
 
-        // Уже завершён — ничего не делаем
         if (match.status === 'finished') return;
+        if (match.status === 'cancelled') return;
 
         const { data: votes, error: vErr } = await sb.from('match_votes')
             .select('*').eq('match_id', matchId);
@@ -13421,11 +13537,9 @@ async function tryFinishMatch(matchId) {
         const capAVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_a_id));
         const capBVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_b_id));
 
-        // Оба капитана проголосовали?
         if (capAVote && capBVote) {
             const same = capAVote.winner === capBVote.winner
                       && capAVote.score_a === capBVote.score_a
-                      && capBVote.score_a === capAVote.score_a   // защита от undefined
                       && capAVote.score_b === capBVote.score_b;
 
             if (same) {
@@ -13434,17 +13548,19 @@ async function tryFinishMatch(matchId) {
                     score_a: capAVote.score_a,
                     score_b: capAVote.score_b
                 });
+                markResultShown(matchId);
                 return;
             } else {
-                // Спор — обновляем статус
-                await sb.from('game_matches').update({
-                    result_status: 'disputed',
-                    disputed_at: new Date().toISOString()
-                }).eq('id', matchId);
+                if (match.result_status !== 'disputed') {
+                    await sb.from('game_matches').update({
+                        result_status: 'disputed',
+                        disputed_at: new Date().toISOString()
+                    }).eq('id', matchId);
+                    markResultShown(matchId);
+                }
                 return;
             }
         }
-        // Иначе — ждём второго капитана (ничего не делаем)
     } catch (e) {
         console.warn('tryFinishMatch:', e);
     }
@@ -13565,60 +13681,183 @@ async function finishMatch(matchId, result) {
         // ============================================================
         // FINISHED
         // ============================================================
-        function showFinishedScreen() {
-            switchPage('finished');
-            renderFinishedScreen();
-        }
+function showFinishedScreen() {
+    switchPage('finished');
+    renderFinishedScreen();
+}
 
-        async function renderFinishedScreen() {
-            const container = document.getElementById('finishedContent');
-            const me = currentUser.telegram_id;
-            const isWinner = (currentMatch.winner_team === 'A' && (currentMatch.team_a_players || []).some(p => p.telegram_id === me))
-                          || (currentMatch.winner_team === 'B' && (currentMatch.team_b_players || []).some(p => p.telegram_id === me));
+async function renderFinishedScreen() {
+    const container = document.getElementById('finishedContent');
+    if (!container || !currentMatch) return;
 
-            const myTeam = (currentMatch.team_a_players || []).some(p => p.telegram_id === me) ? 'A' : 'B';
-            const meEntry = ((myTeam === 'A' ? currentMatch.team_a_players : currentMatch.team_b_players) || [])
-    .find(p => Number(p.telegram_id) === Number(me));
-const myBefore = meEntry?.elo_before ?? 1000;
+    const me = Number(currentUser.telegram_id);
+    const teamA = currentMatch.team_a_players || [];
+    const teamB = currentMatch.team_b_players || [];
 
-            const { data: meData } = await sb.from('users').select('elo').eq('telegram_id', me).single();
-            const myAfter = meData?.elo ?? 1000;
-            const delta = myAfter - myBefore;
+    const isFinished = currentMatch.status === 'finished';
+    const isDisputed = currentMatch.result_status === 'disputed';
+    const isConfirmed = currentMatch.result_status === 'confirmed';
 
-            container.innerHTML = `
-                <div class="profile-hero" style="text-align:center;">
-                    <div style="font-size:64px;margin-bottom:14px;">${isWinner ? '🏆' : '😔'}</div>
-                    <div style="font-size:22px;font-weight:800;color:${isWinner ? 'var(--emerald)' : 'var(--red)'};margin-bottom:8px;">
-                        ${isWinner ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}
+    const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
+                 : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
+
+    const allIds = [...teamA, ...teamB].map(p => Number(p.telegram_id)).filter(Boolean);
+    const [usersRes, votesRes] = await Promise.all([
+        sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url, elo')
+            .in('telegram_id', allIds.length ? allIds : [0]),
+        sb.from('match_votes').select('*').eq('match_id', currentMatch.id)
+    ]);
+    const userMap = {};
+    (usersRes.data || []).forEach(u => userMap[Number(u.telegram_id)] = u);
+    const votes = votesRes.data || [];
+
+    const capAVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_a_id));
+    const capBVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_b_id));
+
+    const meEntry = ((myTeam === 'A' ? teamA : teamB) || [])
+        .find(p => Number(p.telegram_id) === me);
+    const myBefore = meEntry?.elo_before ?? null;
+    const myAfter = meEntry?.elo_after ?? userMap[me]?.elo ?? null;
+    const delta = (myBefore != null && myAfter != null) ? (myAfter - myBefore) : null;
+
+    const isWinner = myTeam && currentMatch.winner_team === myTeam;
+
+    const renderRow = (p, team) => {
+        const u = userMap[Number(p.telegram_id)] || {};
+        const av = renderAvatar(u);
+        const pIsCap = Number(p.telegram_id) === (team === 'A' ? currentMatch.captain_a_id : currentMatch.captain_b_id);
+        const vote = votes.find(v => Number(v.telegram_id) === Number(p.telegram_id));
+        const isMe = Number(p.telegram_id) === me;
+        const eloBefore = p.elo_before ?? u.elo ?? '—';
+        const eloAfter = p.elo_after ?? u.elo ?? '—';
+        const d = (typeof eloBefore === 'number' && typeof eloAfter === 'number') ? eloAfter - eloBefore : null;
+
+        return `
+            <div class="ig-player-row team-${team.toLowerCase()} ${isMe ? 'you' : ''}" style="margin-bottom: 6px;">
+                <div class="ig-player-avatar">${av}</div>
+                <div class="ig-player-info">
+                    <div class="ig-player-name">
+                        ${escapeHtml(u.display_name || 'Игрок')}
+                        ${pIsCap ? '<span style="color: var(--gold);">👑</span>' : ''}
+                        ${isMe ? '<span style="color: var(--emerald); font-size: 10px; font-weight: 800; margin-left: 4px;">ТЫ</span>' : ''}
                     </div>
-                    <div style="font-size:14px;color:var(--hint);margin-bottom:16px;">
-                        Карта: <b>${escapeHtml(currentMatch.final_map || '—')}</b>
+                    <div class="ig-player-team-tag team-${team.toLowerCase()}" style="display:flex; justify-content:space-between; gap:8px;">
+                        <span>Команда ${team}${pIsCap ? ' · Капитан' : ''}</span>
+                        ${d != null ? `<span style="color:${d >= 0 ? 'var(--emerald)' : 'var(--red)'}; font-weight:800;">${d >= 0 ? '+' : ''}${d} DXP</span>` : ''}
                     </div>
-                    <div style="font-size:13px;color:var(--hint);margin-bottom:8px;">Счёт</div>
-                    <div style="font-size:36px;font-weight:900;margin-bottom:20px;">
-                        <span style="color:${currentMatch.winner_team === 'A' ? 'var(--emerald)' : 'var(--hint)'};">${currentMatch.score_a ?? '?'}</span>
-                        <span style="color:var(--hint);font-size:20px;margin:0 12px;">:</span>
-                        <span style="color:${currentMatch.winner_team === 'B' ? 'var(--emerald)' : 'var(--hint)'};">${currentMatch.score_b ?? '?'}</span>
+                    ${vote && vote.score_a != null ? `<div style="font-size: 11px; color: var(--hint); margin-top: 4px;">Голос: <b style="color: var(--emerald);">${vote.score_a} : ${vote.score_b}</b> → ${vote.winner}</div>` : ''}
+                </div>
+            </div>
+        `;
+    };
+
+    const votesBlock = `
+        <div style="margin-top: 16px; padding: 14px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 14px;">
+            <div style="font-size: 10px; color: var(--hint); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 800; margin-bottom: 10px;">
+                ${isDisputed ? '⚖️ Расхождение результатов' : '📋 Отчёт капитанов'}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="padding: 10px; background: rgba(var(--emerald-rgb),0.06); border: 1px solid rgba(var(--emerald-rgb),0.25); border-radius: 10px;">
+                    <div style="font-size: 10px; color: var(--hint); letter-spacing: 1px;">КАПИТАН A</div>
+                    <div style="font-size: 15px; font-weight: 900; color: var(--emerald); margin-top: 4px;">
+                        ${capAVote && capAVote.score_a != null ? `${capAVote.score_a} : ${capAVote.score_b}` : '— : —'}
                     </div>
+                    <div style="font-size: 11px; color: var(--hint); margin-top: 2px;">
+                        ${capAVote ? `Победитель: ${capAVote.winner}` : 'Не отправлено'}
+                    </div>
+                </div>
+                <div style="padding: 10px; background: rgba(255,84,112,0.06); border: 1px solid rgba(255,84,112,0.25); border-radius: 10px;">
+                    <div style="font-size: 10px; color: var(--hint); letter-spacing: 1px;">КАПИТАН B</div>
+                    <div style="font-size: 15px; font-weight: 900; color: #ff5470; margin-top: 4px;">
+                        ${capBVote && capBVote.score_a != null ? `${capBVote.score_a} : ${capBVote.score_b}` : '— : —'}
+                    </div>
+                    <div style="font-size: 11px; color: var(--hint); margin-top: 2px;">
+                        ${capBVote ? `Победитель: ${capBVote.winner}` : 'Не отправлено'}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    let headerBlock = '';
+    if (isFinished && isConfirmed) {
+        headerBlock = `
+            <div class="profile-hero" style="text-align:center;">
+                <div style="font-size:64px;margin-bottom:14px;">${isWinner ? '🏆' : '😔'}</div>
+                <div style="font-size:22px;font-weight:800;color:${isWinner ? 'var(--emerald)' : 'var(--red)'};margin-bottom:8px;">
+                    ${isWinner ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}
+                </div>
+                <div style="font-size:13px;color:var(--hint);margin-bottom:8px;">Карта: <b>${escapeHtml(currentMatch.final_map || '—')}</b></div>
+                <div style="font-size:36px;font-weight:900;margin-bottom:20px;">
+                    <span style="color:${currentMatch.winner_team === 'A' ? 'var(--emerald)' : 'var(--hint)'};">${currentMatch.score_a ?? '?'}</span>
+                    <span style="color:var(--hint);font-size:20px;margin:0 12px;">:</span>
+                    <span style="color:${currentMatch.winner_team === 'B' ? 'var(--emerald)' : 'var(--hint)'};">${currentMatch.score_b ?? '?'}</span>
+                </div>
+                ${delta != null ? `
                     <div style="font-size:24px;font-weight:900;color:${delta >= 0 ? 'var(--emerald)' : 'var(--red)'};">
-                        ${delta >= 0 ? '+' : ''}${delta} ELO
+                        ${delta >= 0 ? '+' : ''}${delta} DXP
                     </div>
                     <div style="font-size:13px;color:var(--hint);margin-top:4px;">
                         ${myBefore} → ${myAfter} · Уровень ${eloToLevel(myAfter)}
                     </div>
+                ` : ''}
+            </div>
+        `;
+    } else if (isDisputed) {
+        headerBlock = `
+            <div class="moderator-panel" style="text-align:center;">
+                <div style="font-size:56px; margin-bottom: 12px;">⚖️</div>
+                <div class="moderator-title" style="font-size: 20px;">РЕЗУЛЬТАТЫ РАСХОДЯТСЯ</div>
+                <div class="moderator-sub">
+                    Капитаны указали разный счёт. Матч отправлен на проверку модераторам.<br>
+                    Изменить или отменить результат может только модератор.
                 </div>
-                <button class="profile-action-btn edit" onclick="returnToDashboard()">🏠 На главную</button>
-                <button class="profile-action-btn cancel" onclick="openAppealDialog()">⚖️ Подать апелляцию</button>
-            `;
-        }
+            </div>
+        `;
+    }
 
-        function returnToDashboard() {
-            currentMatch = null;
-            if (matchPollTimer) clearInterval(matchPollTimer);
-            if (currentMatchChannel) sb.removeChannel(currentMatchChannel);
-            switchPage('dashboard');
-            loadLeaderboard();
-        }
+    const canOverride = isModerator(currentUser) && (isDisputed || isFinished);
+
+    container.innerHTML = `
+        ${headerBlock}
+        ${votesBlock}
+
+        <div class="ig-section-title" style="margin-top: 20px;">
+            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5"/>
+                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+            </svg>
+            Состав
+        </div>
+        ${teamA.map(p => renderRow(p, 'A')).join('')}
+        ${teamB.map(p => renderRow(p, 'B')).join('')}
+
+        ${canOverride ? `
+            <button class="profile-action-btn save" style="margin-top: 20px; background: rgba(217,171,90,0.9); color:#000;"
+                    onclick="openOverrideResultSheet()">
+                ⚖️ ПЕРЕОПРЕДЕЛИТЬ РЕЗУЛЬТАТ (МОДЕРАТОР)
+            </button>
+        ` : ''}
+
+        <button class="profile-action-btn edit" style="margin-top: 20px;" onclick="returnToDashboard()">
+            🏠 НА ГЛАВНУЮ
+        </button>
+
+        <div style="text-align: center; font-size: 11px; color: var(--hint); margin-top: 12px; line-height: 1.5;">
+            Результат окончательный.<br>
+            Изменить может только модератор.
+        </div>
+    `;
+}
+
+function returnToDashboard() {
+    currentMatch = null;
+    if (matchPollTimer) { clearInterval(matchPollTimer); matchPollTimer = null; }
+    if (currentMatchChannel) { sb.removeChannel(currentMatchChannel); currentMatchChannel = null; }
+    switchPage('dashboard');
+    loadLeaderboard();
+    checkActiveRoom();
+}
 
 async function openAppealDialog() {
     if (!currentMatch) return;
@@ -13672,9 +13911,9 @@ async function checkActiveMatch() {
         // 2. Если в комнате нет — ищем активный game_match
         const { data: matches } = await sb.from('game_matches')
             .select('*')
-            .in('status', ['confirm', 'veto', 'side_pick', 'ready', 'in_game', 'result'])
+            .in('status', ['confirm', 'veto', 'side_pick', 'ready', 'in_game', 'result', 'finished'])
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(20);
 
         for (const m of matches || []) {
             const ids = [...(m.team_a_players || []), ...(m.team_b_players || [])]
@@ -13682,16 +13921,28 @@ async function checkActiveMatch() {
             if (ids.includes(Number(me))) {
                 currentMatch = m;
 
-                if (m.status === 'confirm')      showConfirmScreen();
-                else if (m.status === 'veto')    { showVetoScreen(); subscribeVetoRealtime(m.id); }
-                else if (m.status === 'side_pick') { showVetoScreen(); subscribeVetoRealtime(m.id); }
-                else if (m.status === 'ready')   showMatchScreen();
-                else if (m.status === 'in_game') { showInGameScreen(m.room_id, m); }
-                else if (m.status === 'result')  showResultScreen();
-                else if (m.status === 'finished') showFinishedScreen();
+                                if (m.status === 'confirm')      { showConfirmScreen(); subscribeMatchRealtime(); return; }
+                if (m.status === 'veto')         { showVetoScreen(); subscribeVetoRealtime(m.id); subscribeMatchRealtime(); return; }
+                if (m.status === 'side_pick')    { showVetoScreen(); subscribeVetoRealtime(m.id); subscribeMatchRealtime(); return; }
+                if (m.status === 'ready')        { showMatchScreen(); subscribeMatchRealtime(); return; }
+                if (m.status === 'in_game')      { showInGameScreen(m.room_id, m); subscribeMatchRealtime(); return; }
 
-                subscribeMatchRealtime();
-                return;
+                if (m.status === 'result') {
+                    showResultScreen();
+                    subscribeMatchRealtime();
+                    return;
+                }
+
+                if (m.status === 'finished') {
+                    if (wasResultShown(m.id)) {
+                        currentMatch = null;
+                        return;
+                    }
+                    markResultShown(m.id);
+                    showFinishedScreen();
+                    subscribeMatchRealtime();
+                    return;
+                }
             }
         }
     } catch (e) {
@@ -15073,6 +15324,7 @@ async function closeRoom(roomId) {
 
 async function startMatch(roomId) {
     haptic('heavy');
+    clearResultShown();
 
     const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
     if (!room) {
