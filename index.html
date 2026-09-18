@@ -3611,7 +3611,7 @@ body::after {
     position: relative;
     width: 100%;
     padding: 0;
-    border: 1px solid var(--border-strong);
+    border: 2px solid var(--emerald);
     border-radius: 0px;
     cursor: pointer;
     font-family: inherit;
@@ -3620,13 +3620,14 @@ body::after {
     margin-bottom: 20px;
     background:
         linear-gradient(180deg,
-            rgba(var(--emerald-rgb), 0.10) 0%,
-            rgba(var(--emerald-rgb), 0.02) 45%,
-            rgba(0, 0, 0, 0.5) 100%);
+            rgba(var(--emerald-rgb), 0.28) 0%,
+            rgba(var(--emerald-rgb), 0.10) 45%,
+            rgba(0, 0, 0, 0.65) 100%);
     box-shadow:
         inset 0 0 0 1px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.04),
-        0 4px 18px rgba(0, 0, 0, 0.45);
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 6px 26px rgba(var(--emerald-rgb), 0.35),
+        0 0 40px rgba(var(--emerald-rgb), 0.15);
     transition: transform 0.18s ease,
                 border-color 0.25s ease,
                 box-shadow 0.3s ease;
@@ -3634,6 +3635,24 @@ body::after {
         14px 0, 100% 0, 100% calc(100% - 14px),
         calc(100% - 14px) 100%, 0 100%, 0 14px
     );
+    animation: playBtnPulse 2.6s ease-in-out infinite;
+}
+
+@keyframes playBtnPulse {
+    0%, 100% {
+        box-shadow:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 6px 26px rgba(var(--emerald-rgb), 0.35),
+            0 0 40px rgba(var(--emerald-rgb), 0.15);
+    }
+    50% {
+        box-shadow:
+            inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 8px 32px rgba(var(--emerald-rgb), 0.55),
+            0 0 60px rgba(var(--emerald-rgb), 0.35);
+    }
 }
 
 /* Верхняя неоновая полоска */
@@ -3732,10 +3751,10 @@ body::after {
 }
 
 .pbc-icon {
-    font-size: 26px;
+    font-size: 28px;
     line-height: 1;
     flex-shrink: 0;
-    filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.5));
+    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.9));
     transition: transform 0.25s ease;
 }
 
@@ -3750,12 +3769,16 @@ body::after {
 }
 
 .pbc-title {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 900;
     letter-spacing: 5px;
     line-height: 1;
-    color: var(--text);
-    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.35);
+    color: #fff;
+    text-shadow:
+        0 0 8px rgba(var(--emerald-rgb), 0.6),
+        0 0 20px rgba(var(--emerald-rgb), 0.4),
+        0 2px 6px rgba(0, 0, 0, 0.8);
+    transition: letter-spacing 0.3s ease, text-shadow 0.3s ease;
 }
 
 .pbc-sub {
@@ -8733,6 +8756,7 @@ if (tg) {
 }
 
 let currentUser = null;
+let currentProfileUserId = null; // чей профиль сейчас открыт (для realtime-графика)
 
 // Глобальный флаг: SDK загружен?
 const hasTelegramSDK = !!tg;
@@ -9726,6 +9750,7 @@ async function notify(telegramId, text, type = null) {
         subscribeCoversRealtime();
         updateChatsBadge();
         subscribeChatsRealtime();
+        subscribeDxpHistoryRealtime();
 
         // Онбординг
         if (needsOnboarding(currentUser)) {
@@ -9900,6 +9925,7 @@ function myClubTagHTML(telegramId) {
 
 async function renderProfileView(user) {
     const container = document.getElementById('profileContent');
+    currentProfileUserId = user.telegram_id;   // ← ЭТА СТРОКА
 
     if (!clubTagCache[user.telegram_id]) {
         await loadClubTagsForUsers([user.telegram_id]);
@@ -10281,12 +10307,18 @@ async function openPlayerProfile(userId) {
                 <div class="profile-view-row"><span class="profile-view-label">Матчей</span><span class="profile-view-value">${user.matches_played ?? 0}</span></div>
                 <div class="profile-view-row"><span class="profile-view-label">Побед</span><span class="profile-view-value">${user.wins ?? 0}</span></div>
             `}
-            ${friendBtn}
+                        ${friendBtn}
             <button class="profile-action-btn cancel" style="margin-top: 8px;" onclick="closePlayerModal(); openChatWithUser(${user.telegram_id})">
                 💬 НАПИСАТЬ СООБЩЕНИЕ
             </button>
         `;
+
+        // Рисуем график для этого игрока
+        currentProfileUserId = user.telegram_id;
+        setTimeout(() => renderEloChart(user.telegram_id), 100);
+
     } catch (e) {
+        console.error('openPlayerProfile:', e);
         content.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить</div>';
     }
 }
@@ -10925,11 +10957,29 @@ ${canEdit ? `
     if (isOwner) updateRequestsBadge();
 }
 
-            async function openAllClubsSheet() {
-    document.getElementById('sheetOverlay').classList.add('active');
-    document.getElementById('allClubsSheet').classList.add('active');
-    document.getElementById('allClubsSearch').value = '';
-    await loadAllClubsSheet('');
+async function openAllClubsSheet() {
+    console.log('openAllClubsSheet called');
+
+    const sheet = document.getElementById('allClubsSheet');
+    const overlay = document.getElementById('sheetOverlay');
+    const search = document.getElementById('allClubsSearch');
+    const list = document.getElementById('allClubsList');
+
+    if (!sheet) { console.error('#allClubsSheet не найден'); showToast('Ошибка: экран клубов не найден'); return; }
+    if (!overlay) { console.error('#sheetOverlay не найден'); return; }
+
+    overlay.classList.add('active');
+    sheet.classList.add('active');
+    if (search) search.value = '';
+
+    if (list) list.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    try {
+        await loadAllClubsSheet('');
+    } catch (e) {
+        console.error('loadAllClubsSheet error:', e);
+        if (list) list.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + e.message + '</div>';
+    }
 }
 
 let _allClubsTimer = null;
@@ -10943,26 +10993,41 @@ function debouncedAllClubsSearch() {
 
 async function loadAllClubsSheet(q) {
     const el = document.getElementById('allClubsList');
+    if (!el) { console.error('#allClubsList не найден'); return; }
+
     el.innerHTML = '<div class="empty">Загрузка...</div>';
+
     try {
         let query = sb.from('clubs')
             .select('id, name, tag, description, logo_url, max_members')
-            .order('created_at', { ascending: false }).limit(100);
-        if (q.length >= 2) {
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (q && q.length >= 2) {
             const safe = q.replace(/[%_]/g, '');
             query = query.or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`);
         }
-        const { data: clubs } = await query;
+
+        const { data: clubs, error } = await query;
+        if (error) throw error;
 
         const clubIds = (clubs || []).map(c => c.id);
-        const { data: members } = await sb.from('club_members').select('club_id').in('club_id', clubIds);
+        const { data: members } = await sb.from('club_members')
+            .select('club_id')
+            .in('club_id', clubIds.length ? clubIds : [0]);
+
         const countMap = {};
         (members || []).forEach(m => countMap[m.club_id] = (countMap[m.club_id] || 0) + 1);
 
-        if (!clubs?.length) { el.innerHTML = '<div class="empty">Клубов не найдено</div>'; return; }
+        if (!clubs?.length) {
+            el.innerHTML = '<div class="empty">Клубов не найдено</div>';
+            return;
+        }
 
         el.innerHTML = clubs.map(c => {
-            const logoHTML = c.logo_url ? `<img src="${c.logo_url}" alt="">` : c.tag.slice(0, 2).toUpperCase();
+            const logoHTML = c.logo_url
+                ? `<img src="${c.logo_url}" alt="">`
+                : c.tag.slice(0, 2).toUpperCase();
             const count = countMap[c.id] || 0;
             const isMine = myClub?.club?.id === c.id;
             return `
@@ -10980,7 +11045,8 @@ async function loadAllClubsSheet(q) {
             `;
         }).join('');
     } catch (e) {
-        el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>';
+        console.error('loadAllClubsSheet:', e);
+        el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка: ' + e.message + '</div>';
     }
 }
 
@@ -11201,19 +11267,20 @@ async function updateRequestsBadge() {
             return;
         }
 
-        // 🔥 Проверяем — не в клубе ли уже игрок
-        const { data: existingMembership } = await sb.from('club_members')
+        // 🔥 Проверяем — не в клубе ли уже игрок (limit(1) вместо maybeSingle)
+        const { data: existingMemberships } = await sb.from('club_members')
             .select('club_id, clubs(name, tag)')
             .eq('telegram_id', userId)
-            .maybeSingle();
+            .limit(1);
 
-        if (existingMembership) {
-            showToast('🚫 Игрок уже находится в другом клубе');
-            // Помечаем заявку как declined (или rejected)
+        if (existingMemberships && existingMemberships.length > 0) {
+            const existing = existingMemberships[0];
+            showToast(`🚫 Игрок уже в клубе «${existing.clubs?.name || 'другом'}»`);
+
             await sb.from('club_requests').update({ status: 'declined' }).eq('id', requestId);
-            // Уведомляем игрока
+
             notify(userId,
-                `🚫 Твоя заявка в клуб <b>${escapeHtml(myClub.club.name)}</b> отклонена — ты уже в другом клубе.`,
+                `🚫 Твоя заявка в клуб <b>${escapeHtml(myClub.club.name)}</b> отклонена — ты уже в клубе.`,
                 'club'
             );
             renderRequestsSheet();
@@ -11221,7 +11288,7 @@ async function updateRequestsBadge() {
             return;
         }
 
-        // Также — удаляем ВСЕ другие pending-заявки этого игрока в другие клубы
+        // Удаляем все pending-заявки этого игрока в другие клубы
         await sb.from('club_requests')
             .update({ status: 'declined' })
             .eq('telegram_id', userId)
@@ -11603,15 +11670,15 @@ async function updateRequestsBadge() {
                     .select('id').eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
                 if (ban) { showToast('🚫 Ты забанен'); if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Бан'; } return; }
 
-                        // 🔥 Проверяем — не в клубе ли уже
-        const { data: existingMembership } = await sb.from('club_members')
+        // 🔥 Проверяем — не в клубе ли уже (limit(1) вместо maybeSingle)
+        const { data: existingMemberships } = await sb.from('club_members')
             .select('club_id, clubs(name, tag)')
             .eq('telegram_id', currentUser.telegram_id)
-            .maybeSingle();
+            .limit(1);
 
-        if (existingMembership) {
-            const clubName = existingMembership.clubs?.name || 'другом клубе';
-            showToast(`🚫 Ты уже в клубе «${clubName}»`);
+        if (existingMemberships && existingMemberships.length > 0) {
+            const existing = existingMemberships[0];
+            showToast(`🚫 Ты уже в клубе «${existing.clubs?.name || 'другом'}»`);
             if (btnEl) {
                 btnEl.className = 'friend-action decline';
                 btnEl.textContent = '🚫 Уже в клубе';
@@ -19340,12 +19407,12 @@ async function declineInviteNotif(inviteId) {
 
             async function acceptClubInviteNotif(inviteId, clubId, fromId) {
     try {
-        // Уже в клубе?
-        const { data: membership } = await sb.from('club_members')
+        // Уже в клубе? (limit(1) вместо maybeSingle)
+        const { data: memberships } = await sb.from('club_members')
             .select('club_id')
             .eq('telegram_id', currentUser.telegram_id)
-            .maybeSingle();
-        if (membership) {
+            .limit(1);
+        if (memberships && memberships.length > 0) {
             showToast('Ты уже в клубе');
             await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
             await renderNotifList();
@@ -20116,6 +20183,31 @@ function subscribeChatsRealtime() {
 }
 
             // ============================================================
+// REALTIME НА DXP_HISTORY (обновляет график у всех в реальном времени)
+// ============================================================
+let dxpHistoryChannel = null;
+
+function subscribeDxpHistoryRealtime() {
+    if (dxpHistoryChannel) sb.removeChannel(dxpHistoryChannel);
+
+    dxpHistoryChannel = sb.channel('dxp_history_rt')
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'dxp_history'
+        }, (payload) => {
+            const row = payload.new;
+            if (!row) return;
+
+            // Если открыт профиль этого игрока — обновляем график
+            if (currentProfileUserId && Number(row.telegram_id) === Number(currentProfileUserId)) {
+                renderEloChart(currentProfileUserId);
+            }
+        })
+        .subscribe();
+}
+
+            // ============================================================
 // APP LIFECYCLE / OPTIMIZATION
 // ============================================================
 const CHANNELS = new Map(); // name -> channel
@@ -20188,7 +20280,7 @@ async function renderEloChart(userId) {
     const lossesEl = document.getElementById('eloChartLosses');
 
     try {
-        // Берём последние 30 матчей игрока из dxp_history
+        // Берём последние 30 матчей ИМЕННО ЭТОГО игрока
         const { data: history, error } = await sb
             .from('dxp_history')
             .select('elo_before, elo_after, delta, won, created_at')
@@ -20198,7 +20290,6 @@ async function renderEloChart(userId) {
 
         if (error) throw error;
 
-        // Хронологический порядок + последние 15
         const ordered = (history || []).slice().reverse();
         const recent = ordered.slice(-15);
 
@@ -20225,14 +20316,12 @@ async function renderEloChart(userId) {
         card.classList.remove('empty');
         card.querySelector('.ech-empty-msg')?.remove();
 
-        // Точки: используем elo_after (актуальное после матча)
         const points = recent.map(h => ({
             elo: h.elo_after ?? h.elo_before ?? 1000,
             win: h.won === true,
             delta: h.delta ?? 0
         }));
 
-        // Оси
         const elos = points.map(p => p.elo);
         const min = Math.min(...elos);
         const max = Math.max(...elos);
@@ -20241,7 +20330,6 @@ async function renderEloChart(userId) {
         const yMin = min - pad;
         const yMax = max + pad;
 
-        // Геометрия SVG
         const W = 320, H = 140;
         const padL = 6, padR = 6, padT = 10, padB = 12;
         const innerW = W - padL - padR;
@@ -20267,18 +20355,15 @@ async function renderEloChart(userId) {
         dotEl?.setAttribute('cx', last.x.toFixed(1));
         dotEl?.setAttribute('cy', last.y.toFixed(1));
 
-        // Y-ось
         const labels = [yMax, yMax - (yMax - yMin) / 3, yMax - 2 * (yMax - yMin) / 3, yMin];
         if (yAxisEl) yAxisEl.innerHTML = labels.map(v => `<span>${Math.round(v)}</span>`).join('');
 
-        // Delta = сумма дельт на графике
         const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
         if (deltaEl) {
             deltaEl.textContent = (totalDelta >= 0 ? '+' : '') + totalDelta;
             deltaEl.classList.toggle('negative', totalDelta < 0);
         }
 
-        // W/L
         const wins = points.filter(p => p.win).length;
         const losses = points.length - wins;
         if (winsEl) winsEl.textContent = wins;
