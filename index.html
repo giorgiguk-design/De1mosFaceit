@@ -14298,69 +14298,84 @@ let vetoRtChannel = null;
 let vetoPollInterval = null;
 
 function subscribeVetoRealtime(matchId) {
-    console.log('🎬 subscribeVetoRealtime START, matchId:', matchId, 'sb?', !!sb);
-    if (vetoRtChannel) sb.removeChannel(vetoRtChannel);
+    console.log('🎬 subscribeVetoRealtime START, matchId =', matchId, 'sb =', !!sb);
+
+    if (vetoRtChannel) {
+        console.log('🎬 отписываемся от старого vetoRtChannel');
+        try { sb.removeChannel(vetoRtChannel); } catch (e) {}
+    }
     vetoRtChannel = null;
 
-    if (!matchId) return;
+    if (!matchId) {
+        console.warn('❌ matchId пустой — подписка не создана');
+        return;
+    }
 
-    console.log('🎬 subscribeVetoRealtime для matchId:', matchId);
+    console.log('🎬 создаём канал veto_rt_' + matchId);
 
-    vetoRtChannel = sb.channel('veto_rt_' + matchId)
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'game_matches',
-            filter: 'id=eq.' + matchId
-        }, async (payload) => {
-            const fresh = payload.new;
-            if (!fresh) return;
+    try {
+        vetoRtChannel = sb.channel('veto_rt_' + matchId)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'game_matches',
+                filter: 'id=eq.' + matchId
+            }, async (payload) => {
+                const fresh = payload.new;
+                if (!fresh) return;
 
-            const prevStatus = currentMatch?.status;
-            const prevLen = (currentMatch?.veto_log || []).length;
-            const newLen = (fresh.veto_log || []).length;
+                const prevStatus = currentMatch?.status;
+                const prevLen = (currentMatch?.veto_log || []).length;
+                const newLen = (fresh.veto_log || []).length;
 
-            currentMatch = fresh;
+                currentMatch = fresh;
 
-            console.log('📡 veto update:', prevStatus, '→', fresh.status, '| банов:', prevLen, '→', newLen);
+                console.log('📡 veto update:', prevStatus, '→', fresh.status, '| банов:', prevLen, '→', newLen);
 
-            if (fresh.status === 'side_pick') {
-                haptic('heavy');
-                if (prevStatus !== 'side_pick') {
-                    showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
+                if (fresh.status === 'side_pick') {
+                    haptic('heavy');
+                    if (prevStatus !== 'side_pick') {
+                        showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
+                    }
+                    stopVetoPolling();
+                    renderVeto();
+                    startVetoCountdown();
+                    return;
                 }
-                stopVetoPolling();
-                renderVeto();
-                startVetoCountdown();
-                return;
-            }
 
-            if (fresh.status === 'veto') {
-                renderVeto();
-                startVetoCountdown();
-            } else if (fresh.status === 'in_game') {
-                stopVetoPolling();
-                showInGameScreen(fresh.room_id, fresh);
-            } else if (fresh.status === 'cancelled') {
-                stopVetoPolling();
-                showVetoCancelledScreen(fresh.cancelled_reason);
-            } else if (fresh.status === 'result') {
-                stopVetoPolling();
-                showResultScreen();
-            }
-        })
-        .subscribe((status) => {
-            console.log('📡 veto_rt status:', status);
-            if (status === 'SUBSCRIBED') {
-                syncVetoFromDB(matchId);
-            }
-        });
+                if (fresh.status === 'veto') {
+                    renderVeto();
+                    startVetoCountdown();
+                } else if (fresh.status === 'in_game') {
+                    stopVetoPolling();
+                    showInGameScreen(fresh.room_id, fresh);
+                } else if (fresh.status === 'cancelled') {
+                    stopVetoPolling();
+                    showVetoCancelledScreen(fresh.cancelled_reason);
+                } else if (fresh.status === 'result') {
+                    stopVetoPolling();
+                    showResultScreen();
+                }
+            })
+            .subscribe((status) => {
+                console.log('📡 veto_rt status:', status);
+                if (status === 'SUBSCRIBED') {
+                    syncVetoFromDB(matchId);
+                }
+            });
 
-    // 🔥 FALLBACK: polling каждые 1.5 секунды
+        console.log('🎬 канал создан:', vetoRtChannel ? 'OK' : 'NULL');
+    } catch (e) {
+        console.error('❌ ошибка создания канала veto_rt:', e);
+        return;
+    }
+
     startVetoPolling(matchId);
 }
 
+// ============================================================
 // Синхронизация с БД (на случай, если realtime пропустил событие)
+// ============================================================
 async function syncVetoFromDB(matchId) {
     if (!matchId || !currentMatch) return;
     try {
@@ -14393,7 +14408,9 @@ async function syncVetoFromDB(matchId) {
     }
 }
 
-// ---- Polling ----
+// ============================================================
+// Polling fallback — каждые 1.5 секунды проверяем статус матча
+// ============================================================
 function startVetoPolling(matchId) {
     if (vetoPollInterval) clearInterval(vetoPollInterval);
 
@@ -14458,87 +14475,6 @@ function startVetoPolling(matchId) {
             console.warn('polling error:', e);
         }
     }, 1500);
-}
-
-function stopVetoPolling() {
-    if (vetoPollInterval) {
-        clearInterval(vetoPollInterval);
-        vetoPollInterval = null;
-    }
-}
-
-// ---- Polling для veto ----
-function startVetoPolling(matchId) {
-    if (vetoPollInterval) clearInterval(vetoPollInterval);
-
-    console.log('⏱️ startVetoPolling для', matchId);
-
-    vetoPollInterval = setInterval(async () => {
-        if (!currentMatch) {
-            console.log('⏱️ polling: currentMatch = null');
-            return;
-        }
-        if (currentMatch.id !== matchId) {
-            console.log('⏱️ polling: matchId не совпадает', currentMatch.id, '!==', matchId);
-            return;
-        }
-        if (currentMatch.status !== 'veto' && currentMatch.status !== 'side_pick') {
-            console.log('⏱️ polling: статус', currentMatch.status, '— стоп');
-            stopVetoPolling();
-            return;
-        }
-
-        try {
-            const { data } = await sb.from('game_matches')
-                .select('*').eq('id', matchId).single();
-            if (!data) return;
-
-            const prevStatus = currentMatch.status;
-            const prevLen = (currentMatch.veto_log || []).length;
-            const newLen = (data.veto_log || []).length;
-
-            if (data.status !== prevStatus || newLen !== prevLen) {
-                console.log('🔄 polling:', prevStatus, '→', data.status, '| банов:', prevLen, '→', newLen);
-
-                currentMatch = data;
-
-                if (data.status === 'side_pick') {
-                    haptic('heavy');
-                    showToast('🗺️ Карта выбрана: ' + (data.final_map || '—'));
-                    stopVetoPolling();
-                    renderVeto();
-                    startVetoCountdown();
-                    return;
-                }
-
-                if (data.status === 'veto') {
-                    renderVeto();
-                    startVetoCountdown();
-                    return;
-                }
-
-                if (data.status === 'in_game') {
-                    stopVetoPolling();
-                    showInGameScreen(data.room_id, data);
-                    return;
-                }
-
-                if (data.status === 'cancelled') {
-                    stopVetoPolling();
-                    showVetoCancelledScreen(data.cancelled_reason);
-                    return;
-                }
-
-                if (data.status === 'result') {
-                    stopVetoPolling();
-                    showResultScreen();
-                    return;
-                }
-            }
-        } catch (e) {
-            console.warn('polling error:', e);
-        }
-    }, 1500);   // 🔥 каждые 1.5 секунды
 }
 
 function stopVetoPolling() {
