@@ -13480,8 +13480,12 @@ function showVetoScreen() {
     renderVeto();
     startVetoCountdown();
 
+    // 🔥 ОБЯЗАТЕЛЬНО подписываемся на realtime матча + запускаем polling
     if (currentMatch?.id) {
-        subscribeVetoRealtime(currentMatch.id);   // ← это запускает и polling
+        console.log('🎬 showVetoScreen → subscribeVetoRealtime', currentMatch.id);
+        subscribeVetoRealtime(currentMatch.id);
+    } else {
+        console.warn('⚠️ showVetoScreen: currentMatch.id пустой');
     }
 }
 // ============================================================
@@ -14294,6 +14298,7 @@ let vetoRtChannel = null;
 let vetoPollInterval = null;
 
 function subscribeVetoRealtime(matchId) {
+    console.log('🎬 subscribeVetoRealtime START, matchId:', matchId, 'sb?', !!sb);
     if (vetoRtChannel) sb.removeChannel(vetoRtChannel);
     vetoRtChannel = null;
 
