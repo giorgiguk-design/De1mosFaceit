@@ -13493,49 +13493,34 @@ async function renderVeto() {
     const match = currentMatch;
     if (!match) return;
 
-    // 🔥 Проверка: если уже выбираем сторону или матч идёт — рендерим финал
-    if (match.status === 'side_pick' || match.status === 'ready' || match.status === 'in_game') {
-        // ... подготовка userMap ...
-        renderVetoFinal(content, match, userMap);
-        return;
-    }
-
     const me = Number(currentUser.telegram_id);
     const teamA = match.team_a_players || [];
     const teamB = match.team_b_players || [];
     const allPlayers = [...teamA, ...teamB];
     const allIds = allPlayers.map(p => Number(p.telegram_id));
 
+    // 🔥 ЗАГРУЖАЕМ userMap СРАЗУ — чтобы он был доступен везде ниже
     const { data: users } = await sb.from('users')
         .select('telegram_id, display_name, custom_avatar, photo_url, elo')
         .in('telegram_id', allIds.length ? allIds : [0]);
     const userMap = {};
     (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
 
+    // 🔥 Финальная фаза: выбор стороны
+    if (match.status === 'side_pick' || match.status === 'ready' || match.status === 'in_game') {
+        renderVetoFinal(content, match, userMap);
+        return;
+    }
+
+    // ============================================================
+    // Дальше — обычный veto (фазы банов)
+    // ============================================================
     const capAId = Number(match.captain_a_id);
     const capBId = Number(match.captain_b_id);
     const iAmCapA = me === capAId;
     const iAmCapB = me === capBId;
     const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
                   : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
-
-    if (match.status === 'side_pick' || match.status === 'ready' || match.status === 'in_game') {
-        renderVetoFinal(content, match, userMap);
-        return;
-    }
-
-        // 🔥 Финальная фаза: выбор стороны
-    if (match.status === 'side_pick' || match.status === 'ready' || match.status === 'in_game') {
-        // Загружаем userMap
-        const { data: users } = await sb.from('users')
-            .select('telegram_id, display_name, custom_avatar, photo_url, elo')
-            .in('telegram_id', allIds.length ? allIds : [0]);
-        const userMap = {};
-        (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
-
-        renderVetoFinal(content, match, userMap);
-        return;
-    }
 
     const vetoLog = match.veto_log || [];
     const bannedMaps = vetoLog.map(v => v.map);
@@ -13889,35 +13874,25 @@ function renderVetoFinal(content, match, userMap) {
     // ============================================================
     // МОДЕЛЬКИ НА ФОНЕ
     // ============================================================
-    // Логика:
-    // - Сторона не выбрана → показываем обе модельки (как было)
-    // - Я в команде и сторона выбрана → показываем МОЮ модельку справа
-    // - Я зритель → показываем модельку команды A (она выбирает первой)
-    // ============================================================
-    let modelT = false;   // рисовать террориста?
-    let modelCT = false;  // рисовать спецназа?
+    let modelT = false;
+    let modelCT = false;
 
     if (!sideChosen) {
-        // Стороны не выбраны — нейтрально, показываем обе
+        // Стороны не выбраны — показываем обе
         modelT = true;
         modelCT = true;
     } else if (mySide) {
-        // Я в команде → показываю МОЮ сторону крупно справа
+        // Я в команде → показываю МОЮ сторону
         modelCT = (mySide === 'Спецназ');
         modelT  = (mySide === 'Террорист');
     } else {
-        // Зритель → показываю сторону команды A (она выбирала первой)
+        // Зритель → показываю сторону команды A
         const aSide = match.side_a;
         modelCT = (aSide === 'Спецназ');
         modelT  = (aSide === 'Террорист');
     }
 
-    // Что рисуем для "чужой" команды (если я не в матче — не рисуем)
-    // Если стороны выбраны и я в команде — показываю ТОЛЬКО свою модельку,
-    // чтобы было чётко видно "за кого я"
-    // Если хочу обе — оставить modelT/modelCT так, как выше.
-
-    // Заголовок "Вы — за ..."
+    // Заголовок
     let mySideText = '';
     if (sideChosen && mySide) {
         mySideText = mySide === 'Спецназ' ? 'Вы — за спецназ' : 'Вы — за террористов';
@@ -13929,7 +13904,6 @@ function renderVetoFinal(content, match, userMap) {
             : `Капитан команды ${sidePickerTeam} выбирает сторону`;
     }
 
-    // Модели
     const modelTHTML = modelT
         ? `<img class="vf3-model t" src="${MAPS_BUCKET_URL}/t.png" alt="" onerror="this.style.display='none'">`
         : '';
