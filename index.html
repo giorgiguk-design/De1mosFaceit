@@ -7377,7 +7377,6 @@ html.lite-mode * {
 .vf3-model {
     position: absolute;
     bottom: 0;
-    right: -10px;
     height: 95%;
     max-height: 320px;
     z-index: 2;
@@ -7385,7 +7384,13 @@ html.lite-mode * {
     opacity: 0.9;
     pointer-events: none;
     object-fit: contain;
-    mix-blend-mode: luminosity; /* ← делает модельку серой, как фон */
+    mix-blend-mode: luminosity;
+}
+.vf3-model.ct {
+    right: -10px;      /* у самого края — самый правый */
+}
+.vf3-model.t {
+    right: 80px;       /* левее CT — террорист ближе к центру */
 }
 .vf3-content {
     position: relative;
@@ -7418,17 +7423,19 @@ html.lite-mode * {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px;
+    padding: 8px 16px;
     border-radius: 999px;
-    background: rgba(var(--emerald-rgb), 0.18);
-    border: 1px solid rgba(var(--emerald-rgb), 0.5);
+    background: rgba(0, 0, 0, 0.85);   /* ← было emerald 0.18, стало чёрное 0.85 */
+    border: 1px solid rgba(var(--emerald-rgb), 0.6);
     font-size: 13px;
     font-weight: 900;
-    color: var(--emerald);
+    color: var(--emerald-3);
     letter-spacing: 1px;
     text-transform: uppercase;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.4), 0 1px 3px rgba(0,0,0,0.9);
 }
 .vf3-sub {
     font-size: 12.5px;
@@ -7516,7 +7523,6 @@ html.lite-mode * {
 .ig-v3-model {
     position: absolute;
     bottom: 0;
-    right: -10px;
     height: 90%;
     max-height: 380px;
     z-index: 2;
@@ -7525,6 +7531,12 @@ html.lite-mode * {
     pointer-events: none;
     object-fit: contain;
     mix-blend-mode: luminosity;
+}
+.ig-v3-model.ct {
+    right: -10px;
+}
+.ig-v3-model.t {
+    right: 90px;
 }
 .ig-v3-content {
     position: relative;
@@ -7632,6 +7644,35 @@ html.lite-mode * {
     transition: transform 0.15s ease, background 0.2s ease;
 }
 .ig-v3-btn-secondary:active { transform: scale(0.97); background: rgba(0,0,0,0.7); }
+
+.ig-cancel-square {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 84, 112, 0.15);
+    border: 1.5px solid rgba(255, 84, 112, 0.5);
+    border-radius: 12px;
+    color: #ff5470;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.22s ease, border-color 0.22s ease;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.ig-cancel-square:active { transform: scale(0.93); background: rgba(255,84,112,0.25); }
+.ig-cancel-square:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(255,84,112,0.08);
+}
+.ig-cancel-square.voted {
+    background: rgba(255, 84, 112, 0.05);
+    border-color: rgba(255, 84, 112, 0.25);
+    color: rgba(255,84,112,0.6);
+}
     
 </style>
 </head>
@@ -12876,7 +12917,6 @@ function getCurrentVetoPhase(match) {
 function getSidePickerTeam(match) {
     const firstTeam = match.veto_first_team;
     if (!firstTeam) return 'A';
-    // Последний бан делает первая → сторону выбирает вторая
     return firstTeam === 'A' ? 'B' : 'A';
 }
 
@@ -12884,21 +12924,22 @@ function getSidePickerTeam(match) {
 // Открытие экрана veto
 // ============================================================
 function showVetoScreen() {
-    // Принудительно закрываем play-screen, если он открыт
     const screen = document.getElementById('playScreen');
     if (screen) screen.classList.remove('active');
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
 
-    // Отписываемся от реалтайма комнаты, чтобы не тянуть лишнее
     unsubscribeRoomRealtime();
     unsubscribeInGameRealtime();
 
     switchPage('veto');
     renderVeto();
     startVetoCountdown();
-}
 
+    if (currentMatch?.id) {
+        subscribeVetoRealtime(currentMatch.id);
+    }
+}
 // ============================================================
 // РЕНДЕР VETO
 // ============================================================
@@ -13251,7 +13292,8 @@ function renderVetoFinal(content, match, userMap) {
             <div class="veto-final-v3">
                 <div class="vf3-bg" style="background-image: url('${bgUrl}');"></div>
                 <div class="vf3-overlay"></div>
-                ${modelUrl ? `<img class="vf3-model" src="${modelUrl}" alt="">` : ''}
+                <img class="vf3-model t" src="${MAPS_BUCKET_URL}/t.png" alt="" onerror="this.style.display='none'">
+<img class="vf3-model ct" src="${MAPS_BUCKET_URL}/ct.png" alt="" onerror="this.style.display='none'">
 
                 <div class="vf3-content">
                     <div class="vf3-label">Карта выбрана</div>
@@ -13583,9 +13625,6 @@ async function returnAfterVetoCancel() {
     checkActiveRoom();
 }
 
-// ============================================================
-// Realtime подписка на veto
-// ============================================================
 let vetoRtChannel = null;
 
 function subscribeVetoRealtime(matchId) {
@@ -13597,20 +13636,26 @@ function subscribeVetoRealtime(matchId) {
             event: 'UPDATE',
             schema: 'public',
             table: 'game_matches',
-            filter: `id=eq.${matchId}`
+            filter: 'id=eq.' + matchId
         }, async (payload) => {
-            currentMatch = payload.new;
+            const fresh = payload.new;
+            if (!fresh) return;
 
-            if (currentMatch.status === 'veto') {
+            const prevStatus = currentMatch?.status;
+            currentMatch = fresh;
+
+            if (fresh.status === 'veto') {
                 renderVeto();
                 startVetoCountdown();
-            } else if (currentMatch.status === 'side_pick') {
+            } else if (fresh.status === 'side_pick' || fresh.status === 'ready') {
                 renderVeto();
                 startVetoCountdown();
-            } else if (currentMatch.status === 'in_game') {
-                showInGameScreen();
-            } else if (currentMatch.status === 'cancelled') {
-                showVetoCancelledScreen(currentMatch.cancelled_reason);
+            } else if (fresh.status === 'in_game') {
+                showInGameScreen(fresh.room_id, fresh);
+            } else if (fresh.status === 'cancelled') {
+                showVetoCancelledScreen(fresh.cancelled_reason);
+            } else if (fresh.status === 'result') {
+                showResultScreen();
             }
         })
         .subscribe();
@@ -13681,6 +13726,8 @@ function subscribeVetoRealtime(matchId) {
 async function renderResultScreen() {
     if (matchPollTimer) clearInterval(matchPollTimer);
     const container = document.getElementById('resultContent');
+    if (!container || !currentMatch) return;
+
     const me = Number(currentUser.telegram_id);
     const isCapA = Number(currentMatch.captain_a_id) === me;
     const isCapB = Number(currentMatch.captain_b_id) === me;
@@ -13690,8 +13737,10 @@ async function renderResultScreen() {
     const teamB = currentMatch.team_b_players || [];
     const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
                  : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
+    const mySide = myTeam === 'A' ? currentMatch.side_a
+                 : myTeam === 'B' ? currentMatch.side_b : null;
 
-    // --- Загружаем данные параллельно ---
+    // Загружаем данные
     const allIds = [...teamA, ...teamB].map(p => p.telegram_id);
     const [usersRes, shotsRes, votesRes] = await Promise.all([
         sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url')
@@ -13702,17 +13751,14 @@ async function renderResultScreen() {
 
     const userMap = {};
     (usersRes.data || []).forEach(u => userMap[u.telegram_id] = u);
-
     const screenshots = shotsRes.data || [];
     const votes = votesRes.data || [];
 
     const myVote = votes.find(v => Number(v.telegram_id) === me);
     const myShot = screenshots.find(s => Number(s.uploader_id) === me);
-
     const shotA = screenshots.find(s => s.team === 'A');
     const shotB = screenshots.find(s => s.team === 'B');
 
-    // --- Проверяем конфликт голосов ---
     const capAVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_a_id));
     const capBVote = votes.find(v => Number(v.telegram_id) === Number(currentMatch.captain_b_id));
     const hasConflict = capAVote && capBVote &&
@@ -13720,6 +13766,55 @@ async function renderResultScreen() {
          capAVote.score_a !== capBVote.score_a ||
          capAVote.score_b !== capBVote.score_b);
 
+    const bgUrl = mapBgUrl(currentMatch.final_map);
+
+    // ============================================================
+    // БЛОК 1: Заголовок матча с фоном карты
+    // ============================================================
+    const headerBlock = `
+        <div class="ig-v3-screen" style="min-height: 200px; margin-bottom: 16px;">
+            <div class="ig-v3-bg" style="background-image: url('${bgUrl}'); filter: brightness(0.35);"></div>
+            <div class="ig-v3-overlay"></div>
+
+            <div style="position: relative; z-index: 3; padding: 24px 18px; min-height: 200px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,0.6); font-weight: 800; margin-bottom: 6px;">
+                    Результат матча · #${String(currentMatch.id).padStart(6, '0')}
+                </div>
+                <div style="font-size: 30px; font-weight: 900; color: #fff; letter-spacing: 0.5px; margin-bottom: 10px; text-shadow: 0 4px 20px rgba(0,0,0,0.9);">
+                    ${escapeHtml(currentMatch.final_map || '—')}
+                </div>
+                ${mySide ? `
+                    <div style="display:inline-flex; align-items:center; gap:8px; padding: 6px 14px; border-radius: 999px; background: rgba(0,0,0,0.85); border: 1px solid rgba(var(--emerald-rgb), 0.5); font-size: 12px; font-weight: 900; color: var(--emerald-3); letter-spacing: 1px; text-transform: uppercase; backdrop-filter: blur(8px); width: fit-content; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+                        <span>${mySide === 'Спецназ' ? '🛡️' : '💣'}</span>
+                        <span>Вы играли за ${mySide === 'Спецназ' ? 'спецназ' : 'террористов'}</span>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    // ============================================================
+    // БЛОК 2: Инструкция
+    // ============================================================
+    const instructionsBlock = `
+        <div style="padding: 14px 16px; margin-bottom: 14px; background: rgba(var(--emerald-rgb),0.06); border: 1px solid rgba(var(--emerald-rgb),0.25); border-radius: 14px; border-left: 3px solid var(--emerald);">
+            <div style="font-size: 11px; font-weight: 900; color: var(--emerald); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px;">
+                📋 Что нужно сделать
+            </div>
+            <div style="font-size: 12.5px; color: var(--text); line-height: 1.6;">
+                ${myVote
+                    ? `✅ Ты уже отправил результат. Ожидаем ${isCaptain ? 'второго капитана' : 'капитана'}.`
+                    : (isCaptain
+                        ? `1️⃣ Загрузи скриншот матча<br>2️⃣ Введи счёт и выбери победителя<br>3️⃣ Нажми «Отправить результат»`
+                        : `1️⃣ Дождись, пока капитан загрузит скриншот<br>2️⃣ Введи счёт (если хочешь)<br>3️⃣ Нажми «Отправить результат»`)
+                }
+            </div>
+        </div>
+    `;
+
+    // ============================================================
+    // БЛОК 3: Конфликт (если есть)
+    // ============================================================
     let conflictBanner = '';
     if (hasConflict) {
         conflictBanner = `
@@ -13746,6 +13841,9 @@ async function renderResultScreen() {
         `;
     }
 
+    // ============================================================
+    // БЛОК 4: Игроки
+    // ============================================================
     const renderPlayerRow = (p, team) => {
         const u = userMap[p.telegram_id] || {};
         const av = renderAvatar(u);
@@ -13776,6 +13874,21 @@ async function renderResultScreen() {
         `;
     };
 
+    const playersBlock = `
+        <div class="ig-section-title" style="margin-top: 8px;">
+            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5"/>
+                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+            </svg>
+            Состав · ${allIds.length} игроков
+        </div>
+        ${teamA.map(p => renderPlayerRow(p, 'A')).join('')}
+        ${teamB.map(p => renderPlayerRow(p, 'B')).join('')}
+    `;
+
+    // ============================================================
+    // БЛОК 5: Скриншот
+    // ============================================================
     const renderScreenshotBlock = () => {
         if (myShot) {
             return `
@@ -13833,6 +13946,9 @@ async function renderResultScreen() {
         `;
     };
 
+    // ============================================================
+    // БЛОК 6: Форма счёта
+    // ============================================================
     const renderScoreBlock = () => {
         if (myVote) {
             return `
@@ -13909,32 +14025,14 @@ async function renderResultScreen() {
         `;
     };
 
+    // ============================================================
+    // ФИНАЛЬНЫЙ HTML
+    // ============================================================
     container.innerHTML = `
-        <div class="ig-match-header">
-            <div class="ig-match-row">
-                <div class="ig-match-num">Матч <b>#${String(currentMatch.id).padStart(6, '0')}</b></div>
-                <div class="ig-status-badge live">РЕЗУЛЬТАТ</div>
-            </div>
-            <div class="ig-map-line">Карта</div>
-            <div class="ig-map-name">${escapeHtml(currentMatch.final_map || '—')}</div>
-            <div class="ig-players-line">
-                <span>Стороны: <b>A — ${escapeHtml(currentMatch.side_a || '—')}</b></span>
-                <span><b>B — ${escapeHtml(currentMatch.side_b || '—')}</b></span>
-            </div>
-        </div>
-
+        ${headerBlock}
+        ${instructionsBlock}
         ${conflictBanner}
-
-        <div class="ig-section-title">
-            <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
-                <circle cx="9" cy="8" r="3.5"/>
-                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
-            </svg>
-            Состав · ${allIds.length} игроков
-        </div>
-
-        ${teamA.map(p => renderPlayerRow(p, 'A')).join('')}
-        ${teamB.map(p => renderPlayerRow(p, 'B')).join('')}
+        ${playersBlock}
 
         <div class="ig-section-title" style="margin-top: 20px;">
             <svg class="cy-icon cy-xs" viewBox="0 0 24 24">
@@ -13943,7 +14041,6 @@ async function renderResultScreen() {
             </svg>
             Доказательство
         </div>
-
         ${renderScreenshotBlock()}
 
         <div class="ig-section-title" style="margin-top: 20px;">
@@ -13953,13 +14050,18 @@ async function renderResultScreen() {
             </svg>
             Твой результат
         </div>
-
         ${renderScoreBlock()}
 
-        <button class="profile-action-btn cancel" style="margin-top: 20px;"
-                onclick="openAppealDialog()">
-            ⚖️ Подать апелляцию
-        </button>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="profile-action-btn cancel" style="flex: 1;"
+                    onclick="backToInGameFromResult('${currentMatch?.room_id || ''}')">
+                ← НАЗАД
+            </button>
+            <button class="profile-action-btn cancel" style="flex: 1;"
+                    onclick="openAppealDialog()">
+                ⚖️ Апелляция
+            </button>
+        </div>
     `;
 
     // Автоустановка победителя при вводе счёта
@@ -14000,7 +14102,6 @@ async function renderResultScreen() {
         }, () => renderResultScreen())
         .subscribe();
 
-    // Fallback polling каждые 4 сек — на случай, если realtime не сработал
     matchPollTimer = setInterval(async () => {
         try {
             const { data } = await sb.from('game_matches')
@@ -14024,7 +14125,6 @@ async function renderResultScreen() {
                 return;
             }
 
-            // Пытаемся финализировать, если оба капитана проголосовали
             await tryFinishMatch(currentMatch.id);
         } catch (e) {}
     }, 4000);
@@ -16596,7 +16696,7 @@ async function showInGameScreen(roomId, room) {
 
     const me = Number(currentUser.telegram_id);
 
-    // Определяем мою команду
+    // Моя команда
     const { data: players } = await sb.from('room_players')
         .select('telegram_id, team, is_ready').eq('room_id', roomId);
     const myPlayer = (players || []).find(p => Number(p.telegram_id) === me);
@@ -16607,9 +16707,17 @@ async function showInGameScreen(roomId, room) {
                  : null;
 
     const bgUrl = mapBgUrl(room.final_map);
-    const modelUrl = mySide ? sideModelUrl(mySide) : null;
 
-    // Заголовок
+    // Голоса за отмену
+    const cancelVotes = await getCancelVotesCount(roomId);
+    const neededVotes = cancelVotesNeeded(room.mode);
+    const alreadyVoted = await (async () => {
+        const { data } = await sb.from('match_cancel_votes')
+            .select('id').eq('match_id', roomId)
+            .eq('voter_id', me).maybeSingle();
+        return !!data;
+    })();
+
     let titleText = '';
     if (mySide) {
         titleText = mySide === 'Спецназ' ? 'Вы — за спецназ' : 'Вы — за террористов';
@@ -16621,14 +16729,15 @@ async function showInGameScreen(roomId, room) {
         <div class="ig-v3-screen">
             <div class="ig-v3-bg" style="background-image: url('${bgUrl}');"></div>
             <div class="ig-v3-overlay"></div>
-            ${modelUrl ? `<img class="ig-v3-model" src="${modelUrl}" alt="">` : ''}
+            <img class="ig-v3-model t" src="${MAPS_BUCKET_URL}/t.png" alt="" onerror="this.style.display='none'">
+            <img class="ig-v3-model ct" src="${MAPS_BUCKET_URL}/ct.png" alt="" onerror="this.style.display='none'">
 
             <div class="ig-v3-content">
                 <div class="ig-v3-label">Матч готов · Карта</div>
                 <div class="ig-v3-map">${escapeHtml(room.final_map || '—')}</div>
 
                 ${mySide ? `
-                    <div style="display:inline-flex; align-items:center; gap:8px; padding: 8px 16px; border-radius: 999px; background: rgba(var(--emerald-rgb), 0.18); border: 1px solid rgba(var(--emerald-rgb), 0.5); font-size: 14px; font-weight: 900; color: var(--emerald); letter-spacing: 1px; text-transform: uppercase; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); margin-bottom: 16px;">
+                    <div style="display:inline-flex; align-items:center; gap:8px; padding: 10px 18px; border-radius: 999px; background: rgba(0,0,0,0.85); border: 1px solid rgba(var(--emerald-rgb), 0.6); font-size: 14px; font-weight: 900; color: var(--emerald-3); letter-spacing: 1px; text-transform: uppercase; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.4), 0 1px 3px rgba(0,0,0,0.9);">
                         <span>${mySide === 'Спецназ' ? '🛡️' : '💣'}</span>
                         <span>${titleText}</span>
                     </div>
@@ -16648,12 +16757,28 @@ async function showInGameScreen(roomId, room) {
                 `}
 
                 <div class="ig-v3-actions">
-                    <button class="ig-v3-btn-primary" onclick="enterInGameLinkAndGoResult('${escapeHtml(room.host_link)}', ${roomId})">
-                        🎮 ЗАЙТИ В ИГРУ
+                    <button class="ig-v3-btn-primary" onclick="copyInGameLink('${escapeHtml(room.host_link)}')">
+                        🔗 ОТКРЫТЬ И СКОПИРОВАТЬ ССЫЛКУ
                     </button>
-                    <button class="ig-v3-btn-secondary" onclick="copyInGameLink('${escapeHtml(room.host_link)}')">
-                        📋 Скопировать ссылку на лобби
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 14px; max-width: 360px;">
+                    <button class="ig-v3-btn-secondary" style="padding: 14px; font-weight: 900;" onclick="goToResultFromInGame(${roomId})">
+                        📊 ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ
                     </button>
+                    <button class="ig-cancel-square ${alreadyVoted ? 'voted' : ''}"
+                            onclick="voteCancelMatch(${roomId})"
+                            title="Отмена матча"
+                            ${alreadyVoted ? 'disabled' : ''}>
+                        <span style="font-size: 18px;">✕</span>
+                        <span style="font-size: 9px; font-weight: 900; letter-spacing: 0.5px; margin-top: 2px;">
+                            ${alreadyVoted ? 'ГОЛОС' : `${cancelVotes}/${neededVotes}`}
+                        </span>
+                    </button>
+                </div>
+
+                <div style="margin-top: 10px; font-size: 10px; color: rgba(255,255,255,0.55); font-weight: 700; max-width: 360px; text-align: center;">
+                    Отмена требует ${neededVotes} ${neededVotes === 1 ? 'голос' : neededVotes < 5 ? 'голоса' : 'голосов'} из ${playersTotalInMatch(room.mode)}
                 </div>
             </div>
         </div>
@@ -16661,18 +16786,15 @@ async function showInGameScreen(roomId, room) {
 }
 
 // Кнопка "Зайти в игру" — открывает ссылку и переводит всех на результат
+// Просто открывает ссылку, НЕ переводит в result
 async function enterInGameLinkAndGoResult(url, roomId) {
-    if (url) {
-        try {
-            if (tg?.openLink) tg.openLink(url);
-            else window.open(url, '_blank');
-        } catch (e) {}
-    }
-
-    // Переводим комнату в статус result — все увидят экран результата
+    if (!url) { showToast('Ссылка отсутствует'); return; }
     try {
-        await sb.from('rooms').update({ status: 'result' }).eq('id', roomId);
-    } catch (e) {}
+        if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank');
+    } catch (e) {
+        window.open(url, '_blank');
+    }
 }
 
 function getVotesNeeded(totalPlayers) {
@@ -16690,31 +16812,88 @@ async function getCancelVotes(roomId) {
     } catch (e) { return []; }
 }
 
+// Сколько голосов нужно для отмены по режиму
+function cancelVotesNeeded(mode) {
+    if (mode === '1x1') return 2;
+    if (mode === '2x2') return 3;
+    if (mode === '5x5') return 6;
+    return 6;
+}
+
+// Общее число игроков в матче по режиму
+function playersTotalInMatch(mode) {
+    if (mode === '1x1') return 2;
+    if (mode === '2x2') return 4;
+    if (mode === '5x5') return 10;
+    return 10;
+}
+
+// Получить голоса за отмену
+async function getCancelVotesCount(roomId) {
+    try {
+        const { count } = await sb.from('match_cancel_votes')
+            .select('id', { count: 'exact', head: true })
+            .eq('match_id', roomId);
+        return count || 0;
+    } catch (e) { return 0; }
+}
+
+// Проголосовать за отмену
 async function voteCancelMatch(roomId) {
     haptic('heavy');
     try {
-        await sb.from('match_cancel_votes').upsert({
+        // Проверяем, не отменён ли уже
+        const { data: room } = await sb.from('rooms')
+            .select('mode, status').eq('id', roomId).maybeSingle();
+        if (!room) { showToast('Комната не найдена'); return; }
+        if (room.status === 'cancelled') { showToast('Матч уже отменён'); return; }
+
+        // Проверяем, что я в комнате
+        const { data: me } = await sb.from('room_players')
+            .select('telegram_id, is_ready')
+            .eq('room_id', roomId)
+            .eq('telegram_id', currentUser.telegram_id)
+            .maybeSingle();
+        if (!me || !me.is_ready) {
+            showToast('Только игроки матча могут голосовать');
+            return;
+        }
+
+        // Проверяем, не голосовал ли уже
+        const { data: existing } = await sb.from('match_cancel_votes')
+            .select('id').eq('match_id', roomId)
+            .eq('voter_id', currentUser.telegram_id).maybeSingle();
+        if (existing) {
+            showToast('Ты уже голосовал за отмену');
+            return;
+        }
+
+        // Записываем голос
+        await sb.from('match_cancel_votes').insert({
             match_id: roomId,
             voter_id: currentUser.telegram_id,
             created_at: new Date().toISOString()
-        }, { onConflict: 'match_id,voter_id' });
-
-        showToast('🗳️ Твой голос учтён');
+        });
 
         // Проверяем количество
-        const votes = await getCancelVotes(roomId);
-        const { data: players } = await sb.from('room_players')
-            .select('team, is_ready').eq('room_id', roomId);
-        const totalPlayers = (players || []).filter(p => p.is_ready).length;
-        const needed = getVotesNeeded(totalPlayers);
+        const count = await getCancelVotesCount(roomId);
+        const needed = cancelVotesNeeded(room.mode);
 
-        if (votes.length >= needed) {
-            // Отменяем матч
-            await cancelMatchByVote(roomId);
-        } else {
-            renderInGameScreen(roomId);
+        if (count >= needed) {
+            // Отменяем
+            await cancelMatch(roomId, 'vote');
+            return;
         }
+
+        showToast(`🗳️ Голос учтён (${count}/${needed})`);
+        haptic('medium');
+
+        // Обновляем отображение
+        const { data: freshRoom } = await sb.from('rooms')
+            .select('*').eq('id', roomId).maybeSingle();
+        if (freshRoom) showInGameScreen(roomId, freshRoom);
     } catch (e) {
+        console.error('voteCancelMatch:', e);
         showToast('Ошибка: ' + e.message);
     }
 }
@@ -16965,36 +17144,46 @@ function copyInGameLink(url) {
     }
 }
 
-async function goToResultFromInGame(roomId) {
-    const { data: room } = await sb.from('rooms')
-        .select('status').eq('id', roomId).maybeSingle();
-    if (!room || room.status === 'cancelled') {
-        showToast('Матч отменён');
-        return;
-    }
-
-    // Переводим комнату в статус result и открываем game_matches
+            async function backToInGameFromResult(roomId) {
+    if (!roomId) { showToast('Комната не найдена'); return; }
     try {
-        // Ищем активный матч пользователя
-        const me = currentUser.telegram_id;
-        const { data: matches } = await sb.from('game_matches')
-            .select('*')
-            .in('status', ['ready', 'result'])
-            .order('created_at', { ascending: false })
-            .limit(10);
+        const { data: room } = await sb.from('rooms')
+            .select('*').eq('id', roomId).maybeSingle();
+        if (!room) { showToast('Комната не найдена'); return; }
 
-        for (const m of matches || []) {
-            const ids = [...(m.team_a_players || []), ...(m.team_b_players || [])]
-                .map(p => Number(p.telegram_id));
-            if (ids.includes(Number(me))) {
-                currentMatch = m;
-                showResultScreen();
-                return;
-            }
+        // Возвращаем комнату в статус in_game
+        await sb.from('rooms').update({ status: 'in_game' }).eq('id', roomId);
+
+        // И матч тоже
+        if (currentMatch?.id) {
+            await sb.from('game_matches').update({ status: 'in_game' }).eq('id', currentMatch.id);
+            currentMatch = { ...currentMatch, status: 'in_game' };
         }
 
-        showToast('⚠️ Активный матч не найден');
+        // Открываем in-game экран
+        showInGameScreen(roomId, room);
     } catch (e) {
+        console.error('backToInGameFromResult:', e);
+        showToast('Ошибка: ' + e.message);
+    }
+}
+
+async function goToResultFromInGame(roomId) {
+    try {
+        // Переводим комнату в result
+        await sb.from('rooms').update({ status: 'result' }).eq('id', roomId);
+        // Обновляем статус game_match
+        const { data: match } = await sb.from('game_matches')
+            .select('*').eq('room_id', roomId)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (match) {
+            await sb.from('game_matches').update({ status: 'result' }).eq('id', match.id);
+            currentMatch = { ...match, status: 'result' };
+        }
+        // Переходим на экран результата
+        showResultScreen();
+    } catch (e) {
+        console.error('goToResultFromInGame:', e);
         showToast('Ошибка: ' + e.message);
     }
 }
