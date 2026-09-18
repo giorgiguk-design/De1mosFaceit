@@ -30,7 +30,10 @@
 <title>De1mos Faceit</title>
 <link rel="preconnect" href="https://ksmuopoasgzyromdjtnt.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://ksmuopoasgzyromdjtnt.supabase.co">
-<script src="https://telegram.org/js/telegram-web-app.js" onerror="console.warn('Telegram SDK не загрузился');"></script>
+<!-- Telegram SDK — локально, чтобы не зависеть от telegram.org -->
+<script src="./telegram-web-app.js" onerror="console.warn('Telegram SDK не загрузился');"></script>
+
+<!-- Supabase — тоже лучше скачать локально, но CDN обычно работает -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
         /* ============================================================
@@ -8592,6 +8595,67 @@ html.lite-mode * {
     <div class="toast" id="toast"></div>
     <div class="page-loading-bar" id="pageLoadingBar"></div>
         <script>
+            // ============================================================
+// БЕЗОПАСНЫЙ STORAGE (обходит Tracking Prevention в WebView2)
+// ============================================================
+const _memStore = {};
+
+const safeStorage = {
+    getItem(key) {
+        try {
+            const v = localStorage.getItem(key);
+            return v !== null ? v : (_memStore[key] ?? null);
+        } catch (e) {
+            return _memStore[key] ?? null;
+        }
+    },
+    setItem(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {}
+        _memStore[key] = String(value);
+    },
+    removeItem(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {}
+        delete _memStore[key];
+    }
+};
+
+// Глобальный перехват: делаем так, чтобы любой вызов localStorage.getItem
+// автоматически использовал safeStorage, даже если код старый.
+// Это костыль, но безопасный: если localStorage работает — используется он же.
+try {
+    const _origGet = localStorage.getItem.bind(localStorage);
+    const _origSet = localStorage.setItem.bind(localStorage);
+    const _origRemove = localStorage.removeItem.bind(localStorage);
+
+    Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        get() {
+            return {
+                getItem: (k) => {
+                    try { return _origGet(k); } catch (e) { return _memStore[k] ?? null; }
+                },
+                setItem: (k, v) => {
+                    try { _origSet(k, v); } catch (e) {}
+                    _memStore[k] = String(v);
+                },
+                removeItem: (k) => {
+                    try { _origRemove(k); } catch (e) {}
+                    delete _memStore[k];
+                },
+                clear: () => {
+                    try { localStorage.clear(); } catch (e) {}
+                    Object.keys(_memStore).forEach(k => delete _memStore[k]);
+                }
+            };
+        }
+    });
+} catch (e) {
+    console.warn('localStorage shim failed:', e);
+}
         // ============================================================
         // SUPABASE CONFIG
         // ============================================================
@@ -8655,9 +8719,23 @@ function getDXP(user) {
     console.warn('⚠️ Supabase не загружен при старте скрипта');
 }
 
-        const tg = window.Telegram?.WebApp;
-        let currentUser = null;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) { console.warn(e); } }
+        // tg может быть undefined, если SDK не загрузился
+const tg = window.Telegram?.WebApp || null;
+
+// Пытаемся инициализировать, если доступен
+if (tg) {
+    try {
+        tg.ready();
+        tg.expand();
+    } catch (e) {
+        console.warn('tg.ready/expand failed:', e);
+    }
+}
+
+let currentUser = null;
+
+// Глобальный флаг: SDK загружен?
+const hasTelegramSDK = !!tg;
 
         // ============================================================
         // STATE
@@ -9515,141 +9593,162 @@ async function notify(telegramId, text, type = null) {
         // INIT
         // ============================================================
         async function init() {
-            if (!tg && !location.search.includes('dev=1')) { showToast('Откройте через Telegram'); return; }
+    // Пытаемся получить пользователя из Telegram
+    let user = tg?.initDataUnsafe?.user;
 
-            let user = tg?.initDataUnsafe?.user;
-            if (!user && (location.hostname === 'localhost' || location.search.includes('dev=1'))) {
-                const params = new URLSearchParams(location.search);
-                const devId = Number(params.get('id')) || 999999999;
-                const devName = params.get('name') || ('DevUser' + devId);
-                user = { id: devId, first_name: devName, username: 'dev' + devId, photo_url: null };
-                console.warn('⚠️ DEV MODE', user);
-            }
-            if (!user) { showToast('Не удалось получить данные Telegram'); return; }
-
-            try {
-                const { data: existing } = await sb.from('users')
-                    .select('*').eq('telegram_id', user.id).maybeSingle();
-
-                let data, error;
-                                if (existing) {
-                    const upd = {
-                        username: user.username || existing.username,
-                        // НЕ перезаписываем photo_url пустым значением
-                        photo_url: user.photo_url || existing.photo_url || null
-                    };
-                    ({ data, error } = await sb.from('users')
-                        .update(upd).eq('telegram_id', user.id).select().single());
-                } else {
-                    ({ data, error } = await sb.from('users')
-                        .insert({
-                            telegram_id: user.id,
-                            username: user.username || null,
-                            display_name: user.first_name || user.username || 'Игрок',
-                            photo_url: user.photo_url || null
-                        }).select().single());
-                }
-                if (error) throw error;
-
-                currentUser = data;
-applyHeaderAvatar(currentUser);
-renderDashboard(currentUser);
-loadProfile(currentUser);
-loadLeaderboard();
-
-// 👇 1. Сначала ГАСИМ все UI комнаты — до любой логики
-activeRoomId = null;
-hideActiveRoomBanner();
-const _ind = document.getElementById('headerRoomIndicator');
-if (_ind) _ind.style.display = 'none';
-const _flt = document.getElementById('playEnterFloat');
-if (_flt) _flt.classList.remove('active');
-
-// 🔥 ЖЁСТКАЯ ЗАЧИСТКА: убираем себя из всех мёртвых комнат + сбрасываем localStorage
-try {
-    // Удаляем себя из всех комнат со статусом cancelled/finished/не существует
-    const { data: myRooms } = await sb.from('room_players')
-        .select('room_id, rooms(id, status)')
-        .eq('telegram_id', currentUser.telegram_id);
-
-    for (const r of myRooms || []) {
-        const roomStatus = r.rooms?.status;
-        if (!r.rooms || roomStatus === 'cancelled' || roomStatus === 'finished') {
-            try {
-                await sb.from('room_players').delete()
-                    .eq('telegram_id', currentUser.telegram_id)
-                    .eq('room_id', r.room_id);
-            } catch (e) {}
-        }
+    // Dev-режим (через ?dev=1)
+    if (!user && (location.hostname === 'localhost' || location.search.includes('dev=1'))) {
+        const params = new URLSearchParams(location.search);
+        const devId = Number(params.get('id')) || 999999999;
+        const devName = params.get('name') || ('DevUser' + devId);
+        user = { id: devId, first_name: devName, username: 'dev' + devId, photo_url: null };
+        console.warn('⚠️ DEV MODE', user);
     }
 
-    // Сбрасываем флаг показа "Матч отменён" для старых комнат
-    // (чтобы новые отменённые комнаты показывались)
-    // localStorage.removeItem('cancelledShownFor'); // ← оставьте закомментированным, работает ниже
+    // 🔥 ГЛАВНОЕ: НЕ выходим, если tg нет. Пробуем работать в ограниченном режиме.
+    if (!user) {
+        console.warn('⚠️ Telegram SDK не загрузился или пользователь не найден');
 
-} catch (e) { console.warn('init cleanup:', e); }
-
-// 🔥 Скрываем ЛЮБОЙ возможный баннер (даже если он "застрял" в DOM)
-setTimeout(() => {
-    const banner = document.getElementById('activeRoomBanner');
-    if (banner) banner.classList.remove('active');
-    const ind = document.getElementById('headerRoomIndicator');
-    if (ind) ind.style.display = 'none';
-    const flt = document.getElementById('playEnterFloat');
-    if (flt) flt.classList.remove('active');
-    const scr = document.getElementById('playScreen');
-    // НЕ трогаем playScreen — вдруг игрок реально в комнате
-}, 300);
-
-                // 👇 2. Чистим себя из отменённых/удалённых комнат (перед проверками!)
-                try {
-                    const { data: myRooms } = await sb.from('room_players')
-                        .select('room_id, rooms(status)')
-                        .eq('telegram_id', currentUser.telegram_id);
-
-                    for (const r of myRooms || []) {
-                        if (!r.rooms || r.rooms.status === 'cancelled' || r.rooms.status === 'finished') {
-                            await sb.from('room_players').delete()
-                                .eq('telegram_id', currentUser.telegram_id)
-                                .eq('room_id', r.room_id);
-                        }
-                    }
-                } catch (e) {}
-
-                // 👇 3. Теперь восстанавливаем актуальное состояние
-                checkActiveMatch();     // ← только ОДИН раз
-                checkActiveRoom();      // ← проверка баннера/индикатора
-
-                // === ПОДПИСКИ ===
-                updateNotifBadge();
-                subscribeNotificationsRealtime();
-                loadAllCovers();
-                subscribeCoversRealtime();
-                updateChatsBadge();
-                subscribeChatsRealtime();
-
-                // === ОНБОРДИНГ ===
-                if (needsOnboarding(currentUser)) {
-                    openOnboarding();
-                }
-
-                // === АВТООЧИСТКА КОМНАТ ===
-                cleanupStaleRooms();
-                setInterval(cleanupStaleRooms, 60000);
-
-                // === ПЕРИОДИЧЕСКАЯ ПРОВЕРКА КОМНАТЫ ===
-                setInterval(checkActiveRoom, 4000);   // было 8000 — теперь 4 сек
-
-                // === ПОКАЗ МОДЕРАТОР-КНОПКИ ===
-                if (isModerator(currentUser) && !currentUser.is_admin) {
-                    const modBtn = document.getElementById('moderatorMenuBtn');
-                    if (modBtn) modBtn.style.display = 'flex';
-                }
-            } catch (e) {
-                console.error('Init error:', e);
-                showToast('Ошибка: ' + (e?.message || e));
-            }
+        // Показываем заглушку
+        const container = document.getElementById('profileContent');
+        if (container) {
+            container.innerHTML = `
+                <div class="profile-hero" style="text-align:center; padding: 40px 20px;">
+                    <div style="font-size: 64px; margin-bottom: 16px;">📡</div>
+                    <div style="font-size: 18px; font-weight: 800; margin-bottom: 10px;">
+                        Нет соединения
+                    </div>
+                    <div style="font-size: 13px; color: var(--hint); line-height: 1.6; margin-bottom: 20px;">
+                        Не удалось загрузить Telegram SDK.<br>
+                        Проверь интернет и перезапусти приложение.
+                    </div>
+                    <button onclick="location.reload()" style="
+                        padding: 12px 28px;
+                        background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                        color: #04140e;
+                        border: none;
+                        border-radius: 12px;
+                        font-weight: 800;
+                        font-size: 14px;
+                        cursor: pointer;
+                        font-family: inherit;
+                    ">🔄 ПЕРЕЗАГРУЗИТЬ</button>
+                </div>
+            `;
         }
+
+        // Пытаемся перезагрузить страницу один раз через 3 секунды
+        setTimeout(() => {
+            if (!tg?.initDataUnsafe?.user) {
+                console.warn('Повторная попытка загрузки Telegram SDK...');
+                const script = document.createElement('script');
+                script.src = './telegram-web-app.js';
+                script.onload = () => {
+                    console.log('SDK загружен со второй попытки');
+                    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+                        location.reload();
+                    }
+                };
+                document.head.appendChild(script);
+            }
+        }, 3000);
+
+        return;
+    }
+
+    // Дальше — основная логика (та же, что была)
+    try {
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        const { data: existing } = await sb.from('users')
+            .select('*').eq('telegram_id', user.id).maybeSingle();
+
+        let data, error;
+
+        if (existing) {
+            const upd = {
+                username: user.username || existing.username,
+                photo_url: user.photo_url || existing.photo_url || null
+            };
+            ({ data, error } = await sb.from('users')
+                .update(upd).eq('telegram_id', user.id).select().single());
+        } else {
+            ({ data, error } = await sb.from('users')
+                .insert({
+                    telegram_id: user.id,
+                    username: user.username || null,
+                    display_name: user.first_name || user.username || 'Игрок',
+                    photo_url: user.photo_url || null
+                }).select().single());
+        }
+        if (error) throw error;
+
+        currentUser = data;
+        applyHeaderAvatar(currentUser);
+        renderDashboard(currentUser);
+        loadProfile(currentUser);
+        loadLeaderboard();
+
+        // Гасим UI комнаты
+        activeRoomId = null;
+        hideActiveRoomBanner();
+        const _ind = document.getElementById('headerRoomIndicator');
+        if (_ind) _ind.style.display = 'none';
+        const _flt = document.getElementById('playEnterFloat');
+        if (_flt) _flt.classList.remove('active');
+
+        // Чистим себя из мёртвых комнат
+        try {
+            const { data: myRooms } = await sb.from('room_players')
+                .select('room_id, rooms(id, status)')
+                .eq('telegram_id', currentUser.telegram_id);
+
+            for (const r of myRooms || []) {
+                const roomStatus = r.rooms?.status;
+                if (!r.rooms || roomStatus === 'cancelled' || roomStatus === 'finished') {
+                    try {
+                        await sb.from('room_players').delete()
+                            .eq('telegram_id', currentUser.telegram_id)
+                            .eq('room_id', r.room_id);
+                    } catch (e) {}
+                }
+            }
+        } catch (e) { console.warn('init cleanup:', e); }
+
+        // Восстанавливаем состояние
+        checkActiveMatch();
+        checkActiveRoom();
+
+        // Подписки
+        updateNotifBadge();
+        subscribeNotificationsRealtime();
+        loadAllCovers();
+        subscribeCoversRealtime();
+        updateChatsBadge();
+        subscribeChatsRealtime();
+
+        // Онбординг
+        if (needsOnboarding(currentUser)) {
+            openOnboarding();
+        }
+
+        // Автoочистка
+        cleanupStaleRooms();
+        setInterval(cleanupStaleRooms, 60000);
+
+        // Периодическая проверка комнаты
+        setInterval(checkActiveRoom, 4000);
+
+        // Кнопка модератора
+        if (isModerator(currentUser) && !currentUser.is_admin) {
+            const modBtn = document.getElementById('moderatorMenuBtn');
+            if (modBtn) modBtn.style.display = 'flex';
+        }
+    } catch (e) {
+        console.error('Init error:', e);
+        showToast('Ошибка: ' + (e?.message || e));
+    }
+}
 
 function applyHeaderAvatar(user) {
     const src = user.custom_avatar || user.photo_url;
@@ -20609,7 +20708,6 @@ function safeBoot() {
 }
 
 if (!safeBoot()) {
-    // Пробуем каждые 200мс до 10 секунд
     let _bootAttempts = 0;
     const _bootTimer = setInterval(() => {
         _bootAttempts++;
