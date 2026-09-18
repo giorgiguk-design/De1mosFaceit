@@ -10388,10 +10388,12 @@ function closeAllSheets() {
     const support = document.getElementById('supportSheet');
     if (support) setTimeout(() => support.remove(), 400);
 
-    // Дополнительно закрываем все временные шиты
-    ['overrideOverlay', 'overrideSheet', 'shareOverlay', 'shareSheet',
-     'reportOverlay', 'reportSheet', 'changeCapOverlay', 'changeCapSheet',
-     'playerActionsOverlay', 'reportSheet'].forEach(id => {
+    // Убираем только временные шиты (созданные динамически)
+    ['overrideOverlay', 'overrideSheet',
+     'shareOverlay', 'shareSheet',
+     'reportOverlay', 'reportSheet',
+     'changeCapOverlay', 'changeCapSheet',
+     'playerActionsOverlay', 'playerActionsSheet'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
     });
@@ -10770,11 +10772,30 @@ function renderFriendItem(item, mode) {
         // ============================================================
         // CLUB
         // ============================================================
-        async function openClubPage() {
-            switchPage('club');
-            await loadClub();
-            subscribeClubRealtime();
-        }
+       let clubRealtimeChannel = null;
+
+function subscribeClubRealtime() {
+    if (clubRealtimeChannel) sb.removeChannel(clubRealtimeChannel);
+    if (!currentUser) return;
+
+    clubRealtimeChannel = sb.channel('club_rt_' + currentUser.telegram_id)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_members',
+            filter: `telegram_id=eq.${currentUser.telegram_id}`
+        }, async () => {
+            // Если меня кикнули / я вступил / вышел — перерисовываем клуб
+            if (document.getElementById('page-club')?.classList.contains('active')) {
+                await loadClub();
+            }
+        })
+        .subscribe();
+}
+
+async function openClubPage() {
+    switchPage('club');
+    await loadClub();
+    subscribeClubRealtime();
+}
 
         async function loadClub() {
             const container = document.getElementById('clubContent');
@@ -10975,21 +10996,53 @@ async function openAllClubsSheet() {
     const search = document.getElementById('allClubsSearch');
     const list = document.getElementById('allClubsList');
 
-    if (!sheet) { console.error('#allClubsSheet не найден'); showToast('Ошибка: экран клубов не найден'); return; }
-    if (!overlay) { console.error('#sheetOverlay не найден'); return; }
-    if (!list) { console.error('#allClubsList не найден'); return; }
+    // === ДИАГНОСТИКА ===
+    if (!sheet) {
+        console.error('#allClubsSheet не найден в DOM');
+        showToast('❌ Элемент allClubsSheet не найден');
+        return;
+    }
+    if (!overlay) {
+        console.error('#sheetOverlay не найден в DOM');
+        showToast('❌ Элемент sheetOverlay не найден');
+        return;
+    }
+    if (!list) {
+        console.error('#allClubsList не найден в DOM');
+        showToast('❌ Элемент allClubsList не найден');
+        return;
+    }
 
+    // Проверяем, что sheet не вложен в другой скрытый элемент
+    const parentChain = [];
+    let p = sheet.parentElement;
+    while (p && p !== document.body) {
+        parentChain.push(p.tagName + (p.id ? '#' + p.id : '') + (p.className ? '.' + p.className.split(' ').join('.') : ''));
+        p = p.parentElement;
+    }
+    console.log('Родители allClubsSheet:', parentChain.join(' > ') || '(прямой child body)');
+
+    // Проверяем computed style родителя
+    if (sheet.parentElement && sheet.parentElement !== document.body) {
+        const parentStyle = window.getComputedStyle(sheet.parentElement);
+        console.warn('Родитель sheet:', sheet.parentElement.tagName,
+            'display:', parentStyle.display,
+            'visibility:', parentStyle.visibility,
+            'opacity:', parentStyle.opacity);
+    }
+
+    // === ОТКРЫТИЕ ===
     overlay.classList.add('active');
     sheet.classList.add('active');
     if (search) search.value = '';
 
-    list.innerHTML = '<div class="empty">Загрузка...</div>';
+    list.innerHTML = '<div class="empty" style="color: var(--emerald);">Загрузка клубов...</div>';
 
     try {
         await loadAllClubsSheet('');
     } catch (e) {
         console.error('loadAllClubsSheet error:', e);
-        list.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + e.message + '</div>';
+        list.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + escapeHtml(e.message) + '</div>';
     }
 }
 
@@ -10998,7 +11051,10 @@ function debouncedAllClubsSearch() {
     clearTimeout(_allClubsTimer);
     _allClubsTimer = setTimeout(() => {
         const searchEl = document.getElementById('allClubsSearch');
-        if (!searchEl) return;
+        if (!searchEl) {
+            console.warn('#allClubsSearch не найден');
+            return;
+        }
         const q = searchEl.value.trim();
         loadAllClubsSheet(q);
     }, 300);
@@ -11008,11 +11064,16 @@ async function loadAllClubsSheet(q) {
     console.log('loadAllClubsSheet called with q =', q);
 
     const el = document.getElementById('allClubsList');
-    if (!el) { console.error('#allClubsList не найден'); return; }
+    if (!el) {
+        console.error('#allClubsList не найден');
+        showToast('❌ Список клубов не найден');
+        return;
+    }
 
-    el.innerHTML = '<div class="empty">Загрузка...</div>';
+    el.innerHTML = '<div class="empty" style="color: var(--emerald);">Загрузка...</div>';
 
     try {
+        // === ШАГ 1: сам запрос ===
         let query = sb.from('clubs')
             .select('id, name, tag, description, logo_url, max_members')
             .order('created_at', { ascending: false })
@@ -11024,29 +11085,64 @@ async function loadAllClubsSheet(q) {
         }
 
         const { data: clubs, error } = await query;
-        if (error) throw error;
 
-        console.log('clubs loaded:', clubs?.length);
-
-        const clubIds = (clubs || []).map(c => c.id);
-        const { data: members } = await sb.from('club_members')
-            .select('club_id')
-            .in('club_id', clubIds.length ? clubIds : [0]);
-
-        const countMap = {};
-        (members || []).forEach(m => countMap[m.club_id] = (countMap[m.club_id] || 0) + 1);
-
-        if (!clubs?.length) {
-            el.innerHTML = '<div class="empty">Клубов не найдено</div>';
+        // === ДИАГНОСТИКА: ошибка запроса ===
+        if (error) {
+            console.error('Ошибка SELECT clubs:', error);
+            el.innerHTML = `
+                <div class="empty" style="color: var(--red); font-size: 13px; line-height: 1.5; padding: 16px;">
+                    ❌ Ошибка загрузки клубов:<br>
+                    <b>${escapeHtml(error.message)}</b><br>
+                    <span style="color: var(--hint); font-size: 11px;">
+                        Код: ${escapeHtml(error.code || '—')}<br>
+                        Детали: ${escapeHtml(error.details || '—')}<br>
+                        Подсказка: ${escapeHtml(error.hint || '—')}
+                    </span>
+                </div>
+            `;
             return;
         }
 
+        console.log('✅ clubs loaded:', clubs?.length, 'шт.');
+
+        // === ДИАГНОСТИКА: пустой результат ===
+        if (!clubs || clubs.length === 0) {
+            el.innerHTML = `
+                <div class="empty" style="color: var(--gold); font-size: 13px; line-height: 1.6; padding: 20px; text-align: center;">
+                    ⚠️ Клубов не найдено<br>
+                    <span style="color: var(--hint); font-size: 11px; display: block; margin-top: 8px;">
+                        Если ты точно знаешь, что клубы есть —<br>
+                        скорее всего это <b>RLS-политика</b> в Supabase.
+                    </span>
+                </div>
+            `;
+            return;
+        }
+
+        // === ШАГ 2: количество участников ===
+        const clubIds = clubs.map(c => c.id);
+        const { data: members, error: mErr } = await sb.from('club_members')
+            .select('club_id')
+            .in('club_id', clubIds);
+
+        if (mErr) {
+            console.warn('club_members load error:', mErr);
+        }
+
+        const countMap = {};
+        (members || []).forEach(m => {
+            countMap[m.club_id] = (countMap[m.club_id] || 0) + 1;
+        });
+
+        // === ШАГ 3: рендер ===
         el.innerHTML = clubs.map(c => {
             const logoHTML = c.logo_url
                 ? `<img src="${c.logo_url}" alt="">`
-                : c.tag.slice(0, 2).toUpperCase();
+                : escapeHtml(c.tag.slice(0, 2).toUpperCase());
+
             const count = countMap[c.id] || 0;
             const isMine = myClub?.club?.id === c.id;
+
             return `
                 <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => viewClub(${c.id}), 250);">
                     <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
@@ -11061,9 +11157,15 @@ async function loadAllClubsSheet(q) {
                 </div>
             `;
         }).join('');
+
+        console.log('✅ Отрисовано клубов:', clubs.length);
     } catch (e) {
-        console.error('loadAllClubsSheet:', e);
-        el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка: ' + e.message + '</div>';
+        console.error('loadAllClubsSheet exception:', e);
+        el.innerHTML = `
+            <div class="empty" style="color: var(--red); font-size: 13px; padding: 16px;">
+                ❌ Исключение: <b>${escapeHtml(e.message || String(e))}</b>
+            </div>
+        `;
     }
 }
 
