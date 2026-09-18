@@ -14289,6 +14289,7 @@ showVetoCancelledScreen('veto_timeout');
 }
             
 function showVetoCancelledScreen(reason) {
+    stopWaitingLinkChannel();
     stopVetoPolling(); 
     const content = document.getElementById('vetoContent');
     if (!content) return;
@@ -14348,6 +14349,7 @@ function showVetoCancelledScreen(reason) {
 }
 
 async function returnAfterVetoCancel() {
+stopWaitingLinkChannel();
 stopVetoPolling();
     if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
     if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
@@ -14567,6 +14569,14 @@ function stopVetoPolling() {
         clearInterval(vetoPollInterval);
         vetoPollInterval = null;
     }
+}
+
+            function stopWaitingLinkChannel() {
+    if (waitingLinkChannel) {
+        sb.removeChannel(waitingLinkChannel);
+        waitingLinkChannel = null;
+    }
+    clearTimeout(waitingLinkTimer);
 }
 
         // ============================================================
@@ -17549,27 +17559,96 @@ async function showSidePick(roomId) {
 // ============================================================
 // HOST LINK
 // ============================================================
+let waitingLinkChannel = null;
 let waitingLinkTimer = null;
 
 async function showWaitingLinkScreen(roomId, room) {
-    // Закрываем play-screen, если открыт — переходим на отдельный экран
+    // Отписываемся от старой подписки, если была
+    if (waitingLinkChannel) {
+        try { sb.removeChannel(waitingLinkChannel); } catch (e) {}
+        waitingLinkChannel = null;
+    }
+    clearTimeout(waitingLinkTimer);
+
+    // Закрываем play-screen
     const screen = document.getElementById('playScreen');
     if (screen) screen.classList.remove('active');
-    
+
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
 
-    // Показываем "Войти в игру" — плавающая кнопка (только если ссылка есть)
     const isLeader = String(room.leader_id) === String(currentUser.telegram_id);
     const hasLink = !!room.host_link;
 
-    // Проверяем: если ссылка уже залита — сразу на in_game
+    // Если ссылка уже есть — сразу in-game
     if (hasLink) {
         showInGameScreen(roomId, room);
         return;
     }
 
-    // Если хост — 5 секунд показываем "Карта выбрана", потом форму
+    // === 🔥 ПОДПИСКА: ловим появление host_link у ВСЕХ игроков ===
+    waitingLinkChannel = sb.channel('waiting_link_' + roomId)
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'rooms',
+            filter: 'id=eq.' + roomId
+        }, async (payload) => {
+            const freshRoom = payload.new;
+            if (!freshRoom) return;
+
+            console.log('📡 waiting room update:', freshRoom.status, '| host_link:', freshRoom.host_link ? 'ЕСТЬ' : 'нет');
+
+            // Комната отменена
+            if (freshRoom.status === 'cancelled') {
+                if (waitingLinkChannel) {
+                    sb.removeChannel(waitingLinkChannel);
+                    waitingLinkChannel = null;
+                }
+                fullExitFromMatch(roomId);
+                return;
+            }
+
+            // 🔥 Ссылка появилась — переключаемся на in-game
+            if (freshRoom.host_link) {
+                if (waitingLinkChannel) {
+                    sb.removeChannel(waitingLinkChannel);
+                    waitingLinkChannel = null;
+                }
+                haptic('heavy');
+                showToast('🔗 Хост добавил ссылку!');
+                showInGameScreen(roomId, freshRoom);
+                return;
+            }
+
+            // Статус сменился на result — показываем результат
+            if (freshRoom.status === 'result') {
+                const { data: match } = await sb.from('game_matches')
+                    .select('*').eq('room_id', roomId)
+                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                if (match) {
+                    currentMatch = match;
+                    showResultScreen();
+                }
+            }
+
+            if (freshRoom.status === 'finished') {
+                const { data: match } = await sb.from('game_matches')
+                    .select('*').eq('room_id', roomId)
+                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                if (match) {
+                    currentMatch = match;
+                    showFinishedScreen();
+                }
+            }
+        })
+        .subscribe((status) => {
+            console.log('📡 waiting_link channel status:', status);
+        });
+
+    // === РЕНДЕР ЭКРАНА ===
+
+    // Хост — через 5 секунд показываем форму
     if (isLeader) {
         switchPage('veto');
         const content = document.getElementById('vetoContent');
@@ -17582,14 +17661,13 @@ async function showWaitingLinkScreen(roomId, room) {
             </div>
         `;
 
-        clearTimeout(waitingLinkTimer);
         waitingLinkTimer = setTimeout(() => {
             renderHostLinkForm(roomId);
         }, 5000);
         return;
     }
 
-    // Если не хост — показываем ожидание
+    // Не-хост — показываем ожидание
     switchPage('veto');
     const content = document.getElementById('vetoContent');
     content.innerHTML = `
@@ -17649,8 +17727,7 @@ async function submitHostLink(roomId) {
     const input = document.getElementById('hostLinkInput');
     if (!input) return;
     const link = input.value.trim();
-    
-    // 🔥 Более мягкая валидация — просто не пустая и похожа на URL/схему
+
     if (!link || link.length < 5) {
         showToast('Вставь ссылку из Standoff 2');
         return;
@@ -17659,48 +17736,28 @@ async function submitHostLink(roomId) {
         showToast('Ссылка должна начинаться с https:// или standoff2://');
         return;
     }
-    
+
     const btn = input.nextElementSibling;
     if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
-    
+
     try {
-        // 🔥 Пробуем обновить — с полями, которые точно есть
-        const updatePayload = {
+        // 🔥 Один чистый апдейт — без лишних полей
+        const { error } = await sb.from('rooms').update({
             host_link: link,
             status: 'in_game'
-        };
-        
-        // Пробуем добавить link_added_at (если колонка есть)
-        try {
-            updatePayload.link_added_at = new Date().toISOString();
-        } catch (e) {}
-        
-        const { error } = await sb.from('rooms').update(updatePayload).eq('id', roomId);
-        
-        if (error) {
-            console.warn('submitHostLink update error:', error);
-            
-            // Fallback — только host_link и status
-            const { error: e2 } = await sb.from('rooms').update({
-                host_link: link,
-                status: 'in_game'
-            }).eq('id', roomId);
-            
-            if (e2) throw e2;
-        }
-        
+        }).eq('id', roomId);
+
+        if (error) throw error;
+
         await touchRoom(roomId);
-        
+
         showToast('✅ Ссылка отправлена игрокам');
         haptic('medium');
 
-        // 🔥 Перерисовываем экран — используем showInGameScreen, а не renderInGameScreen
+        // Хост сразу переключается
         const { data: freshRoom } = await sb.from('rooms').select('*').eq('id', roomId).single();
         if (freshRoom) {
-            showInGameScreen(roomId, freshRoom);
-        } else {
-            // Fallback
-            switchPage('veto');
+            showInGameScreen(freshRoom.id, freshRoom);
         }
     } catch (e) {
         console.error('submitHostLink:', e);
@@ -17715,7 +17772,8 @@ async function submitHostLink(roomId) {
 let inGameChannel = null;
 
 async function showInGameScreen(roomId, room) {
-    stopVetoPolling();  
+    stopVetoPolling(); 
+    stopWaitingLinkChannel();
     switchPage('veto');
     const content = document.getElementById('vetoContent');
     if (!content) return;
@@ -18012,6 +18070,7 @@ async function cancelMatchAndExitAll(roomId, reason = 'vote') {
 
 // Полный выход из матча/комнаты (локальный state + UI + переход на главную)
 async function fullExitFromMatch(roomId) {
+    stopWaitingLinkChannel();
     try {
         stopVetoPolling();
         // Отписываемся от всех каналов
@@ -18247,19 +18306,61 @@ function subscribeInGameRealtime(roomId) {
     if (inGameChannel) sb.removeChannel(inGameChannel);
 
     inGameChannel = sb.channel('ingame_' + roomId)
-        // Изменения комнаты (отмена)
+        // ==== Изменения комнаты ====
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
             table: 'rooms',
             filter: 'id=eq.' + roomId
-        }, (payload) => {
+        }, async (payload) => {
             const room = payload.new;
+            if (!room) return;
+
+            console.log('📡 rooms update:', room.status, '| host_link:', room.host_link ? 'ЕСТЬ' : 'нет');
+
+            // 1. Отменена — выходим
             if (room.status === 'cancelled') {
                 fullExitFromMatch(roomId);
+                return;
+            }
+
+            // 2. Появилась ссылка — перерисовываем экран
+            if (room.host_link) {
+                // Только если мы сейчас на экране ожидания (page-veto с waiting_link)
+                const vetoPage = document.getElementById('page-veto');
+                if (vetoPage?.classList.contains('active')) {
+                    haptic('heavy');
+                    showToast('🔗 Хост добавил ссылку!');
+                    showInGameScreen(roomId, room);
+                }
+                return;
+            }
+
+            // 3. Статус сменился на result — показываем экран результата
+            if (room.status === 'result') {
+                const { data: match } = await sb.from('game_matches')
+                    .select('*').eq('room_id', roomId)
+                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                if (match) {
+                    currentMatch = match;
+                    showResultScreen();
+                }
+                return;
+            }
+
+            // 4. Статус finished — финал
+            if (room.status === 'finished') {
+                const { data: match } = await sb.from('game_matches')
+                    .select('*').eq('room_id', roomId)
+                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                if (match) {
+                    currentMatch = match;
+                    showFinishedScreen();
+                }
+                return;
             }
         })
-        // Голоса за отмену — обновляем счётчик у всех
+        // ==== Голоса за отмену ====
         .on('postgres_changes', {
             event: '*',
             schema: 'public',
@@ -18277,7 +18378,7 @@ function subscribeInGameRealtime(roomId) {
                 showInGameScreen(roomId, freshRoom);
             }
         })
-        // Матч отменён
+        // ==== Матч отменён ====
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
@@ -18290,7 +18391,9 @@ function subscribeInGameRealtime(roomId) {
                 fullExitFromMatch(roomId);
             }
         })
-        .subscribe();
+        .subscribe((status) => {
+            console.log('📡 ingame channel status:', status);
+        });
 }
 
 function unsubscribeInGameRealtime() {
