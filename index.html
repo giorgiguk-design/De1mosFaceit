@@ -9777,6 +9777,15 @@ async function notify(telegramId, text, type = null) {
         updateChatsBadge();
         subscribeChatsRealtime();
         subscribeDxpHistoryRealtime();
+        // 🔥 НОВЫЕ:
+        subscribeUsersRealtime();
+        subscribeFriendshipsRealtime();
+        subscribeClubsRealtime();
+        subscribeMatchesHistoryRealtime();
+        subscribeMessagesListRealtime();
+        // Уже есть в файле, если не вызывались — раскомментируй:
+        if (typeof subscribePartyInvitesRealtime === 'function') subscribePartyInvitesRealtime();
+        if (typeof subscribeClubInvitesRealtime === 'function') subscribeClubInvitesRealtime();
 
         // Онбординг
         if (needsOnboarding(currentUser)) {
@@ -10420,7 +10429,6 @@ function closeAllSheets() {
     const support = document.getElementById('supportSheet');
     if (support) setTimeout(() => support.remove(), 400);
 
-    // Убираем только временные шиты (созданные динамически)
     ['overrideOverlay', 'overrideSheet',
      'shareOverlay', 'shareSheet',
      'reportOverlay', 'reportSheet',
@@ -10429,6 +10437,12 @@ function closeAllSheets() {
         const el = document.getElementById(id);
         if (el) el.remove();
     });
+
+    // 🔥 Отписываемся от шитов, чтобы не тратить ресурсы
+    if (allClubsSheetChannel) {
+        sb.removeChannel(allClubsSheetChannel);
+        allClubsSheetChannel = null;
+    }
 }
 
         function pickFromTelegram() {
@@ -10826,7 +10840,7 @@ function subscribeClubRealtime() {
 async function openClubPage() {
     switchPage('club');
     await loadClub();
-    subscribeClubRealtime();
+    // Realtime уже подписан глобально через subscribeClubsRealtime()
 }
 
         async function loadClub() {
@@ -11072,6 +11086,9 @@ async function openAllClubsSheet() {
 
     try {
         await loadAllClubsSheet('');
+
+        subscribeAllClubsSheetRealtime();
+        
     } catch (e) {
         console.error('loadAllClubsSheet error:', e);
         list.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + escapeHtml(e.message) + '</div>';
@@ -11199,6 +11216,33 @@ async function loadAllClubsSheet(q) {
             </div>
         `;
     }
+}
+
+            // ============================================================
+// REALTIME — открытый шит "Все клубы"
+// ============================================================
+let allClubsSheetChannel = null;
+
+function subscribeAllClubsSheetRealtime() {
+    if (allClubsSheetChannel) sb.removeChannel(allClubsSheetChannel);
+    allClubsSheetChannel = sb.channel('all_clubs_sheet_rt')
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'clubs'
+        }, () => {
+            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
+                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
+                loadAllClubsSheet(q);
+            }
+        })
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_members'
+        }, () => {
+            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
+                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
+                loadAllClubsSheet(q);
+            }
+        })
+        .subscribe();
 }
 
         // ============================================================
@@ -20425,20 +20469,246 @@ function subscribeDxpHistoryRealtime() {
             const row = payload.new;
             if (!row) return;
 
-            // 1. Если открыт мой профиль и это моя запись
             if (document.getElementById('page-profile')?.classList.contains('active')
                 && Number(row.telegram_id) === Number(currentUser.telegram_id)) {
                 const card = document.getElementById('eloChartCardMe');
                 if (card) renderEloChart(row.telegram_id, card);
             }
 
-            // 2. Если открыт чужой профиль и это его запись
             const playerModal = document.getElementById('playerModal');
             if (playerModal?.classList.contains('active')
                 && currentProfileUserId
                 && Number(row.telegram_id) === Number(currentProfileUserId)) {
                 const card = document.querySelector('#playerModalContent #eloChartCardPlayer');
                 if (card) renderEloChart(row.telegram_id, card);
+            }
+        })
+        .subscribe();
+}
+
+            // ============================================================
+// UNIVERSAL REALTIME — users
+// ============================================================
+let usersRealtimeChannel = null;
+
+function subscribeUsersRealtime() {
+    if (usersRealtimeChannel) sb.removeChannel(usersRealtimeChannel);
+    if (!currentUser) return;
+
+    const myId = Number(currentUser.telegram_id);
+
+    usersRealtimeChannel = sb.channel('users_rt_global')
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'users'
+        }, (payload) => {
+            const u = payload.new;
+            if (!u) return;
+
+            // 1. Если это я — обновляем currentUser и всё, что от него зависит
+            if (Number(u.telegram_id) === myId) {
+                const eloChanged = u.elo !== currentUser.elo;
+                const statsChanged = u.wins !== currentUser.wins
+                    || u.matches_played !== currentUser.matches_played
+                    || u.display_name !== currentUser.display_name
+                    || u.custom_avatar !== currentUser.custom_avatar;
+
+                currentUser = { ...currentUser, ...u };
+
+                if (eloChanged || statsChanged) {
+                    // Dashboard
+                    if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+                        renderDashboard(currentUser);
+                        updatePlayBtnSub();
+                    }
+                    // Профиль (только если не в режиме редактирования)
+                    if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
+                        renderProfileView(currentUser);
+                    }
+                    // Аватар в шапке + меню
+                    applyHeaderAvatar(currentUser);
+                    fillMenuDrawerUser();
+                }
+            }
+
+            // 2. Лидерборд — если открыт dashboard или полный лидерборд
+            if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+                loadLeaderboard();
+            }
+            if (document.getElementById('page-leaderboard')?.classList.contains('active')) {
+                openFullLeaderboard();
+            }
+
+            // 3. Открытый чужой профиль — обновить
+            const playerModal = document.getElementById('playerModal');
+            if (playerModal?.classList.contains('active') && currentProfileUserId
+                && Number(u.telegram_id) === Number(currentProfileUserId)) {
+                openPlayerProfile(currentProfileUserId);
+            }
+
+            // 4. Открытый чат — если это собеседник (имя/аватар)
+            if (currentChat && currentChat.type === 'dm'
+                && Number(u.telegram_id) === Number(currentChat.id)) {
+                const avEl = document.getElementById('chatViewAvatar');
+                const titleEl = document.getElementById('chatViewTitle');
+                if (titleEl) titleEl.textContent = u.display_name || 'Игрок';
+                if (avEl) {
+                    const src = u.custom_avatar || u.photo_url;
+                    avEl.innerHTML = src ? `<img src="${src}" alt="">` : (u.display_name || '?')[0].toUpperCase();
+                }
+            }
+        })
+        .subscribe();
+}
+
+// ============================================================
+// REALTIME — friendships
+// ============================================================
+let friendshipsChannel = null;
+
+function subscribeFriendshipsRealtime() {
+    if (friendshipsChannel) sb.removeChannel(friendshipsChannel);
+    if (!currentUser) return;
+
+    const myId = Number(currentUser.telegram_id);
+
+    friendshipsChannel = sb.channel('friendships_rt_' + myId)
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'friendships'
+        }, (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+            if (Number(row.requester_id) !== myId && Number(row.addressee_id) !== myId) return;
+
+            // Список друзей
+            if (document.getElementById('page-friends')?.classList.contains('active')) {
+                loadFriends();
+            }
+            // Уведомления
+            updateNotifBadge();
+        })
+        .subscribe();
+}
+
+// ============================================================
+// REALTIME — clubs / club_members / club_requests / club_invites
+// ============================================================
+let clubsRealtimeChannel = null;
+
+function subscribeClubsRealtime() {
+    if (clubsRealtimeChannel) sb.removeChannel(clubsRealtimeChannel);
+    if (!currentUser) return;
+
+    const myId = Number(currentUser.telegram_id);
+
+    clubsRealtimeChannel = sb.channel('clubs_rt_global')
+        // Изменения в клубах (название, лого, состав)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'clubs'
+        }, () => {
+            if (document.getElementById('page-club')?.classList.contains('active')) {
+                loadClub();
+            }
+            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
+                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
+                loadAllClubsSheet(q);
+            }
+        })
+        // Изменения в составе клуба
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_members'
+        }, () => {
+            if (document.getElementById('page-club')?.classList.contains('active')) {
+                loadClub();
+            }
+            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
+                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
+                loadAllClubsSheet(q);
+            }
+        })
+        // Заявки в клуб
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_requests'
+        }, () => {
+            if (document.getElementById('page-club')?.classList.contains('active')
+                && myClub?.club) {
+                if (typeof updateRequestsBadge === 'function') updateRequestsBadge();
+                if (document.getElementById('requestsSheet')?.classList.contains('active')) {
+                    renderRequestsSheet();
+                }
+            }
+        })
+        // Приглашения в клуб
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_invites'
+        }, () => {
+            if (document.getElementById('page-club')?.classList.contains('active')) {
+                loadClub();
+            }
+        })
+        .subscribe();
+}
+
+// ============================================================
+// REALTIME — game_matches (история матчей)
+// ============================================================
+let matchesHistoryChannel = null;
+
+function subscribeMatchesHistoryRealtime() {
+    if (matchesHistoryChannel) sb.removeChannel(matchesHistoryChannel);
+    if (!currentUser) return;
+
+    matchesHistoryChannel = sb.channel('matches_history_rt')
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'game_matches'
+        }, (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            const myId = Number(currentUser.telegram_id);
+            const ids = [...(row.team_a_players || []), ...(row.team_b_players || [])]
+                .map(p => Number(p.telegram_id));
+
+            if (!ids.includes(myId)) return;
+
+            if (document.getElementById('page-matches')?.classList.contains('active')) {
+                loadMatchesHistory();
+            }
+        })
+        .subscribe();
+}
+
+// ============================================================
+// REALTIME — messages (обновление списка чатов)
+// ============================================================
+let messagesListChannel = null;
+
+function subscribeMessagesListRealtime() {
+    if (messagesListChannel) sb.removeChannel(messagesListChannel);
+    if (!currentUser) return;
+
+    const myId = Number(currentUser.telegram_id);
+
+    messagesListChannel = sb.channel('messages_list_rt_' + myId)
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'messages',
+            filter: `recipient_id=eq.${myId}`
+        }, () => {
+            if (document.getElementById('page-chat')?.classList.contains('active')
+                && !document.getElementById('chatView')?.classList.contains('active')) {
+                loadChatList();
+            }
+        })
+        .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'messages',
+            filter: `sender_id=eq.${myId}`
+        }, () => {
+            if (document.getElementById('page-chat')?.classList.contains('active')
+                && !document.getElementById('chatView')?.classList.contains('active')) {
+                loadChatList();
             }
         })
         .subscribe();
