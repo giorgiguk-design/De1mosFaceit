@@ -8816,42 +8816,93 @@ function clearResultShown() {
         const ROOM_TIMEOUT_MS = 15 * 60 * 1000;
 
         async function cleanupStaleRooms() {
-            if (!currentUser) return;
-            try {
-                const cutoff = new Date(Date.now() - ROOM_TIMEOUT_MS).toISOString();
+    if (!currentUser) return;
+    try {
+        const cutoff = new Date(Date.now() - ROOM_TIMEOUT_MS).toISOString();
 
-                const { data: stale } = await sb.from('rooms')
-                    .select('id, name')
-                    .eq('status', 'open')
-                    .lt('last_activity_at', cutoff);
+        // 1. Завершённые и отменённые комнаты старше 15 минут — удаляем
+        const { data: deadRooms } = await sb.from('rooms')
+            .select('id, name, status')
+            .in('status', ['finished', 'cancelled'])
+            .lt('last_activity_at', cutoff);
 
-                if (!stale?.length) return;
-
-                for (const room of stale) {
-                    const { data: players } = await sb.from('room_players')
-                        .select('telegram_id').eq('room_id', room.id);
-
-                    for (const p of players || []) {
-                        notify(p.telegram_id,
-                            `⏰ Комната <b>${escapeHtml(room.name)}</b> закрыта из-за неактивности (15 мин).`
-                        );
-                    }
-
-                    await sb.from('room_players').delete().eq('room_id', room.id);
-                    await sb.from('room_messages').delete().eq('room_id', room.id);
-                    await sb.from('rooms').delete().eq('id', room.id);
-                }
-
-                if (activeRoomId && stale.some(r => r.id === activeRoomId)) {
-                    activeRoomId = null;
-                    hideActiveRoomBanner();
-                    const indicator = document.getElementById('headerRoomIndicator');
-                    if (indicator) indicator.style.display = 'none';
-                }
-            } catch (e) {
-                console.warn('cleanupStaleRooms:', e);
-            }
+        for (const room of deadRooms || []) {
+            await sb.from('room_players').delete().eq('room_id', room.id);
+            await sb.from('match_cancel_votes').delete().eq('match_id', room.id);
+            await sb.from('room_messages').delete().eq('room_id', room.id);
+            await sb.from('rooms').delete().eq('id', room.id);
         }
+
+        // 2. Открытые комнаты без активности 15 минут — отменяем
+        const { data: staleOpen } = await sb.from('rooms')
+            .select('id, name')
+            .eq('status', 'open')
+            .lt('last_activity_at', cutoff);
+
+        for (const room of staleOpen || []) {
+            const { data: players } = await sb.from('room_players')
+                .select('telegram_id').eq('room_id', room.id);
+
+            for (const p of players || []) {
+                notify(p.telegram_id,
+                    `⏰ Комната <b>${escapeHtml(room.name)}</b> закрыта из-за неактивности (15 мин).`
+                );
+            }
+
+            await sb.from('room_players').delete().eq('room_id', room.id);
+            await sb.from('room_messages').delete().eq('room_id', room.id);
+            await sb.from('rooms').delete().eq('id', room.id);
+        }
+
+        // 3. Комнаты в veto / waiting_link / in_game / side_pick старше 30 минут — отменяем
+        const longCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+        const { data: stuckRooms } = await sb.from('rooms')
+            .select('id, name, status')
+            .in('status', ['veto', 'side_pick', 'waiting_link', 'in_game', 'result'])
+            .lt('last_activity_at', longCutoff);
+
+        for (const room of stuckRooms || []) {
+            // Отменяем матч
+            await sb.from('game_matches')
+                .update({
+                    status: 'cancelled',
+                    cancelled_reason: 'stale_cleanup',
+                    cancelled_at: new Date().toISOString()
+                })
+                .eq('room_id', room.id)
+                .in('status', ['veto', 'side_pick', 'ready', 'in_game', 'result']);
+
+            const { data: players } = await sb.from('room_players')
+                .select('telegram_id').eq('room_id', room.id);
+
+            for (const p of players || []) {
+                notify(p.telegram_id,
+                    `⏰ Матч <b>${escapeHtml(room.name)}</b> отменён — игроки слишком долго не проявляли активность.`,
+                    'party'
+                );
+            }
+
+            await sb.from('room_players').delete().eq('room_id', room.id);
+            await sb.from('match_cancel_votes').delete().eq('match_id', room.id);
+            await sb.from('room_messages').delete().eq('room_id', room.id);
+            await sb.from('rooms').delete().eq('id', room.id);
+        }
+
+        // 4. Гасим локальный UI, если мы были в удалённой комнате
+        if (activeRoomId && [
+            ...(deadRooms || []),
+            ...(staleOpen || []),
+            ...(stuckRooms || [])
+        ].some(r => r.id === activeRoomId)) {
+            activeRoomId = null;
+            hideActiveRoomBanner();
+            const indicator = document.getElementById('headerRoomIndicator');
+            if (indicator) indicator.style.display = 'none';
+        }
+    } catch (e) {
+        console.warn('cleanupStaleRooms:', e);
+    }
+}
 
         async function touchRoom(roomId) {
             if (!roomId) return;
