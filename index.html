@@ -17120,11 +17120,15 @@ async function openVetoView(roomId) {
                 Твой ход — забань карту
             </div>
         `}
-        <button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
-    <svg class="cy-icon cy-xs" viewBox="0 0 24 24" style="margin-right: 6px;">
-        <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
-    </svg>
-    Чат комнаты
+        <button class="rv-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
+    <span class="rv-ico">
+        <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+            <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+            <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>
+        </svg>
+    </span>
+    <span class="rv-lbl">Чат</span>
+    <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
 </button>
     `;
 
@@ -17238,11 +17242,15 @@ async function showSidePick(roomId) {
                 </div>
             </div>
         ` : ''}
-<button class="room-chat-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" style="margin-top: 20px;">
-    <svg class="cy-icon cy-xs" viewBox="0 0 24 24" style="margin-right: 6px;">
-        <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
-    </svg>
-    Чат комнаты
+<button class="rv-icon-btn" id="roomChatBtn" onclick="openRoomChat(${roomId})" title="Чат">
+    <span class="rv-ico">
+        <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+            <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+            <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>
+        </svg>
+    </span>
+    <span class="rv-lbl">Чат</span>
+    <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
 </button>
     `;
 
@@ -18798,16 +18806,41 @@ async function countUnreadRoomMessages(roomId) {
 async function updateRoomChatButton(roomId) {
     const btn = document.getElementById('roomChatBtn');
     if (!btn) return;
+
     const count = await countUnreadRoomMessages(roomId);
     roomUnreadCount = count;
-    btn.textContent = count > 0 ? `💬 Чат комнаты (${count})` : '💬 Чат комнаты';
+
+    // 🔥 Текст кнопки НЕ трогаем — он всегда "Чат"
+    // Счётчик показываем через отдельный бейдж
+    const badge = document.getElementById('roomChatBadge');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    // Подсветка кнопки при непрочитанных
+    if (count > 0) {
+        btn.classList.add('has-unread');
+    } else {
+        btn.classList.remove('has-unread');
+    }
 }
 
 async function markRoomChatRead(roomId) {
     lastRoomReadAt = new Date();
     localStorage.setItem('roomLastReadAt', lastRoomReadAt.toISOString());
     roomUnreadCount = 0;
-    updateRoomChatButton(roomId);
+
+    // Скрываем бейдж
+    const badge = document.getElementById('roomChatBadge');
+    if (badge) badge.style.display = 'none';
+
+    const btn = document.getElementById('roomChatBtn');
+    if (btn) btn.classList.remove('has-unread');
 }
 
             // ============================================================
@@ -19012,16 +19045,22 @@ function subscribeRoomChatCounter(roomId) {
             filter: 'room_id=eq.' + roomId
         }, async (payload) => {
             const m = payload.new;
-            // Если это чужое сообщение и чат не открыт — увеличиваем счётчик
-            if (!roomChatOpen && String(m.sender_id) !== String(currentUser.telegram_id)) {
-                roomUnreadCount++;
-                const btn = document.getElementById('roomChatBtn');
-                if (btn) {
-                    btn.textContent = `💬 Чат комнаты (${roomUnreadCount})`;
-                    btn.classList.add('has-unread');
-                }
-                haptic('light');
+            if (roomChatOpen) return;
+            if (String(m.sender_id) === String(currentUser.telegram_id)) return;
+
+            roomUnreadCount++;
+
+            // 🔥 Обновляем только бейдж, текст кнопки не трогаем
+            const badge = document.getElementById('roomChatBadge');
+            const btn = document.getElementById('roomChatBtn');
+
+            if (badge) {
+                badge.textContent = roomUnreadCount > 99 ? '99+' : roomUnreadCount;
+                badge.style.display = 'flex';
             }
+            if (btn) btn.classList.add('has-unread');
+
+            haptic('light');
         })
         .subscribe();
 }
