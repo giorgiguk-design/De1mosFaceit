@@ -13421,37 +13421,41 @@ function getCurrentVetoPhase(match) {
     const firstTeam = match.veto_first_team;
     if (!firstTeam) return null;
 
+    const secondTeam = firstTeam === 'A' ? 'B' : 'A';
     const bansFirst = log.filter(v => v.team === firstTeam).length;
-    const bansSecond = log.filter(v => v.team !== firstTeam).length;
+    const bansSecond = log.filter(v => v.team === secondTeam).length;
+    const total = bansFirst + bansSecond;
 
-    // Фаза 1: первая команда банит 2
-    if (bansFirst < 2) {
+    // 6 банов — всё, veto завершён
+    if (total >= 6) return null;
+
+    // Фаза 1: first банит 2 (баны 1-2)
+    if (total < 2) {
         return {
             index: 0,
             team: firstTeam,
             remaining: 2 - bansFirst,
-            label: 'Фаза 1 · Первая команда банит 2 карты'
+            label: `Фаза 1 · Команда ${firstTeam} банит 2 карты`
         };
     }
-    // Фаза 2: вторая команда банит 3
-    if (bansSecond < 3) {
+
+    // Фаза 2: second банит 3 (баны 3-5)
+    if (total < 5) {
         return {
             index: 1,
-            team: firstTeam === 'A' ? 'B' : 'A',
-            remaining: 3 - bansSecond,
-            label: 'Фаза 2 · Вторая команда банит 3 карты'
+            team: secondTeam,
+            remaining: 5 - total,
+            label: `Фаза 2 · Команда ${secondTeam} банит 3 карты`
         };
     }
-    // Фаза 3: первая команда банит 1 (последний)
-    if (bansFirst < 3) {
-        return {
-            index: 2,
-            team: firstTeam,
-            remaining: 3 - bansFirst,
-            label: 'Фаза 3 · Первая команда банит 1 карту'
-        };
-    }
-    return null;
+
+    // Фаза 3: first банит 1 последний (бан 6)
+    return {
+        index: 2,
+        team: firstTeam,
+        remaining: 1,
+        label: `Фаза 3 · Команда ${firstTeam} банит последнюю карту`
+    };
 }
 
 function getSidePickerTeam(match) {
@@ -13695,22 +13699,46 @@ async function renderVeto() {
 // БАН КАРТЫ
 // ============================================================
 async function pickMap(map) {
-    if (!currentMatch) return;
+    console.log('🗳️ pickMap вызван:', map);
+    console.log('   currentMatch:', currentMatch?.id, currentMatch?.status);
+    console.log('   veto_log length:', (currentMatch?.veto_log || []).length);
+
+    if (!currentMatch) {
+        console.error('❌ currentMatch = null');
+        showToast('Матч не активен');
+        return;
+    }
 
     const vetoLog = currentMatch.veto_log || [];
     if (vetoLog.map(v => v.map).includes(map)) {
+        console.warn('❌ Карта уже забанена:', map);
         showToast('Карта уже забанена');
         return;
     }
 
     const phase = getCurrentVetoPhase(currentMatch);
-    if (!phase) { showToast('Veto завершён'); return; }
+    console.log('   phase:', phase);
+
+    if (!phase) {
+        console.warn('❌ phase = null');
+        showToast('Veto завершён — ждём выбор стороны');
+        return;
+    }
 
     const me = Number(currentUser.telegram_id);
     const isMyTurn =
         (me === Number(currentMatch.captain_a_id) && phase.team === 'A') ||
         (me === Number(currentMatch.captain_b_id) && phase.team === 'B');
-    if (!isMyTurn) { showToast('Не твой ход'); return; }
+
+    console.log('   me:', me, 'capA:', currentMatch.captain_a_id, 'capB:', currentMatch.captain_b_id);
+    console.log('   phase.team:', phase.team);
+    console.log('   isMyTurn:', isMyTurn);
+
+    if (!isMyTurn) {
+        console.warn('❌ не мой ход');
+        showToast('Не твой ход');
+        return;
+    }
 
     try {
         const newLog = [...vetoLog, {
@@ -13723,29 +13751,41 @@ async function pickMap(map) {
         const bannedMaps = newLog.map(v => v.map);
         const remaining = STANDOFF_MAPS.filter(m => !bannedMaps.includes(m));
 
+        console.log('   newLog.length:', newLog.length, 'remaining:', remaining);
+
         const update = {
             veto_log: newLog,
             last_action_at: new Date().toISOString()
         };
 
         if (remaining.length === 1) {
-            // Все баны сделаны → выбор стороны
+            // 🔥 Последняя карта → сразу side_pick
             update.final_map = remaining[0];
             update.status = 'side_pick';
             update.side_picker_team = getSidePickerTeam(currentMatch);
             update.current_turn = null;
+
+            console.log('   🔥 ФИНАЛ: final_map =', remaining[0], 'side_picker_team =', update.side_picker_team);
         } else {
             const tempMatch = { ...currentMatch, veto_log: newLog };
             const nextPhase = getCurrentVetoPhase(tempMatch);
             update.current_turn = nextPhase ? nextPhase.team : null;
+            console.log('   next phase:', nextPhase);
         }
 
+        console.log('   📤 update:', update);
+
         const { error } = await sb.from('game_matches').update(update).eq('id', currentMatch.id);
-        if (error) throw error;
+        if (error) {
+            console.error('❌ update error:', error);
+            throw error;
+        }
+
+        console.log('   ✅ update ok');
 
         haptic('medium');
 
-        // 🔥 ЛОКАЛЬНО обновляем состояние сразу — не ждём realtime
+        // Локально обновляем
         currentMatch = { ...currentMatch, ...update };
         currentMatch.veto_log = newLog;
 
@@ -13755,17 +13795,11 @@ async function pickMap(map) {
             showToast(`🚫 ${map} забанена`);
         }
 
-        // 🔥 Мгновенно перерисовываем — если side_pick, renderVeto сам покажет renderVetoFinal
+        console.log('   🎨 renderVeto() с status =', currentMatch.status);
         renderVeto();
+        startVetoCountdown();
 
-        // 🔥 И запускаем таймер заново для нового хода
-        if (currentMatch.status === 'side_pick') {
-            startVetoCountdown();
-        } else {
-            startVetoCountdown();
-        }
-
-        // Дополнительно подтягиваем свежие данные из БД (для надёжности)
+        // Фоновый рефетч
         setTimeout(async () => {
             const { data } = await sb.from('game_matches')
                 .select('*').eq('id', currentMatch.id).single();
@@ -13773,10 +13807,10 @@ async function pickMap(map) {
                 currentMatch = data;
                 renderVeto();
             }
-        }, 500);
+        }, 800);
 
     } catch (e) {
-        console.error('pickMap:', e);
+        console.error('❌ pickMap exception:', e);
         showToast('Ошибка бана: ' + (e.message || e));
     }
 }
