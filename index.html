@@ -10040,7 +10040,7 @@ async function renderProfileView(user) {
             </div>
         </div>
 
-        <div class="elo-chart-card" id="eloChartCard" data-user-id="${user.telegram_id}">
+               <div class="elo-chart-card" id="eloChartCardMe" data-user-id="${user.telegram_id}">
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
             <span class="ech-corner ech-bl"></span>
@@ -10050,31 +10050,31 @@ async function renderProfileView(user) {
                     <div class="ech-eyebrow">PREMIUM INSIGHT</div>
                     <div class="ech-title">Динамика DXP</div>
                 </div>
-                <div class="ech-delta" id="eloChartDelta">—</div>
+                <div class="ech-delta js-elo-delta">—</div>
             </div>
             <div class="ech-body">
-                <div class="ech-y-axis" id="eloChartYAxis">
+                <div class="ech-y-axis js-elo-yaxis">
                     <span>—</span><span>—</span><span>—</span><span>—</span>
                 </div>
                 <div class="ech-svg-wrap">
-                    <svg class="ech-svg" id="eloChartSvg" viewBox="0 0 320 140" preserveAspectRatio="none">
+                    <svg class="ech-svg" viewBox="0 0 320 140" preserveAspectRatio="none">
                         <defs>
-                            <linearGradient id="eloGradient" x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient id="eloGradientMe" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%"  stop-color="var(--emerald)" stop-opacity="0.45"/>
                                 <stop offset="100%" stop-color="var(--emerald)" stop-opacity="0"/>
                             </linearGradient>
                         </defs>
-                        <path id="eloAreaPath" fill="url(#eloGradient)" d=""/>
-                        <path id="eloLinePath" fill="none" stroke="var(--emerald)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d=""/>
-                        <circle id="eloLastDot" r="3" fill="var(--emerald-3)" cx="0" cy="0"/>
+                        <path class="js-elo-area" fill="url(#eloGradientMe)" d=""/>
+                        <path class="js-elo-line" fill="none" stroke="var(--emerald)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d=""/>
+                        <circle class="js-elo-dot" r="3" fill="var(--emerald-3)" cx="0" cy="0"/>
                     </svg>
                 </div>
             </div>
-            <div class="ech-streak" id="eloChartStreak"></div>
+            <div class="ech-streak js-elo-streak"></div>
             <div class="ech-footer">
                 <div class="ech-wl">
-                    <span class="ech-w">W <b id="eloChartWins">0</b></span>
-                    <span class="ech-l">L <b id="eloChartLosses">0</b></span>
+                    <span class="ech-w">W <b class="js-elo-wins">0</b></span>
+                    <span class="ech-l">L <b class="js-elo-losses">0</b></span>
                 </div>
                 <div class="ech-winrate">${winrate}% WR</div>
             </div>
@@ -10084,7 +10084,10 @@ async function renderProfileView(user) {
         <div id="profileMatchHistory"><div class="empty">Матчей пока нет</div></div>
     `;
 
-    renderEloChart(user.telegram_id);
+       setTimeout(() => {
+        const card = document.getElementById('eloChartCardMe');
+        renderEloChart(user.telegram_id, card);
+    }, 100);
 }
 
 function enterProfileEditMode() {
@@ -10284,44 +10287,44 @@ async function openPlayerProfile(userId) {
     <div class="profile-stat"><div class="profile-stat-value">${winrate}%</div><div class="profile-stat-label">Winrate</div></div>
     <div class="profile-stat"><div class="profile-stat-value">${user.hide_hours ? '—' : hours + 'ч'}</div><div class="profile-stat-label">На Faceit</div></div>
 </div>
-            <div class="elo-chart-card" id="eloChartCard" data-user-id="${user.telegram_id}">
-    <span class="ech-corner ech-tl"></span>
-    <span class="ech-corner ech-tr"></span>
-    <span class="ech-corner ech-bl"></span>
-    <span class="ech-corner ech-br"></span>
-    <div class="ech-header">
-        <div>
-            <div class="ech-eyebrow">PREMIUM INSIGHT</div>
-            <div class="ech-title">Динамика DXP</div>
-        </div>
-        <div class="ech-delta" id="eloChartDelta">—</div>
-    </div>
-    <div class="ech-body">
-        <div class="ech-y-axis" id="eloChartYAxis">
-            <span>—</span><span>—</span><span>—</span><span>—</span>
-        </div>
-        <div class="ech-svg-wrap">
-            <svg class="ech-svg" id="eloChartSvg" viewBox="0 0 320 140" preserveAspectRatio="none">
-                <defs>
-                    <linearGradient id="eloGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%"  stop-color="var(--emerald)" stop-opacity="0.45"/>
-                        <stop offset="100%" stop-color="var(--emerald)" stop-opacity="0"/>
-                    </linearGradient>
-                </defs>
-                <path id="eloAreaPath" fill="url(#eloGradient)" d=""/>
-                <path id="eloLinePath" fill="none" stroke="var(--emerald)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d=""/>
-                <circle id="eloLastDot" r="3" fill="var(--emerald-3)" cx="0" cy="0"/>
-            </svg>
-        </div>
-    </div>
-    <div class="ech-streak" id="eloChartStreak"></div>
-    <div class="ech-footer">
-        <div class="ech-wl">
-            <span class="ech-w">W <b id="eloChartWins">0</b></span>
-            <span class="ech-l">L <b id="eloChartLosses">0</b></span>
-        </div>
-    </div>
-</div>
+                        <div class="elo-chart-card" id="eloChartCardPlayer" data-user-id="${user.telegram_id}">
+                <span class="ech-corner ech-tl"></span>
+                <span class="ech-corner ech-tr"></span>
+                <span class="ech-corner ech-bl"></span>
+                <span class="ech-corner ech-br"></span>
+                <div class="ech-header">
+                    <div>
+                        <div class="ech-eyebrow">PREMIUM INSIGHT</div>
+                        <div class="ech-title">Динамика DXP</div>
+                    </div>
+                    <div class="ech-delta js-elo-delta">—</div>
+                </div>
+                <div class="ech-body">
+                    <div class="ech-y-axis js-elo-yaxis">
+                        <span>—</span><span>—</span><span>—</span><span>—</span>
+                    </div>
+                    <div class="ech-svg-wrap">
+                        <svg class="ech-svg" viewBox="0 0 320 140" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="eloGradientPlayer" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%"  stop-color="var(--emerald)" stop-opacity="0.45"/>
+                                    <stop offset="100%" stop-color="var(--emerald)" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path class="js-elo-area" fill="url(#eloGradientPlayer)" d=""/>
+                            <path class="js-elo-line" fill="none" stroke="var(--emerald)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" d=""/>
+                            <circle class="js-elo-dot" r="3" fill="var(--emerald-3)" cx="0" cy="0"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="ech-streak js-elo-streak"></div>
+                <div class="ech-footer">
+                    <div class="ech-wl">
+                        <span class="ech-w">W <b class="js-elo-wins">0</b></span>
+                        <span class="ech-l">L <b class="js-elo-losses">0</b></span>
+                    </div>
+                </div>
+            </div>
             <div class="profile-view-row">
     <span class="profile-view-label">Standoff 2 ID</span>
     <span class="profile-view-value" style="display: flex; align-items: center; gap: 8px;">
@@ -10341,7 +10344,10 @@ async function openPlayerProfile(userId) {
 
         // Рисуем график для этого игрока
         currentProfileUserId = user.telegram_id;
-        setTimeout(() => renderEloChart(user.telegram_id), 100);
+        setTimeout(() => {
+            const card = document.querySelector('#playerModalContent #eloChartCardPlayer');
+            renderEloChart(user.telegram_id, card);
+        }, 100);
 
     } catch (e) {
         console.error('openPlayerProfile:', e);
@@ -20419,9 +20425,20 @@ function subscribeDxpHistoryRealtime() {
             const row = payload.new;
             if (!row) return;
 
-            // Если открыт профиль этого игрока — обновляем график
-            if (currentProfileUserId && Number(row.telegram_id) === Number(currentProfileUserId)) {
-                renderEloChart(currentProfileUserId);
+            // 1. Если открыт мой профиль и это моя запись
+            if (document.getElementById('page-profile')?.classList.contains('active')
+                && Number(row.telegram_id) === Number(currentUser.telegram_id)) {
+                const card = document.getElementById('eloChartCardMe');
+                if (card) renderEloChart(row.telegram_id, card);
+            }
+
+            // 2. Если открыт чужой профиль и это его запись
+            const playerModal = document.getElementById('playerModal');
+            if (playerModal?.classList.contains('active')
+                && currentProfileUserId
+                && Number(row.telegram_id) === Number(currentProfileUserId)) {
+                const card = document.querySelector('#playerModalContent #eloChartCardPlayer');
+                if (card) renderEloChart(row.telegram_id, card);
             }
         })
         .subscribe();
@@ -20486,21 +20503,21 @@ function throttle(fn, delay = 300) {
          // ============================================================
 // DXPCHART — рисует график DXPпо последним матчам
 // ============================================================
-async function renderEloChart(userId) {
-    const card = document.getElementById('eloChartCard');
+async function renderEloChart(userId, cardEl = null) {
+    const card = cardEl || document.getElementById('eloChartCardMe');
     if (!card) return;
 
-    const areaEl = document.getElementById('eloAreaPath');
-    const lineEl = document.getElementById('eloLinePath');
-    const dotEl = document.getElementById('eloLastDot');
-    const yAxisEl = document.getElementById('eloChartYAxis');
-    const deltaEl = document.getElementById('eloChartDelta');
-    const streakEl = document.getElementById('eloChartStreak');
-    const winsEl = document.getElementById('eloChartWins');
-    const lossesEl = document.getElementById('eloChartLosses');
+    // 🔥 Ищем элементы ВНУТРИ конкретной карточки, а не по всему документу
+    const areaEl    = card.querySelector('.js-elo-area');
+    const lineEl    = card.querySelector('.js-elo-line');
+    const dotEl     = card.querySelector('.js-elo-dot');
+    const yAxisEl   = card.querySelector('.js-elo-yaxis');
+    const deltaEl   = card.querySelector('.js-elo-delta');
+    const streakEl  = card.querySelector('.js-elo-streak');
+    const winsEl    = card.querySelector('.js-elo-wins');
+    const lossesEl  = card.querySelector('.js-elo-losses');
 
     try {
-        // Берём последние 30 матчей ИМЕННО ЭТОГО игрока
         const { data: history, error } = await sb
             .from('dxp_history')
             .select('elo_before, elo_after, delta, won, created_at')
