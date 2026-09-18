@@ -7381,9 +7381,11 @@ html.lite-mode * {
     height: 95%;
     max-height: 320px;
     z-index: 2;
-    filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
+    filter: drop-shadow(0 0 20px rgba(0,0,0,0.8)) brightness(0.55) saturate(0.85);
+    opacity: 0.9;
     pointer-events: none;
     object-fit: contain;
+    mix-blend-mode: luminosity; /* ← делает модельку серой, как фон */
 }
 .vf3-content {
     position: relative;
@@ -7518,10 +7520,11 @@ html.lite-mode * {
     height: 90%;
     max-height: 380px;
     z-index: 2;
-    filter: drop-shadow(0 0 20px rgba(0,0,0,0.9));
+    filter: drop-shadow(0 0 20px rgba(0,0,0,0.9)) brightness(0.55) saturate(0.85);
+    opacity: 0.9;
     pointer-events: none;
     object-fit: contain;
-    opacity: 0.95;
+    mix-blend-mode: luminosity;
 }
 .ig-v3-content {
     position: relative;
@@ -13204,6 +13207,11 @@ function renderVetoFinal(content, match, userMap) {
     const capBId = Number(match.captain_b_id);
     const me = Number(currentUser.telegram_id);
 
+    const teamA = match.team_a_players || [];
+    const teamB = match.team_b_players || [];
+    const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
+                 : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
+
     const sidePickerTeam = match.side_picker_team || getSidePickerTeam(match);
     const iAmSidePicker =
         (sidePickerTeam === 'A' && me === capAId) ||
@@ -13213,9 +13221,30 @@ function renderVetoFinal(content, match, userMap) {
     const canPickSide = iAmSidePicker && !sideChosen;
     const vetoLog = match.veto_log || [];
 
-    const displaySide = match.side_a || null;
+    // Моя сторона (если я в команде)
+    const mySide = myTeam === 'A' ? match.side_a
+                 : myTeam === 'B' ? match.side_b
+                 : null;
+
+    // Что рисуем справа:
+    // - если я в команде и сторона выбрана — моделька моей стороны
+    // - если сторона не выбрана — нейтральный фон без модельки
+    const displaySide = sideChosen ? (mySide || match.side_a) : null;
     const bgUrl = mapBgUrl(finalMap);
     const modelUrl = displaySide ? sideModelUrl(displaySide) : null;
+
+    // Заголовок "Вы — за ..."
+    let mySideText = '';
+    if (sideChosen && mySide) {
+        mySideText = mySide === 'Спецназ' ? 'Вы — за спецназ' : 'Вы — за террористов';
+    } else if (sideChosen && !mySide) {
+        // Зритель — показываем стороны нейтрально
+        mySideText = 'Стороны выбраны';
+    } else {
+        mySideText = iAmSidePicker
+            ? 'Ты выбираешь сторону ↓'
+            : `Капитан команды ${sidePickerTeam} выбирает сторону`;
+    }
 
     content.innerHTML = `
         <div class="veto-wrap-v3">
@@ -13228,10 +13257,15 @@ function renderVetoFinal(content, match, userMap) {
                     <div class="vf3-label">Карта выбрана</div>
                     <div class="vf3-map">${escapeHtml(finalMap)}</div>
 
-                    ${sideChosen ? `
+                    ${sideChosen && mySide ? `
                         <div class="vf3-side">
-                            <span>${displaySide === 'Спецназ' ? '🛡️' : '💣'}</span>
-                            <span>Сторона A · ${escapeHtml(displaySide)}</span>
+                            <span>${mySide === 'Спецназ' ? '🛡️' : '💣'}</span>
+                            <span>${mySideText}</span>
+                        </div>
+                    ` : sideChosen && !mySide ? `
+                        <div class="vf3-side" style="background: rgba(217,171,90,0.18); border-color: rgba(217,171,90,0.5); color: var(--gold);">
+                            <span>👀</span>
+                            <span>Стороны выбраны</span>
                         </div>
                     ` : `
                         <div class="vf3-side" style="background: rgba(217,171,90,0.18); border-color: rgba(217,171,90,0.5); color: var(--gold);">
@@ -13242,10 +13276,10 @@ function renderVetoFinal(content, match, userMap) {
 
                     <div class="vf3-sub">
                         ${sideChosen
-                            ? `Команда B: <b>${escapeHtml(match.side_b || '—')}</b>`
-                            : (iAmSidePicker
-                                ? 'Ты выбираешь сторону ↓'
-                                : `Капитан команды ${sidePickerTeam} выбирает сторону`)
+                            ? (myTeam
+                                ? `Противник играет за ${escapeHtml(mySide === 'Спецназ' ? 'террористов' : 'спецназ')}`
+                                : `A — ${escapeHtml(match.side_a || '—')} · B — ${escapeHtml(match.side_b || '—')}`)
+                            : (iAmSidePicker ? 'Выбери сторону ↓' : `Ждём капитана команды ${sidePickerTeam}`)
                         }
                     </div>
                 </div>
@@ -13267,16 +13301,16 @@ function renderVetoFinal(content, match, userMap) {
             ` : ''}
 
             ${sideChosen ? `
-                <div style="padding: 16px; background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.08), rgba(0,0,0,0.3)); border: 1px solid var(--border-strong); border-radius: 12px; text-align: center;">
-                    <div style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--hint); font-weight: 800; margin-bottom: 10px;">Стороны</div>
+                <div style="padding: 16px; background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.08), rgba(0,0,0,0.3)); border: 1px solid var(--border-strong); border-radius: 12px;">
+                    <div style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--hint); font-weight: 800; margin-bottom: 10px; text-align: center;">Стороны</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div style="padding: 10px; background: rgba(var(--emerald-rgb),0.08); border: 1px solid rgba(var(--emerald-rgb),0.3); border-radius: 10px;">
                             <div style="font-size: 10px; color: var(--hint); letter-spacing: 1px; font-weight: 800;">КОМАНДА A</div>
-                            <div style="font-size: 16px; font-weight: 900; color: var(--emerald); margin-top: 4px;">${escapeHtml(match.side_a)}</div>
+                            <div style="font-size: 15px; font-weight: 900; color: var(--emerald); margin-top: 4px;">${escapeHtml(match.side_a)}</div>
                         </div>
                         <div style="padding: 10px; background: rgba(255,84,112,0.08); border: 1px solid rgba(255,84,112,0.3); border-radius: 10px;">
                             <div style="font-size: 10px; color: var(--hint); letter-spacing: 1px; font-weight: 800;">КОМАНДА B</div>
-                            <div style="font-size: 16px; font-weight: 900; color: #ff5470; margin-top: 4px;">${escapeHtml(match.side_b)}</div>
+                            <div style="font-size: 15px; font-weight: 900; color: #ff5470; margin-top: 4px;">${escapeHtml(match.side_b)}</div>
                         </div>
                     </div>
                 </div>
@@ -16560,8 +16594,28 @@ async function showInGameScreen(roomId, room) {
         return;
     }
 
+    const me = Number(currentUser.telegram_id);
+
+    // Определяем мою команду
+    const { data: players } = await sb.from('room_players')
+        .select('telegram_id, team, is_ready').eq('room_id', roomId);
+    const myPlayer = (players || []).find(p => Number(p.telegram_id) === me);
+    const myTeam = myPlayer?.team || null;
+
+    const mySide = myTeam === 'A' ? room.side_a
+                 : myTeam === 'B' ? room.side_b
+                 : null;
+
     const bgUrl = mapBgUrl(room.final_map);
-    const modelUrl = sideModelUrl(room.side_a); // моделька стороны A (по умолчанию CT или T)
+    const modelUrl = mySide ? sideModelUrl(mySide) : null;
+
+    // Заголовок
+    let titleText = '';
+    if (mySide) {
+        titleText = mySide === 'Спецназ' ? 'Вы — за спецназ' : 'Вы — за террористов';
+    } else {
+        titleText = 'Матч готов';
+    }
 
     content.innerHTML = `
         <div class="ig-v3-screen">
@@ -16573,18 +16627,25 @@ async function showInGameScreen(roomId, room) {
                 <div class="ig-v3-label">Матч готов · Карта</div>
                 <div class="ig-v3-map">${escapeHtml(room.final_map || '—')}</div>
 
-                <div class="ig-v3-sides">
-                    <div class="ig-v3-side-card a">
-                        <div class="ig-v3-side-icon">${room.side_a === 'Спецназ' ? '🛡️' : '💣'}</div>
-                        <div class="ig-v3-side-team">Команда A</div>
-                        <div class="ig-v3-side-name">${escapeHtml(room.side_a || '—')}</div>
+                ${mySide ? `
+                    <div style="display:inline-flex; align-items:center; gap:8px; padding: 8px 16px; border-radius: 999px; background: rgba(var(--emerald-rgb), 0.18); border: 1px solid rgba(var(--emerald-rgb), 0.5); font-size: 14px; font-weight: 900; color: var(--emerald); letter-spacing: 1px; text-transform: uppercase; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); margin-bottom: 16px;">
+                        <span>${mySide === 'Спецназ' ? '🛡️' : '💣'}</span>
+                        <span>${titleText}</span>
                     </div>
-                    <div class="ig-v3-side-card b">
-                        <div class="ig-v3-side-icon">${room.side_b === 'Спецназ' ? '🛡️' : '💣'}</div>
-                        <div class="ig-v3-side-team">Команда B</div>
-                        <div class="ig-v3-side-name">${escapeHtml(room.side_b || '—')}</div>
+                ` : `
+                    <div class="ig-v3-sides">
+                        <div class="ig-v3-side-card a">
+                            <div class="ig-v3-side-icon">${room.side_a === 'Спецназ' ? '🛡️' : '💣'}</div>
+                            <div class="ig-v3-side-team">Команда A</div>
+                            <div class="ig-v3-side-name">${escapeHtml(room.side_a || '—')}</div>
+                        </div>
+                        <div class="ig-v3-side-card b">
+                            <div class="ig-v3-side-icon">${room.side_b === 'Спецназ' ? '🛡️' : '💣'}</div>
+                            <div class="ig-v3-side-team">Команда B</div>
+                            <div class="ig-v3-side-name">${escapeHtml(room.side_b || '—')}</div>
+                        </div>
                     </div>
-                </div>
+                `}
 
                 <div class="ig-v3-actions">
                     <button class="ig-v3-btn-primary" onclick="enterInGameLinkAndGoResult('${escapeHtml(room.host_link)}', ${roomId})">
