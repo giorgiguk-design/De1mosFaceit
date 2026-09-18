@@ -7046,6 +7046,589 @@ html.lite-mode .stat-card:active {
 html.lite-mode * {
     scroll-behavior: auto !important;
 }
+
+    /* ============================================================ */
+/* VETO V3 — КАРТОЧКИ С ФОНОМ КАРТ                               */
+/* ============================================================ */
+
+.veto-wrap-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 24px;
+}
+
+/* --- ХЕДЕР --- */
+.veto-header-v3 {
+    position: relative;
+    overflow: hidden;
+    padding: 16px 18px;
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb), 0.10) 0%, rgba(0,0,0,0.5) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 16px;
+}
+.veto-header-v3.team-b {
+    background: linear-gradient(160deg, rgba(255,84,112,0.10) 0%, rgba(0,0,0,0.5) 100%);
+    border-color: rgba(255,84,112,0.4);
+}
+.veto-header-v3::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.8;
+}
+.veto-header-v3.team-b::before {
+    background: linear-gradient(90deg, transparent, #ff5470, transparent);
+}
+
+.vh3-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.vh3-phase {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--hint);
+}
+.vh3-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--text);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.vh3-title .team-tag {
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+.vh3-title .team-tag.a {
+    background: rgba(var(--emerald-rgb), 0.18);
+    color: var(--emerald);
+    border: 1px solid rgba(var(--emerald-rgb), 0.4);
+}
+.vh3-title .team-tag.b {
+    background: rgba(255, 84, 112, 0.18);
+    color: #ff5470;
+    border: 1px solid rgba(255, 84, 112, 0.4);
+}
+.vh3-timer {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--emerald);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.6);
+}
+.vh3-timer.team-b { color: #ff5470; text-shadow: 0 0 16px rgba(255,84,112,0.6); }
+.vh3-timer.warning { color: var(--red); animation: pulseRed 0.6s ease-in-out infinite; }
+
+.vh3-progress {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    margin-top: 4px;
+}
+.vh3-progress .step {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.06);
+}
+.vh3-progress .step.done-a { background: var(--emerald); box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6); }
+.vh3-progress .step.done-b { background: #ff5470; box-shadow: 0 0 8px rgba(255,84,112,0.6); }
+.vh3-progress .step.active-a { background: var(--emerald); animation: stepPulseA 1.6s ease-in-out infinite; }
+.vh3-progress .step.active-b { background: #ff5470; animation: stepPulseB 1.6s ease-in-out infinite; }
+
+/* --- ПОДСКАЗКА --- */
+.veto-hint-v3 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: rgba(var(--emerald-rgb), 0.06);
+    border: 1px solid rgba(var(--emerald-rgb), 0.25);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.45;
+}
+.veto-hint-v3.team-b {
+    background: rgba(255, 84, 112, 0.06);
+    border-color: rgba(255, 84, 112, 0.3);
+}
+.veto-hint-v3 .hint-icon { font-size: 22px; flex-shrink: 0; }
+.veto-hint-v3 b { color: var(--emerald); }
+.veto-hint-v3.team-b b { color: #ff5470; }
+
+/* --- КАПИТАНЫ --- */
+.veto-captains-v3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.veto-cap-card {
+    position: relative;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.25s ease;
+}
+.veto-cap-card.a { border-left: 3px solid var(--emerald); }
+.veto-cap-card.b { border-left: 3px solid #ff5470; }
+.veto-cap-card.active.a {
+    background: rgba(var(--emerald-rgb), 0.12);
+    border-color: var(--emerald);
+    box-shadow: 0 0 0 1px var(--emerald), 0 6px 20px rgba(var(--emerald-rgb), 0.3);
+}
+.veto-cap-card.active.b {
+    background: rgba(255, 84, 112, 0.12);
+    border-color: #ff5470;
+    box-shadow: 0 0 0 1px #ff5470, 0 6px 20px rgba(255,84,112,0.3);
+}
+.veto-cap-label {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.veto-cap-card.a .veto-cap-label { color: var(--emerald); }
+.veto-cap-card.b .veto-cap-label { color: #ff5470; }
+.veto-cap-row { display: flex; align-items: center; gap: 8px; }
+.veto-cap-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 900; color: #04140e;
+    overflow: hidden; flex-shrink: 0;
+}
+.veto-cap-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.veto-cap-card.b .veto-cap-avatar {
+    background: linear-gradient(135deg, #ff5470, #cc1e38);
+    color: #fff;
+}
+.veto-cap-name {
+    flex: 1; min-width: 0;
+    font-size: 12px; font-weight: 800;
+    color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.veto-cap-bans {
+    font-size: 10px; font-weight: 800;
+    padding: 2px 7px; border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    color: var(--hint);
+}
+.veto-cap-card.a .veto-cap-bans { background: rgba(var(--emerald-rgb), 0.15); color: var(--emerald); }
+.veto-cap-card.b .veto-cap-bans { background: rgba(255,84,112,0.15); color: #ff5470; }
+
+/* --- КАРТОЧКИ КАРТ С ФОНОМ --- */
+.veto-maps-v3 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.veto-map-v3 {
+    position: relative;
+    height: 150px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #000;
+    font-family: inherit;
+    color: #fff;
+    padding: 0;
+    transition: transform 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    isolation: isolate;
+}
+.veto-map-v3:not(:disabled):hover {
+    transform: translateY(-3px);
+    border-color: var(--emerald);
+    box-shadow: 0 8px 24px rgba(var(--emerald-rgb), 0.35);
+}
+.veto-map-v3:not(:disabled):active { transform: scale(0.97); }
+.veto-map-v3:disabled { cursor: not-allowed; }
+.veto-map-v3.locked { opacity: 0.55; }
+
+.vm3-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: 0;
+    transition: transform 0.5s ease;
+}
+.veto-map-v3:not(:disabled):hover .vm3-bg {
+    transform: scale(1.08);
+}
+.vm3-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0,0,0,0.1) 0%,
+        rgba(0,0,0,0.4) 50%,
+        rgba(0,0,0,0.85) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+.vm3-bottom {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 10px 12px;
+    z-index: 2;
+    text-align: left;
+}
+.vm3-name {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    margin-bottom: 2px;
+}
+.vm3-action {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: var(--emerald);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.8);
+}
+.vm3-action.muted { color: var(--hint); text-shadow: none; }
+
+.veto-map-v3.banned {
+    border-color: rgba(255,84,112,0.5);
+    cursor: default;
+}
+.veto-map-v3.banned .vm3-bg { filter: grayscale(100%) brightness(0.4); }
+.veto-map-v3.banned .vm3-overlay {
+    background: linear-gradient(180deg,
+        rgba(255, 84, 112, 0.15) 0%,
+        rgba(0,0,0,0.6) 100%);
+}
+.veto-map-v3.banned.by-a { border-color: rgba(var(--emerald-rgb), 0.5); }
+.veto-map-v3.banned.by-b { border-color: rgba(255,84,112,0.5); }
+
+.vm3-ban-cross {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 56px;
+    font-weight: 900;
+    color: rgba(255, 84, 112, 0.85);
+    text-shadow: 0 0 24px rgba(255,84,112,0.8), 0 4px 12px rgba(0,0,0,0.9);
+    z-index: 3;
+    pointer-events: none;
+    animation: banPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes banPop {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+.vm3-author {
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
+    font-weight: 700;
+    margin-top: 2px;
+}
+
+/* --- ФИНАЛЬНЫЙ ЭКРАН VETO --- */
+.veto-final-v3 {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    min-height: 320px;
+    border: 1px solid var(--border-strong);
+    isolation: isolate;
+    animation: bounceIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.vf3-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+    transform: scale(1.05);
+    filter: brightness(0.5);
+}
+.vf3-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0,0,0,0.3) 0%,
+        rgba(0,0,0,0.55) 60%,
+        rgba(0,0,0,0.9) 100%);
+    z-index: 1;
+}
+.vf3-model {
+    position: absolute;
+    bottom: 0;
+    right: -10px;
+    height: 95%;
+    max-height: 320px;
+    z-index: 2;
+    filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
+    pointer-events: none;
+    object-fit: contain;
+}
+.vf3-content {
+    position: relative;
+    z-index: 3;
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+    text-align: center;
+}
+.vf3-label {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+.vf3-map {
+    font-size: 38px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(var(--emerald-rgb), 0.4);
+}
+.vf3-side {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(var(--emerald-rgb), 0.18);
+    border: 1px solid rgba(var(--emerald-rgb), 0.5);
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.vf3-sub {
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.5;
+    margin-top: 12px;
+    max-width: 240px;
+}
+
+/* --- ЛОГ БАНОВ V3 --- */
+.veto-log-v3 {
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.veto-log-v3 .log-title {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-bottom: 6px;
+}
+.veto-log-v3 .veto-log-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    font-size: 12px;
+}
+.veto-log-v3 .veto-log-row .num {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 900; color: var(--hint);
+    flex-shrink: 0;
+}
+.veto-log-v3 .veto-log-row.a .num { background: rgba(var(--emerald-rgb), 0.15); color: var(--emerald); }
+.veto-log-v3 .veto-log-row.b .num { background: rgba(255, 84, 112, 0.15); color: #ff5470; }
+.veto-log-v3 .veto-log-row .map {
+    font-weight: 900; color: var(--red);
+    text-decoration: line-through;
+    text-decoration-color: rgba(255, 84, 112, 0.6);
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.veto-log-v3 .veto-log-row .author {
+    font-size: 10px; color: var(--hint); font-weight: 700;
+}
+
+/* --- IN-GAME ЭКРАН С ФОНОМ КАРТЫ --- */
+.ig-v3-screen {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    min-height: 380px;
+    border: 1px solid var(--border-strong);
+    isolation: isolate;
+    margin-bottom: 14px;
+}
+.ig-v3-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+    filter: brightness(0.4);
+    transform: scale(1.05);
+}
+.ig-v3-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0,0,0,0.4) 0%,
+        rgba(0,0,0,0.7) 50%,
+        rgba(0,0,0,0.95) 100%);
+    z-index: 1;
+}
+.ig-v3-model {
+    position: absolute;
+    bottom: 0;
+    right: -10px;
+    height: 90%;
+    max-height: 380px;
+    z-index: 2;
+    filter: drop-shadow(0 0 20px rgba(0,0,0,0.9));
+    pointer-events: none;
+    object-fit: contain;
+    opacity: 0.95;
+}
+.ig-v3-content {
+    position: relative;
+    z-index: 3;
+    padding: 24px 18px;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.ig-v3-label {
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+.ig-v3-map {
+    font-size: 34px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.9), 0 0 40px rgba(var(--emerald-rgb), 0.35);
+}
+.ig-v3-sides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+    max-width: 320px;
+}
+.ig-v3-side-card {
+    padding: 10px;
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.ig-v3-side-card.a {
+    background: rgba(var(--emerald-rgb), 0.18);
+    border: 1px solid rgba(var(--emerald-rgb), 0.5);
+}
+.ig-v3-side-card.b {
+    background: rgba(255, 84, 112, 0.18);
+    border: 1px solid rgba(255, 84, 112, 0.5);
+}
+.ig-v3-side-team {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 3px;
+}
+.ig-v3-side-name {
+    font-size: 15px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+.ig-v3-side-icon {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+.ig-v3-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
+    max-width: 320px;
+}
+.ig-v3-btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
+    border: none;
+    border-radius: 14px;
+    color: #04140e;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(var(--emerald-rgb), 0.4);
+    transition: transform 0.18s ease, box-shadow 0.22s ease;
+}
+.ig-v3-btn-primary:active { transform: scale(0.97); }
+.ig-v3-btn-primary:hover { box-shadow: 0 10px 32px rgba(var(--emerald-rgb), 0.55); }
+
+.ig-v3-btn-secondary {
+    width: 100%;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 14px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s ease;
+}
+.ig-v3-btn-secondary:active { transform: scale(0.97); background: rgba(0,0,0,0.7); }
     
 </style>
 </head>
@@ -7981,6 +8564,35 @@ html.lite-mode * {
         };
 
         const MAP_POOL = ["Sandstone", "Province", "Breeze", "Dune", "Rust", "Hanami", "Prison"];
+
+// ============================================================
+// КАРТИНКИ КАРТ И МОДЕЛЕК
+// ============================================================
+const MAPS_BUCKET_URL = SUPABASE_URL + '/storage/v1/object/public/maps';
+
+const MAP_ASSET_NAMES = {
+    'Sandstone': 'sandstone',
+    'Province':  'province',
+    'Breeze':    'breeze',
+    'Dune':      'dune',
+    'Rust':      'rust',
+    'Hanami':    'hanami',
+    'Prison':    'prison',
+};
+
+function mapBgUrl(mapName) {
+    if (!mapName) return null;
+    const key = MAP_ASSET_NAMES[mapName] || mapName.toLowerCase();
+    return `${MAPS_BUCKET_URL}/${key}.png`;
+}
+
+function sideModelUrl(side) {
+    if (!side) return null;
+    const s = String(side).toLowerCase();
+    if (s.includes('спецн') || s === 'ct') return `${MAPS_BUCKET_URL}/ct.png`;
+    if (s.includes('террор') || s === 't') return `${MAPS_BUCKET_URL}/t.png`;
+    return null;
+}
 
         // Защита: ждём загрузку Supabase
 let sb = null;
@@ -12290,7 +12902,6 @@ function showVetoScreen() {
 async function renderVeto() {
     const content = document.getElementById('vetoContent');
     if (!content) return;
-
     const match = currentMatch;
     if (!match) return;
 
@@ -12313,31 +12924,25 @@ async function renderVeto() {
     const myTeam = teamA.some(p => Number(p.telegram_id) === me) ? 'A'
                   : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
 
-    const vetoLog = match.veto_log || [];
-    const bannedMaps = vetoLog.map(v => v.map);
-
-    // Переход на финал
-    if (match.status === 'side_pick' || match.status === 'ready') {
+    if (match.status === 'side_pick' || match.status === 'ready' || match.status === 'in_game') {
         renderVetoFinal(content, match, userMap);
         return;
     }
 
+    const vetoLog = match.veto_log || [];
+    const bannedMaps = vetoLog.map(v => v.map);
     const phase = getCurrentVetoPhase(match);
-    if (!phase) {
-        await finalizeVeto();
-        return;
-    }
+    if (!phase) { await finalizeVeto(); return; }
 
     const currentTurn = phase.team;
     const isMyTurn = (iAmCapA && currentTurn === 'A') || (iAmCapB && currentTurn === 'B');
     const isMyTeamTurn = myTeam === currentTurn;
 
-const timerDuration = 60;  // ← 60 секунд
-const lastActionAt = match.last_action_at || match.veto_started_at || new Date().toISOString();
-const elapsed = Math.floor((Date.now() - new Date(lastActionAt).getTime()) / 1000);
-const timeLeft = Math.max(0, timerDuration - elapsed);
+    const timerDuration = 60;
+    const lastActionAt = match.last_action_at || match.veto_started_at || new Date().toISOString();
+    const elapsed = Math.floor((Date.now() - new Date(lastActionAt).getTime()) / 1000);
+    const timeLeft = Math.max(0, timerDuration - elapsed);
 
-    // Прогресс
     const firstTeam = match.veto_first_team;
     const bansFirst = vetoLog.filter(v => v.team === firstTeam).length;
     const bansSecond = vetoLog.filter(v => v.team !== firstTeam).length;
@@ -12362,25 +12967,33 @@ const timeLeft = Math.max(0, timerDuration - elapsed);
         const isBanned = bannedMaps.includes(map);
         const banEntry = vetoLog.find(v => v.map === map);
         const banAuthor = banEntry ? userMap[Number(banEntry.by)] : null;
-        const banAuthorName = banAuthor?.display_name || '—';
         const banTeam = banEntry?.team;
 
         if (isBanned) {
             return `
-                <div class="veto-map-v2 banned by-${banTeam?.toLowerCase() || 'a'}">
-                    <div class="ban-badge ${banTeam?.toLowerCase() || 'a'}">БАН ${banTeam || ''}</div>
-                    <div class="map-name">${escapeHtml(map)}</div>
-                    <div class="ban-author">${escapeHtml(banAuthorName)}</div>
+                <div class="veto-map-v3 banned by-${banTeam?.toLowerCase() || 'a'}">
+                    <div class="vm3-bg" style="background-image: url('${mapBgUrl(map)}');"></div>
+                    <div class="vm3-overlay"></div>
+                    <div class="vm3-ban-cross">✕</div>
+                    <div class="vm3-bottom">
+                        <div class="vm3-name">${escapeHtml(map)}</div>
+                        <div class="vm3-author">Забанил: ${escapeHtml(banAuthor?.display_name || '—')}</div>
+                    </div>
                 </div>
             `;
         }
 
         const canClick = isMyTurn;
         return `
-            <button class="veto-map-v2 ${canClick ? '' : 'locked'}"
+            <button class="veto-map-v3 ${canClick ? '' : 'locked'}"
                     onclick="pickMap('${map}')"
                     ${canClick ? '' : 'disabled'}>
-                <div class="map-name">${escapeHtml(map)}</div>
+                <div class="vm3-bg" style="background-image: url('${mapBgUrl(map)}');"></div>
+                <div class="vm3-overlay"></div>
+                <div class="vm3-bottom">
+                    <div class="vm3-name">${escapeHtml(map)}</div>
+                    ${canClick ? '<div class="vm3-action">ЗАБАНИТЬ</div>' : '<div class="vm3-action muted">ЗАБЛОКИРОВАНО</div>'}
+                </div>
             </button>
         `;
     }).join('');
@@ -12404,15 +13017,15 @@ const timeLeft = Math.max(0, timerDuration - elapsed);
     };
 
     const logHTML = vetoLog.length ? `
-        <div class="veto-log-v2">
-            <div class="log-title">История банов (${vetoLog.length}/${VETO_TOTAL_BANS})</div>
+        <div class="veto-log-v3">
+            <div class="log-title">История банов (${vetoLog.length}/6)</div>
             ${vetoLog.map((v, i) => {
                 const author = userMap[Number(v.by)] || {};
                 return `
                     <div class="veto-log-row ${v.team.toLowerCase()}">
                         <div class="num">${i + 1}</div>
                         <div class="map">${escapeHtml(v.map)}</div>
-                        <div class="author">${escapeHtml(author.display_name || 'Капитан')}</div>
+                        <div class="author">${escapeHtml(author.display_name || '—')}</div>
                     </div>
                 `;
             }).join('')}
@@ -12432,38 +13045,39 @@ const timeLeft = Math.max(0, timerDuration - elapsed);
     ` : '';
 
     content.innerHTML = `
-        <div class="veto-wrap">
-            <div class="veto-header-v2 ${currentTurn === 'B' ? 'team-b' : ''}">
-                <div class="veto-header-top">
+        <div class="veto-wrap-v3">
+            <div class="veto-header-v3 ${currentTurn === 'B' ? 'team-b' : ''}">
+                <div class="vh3-top">
                     <div>
-                        <div class="veto-phase-label">${phase.label}</div>
-                        <div class="veto-phase-title">
+                        <div class="vh3-phase">${phase.label}</div>
+                        <div class="vh3-title">
                             Ход команды
                             <span class="team-tag ${currentTurn.toLowerCase()}">${currentTurn}</span>
                         </div>
                     </div>
-                    <div class="veto-timer-v2 ${currentTurn === 'B' ? 'team-b' : ''} ${timeLeft <= 10 ? 'warning' : ''}"
-     id="vetoTimer">${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}</div>
+                    <div class="vh3-timer ${currentTurn === 'B' ? 'team-b' : ''} ${timeLeft <= 10 ? 'warning' : ''}">
+                        ${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}
+                    </div>
                 </div>
-                <div class="veto-progress-v2">${progressHTML}</div>
+                <div class="vh3-progress">${progressHTML}</div>
             </div>
 
-            <div class="veto-hint-v2 ${currentTurn === 'B' ? 'team-b' : ''}">
+            <div class="veto-hint-v3 ${currentTurn === 'B' ? 'team-b' : ''}">
                 <span class="hint-icon">${isMyTurn ? '🎯' : '⏳'}</span>
                 <div>
                     ${isMyTurn
-                        ? `<b>Твой ход!</b> Забань карту. Осталось в фазе: <b class="${currentTurn.toLowerCase()}">${phase.remaining}</b>`
-                        : `<b class="${currentTurn.toLowerCase()}">Команда ${currentTurn}</b> банит карту. ${isMyTeamTurn ? 'Подскажи капитану!' : 'Ожидай.'}`
+                        ? `<b>Твой ход!</b> Забань карту. Осталось в фазе: <b>${phase.remaining}</b>`
+                        : `<b>Команда ${currentTurn}</b> банит карту. ${isMyTeamTurn ? 'Подскажи капитану!' : 'Ожидай.'}`
                     }
                 </div>
             </div>
 
-            <div class="veto-captains-v2">
+            <div class="veto-captains-v3">
                 ${capCard('A')}
                 ${capCard('B')}
             </div>
 
-            <div class="veto-maps-v2">
+            <div class="veto-maps-v3">
                 ${mapsHTML}
             </div>
 
@@ -12599,19 +13213,41 @@ function renderVetoFinal(content, match, userMap) {
     const canPickSide = iAmSidePicker && !sideChosen;
     const vetoLog = match.veto_log || [];
 
+    const displaySide = match.side_a || null;
+    const bgUrl = mapBgUrl(finalMap);
+    const modelUrl = displaySide ? sideModelUrl(displaySide) : null;
+
     content.innerHTML = `
-        <div class="veto-wrap">
-            <div class="veto-final-v2">
-                <span class="final-icon">🎯</span>
-                <div class="final-label">Карта выбрана</div>
-                <div class="final-map">${escapeHtml(finalMap)}</div>
-                <div class="final-sub">
-                    ${sideChosen
-                        ? `Сторона выбрана: <b style="color:var(--emerald);">${escapeHtml(match.side_a)}</b>`
-                        : (iAmSidePicker
-                            ? 'Ты выбираешь сторону ↓'
-                            : `Капитан команды ${sidePickerTeam} выбирает сторону`)
-                    }
+        <div class="veto-wrap-v3">
+            <div class="veto-final-v3">
+                <div class="vf3-bg" style="background-image: url('${bgUrl}');"></div>
+                <div class="vf3-overlay"></div>
+                ${modelUrl ? `<img class="vf3-model" src="${modelUrl}" alt="">` : ''}
+
+                <div class="vf3-content">
+                    <div class="vf3-label">Карта выбрана</div>
+                    <div class="vf3-map">${escapeHtml(finalMap)}</div>
+
+                    ${sideChosen ? `
+                        <div class="vf3-side">
+                            <span>${displaySide === 'Спецназ' ? '🛡️' : '💣'}</span>
+                            <span>Сторона A · ${escapeHtml(displaySide)}</span>
+                        </div>
+                    ` : `
+                        <div class="vf3-side" style="background: rgba(217,171,90,0.18); border-color: rgba(217,171,90,0.5); color: var(--gold);">
+                            <span>⏳</span>
+                            <span>Выбор стороны</span>
+                        </div>
+                    `}
+
+                    <div class="vf3-sub">
+                        ${sideChosen
+                            ? `Команда B: <b>${escapeHtml(match.side_b || '—')}</b>`
+                            : (iAmSidePicker
+                                ? 'Ты выбираешь сторону ↓'
+                                : `Капитан команды ${sidePickerTeam} выбирает сторону`)
+                        }
+                    </div>
                 </div>
             </div>
 
@@ -12646,8 +13282,8 @@ function renderVetoFinal(content, match, userMap) {
                 </div>
             ` : ''}
 
-            <div class="veto-log-v2">
-                <div class="log-title">История банов (${vetoLog.length}/${VETO_TOTAL_BANS})</div>
+            <div class="veto-log-v3">
+                <div class="log-title">История банов (${vetoLog.length}/6)</div>
                 ${vetoLog.map((v, i) => {
                     const author = userMap[Number(v.by)] || {};
                     return `
@@ -15924,25 +16560,41 @@ async function showInGameScreen(roomId, room) {
         return;
     }
 
+    const bgUrl = mapBgUrl(room.final_map);
+    const modelUrl = sideModelUrl(room.side_a); // моделька стороны A (по умолчанию CT или T)
+
     content.innerHTML = `
-        <div class="veto-wrap">
-            <div class="veto-final-v2">
-                <span class="final-icon">🎮</span>
-                <div class="final-label">Матч готов</div>
-                <div class="final-map">${escapeHtml(room.final_map || '—')}</div>
-                <div class="final-sub">
-                    Стороны: <b>A — ${escapeHtml(room.side_a || '—')}</b> ·
-                    <b>B — ${escapeHtml(room.side_b || '—')}</b>
+        <div class="ig-v3-screen">
+            <div class="ig-v3-bg" style="background-image: url('${bgUrl}');"></div>
+            <div class="ig-v3-overlay"></div>
+            ${modelUrl ? `<img class="ig-v3-model" src="${modelUrl}" alt="">` : ''}
+
+            <div class="ig-v3-content">
+                <div class="ig-v3-label">Матч готов · Карта</div>
+                <div class="ig-v3-map">${escapeHtml(room.final_map || '—')}</div>
+
+                <div class="ig-v3-sides">
+                    <div class="ig-v3-side-card a">
+                        <div class="ig-v3-side-icon">${room.side_a === 'Спецназ' ? '🛡️' : '💣'}</div>
+                        <div class="ig-v3-side-team">Команда A</div>
+                        <div class="ig-v3-side-name">${escapeHtml(room.side_a || '—')}</div>
+                    </div>
+                    <div class="ig-v3-side-card b">
+                        <div class="ig-v3-side-icon">${room.side_b === 'Спецназ' ? '🛡️' : '💣'}</div>
+                        <div class="ig-v3-side-team">Команда B</div>
+                        <div class="ig-v3-side-name">${escapeHtml(room.side_b || '—')}</div>
+                    </div>
+                </div>
+
+                <div class="ig-v3-actions">
+                    <button class="ig-v3-btn-primary" onclick="enterInGameLinkAndGoResult('${escapeHtml(room.host_link)}', ${roomId})">
+                        🎮 ЗАЙТИ В ИГРУ
+                    </button>
+                    <button class="ig-v3-btn-secondary" onclick="copyInGameLink('${escapeHtml(room.host_link)}')">
+                        📋 Скопировать ссылку на лобби
+                    </button>
                 </div>
             </div>
-
-            <button class="ig-enter-btn" onclick="enterInGameLinkAndGoResult('${escapeHtml(room.host_link)}', ${roomId})">
-                🎮 ЗАЙТИ В ИГРУ
-            </button>
-
-            <button class="profile-action-btn cancel" onclick="copyInGameLink('${escapeHtml(room.host_link)}')">
-                📋 Скопировать ссылку на лобби
-            </button>
         </div>
     `;
 }
