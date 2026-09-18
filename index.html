@@ -13480,7 +13480,7 @@ function showVetoScreen() {
     renderVeto();
     startVetoCountdown();
 
-    // 🔥 ОБЯЗАТЕЛЬНО подписываемся на realtime матча + запускаем polling
+    // 🔥 Единственная точка подписки на realtime veto
     if (currentMatch?.id) {
         console.log('🎬 showVetoScreen → subscribeVetoRealtime', currentMatch.id);
         subscribeVetoRealtime(currentMatch.id);
@@ -14031,7 +14031,6 @@ async function pickSideVeto(side) {
             last_action_at: new Date().toISOString()
         }).eq('id', currentMatch.id);
 
-        // Обновляем комнату
         await sb.from('rooms').update({
             status: 'in_game',
             final_map: currentMatch.final_map,
@@ -14042,7 +14041,6 @@ async function pickSideVeto(side) {
         haptic('medium');
         showToast(`✅ Сторона ${sidePickerTeam}: ${side}`);
 
-        // 🔥 ЛОКАЛЬНО обновляем и сразу перерисовываем
         currentMatch = {
             ...currentMatch,
             side_a: side,
@@ -14050,7 +14048,6 @@ async function pickSideVeto(side) {
             status: 'in_game'
         };
 
-        // Перерисовываем финальный экран — теперь покажет выбранную сторону + модельку
         renderVeto();
 
         // Уведомляем всех
@@ -14065,12 +14062,18 @@ async function pickSideVeto(side) {
             );
         }
 
-        // Через секунду уходим на in-game экран
+        // 🔥 Загружаем комнату и передаём её в showInGameScreen
         setTimeout(async () => {
-            const { data } = await sb.from('game_matches')
+            const { data: freshMatch } = await sb.from('game_matches')
                 .select('*').eq('id', currentMatch.id).single();
-            if (data) currentMatch = data;
-            showInGameScreen();
+            if (freshMatch) currentMatch = freshMatch;
+
+            const { data: freshRoom } = await sb.from('rooms')
+                .select('*').eq('id', currentMatch.room_id).single();
+
+            if (freshRoom) {
+                showInGameScreen(freshRoom.id, freshRoom);
+            }
         }, 1500);
 
     } catch (e) {
@@ -15652,12 +15655,12 @@ async function checkActiveMatch() {
                     return;
                 }
                 if (m.status === 'veto') {
-                    showVetoScreen();       // ← внутри уже subscribeVetoRealtime + polling
+                    showVetoScreen();   // ← внутри сам подпишется
                     subscribeMatchRealtime();
                     return;
                 }
                 if (m.status === 'side_pick') {
-                    showVetoScreen();       // ← внутри уже subscribeVetoRealtime + polling
+                    showVetoScreen();   // ← внутри сам подпишется
                     subscribeMatchRealtime();
                     return;
                 }
@@ -15698,16 +15701,15 @@ async function restoreRoomScreen(room, player) {
     currentPlayRoomId = room.id;
 
     switch (room.status) {
-        case 'open':
-            // Открываем play-screen и комнату
+        case 'open': {
             const screen = document.getElementById('playScreen');
             if (screen) screen.classList.add('active');
             openRoomView(room.id);
             break;
+        }
 
         case 'veto':
         case 'side_pick': {
-            // Загружаем сам game_match, чтобы renderVeto работал
             const { data: match } = await sb.from('game_matches')
                 .select('*')
                 .eq('room_id', room.id)
@@ -15715,8 +15717,7 @@ async function restoreRoomScreen(room, player) {
                 .limit(1).maybeSingle();
             if (match) {
                 currentMatch = match;
-                showVetoScreen();
-                subscribeVetoRealtime(match.id);
+                showVetoScreen();          // ← сам подпишется
                 subscribeMatchRealtime();
             }
             break;
@@ -15765,11 +15766,11 @@ async function restoreRoomScreen(room, player) {
             showCancelledOnce(room.id);
             break;
 
-        default:
-            // fallback
+        default: {
             const s = document.getElementById('playScreen');
             if (s) s.classList.add('active');
             openRoomView(room.id);
+        }
     }
 }
                     // ============================================================
@@ -16778,7 +16779,6 @@ function subscribeRoomRealtime(roomId) {
                 showActiveRoomBanner(room);
             }
 
-            // ГАСИМ UI
             const killUI = () => {
                 activeRoomId = null;
                 hideActiveRoomBanner();
@@ -16806,8 +16806,7 @@ function subscribeRoomRealtime(roomId) {
                     .limit(1).maybeSingle();
                 if (match) {
                     currentMatch = match;
-                    showVetoScreen();
-                    subscribeVetoRealtime(match.id);
+                    showVetoScreen();      // ← сам подпишется
                     subscribeMatchRealtime();
                 }
                 return;
@@ -16900,8 +16899,7 @@ function subscribeRoomRealtime(roomId) {
             }
 
             if (m.status === 'veto' || m.status === 'side_pick') {
-                showVetoScreen();
-                subscribeVetoRealtime(m.id);
+                showVetoScreen();     // ← сам подпишется
             } else if (m.status === 'in_game') {
                 const { data: rr } = await sb.from('rooms').select('*').eq('id', roomId).limit(1);
                 if (rr && rr[0]) showInGameScreen(roomId, rr[0]);
@@ -16928,7 +16926,6 @@ function unsubscribeRoomRealtime() {
 async function checkTeamsReady(roomId, room) {
             if (!room) return;
             if (room.status !== 'open') return;
-            if (room.teams_notified_at) return;
             if (room.teams_notified_at) return;
 
             const { data: players } = await sb.from('room_players')
@@ -17148,7 +17145,6 @@ async function startMatch(roomId) {
 
         // 5. Открываем экран пиков карт
         showVetoScreen();
-        subscribeVetoRealtime(match.id);
         subscribeMatchRealtime();
 
     } catch (e) {
@@ -17349,19 +17345,6 @@ async function showSidePick(roomId) {
     `;
 
     setTimeout(() => updateRoomChatButton(roomId), 100);
-}
-
-async function pickSide(roomId, side) {
-    const opposite = side === 'Спецназ' ? 'Террорист' : 'Спецназ';
-    await sb.from('rooms').update({
-        side_a: side,
-        side_b: opposite,
-        status: 'waiting_link'
-    }).eq('id', roomId);
-    await touchRoom(roomId);              // ← ДОБАВЛЕНО
-    
-    haptic('medium');
-    showToast(`✅ Сторона A: ${side}`);
 }
 
 // ============================================================
@@ -18374,52 +18357,6 @@ function startLinkTimer(roomId) {
     tick();
 }
 
-// ============================================================
-// REALTIME подписки для veto и side pick
-// ============================================================
-let vetoChannel = null;
-let sideChannel = null;
-
-function subscribeVetoRealtime(roomId) {
-    if (vetoChannel) sb.removeChannel(vetoChannel);
-    vetoChannel = sb.channel('veto_' + roomId)
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'rooms',
-            filter: 'id=eq.' + roomId
-        }, (payload) => {
-            const room = payload.new;
-            if (room.status === 'veto') {
-                openVetoView(roomId);
-            } else if (room.status === 'side_pick') {
-                showSidePick(roomId);
-            } else if (room.status === 'waiting_link' || room.status === 'in_game') {
-                showHostLinkInput(roomId, room);
-            }
-        })
-        .subscribe();
-}
-
-function subscribeSidePickRealtime(roomId) {
-    if (sideChannel) sb.removeChannel(sideChannel);
-    sideChannel = sb.channel('side_' + roomId)
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'rooms',
-            filter: 'id=eq.' + roomId
-        }, (payload) => {
-            const room = payload.new;
-            if (room.status === 'side_pick') {
-                showSidePick(roomId);
-            } else if (room.status === 'waiting_link' || room.status === 'in_game') {
-                showHostLinkInput(roomId, room);
-            }
-        })
-        .subscribe();
-}
-
 async function closeRoomAndExit(roomId) {
     if (!roomId || !currentUser) {
         unsubscribeRoomRealtime();
@@ -18798,17 +18735,15 @@ async function reopenActiveRoom() {
     haptic();
 
     // 4. Роутинг по статусу
-    if (room.status === 'veto' || room.status === 'side_pick') {
+        if (room.status === 'veto' || room.status === 'side_pick') {
         const { data: match } = await sb.from('game_matches')
             .select('*').eq('room_id', room.id)
             .order('created_at', { ascending: false }).limit(1).maybeSingle();
         if (match) {
             currentMatch = match;
-            showVetoScreen();
-            subscribeVetoRealtime(match.id);
+            showVetoScreen();          // ← сам подпишется
             subscribeMatchRealtime();
         } else {
-            // Матч потерян — считаем, что нечего открывать
             showToast('Матч потерян');
             closePlayScreen();
         }
@@ -19015,8 +18950,7 @@ if (room.status === 'veto' || room.status === 'side_pick') {
         .order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (match) {
         currentMatch = match;
-        showVetoScreen();
-        subscribeVetoRealtime(match.id);
+        showVetoScreen();          // ← сам подпишется
     }
     return;
 }
