@@ -16696,7 +16696,6 @@ async function showInGameScreen(roomId, room) {
 
     const me = Number(currentUser.telegram_id);
 
-    // Моя команда
     const { data: players } = await sb.from('room_players')
         .select('telegram_id, team, is_ready').eq('room_id', roomId);
     const myPlayer = (players || []).find(p => Number(p.telegram_id) === me);
@@ -16711,12 +16710,7 @@ async function showInGameScreen(roomId, room) {
     // Голоса за отмену
     const cancelVotes = await getCancelVotesCount(roomId);
     const neededVotes = cancelVotesNeeded(room.mode);
-    const alreadyVoted = await (async () => {
-        const { data } = await sb.from('match_cancel_votes')
-            .select('id').eq('match_id', roomId)
-            .eq('voter_id', me).maybeSingle();
-        return !!data;
-    })();
+    const iVoted = await hasMyCancelVote(roomId);
 
     let titleText = '';
     if (mySide) {
@@ -16766,23 +16760,27 @@ async function showInGameScreen(roomId, room) {
                     <button class="ig-v3-btn-secondary" style="padding: 14px; font-weight: 900;" onclick="goToResultFromInGame(${roomId})">
                         📊 ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ
                     </button>
-                    <button class="ig-cancel-square ${alreadyVoted ? 'voted' : ''}"
+                    <button class="ig-cancel-square ${iVoted ? 'voted' : ''}"
                             onclick="voteCancelMatch(${roomId})"
-                            title="Отмена матча"
-                            ${alreadyVoted ? 'disabled' : ''}>
-                        <span style="font-size: 18px;">✕</span>
+                            title="${iVoted ? 'Снять голос' : 'Голосовать за отмену'}"
+                            id="cancelVoteBtn">
+                        <span style="font-size: 16px;">${iVoted ? '↩️' : '✕'}</span>
                         <span style="font-size: 9px; font-weight: 900; letter-spacing: 0.5px; margin-top: 2px;">
-                            ${alreadyVoted ? 'ГОЛОС' : `${cancelVotes}/${neededVotes}`}
+                            ${cancelVotes}/${neededVotes}
                         </span>
                     </button>
                 </div>
 
                 <div style="margin-top: 10px; font-size: 10px; color: rgba(255,255,255,0.55); font-weight: 700; max-width: 360px; text-align: center;">
-                    Отмена требует ${neededVotes} ${neededVotes === 1 ? 'голос' : neededVotes < 5 ? 'голоса' : 'голосов'} из ${playersTotalInMatch(room.mode)}
+                    ${iVoted
+                        ? `Ты проголосовал. Нажми ещё раз, чтобы снять голос (${cancelVotes}/${neededVotes})`
+                        : `Отмена требует ${neededVotes} ${neededVotes === 1 ? 'голос' : neededVotes < 5 ? 'голоса' : 'голосов'} из ${playersTotalInMatch(room.mode)}`
+                    }
                 </div>
             </div>
         </div>
     `;
+    subscribeInGameRealtime(roomId);
 }
 
 // Кнопка "Зайти в игру" — открывает ссылку и переводит всех на результат
@@ -16828,7 +16826,6 @@ function playersTotalInMatch(mode) {
     return 10;
 }
 
-// Получить голоса за отмену
 async function getCancelVotesCount(roomId) {
     try {
         const { count } = await sb.from('match_cancel_votes')
@@ -16838,17 +16835,26 @@ async function getCancelVotesCount(roomId) {
     } catch (e) { return 0; }
 }
 
-// Проголосовать за отмену
+async function hasMyCancelVote(roomId) {
+    try {
+        const { data } = await sb.from('match_cancel_votes')
+            .select('id')
+            .eq('match_id', roomId)
+            .eq('voter_id', currentUser.telegram_id)
+            .maybeSingle();
+        return !!data;
+    } catch (e) { return false; }
+}
+
+// Toggle-голосование: нажал — проголосовал, ещё раз — снял голос
 async function voteCancelMatch(roomId) {
     haptic('heavy');
     try {
-        // Проверяем, не отменён ли уже
         const { data: room } = await sb.from('rooms')
             .select('mode, status').eq('id', roomId).maybeSingle();
         if (!room) { showToast('Комната не найдена'); return; }
         if (room.status === 'cancelled') { showToast('Матч уже отменён'); return; }
 
-        // Проверяем, что я в комнате
         const { data: me } = await sb.from('room_players')
             .select('telegram_id, is_ready')
             .eq('room_id', roomId)
@@ -16859,42 +16865,166 @@ async function voteCancelMatch(roomId) {
             return;
         }
 
-        // Проверяем, не голосовал ли уже
-        const { data: existing } = await sb.from('match_cancel_votes')
-            .select('id').eq('match_id', roomId)
-            .eq('voter_id', currentUser.telegram_id).maybeSingle();
-        if (existing) {
-            showToast('Ты уже голосовал за отмену');
-            return;
+        const myVote = await hasMyCancelVote(roomId);
+
+        if (myVote) {
+            // Снимаем голос
+            await sb.from('match_cancel_votes').delete()
+                .eq('match_id', roomId)
+                .eq('voter_id', currentUser.telegram_id);
+
+            const count = await getCancelVotesCount(roomId);
+            const needed = cancelVotesNeeded(room.mode);
+            showToast(`↩️ Голос снят (${count}/${needed})`);
+        } else {
+            // Ставим голос
+            await sb.from('match_cancel_votes').insert({
+                match_id: roomId,
+                voter_id: currentUser.telegram_id,
+                created_at: new Date().toISOString()
+            });
+
+            const count = await getCancelVotesCount(roomId);
+            const needed = cancelVotesNeeded(room.mode);
+
+            if (count >= needed) {
+                // Отменяем матч
+                await cancelMatchAndExitAll(roomId, 'vote');
+                return;
+            }
+
+            showToast(`🗳️ Голос учтён (${count}/${needed})`);
         }
 
-        // Записываем голос
-        await sb.from('match_cancel_votes').insert({
-            match_id: roomId,
-            voter_id: currentUser.telegram_id,
-            created_at: new Date().toISOString()
-        });
-
-        // Проверяем количество
-        const count = await getCancelVotesCount(roomId);
-        const needed = cancelVotesNeeded(room.mode);
-
-        if (count >= needed) {
-            // Отменяем
-            await cancelMatch(roomId, 'vote');
-            return;
-        }
-
-        showToast(`🗳️ Голос учтён (${count}/${needed})`);
         haptic('medium');
 
-        // Обновляем отображение
+        // Перерисовываем экран in-game, чтобы обновить счётчик
         const { data: freshRoom } = await sb.from('rooms')
             .select('*').eq('id', roomId).maybeSingle();
-        if (freshRoom) showInGameScreen(roomId, freshRoom);
+        if (freshRoom && freshRoom.status === 'in_game') {
+            showInGameScreen(roomId, freshRoom);
+        }
     } catch (e) {
         console.error('voteCancelMatch:', e);
         showToast('Ошибка: ' + e.message);
+    }
+}
+
+            // Полная отмена матча: все игроки выкидываются из комнаты и матча
+async function cancelMatchAndExitAll(roomId, reason = 'vote') {
+    if (!roomId) return;
+
+    try {
+        // 1. Собираем ВСЕХ игроков комнаты (до удаления)
+        const { data: players } = await sb.from('room_players')
+            .select('telegram_id')
+            .eq('room_id', roomId);
+        const allIds = (players || []).map(p => Number(p.telegram_id));
+        const me = Number(currentUser?.telegram_id);
+
+        // 2. Меняем статус комнаты
+        await sb.from('rooms').update({
+            status: 'cancelled',
+            cancelled_at: new Date().toISOString(),
+            cancelled_reason: reason,
+            cancelled_by: String(currentUser?.telegram_id || 'system')
+        }).eq('id', roomId);
+
+        // 3. Меняем статус матча
+        try {
+            await sb.from('game_matches').update({
+                status: 'cancelled',
+                cancelled_reason: reason,
+                cancelled_at: new Date().toISOString()
+            }).eq('room_id', roomId).in('status', ['veto', 'side_pick', 'ready', 'in_game', 'result']);
+        } catch (e) { console.warn('cancelMatchAndExitAll match update:', e); }
+
+        // 4. Уведомляем всех, КРОМЕ себя
+        const msg = reason === 'vote'
+            ? '🚫 Матч отменён голосованием игроков.'
+            : '🚫 Матч отменён.';
+
+        for (const id of allIds) {
+            if (id === me) continue;
+            try {
+                await notify(id, msg, 'party');
+            } catch (e) {}
+        }
+
+        // 5. Удаляем всех из комнаты
+        try {
+            await sb.from('room_players').delete().eq('room_id', roomId);
+        } catch (e) {}
+
+        // 6. Удаляем голоса за отмену
+        try {
+            await sb.from('match_cancel_votes').delete().eq('match_id', roomId);
+        } catch (e) {}
+
+        // 7. Через 3 секунды удаляем саму комнату
+        setTimeout(async () => {
+            try {
+                await sb.from('room_messages').delete().eq('room_id', roomId);
+                await sb.from('rooms').delete().eq('id', roomId);
+            } catch (e) {}
+        }, 3000);
+
+        // 8. Полностью чистим локальное состояние
+        await fullExitFromMatch(roomId);
+
+    } catch (e) {
+        console.error('cancelMatchAndExitAll:', e);
+        showToast('Ошибка отмены: ' + e.message);
+    }
+}
+
+// Полный выход из матча/комнаты (локальный state + UI + переход на главную)
+async function fullExitFromMatch(roomId) {
+    try {
+        // Отписываемся от всех каналов
+        if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
+        if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
+        if (matchPollTimer) { clearInterval(matchPollTimer); matchPollTimer = null; }
+        if (currentMatchChannel) { sb.removeChannel(currentMatchChannel); currentMatchChannel = null; }
+        unsubscribeRoomRealtime();
+        unsubscribeInGameRealtime();
+
+        // Убираемся из всех комнат (на всякий случай)
+        try {
+            await sb.from('room_players').delete()
+                .eq('telegram_id', currentUser.telegram_id);
+        } catch (e) {}
+
+        // Сбрасываем состояние
+        activeRoomId = null;
+        currentPlayRoomId = null;
+        currentMatch = null;
+        window._ovWinner = null;
+
+        // Гасим все UI-элементы
+        hideActiveRoomBanner();
+        const indicator = document.getElementById('headerRoomIndicator');
+        if (indicator) indicator.style.display = 'none';
+        const enterFloat = document.getElementById('playEnterFloat');
+        if (enterFloat) enterFloat.classList.remove('active');
+        const screen = document.getElementById('playScreen');
+        if (screen) screen.classList.remove('active');
+        const vetoScreen = document.getElementById('page-veto');
+        if (vetoScreen) vetoScreen.classList.remove('active');
+
+        // Показываем тост
+        showToast('🚫 Матч отменён. Возврат на главную...');
+        haptic('heavy');
+
+        // Переходим на главную
+        setTimeout(() => {
+            switchPage('dashboard');
+            checkActiveRoom();
+            loadLeaderboard();
+        }, 500);
+
+    } catch (e) {
+        console.error('fullExitFromMatch:', e);
     }
 }
 
@@ -17084,7 +17214,7 @@ function subscribeInGameRealtime(roomId) {
     if (inGameChannel) sb.removeChannel(inGameChannel);
 
     inGameChannel = sb.channel('ingame_' + roomId)
-        // Изменения комнаты (статус cancelled)
+        // Изменения комнаты (отмена)
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
@@ -17093,33 +17223,39 @@ function subscribeInGameRealtime(roomId) {
         }, (payload) => {
             const room = payload.new;
             if (room.status === 'cancelled') {
-                showCancelledOnce(roomId);
-                haptic('heavy');
+                fullExitFromMatch(roomId);
             }
         })
-        // Голоса за отмену
+        // Голоса за отмену — обновляем счётчик у всех
         .on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: 'match_cancel_votes',
             filter: 'match_id=eq.' + roomId
         }, async () => {
-            const { data: room } = await sb.from('rooms')
+            const { data: freshRoom } = await sb.from('rooms')
                 .select('*').eq('id', roomId).maybeSingle();
-            if (room?.status === 'in_game') {
-                showInGameScreen(roomId, room);
+            if (!freshRoom) return;
+            if (freshRoom.status === 'cancelled') {
+                fullExitFromMatch(roomId);
+                return;
+            }
+            if (freshRoom.status === 'in_game') {
+                showInGameScreen(roomId, freshRoom);
             }
         })
-        // Жалобы
+        // Матч отменён
         .on('postgres_changes', {
-            event: 'INSERT',
+            event: 'UPDATE',
             schema: 'public',
-            table: 'match_reports',
-            filter: 'match_id=eq.' + roomId
-        }, async () => {
-            const { data: room } = await sb.from('rooms')
-                .select('*').eq('id', roomId).maybeSingle();
-            if (room) showInGameScreen(roomId, room);
+            table: 'game_matches',
+            filter: 'room_id=eq.' + roomId
+        }, (payload) => {
+            const m = payload.new;
+            if (!m) return;
+            if (m.status === 'cancelled') {
+                fullExitFromMatch(roomId);
+            }
         })
         .subscribe();
 }
