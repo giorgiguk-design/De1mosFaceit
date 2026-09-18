@@ -10382,9 +10382,19 @@ async function removeFriendFromProfile(relId, btn) {
         }
 function closeAllSheets() {
     document.querySelectorAll('.sheet').forEach(s => s.classList.remove('active'));
-    document.getElementById('sheetOverlay').classList.remove('active');
+    const overlay = document.getElementById('sheetOverlay');
+    if (overlay) overlay.classList.remove('active');
+
     const support = document.getElementById('supportSheet');
     if (support) setTimeout(() => support.remove(), 400);
+
+    // Дополнительно закрываем все временные шиты
+    ['overrideOverlay', 'overrideSheet', 'shareOverlay', 'shareSheet',
+     'reportOverlay', 'reportSheet', 'changeCapOverlay', 'changeCapSheet',
+     'playerActionsOverlay', 'reportSheet'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
 }
 
         function pickFromTelegram() {
@@ -10967,18 +10977,19 @@ async function openAllClubsSheet() {
 
     if (!sheet) { console.error('#allClubsSheet не найден'); showToast('Ошибка: экран клубов не найден'); return; }
     if (!overlay) { console.error('#sheetOverlay не найден'); return; }
+    if (!list) { console.error('#allClubsList не найден'); return; }
 
     overlay.classList.add('active');
     sheet.classList.add('active');
     if (search) search.value = '';
 
-    if (list) list.innerHTML = '<div class="empty">Загрузка...</div>';
+    list.innerHTML = '<div class="empty">Загрузка...</div>';
 
     try {
         await loadAllClubsSheet('');
     } catch (e) {
         console.error('loadAllClubsSheet error:', e);
-        if (list) list.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + e.message + '</div>';
+        list.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + e.message + '</div>';
     }
 }
 
@@ -10986,12 +10997,16 @@ let _allClubsTimer = null;
 function debouncedAllClubsSearch() {
     clearTimeout(_allClubsTimer);
     _allClubsTimer = setTimeout(() => {
-        const q = document.getElementById('allClubsSearch').value.trim();
+        const searchEl = document.getElementById('allClubsSearch');
+        if (!searchEl) return;
+        const q = searchEl.value.trim();
         loadAllClubsSheet(q);
     }, 300);
 }
 
 async function loadAllClubsSheet(q) {
+    console.log('loadAllClubsSheet called with q =', q);
+
     const el = document.getElementById('allClubsList');
     if (!el) { console.error('#allClubsList не найден'); return; }
 
@@ -11010,6 +11025,8 @@ async function loadAllClubsSheet(q) {
 
         const { data: clubs, error } = await query;
         if (error) throw error;
+
+        console.log('clubs loaded:', clubs?.length);
 
         const clubIds = (clubs || []).map(c => c.id);
         const { data: members } = await sb.from('club_members')
@@ -11031,7 +11048,7 @@ async function loadAllClubsSheet(q) {
             const count = countMap[c.id] || 0;
             const isMine = myClub?.club?.id === c.id;
             return `
-                <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => viewClub(${c.id}), 200);">
+                <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => viewClub(${c.id}), 250);">
                     <div class="lb-avatar" style="border-radius:14px;">${logoHTML}</div>
                     <div style="flex:1;min-width:0;">
                         <div class="leaderboard-name">
@@ -11040,7 +11057,7 @@ async function loadAllClubsSheet(q) {
                         </div>
                         <div style="font-size:11px;color:var(--hint);">[${escapeHtml(c.tag)}] · ${count}/${c.max_members}</div>
                     </div>
-                    <button class="friend-action add" onclick="event.stopPropagation();closeAllSheets();setTimeout(() => viewClub(${c.id}), 200);">Открыть</button>
+                    <button class="friend-action add" onclick="event.stopPropagation();closeAllSheets();setTimeout(() => viewClub(${c.id}), 250);">Открыть</button>
                 </div>
             `;
         }).join('');
@@ -11260,14 +11277,14 @@ async function updateRequestsBadge() {
         // ============================================================
         // CLUB ACTIONS
         // ============================================================
-        async function acceptClubRequest(requestId, userId) {
+async function acceptClubRequest(requestId, userId) {
     try {
         if (myClub.members.length >= myClub.club.max_members) {
             showToast('Клуб заполнен');
             return;
         }
 
-        // 🔥 Проверяем — не в клубе ли уже игрок (limit(1) вместо maybeSingle)
+        // 🔥 limit(1) вместо maybeSingle
         const { data: existingMemberships } = await sb.from('club_members')
             .select('club_id, clubs(name, tag)')
             .eq('telegram_id', userId)
@@ -11288,7 +11305,7 @@ async function updateRequestsBadge() {
             return;
         }
 
-        // Удаляем все pending-заявки этого игрока в другие клубы
+        // Удаляем pending-заявки в другие клубы
         await sb.from('club_requests')
             .update({ status: 'declined' })
             .eq('telegram_id', userId)
@@ -11308,6 +11325,7 @@ async function updateRequestsBadge() {
         closeAllSheets();
         openClubPage();
     } catch (e) {
+        console.error('acceptClubRequest:', e);
         showToast('Ошибка: ' + e.message);
     }
 }
@@ -11561,64 +11579,113 @@ async function updateRequestsBadge() {
         }
 
         async function viewClub(clubId) {
-            const modal = document.getElementById('playerModal');
-            const content = document.getElementById('playerModalContent');
-            content.innerHTML = '<div class="empty">Загрузка...</div>';
-            modal.classList.add('active');
-            try {
-                const { data: club } = await sb.from('clubs').select('*').eq('id', clubId).single();
-                const { data: members } = await sb.from('club_members').select('*').eq('club_id', club.id);
-                const ids = (members || []).map(m => m.telegram_id);
-                const { data: users } = await sb.from('users')
-                    .select('telegram_id, display_name, custom_avatar, photo_url, elo, standoff_id')
-                    .in('telegram_id', ids.length ? ids : [0]);
-                const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+    console.log('viewClub called for clubId =', clubId);
 
-                const logoSrc = club.logo_url;
-                const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : club.tag.slice(0, 2).toUpperCase();
-                const sorted = [...(members || [])].sort((a, b) => {
-                    const rank = { owner: 0, elder: 1, member: 2 };
-                    return (rank[a.role] ?? 3) - (rank[b.role] ?? 3);
-                });
+    const modal = document.getElementById('playerModal');
+    const content = document.getElementById('playerModalContent');
+    if (!modal || !content) { console.error('Модалка не найдена'); return; }
 
-                content.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
-                        <div class="lb-avatar" style="width:72px;height:72px;border-radius:20px;font-size:26px;">${logoHTML}</div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:20px;font-weight:800;">${escapeHtml(club.name)}</div>
-                            <div style="font-size:12px;color:var(--emerald);font-weight:700;margin-top:3px;">[${escapeHtml(club.tag)}] · ${(members || []).length}/${club.max_members}</div>
-                        </div>
-                    </div>
-                    ${club.description ? `<div style="color:var(--hint);font-size:13px;margin-bottom:14px;">${escapeHtml(club.description)}</div>` : ''}
-                    <div class="section-title">Состав</div>
-                    ${sorted.map(m => {
-                        const u = userMap[m.telegram_id] || {};
-                        const av = renderAvatar(u);
-                        let roleTag = '';
-                        if (m.role === 'owner') roleTag = '<span class="role-tag owner">👑 OWNER</span>';
-                        else if (m.role === 'elder') roleTag = '<span class="role-tag elder">⭐ ELDER</span>';
-                        return `
-                            <div class="leaderboard-item">
-                                <div class="lb-avatar">${av}</div>
-                                <div style="flex:1;min-width:0;">
-                                    <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
-                                    <div style="font-size:11px;color:var(--hint);">DXP ${u.elo ?? 1000}</div>
-                                </div>
-                            </div>`;
-                    }).join('')}
+    content.innerHTML = '<div class="empty">Загрузка...</div>';
+    modal.classList.add('active');
 
-                    ${(isModerator(currentUser) && myClub?.club?.id !== clubId) ? `
-                        <button class="profile-action-btn cancel"
-                                style="margin-top: 14px; background: rgba(255,84,112,0.15); border: 1px solid rgba(255,84,112,0.4); color: var(--red);"
-                                onclick="adminDeleteClub(${clubId})">
-                            🗑️ Удалить клуб (модератор)
-                        </button>
-                    ` : ''}
-                `;
-            } catch (e) {
-                content.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить</div>';
+    try {
+        const { data: club, error: cErr } = await sb.from('clubs').select('*').eq('id', clubId).single();
+        if (cErr) throw cErr;
+        if (!club) { content.innerHTML = '<div class="empty">Клуб не найден</div>'; return; }
+
+        const { data: members } = await sb.from('club_members').select('*').eq('club_id', club.id);
+        const ids = (members || []).map(m => m.telegram_id);
+        const { data: users } = await sb.from('users')
+            .select('telegram_id, display_name, custom_avatar, photo_url, elo, standoff_id')
+            .in('telegram_id', ids.length ? ids : [0]);
+
+        const userMap = {};
+        (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+        const logoSrc = club.logo_url;
+        const logoHTML = logoSrc ? `<img src="${logoSrc}" alt="">` : club.tag.slice(0, 2).toUpperCase();
+        const sorted = [...(members || [])].sort((a, b) => {
+            const rank = { owner: 0, elder: 1, member: 2 };
+            return (rank[a.role] ?? 3) - (rank[b.role] ?? 3);
+        });
+
+        // Проверяем, я ли уже в клубе
+        const { data: myMemberships } = await sb.from('club_members')
+            .select('club_id')
+            .eq('telegram_id', currentUser.telegram_id)
+            .limit(1);
+        const iAmInClub = myMemberships && myMemberships.length > 0;
+        const iAmInThisClub = myClub?.club?.id === clubId;
+
+        // Кнопка вступления / заявки
+        let joinBtn = '';
+        if (!iAmInThisClub) {
+            if (iAmInClub) {
+                joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">🚫 Ты уже в другом клубе</button>`;
+            } else {
+                // Проверяем, есть ли уже заявка
+                const { data: myReqs } = await sb.from('club_requests')
+                    .select('id, status')
+                    .eq('club_id', clubId)
+                    .eq('telegram_id', currentUser.telegram_id)
+                    .limit(1);
+                const myReq = myReqs && myReqs[0];
+
+                if (myReq && myReq.status === 'pending') {
+                    joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">⏳ Заявка отправлена</button>`;
+                } else if (myReq && myReq.status === 'accepted') {
+                    joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">✓ Ты в клубе</button>`;
+                } else if ((members || []).length >= club.max_members) {
+                    joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">Клуб заполнен</button>`;
+                } else {
+                    joinBtn = `<button class="profile-action-btn save" style="margin-top: 14px;" onclick="sendClubRequest(${club.id}, this)">➕ Подать заявку</button>`;
+                }
             }
         }
+
+        content.innerHTML = `
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                <div class="lb-avatar" style="width:72px;height:72px;border-radius:20px;font-size:26px;">${logoHTML}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:20px;font-weight:800;">${escapeHtml(club.name)}</div>
+                    <div style="font-size:12px;color:var(--emerald);font-weight:700;margin-top:3px;">[${escapeHtml(club.tag)}] · ${(members || []).length}/${club.max_members}</div>
+                </div>
+            </div>
+            ${club.description ? `<div style="color:var(--hint);font-size:13px;margin-bottom:14px;">${escapeHtml(club.description)}</div>` : ''}
+            <div class="section-title">Состав</div>
+            ${sorted.map(m => {
+                const u = userMap[m.telegram_id] || {};
+                const av = renderAvatar(u);
+                let roleTag = '';
+                if (m.role === 'owner') roleTag = '<span class="role-tag owner">👑 OWNER</span>';
+                else if (m.role === 'elder') roleTag = '<span class="role-tag elder">⭐ ELDER</span>';
+                return `
+                    <div class="leaderboard-item" onclick="closePlayerModal(); setTimeout(() => openPlayerProfile(${m.telegram_id}), 200);">
+                        <div class="lb-avatar">${av}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}${roleTag}</div>
+                            <div style="font-size:11px;color:var(--hint);">DXP ${u.elo ?? 1000}</div>
+                        </div>
+                    </div>`;
+            }).join('')}
+
+            ${joinBtn}
+
+            ${(isModerator(currentUser) && !iAmInThisClub) ? `
+                <button class="profile-action-btn cancel"
+                        style="margin-top: 14px; background: rgba(255,84,112,0.15); border: 1px solid rgba(255,84,112,0.4); color: var(--red);"
+                        onclick="adminDeleteClub(${clubId})">
+                    🗑️ Удалить клуб (модератор)
+                </button>
+            ` : ''}
+
+            <button class="profile-action-btn cancel" style="margin-top: 10px;" onclick="closePlayerModal()">ЗАКРЫТЬ</button>
+        `;
+    } catch (e) {
+        console.error('viewClub:', e);
+        content.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + e.message + '</div>';
+    }
+}
 
             async function adminDeleteClub(clubId) {
     if (!isModerator(currentUser)) return;
@@ -11664,13 +11731,19 @@ async function updateRequestsBadge() {
 }
 
         async function sendClubRequest(clubId, btnEl) {
-            if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
-            try {
-                const { data: ban } = await sb.from('club_bans')
-                    .select('id').eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
-                if (ban) { showToast('🚫 Ты забанен'); if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Бан'; } return; }
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
 
-        // 🔥 Проверяем — не в клубе ли уже (limit(1) вместо maybeSingle)
+    try {
+        // 1. Бан?
+        const { data: ban } = await sb.from('club_bans')
+            .select('id').eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
+        if (ban) {
+            showToast('🚫 Ты забанен в этом клубе');
+            if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Бан'; }
+            return;
+        }
+
+        // 2. Уже в клубе? (limit(1) вместо maybeSingle)
         const { data: existingMemberships } = await sb.from('club_members')
             .select('club_id, clubs(name, tag)')
             .eq('telegram_id', currentUser.telegram_id)
@@ -11686,25 +11759,44 @@ async function updateRequestsBadge() {
             return;
         }
 
-                const { data: club } = await sb.from('clubs').select('name, owner_id, max_members').eq('id', clubId).single();
-                const { data: members } = await sb.from('club_members').select('telegram_id').eq('club_id', clubId);
-                if (club && (members || []).length >= club.max_members) {
-                    showToast('Клуб заполнен');
-                    if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = 'Заполнен'; }
-                    return;
-                }
+        // 3. Клуб полон?
+        const { data: club } = await sb.from('clubs')
+            .select('name, owner_id, max_members')
+            .eq('id', clubId)
+            .single();
 
-                await sb.from('club_requests').upsert({
-                    club_id: clubId, telegram_id: currentUser.telegram_id, status: 'pending'
-                }, { onConflict: 'club_id,telegram_id' });
+        const { data: members } = await sb.from('club_members')
+            .select('telegram_id')
+            .eq('club_id', clubId);
 
-                if (club?.owner_id) {
-                    notify(club.owner_id, `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.`, 'club');
-                }
-                showToast('✅ Заявка отправлена');
-                if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
-            } catch (e) { showToast('Ошибка: ' + e.message); if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; } }
+        if (club && (members || []).length >= club.max_members) {
+            showToast('Клуб заполнен');
+            if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = 'Заполнен'; }
+            return;
         }
+
+        // 4. Отправляем заявку
+        await sb.from('club_requests').upsert({
+            club_id: clubId,
+            telegram_id: currentUser.telegram_id,
+            status: 'pending'
+        }, { onConflict: 'club_id,telegram_id' });
+
+        if (club?.owner_id) {
+            notify(club.owner_id,
+                `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.`,
+                'club'
+            );
+        }
+
+        showToast('✅ Заявка отправлена');
+        if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Заявка'; }
+    } catch (e) {
+        console.error('sendClubRequest:', e);
+        showToast('Ошибка: ' + e.message);
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Заявка'; }
+    }
+}
 
         // ============================================================
         // START CLUB PARTY (клановая битва)
@@ -19405,13 +19497,14 @@ async function declineInviteNotif(inviteId) {
     } catch (e) { showToast('Ошибка'); }
 }
 
-            async function acceptClubInviteNotif(inviteId, clubId, fromId) {
+async function acceptClubInviteNotif(inviteId, clubId, fromId) {
     try {
-        // Уже в клубе? (limit(1) вместо maybeSingle)
+        // 🔥 limit(1) вместо maybeSingle
         const { data: memberships } = await sb.from('club_members')
             .select('club_id')
             .eq('telegram_id', currentUser.telegram_id)
             .limit(1);
+
         if (memberships && memberships.length > 0) {
             showToast('Ты уже в клубе');
             await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
@@ -19420,11 +19513,11 @@ async function declineInviteNotif(inviteId) {
             return;
         }
 
-        // Клуб существует?
         const { data: club } = await sb.from('clubs')
             .select('name, tag, max_members')
             .eq('id', clubId)
             .maybeSingle();
+
         if (!club) {
             showToast('❌ Клуб больше не существует');
             await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
@@ -19433,10 +19526,10 @@ async function declineInviteNotif(inviteId) {
             return;
         }
 
-        // Есть места?
         const { data: members } = await sb.from('club_members')
             .select('telegram_id')
             .eq('club_id', clubId);
+
         if ((members || []).length >= club.max_members) {
             showToast('❌ Клуб заполнен');
             await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
@@ -19445,7 +19538,6 @@ async function declineInviteNotif(inviteId) {
             return;
         }
 
-        // Принимаем
         await sb.from('club_members').insert({
             club_id: clubId,
             telegram_id: currentUser.telegram_id,
@@ -19453,7 +19545,6 @@ async function declineInviteNotif(inviteId) {
         });
         await sb.from('club_invites').update({ status: 'accepted' }).eq('id', inviteId);
 
-        // Событие в клуб
         await sb.from('club_events').insert({
             club_id: clubId,
             actor_id: fromId,
@@ -19471,6 +19562,7 @@ async function declineInviteNotif(inviteId) {
         await renderNotifList();
         await updateNotifBadge();
     } catch (e) {
+        console.error('acceptClubInviteNotif:', e);
         showToast('Ошибка: ' + e.message);
     }
 }
