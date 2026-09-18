@@ -13182,11 +13182,25 @@ async function subscribeMatchRealtime() {
             filter: `id=eq.${matchId}`
         }, async (payload) => {
             currentMatch = payload.new;
-            if (currentMatch.status === 'veto') showVetoScreen();
-            else if (currentMatch.status === 'ready') { renderVeto(); }
-            else if (currentMatch.status === 'result') showResultScreen();
-            else if (currentMatch.status === 'finished') showFinishedScreen();
-            else if (currentMatch.status === 'cancelled') {
+
+            if (currentMatch.status === 'veto') {
+                showVetoScreen();
+            } else if (currentMatch.status === 'ready') {
+                renderVeto();
+            } else if (currentMatch.status === 'side_pick') {
+                renderVeto();
+            } else if (currentMatch.status === 'in_game') {
+                // 🔥 Грузим КОМНАТУ и показываем экран in-game
+                const { data: freshRoom } = await sb.from('rooms')
+                    .select('*').eq('id', currentMatch.room_id).single();
+                if (freshRoom) {
+                    showInGameScreen(freshRoom.id, freshRoom);
+                }
+            } else if (currentMatch.status === 'result') {
+                showResultScreen();
+            } else if (currentMatch.status === 'finished') {
+                showFinishedScreen();
+            } else if (currentMatch.status === 'cancelled') {
                 showToast('Матч отменён');
                 if (matchPollTimer) clearInterval(matchPollTimer);
                 switchPage('play');
@@ -13199,6 +13213,7 @@ async function subscribeMatchRealtime() {
             if (currentMatch?.status === 'veto') renderVeto();
         })
         .subscribe();
+}   .subscribe();
 }
 
         function showConfirmScreen() {
@@ -14024,6 +14039,7 @@ async function pickSideVeto(side) {
     const opposite = side === 'Спецназ' ? 'Террорист' : 'Спецназ';
 
     try {
+        // 1. Обновляем матч
         await sb.from('game_matches').update({
             side_a: side,
             side_b: opposite,
@@ -14031,6 +14047,7 @@ async function pickSideVeto(side) {
             last_action_at: new Date().toISOString()
         }).eq('id', currentMatch.id);
 
+        // 2. Обновляем комнату
         await sb.from('rooms').update({
             status: 'in_game',
             final_map: currentMatch.final_map,
@@ -14041,6 +14058,7 @@ async function pickSideVeto(side) {
         haptic('medium');
         showToast(`✅ Сторона ${sidePickerTeam}: ${side}`);
 
+        // 3. Локально обновляем
         currentMatch = {
             ...currentMatch,
             side_a: side,
@@ -14048,9 +14066,10 @@ async function pickSideVeto(side) {
             status: 'in_game'
         };
 
+        // 4. Перерисовываем — покажем финал на пару секунд
         renderVeto();
 
-        // Уведомляем всех
+        // 5. Уведомляем всех
         const allPlayers = [
             ...(currentMatch.team_a_players || []),
             ...(currentMatch.team_b_players || [])
@@ -14062,7 +14081,7 @@ async function pickSideVeto(side) {
             );
         }
 
-        // 🔥 Загружаем комнату и передаём её в showInGameScreen
+        // 6. Через 1.5 сек — in-game экран с правильным room
         setTimeout(async () => {
             const { data: freshMatch } = await sb.from('game_matches')
                 .select('*').eq('id', currentMatch.id).single();
@@ -14351,7 +14370,12 @@ function subscribeVetoRealtime(matchId) {
                     startVetoCountdown();
                 } else if (fresh.status === 'in_game') {
                     stopVetoPolling();
-                    showInGameScreen(fresh.room_id, fresh);
+                    // 🔥 Загружаем КОМНАТУ и передаём её
+                    const { data: freshRoom } = await sb.from('rooms')
+                        .select('*').eq('id', fresh.room_id).single();
+                    if (freshRoom) {
+                        showInGameScreen(freshRoom.id, freshRoom);
+                    }
                 } else if (fresh.status === 'cancelled') {
                     stopVetoPolling();
                     showVetoCancelledScreen(fresh.cancelled_reason);
@@ -14401,7 +14425,12 @@ async function syncVetoFromDB(matchId) {
             startVetoCountdown();
         } else if (data.status === 'in_game') {
             stopVetoPolling();
-            showInGameScreen(data.room_id, data);
+            // 🔥 Грузим КОМНАТУ
+            const { data: freshRoom } = await sb.from('rooms')
+                .select('*').eq('id', data.room_id).single();
+            if (freshRoom) {
+                showInGameScreen(freshRoom.id, freshRoom);
+            }
         } else if (data.status === 'cancelled') {
             stopVetoPolling();
             showVetoCancelledScreen(data.cancelled_reason);
@@ -14458,7 +14487,12 @@ function startVetoPolling(matchId) {
 
                 if (data.status === 'in_game') {
                     stopVetoPolling();
-                    showInGameScreen(data.room_id, data);
+                    // 🔥 Грузим КОМНАТУ
+                    const { data: freshRoom } = await sb.from('rooms')
+                        .select('*').eq('id', data.room_id).single();
+                    if (freshRoom) {
+                        showInGameScreen(freshRoom.id, freshRoom);
+                    }
                     return;
                 }
 
