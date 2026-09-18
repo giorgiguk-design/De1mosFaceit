@@ -12924,6 +12924,59 @@ async function askJoinRoom(partyId) {
                 .subscribe();
         }
 
+            // ============================================================
+// REALTIME — список открытых комнат (play-screen)
+// ============================================================
+let playRoomsChannel = null;
+
+function subscribePlayRoomsRealtime() {
+    if (playRoomsChannel) sb.removeChannel(playRoomsChannel);
+
+    playRoomsChannel = sb.channel('play_rooms_rt')
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'rooms'
+        }, (payload) => {
+            console.log('📡 rooms event:', payload.eventType, payload.new?.id || payload.old?.id);
+
+            const screen = document.getElementById('playScreen');
+            if (!screen?.classList.contains('active')) {
+                console.log('📡 skip: playScreen не активен');
+                return;
+            }
+            if (currentPlayRoomId) {
+                console.log('📡 skip: мы в комнате', currentPlayRoomId);
+                return;
+            }
+            if (roomChatOpen) {
+                console.log('📡 skip: чат комнаты открыт');
+                return;
+            }
+
+            console.log('📡 → loadPlayRooms()');
+            loadPlayRooms();
+        })
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'room_players'
+        }, (payload) => {
+            console.log('📡 room_players event:', payload.eventType);
+
+            const screen = document.getElementById('playScreen');
+            if (!screen?.classList.contains('active')) return;
+            if (currentPlayRoomId) return;
+            if (roomChatOpen) return;
+
+            loadPlayRooms();
+        })
+        .subscribe((status) => console.log('📡 play_rooms_rt status:', status));
+}
+
+function unsubscribePlayRoomsRealtime() {
+    if (playRoomsChannel) {
+        sb.removeChannel(playRoomsChannel);
+        playRoomsChannel = null;
+    }
+}
+
         // ============================================================
         // INVITE (приглашение из пати)
         // ============================================================
@@ -15702,21 +15755,21 @@ function openPlayScreen() {
     hideActiveRoomBanner();
     haptic();
 
-    // Прячем "Войти в игру" пока не зашли в матч
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
 
     renderPlayList();
+
+    // 🔥 Подписка на realtime-обновления списка комнат
+    subscribePlayRoomsRealtime();
 }
 
 async function closePlayScreen() {
-    // Если открыт чат комнаты — сначала закрываем его, не выходя из комнаты
     if (roomChatOpen && currentPlayRoomId) {
         await closeRoomChat(currentPlayRoomId);
         return;
     }
 
-    // Отписываемся от In-Game realtime
     unsubscribeInGameRealtime();
 
     const screen = document.getElementById('playScreen');
@@ -15725,7 +15778,6 @@ async function closePlayScreen() {
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
 
-    // Если игрок — зритель (не в команде) и комната открыта, выходим автоматически
     if (currentPlayRoomId && currentUser) {
         try {
             const { data: me } = await sb.from('room_players')
@@ -15741,6 +15793,9 @@ async function closePlayScreen() {
             console.warn('closePlayScreen leave:', e);
         }
     }
+
+    // 🔥 Отписываемся от realtime списка комнат
+    unsubscribePlayRoomsRealtime();
 
     currentPlayRoomId = null;
     unsubscribeRoomRealtime();
@@ -18595,7 +18650,6 @@ setInterval(checkActiveRoom, 8000);   // каждые 8 сек
 // Также проверяем, когда приложение возвращается в фокус
 document.addEventListener('visibilitychange', async () => {
     if (!document.hidden) {
-        // Жёстко гасим UI — потом checkActiveRoom восстановит, если нужно
         const banner = document.getElementById('activeRoomBanner');
         if (banner) banner.classList.remove('active');
         const indicator = document.getElementById('headerRoomIndicator');
@@ -18604,6 +18658,12 @@ document.addEventListener('visibilitychange', async () => {
         if (enterFloat) enterFloat.classList.remove('active');
 
         await checkActiveRoom();
+
+        // 🔥 Обновляем список комнат, если play-screen открыт
+        const screen = document.getElementById('playScreen');
+        if (screen?.classList.contains('active') && !currentPlayRoomId && !roomChatOpen) {
+            loadPlayRooms();
+        }
     }
 });
 window.addEventListener('focus', checkActiveRoom);
