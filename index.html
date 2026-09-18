@@ -7699,6 +7699,53 @@ html.lite-mode * {
     border-color: rgba(255, 84, 112, 0.25);
     color: rgba(255,84,112,0.6);
 }
+
+    /* ============ КРАСИВЫЕ АНИМАЦИИ КОМНАТ ============ */
+.play-room-card {
+    transition: opacity 0.3s ease, transform 0.3s ease,
+                border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+/* Появление новой карточки */
+.play-room-card-enter {
+    animation: roomCardIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes roomCardIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.94);
+    }
+    60% {
+        opacity: 1;
+        transform: translateY(2px) scale(1.01);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Вспышка счётчика при изменении */
+.prc-count-num.prc-count-bump {
+    animation: countBump 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes countBump {
+    0%   { transform: scale(1);   color: var(--emerald); }
+    40%  { transform: scale(1.28); color: #22e8a4; text-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.9); }
+    100% { transform: scale(1);   color: var(--emerald); text-shadow: none; }
+}
+
+/* Пульс рамки при обновлении */
+.play-room-card.prc-updated {
+    animation: roomCardPulse 0.7s ease-out;
+}
+
+@keyframes roomCardPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(var(--emerald-rgb), 0.55); }
+    100% { box-shadow: 0 0 0 14px rgba(var(--emerald-rgb), 0); }
+}
     
 </style>
 </head>
@@ -12936,40 +12983,42 @@ function subscribePlayRoomsRealtime() {
         .on('postgres_changes', {
             event: '*', schema: 'public', table: 'rooms'
         }, (payload) => {
-            console.log('📡 rooms event:', payload.eventType, payload.new?.id || payload.old?.id);
-
-            const screen = document.getElementById('playScreen');
-            if (!screen?.classList.contains('active')) {
-                console.log('📡 skip: playScreen не активен');
-                return;
-            }
-            if (currentPlayRoomId) {
-                console.log('📡 skip: мы в комнате', currentPlayRoomId);
-                return;
-            }
-            if (roomChatOpen) {
-                console.log('📡 skip: чат комнаты открыт');
-                return;
-            }
-
-            console.log('📡 → loadPlayRooms()');
-            loadPlayRooms();
-        })
-        .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'room_players'
-        }, (payload) => {
-            console.log('📡 room_players event:', payload.eventType);
-
             const screen = document.getElementById('playScreen');
             if (!screen?.classList.contains('active')) return;
             if (currentPlayRoomId) return;
             if (roomChatOpen) return;
 
-            loadPlayRooms();
+            // Если комната не в текущем режиме — не дёргаем
+            const changedRoom = payload.new || payload.old;
+            if (changedRoom && changedRoom.mode && changedRoom.mode !== selectedMode) {
+                return;
+            }
+
+            // 🔥 Точечное обновление — только список карточек
+            refreshPlayRoomsList();
+        })
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'room_players'
+        }, (payload) => {
+            const screen = document.getElementById('playScreen');
+            if (!screen?.classList.contains('active')) return;
+            if (currentPlayRoomId) return;
+            if (roomChatOpen) return;
+
+            // Точечное — обновляем только затронутую комнату, если знаем какая
+            refreshPlayRoomsList();
         })
         .subscribe((status) => console.log('📡 play_rooms_rt status:', status));
 }
 
+// Точечное обновление списка комнат (с дебаунсом, чтобы не спамить)
+let _refreshRoomsTimer = null;
+function refreshPlayRoomsList() {
+    clearTimeout(_refreshRoomsTimer);
+    _refreshRoomsTimer = setTimeout(() => {
+        loadPlayRooms();
+    }, 150);
+}
 function unsubscribePlayRoomsRealtime() {
     if (playRoomsChannel) {
         sb.removeChannel(playRoomsChannel);
@@ -16175,7 +16224,11 @@ function selectMap(map) {
 async function loadPlayRooms() {
     const container = document.getElementById('playRoomsList');
     if (!container) return;
-    container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
+
+    // Показываем шиммеры только если список пустой
+    if (!container.querySelector('.play-room-card')) {
+        container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
+    }
 
     try {
         const { data: rooms, error } = await sb
@@ -16186,18 +16239,38 @@ async function loadPlayRooms() {
             .order('created_at', { ascending: false });
         if (error) throw error;
 
+        // === Нет комнат ===
         if (!rooms || rooms.length === 0) {
-            container.innerHTML = `
-                <div class="empty-rooms">
-                    <span class="er-icon">🎯</span>
-                    Открытых комнат нет.<br>
-                    <span style="color: var(--emerald); font-weight: 700;">Создай свою!</span>
-                </div>
-            `;
+            // Плавно прячем все карточки, потом показываем заглушку
+            const existing = container.querySelectorAll('.play-room-card');
+            if (existing.length) {
+                existing.forEach(el => {
+                    el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    el.style.opacity = '0';
+                    el.style.transform = 'scale(0.95)';
+                });
+                setTimeout(() => {
+                    container.innerHTML = `
+                        <div class="empty-rooms">
+                            <span class="er-icon">🎯</span>
+                            Открытых комнат нет.<br>
+                            <span style="color: var(--emerald); font-weight: 700;">Создай свою!</span>
+                        </div>
+                    `;
+                }, 300);
+            } else {
+                container.innerHTML = `
+                    <div class="empty-rooms">
+                        <span class="er-icon">🎯</span>
+                        Открытых комнат нет.<br>
+                        <span style="color: var(--emerald); font-weight: 700;">Создай свою!</span>
+                    </div>
+                `;
+            }
             return;
         }
 
-        // Загружаем всех игроков этих комнат
+        // === Загружаем данные ===
         const { data: players } = await sb
             .from('room_players')
             .select('room_id, telegram_id, team, is_ready')
@@ -16209,7 +16282,6 @@ async function loadPlayRooms() {
             byRoom[p.room_id].push(p);
         });
 
-        // Загружаем лидеров комнат
         const leaderIds = [...new Set(rooms.map(r => r.leader_id))];
         const { data: leaders } = await sb
             .from('users')
@@ -16221,7 +16293,31 @@ async function loadPlayRooms() {
         const myRoom = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
         const amInSomeRoom = !!myRoom;
 
-        container.innerHTML = rooms.map(room => {
+        const newIds = new Set(rooms.map(r => String(r.id)));
+        const existingCards = container.querySelectorAll('.play-room-card');
+
+        // === Удаляем карточки, которых больше нет ===
+        existingCards.forEach(card => {
+            const cardId = card.dataset.roomId;
+            if (cardId && !newIds.has(cardId)) {
+                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(-20px) scale(0.95)';
+                setTimeout(() => card.remove(), 300);
+            }
+        });
+
+        // === Если заглушка была — убираем ===
+        const emptyEl = container.querySelector('.empty-rooms');
+        if (emptyEl) emptyEl.remove();
+
+        // === Обновляем/добавляем карточки ===
+        const existingMap = {};
+        container.querySelectorAll('.play-room-card').forEach(card => {
+            existingMap[card.dataset.roomId] = card;
+        });
+
+        rooms.forEach((room, index) => {
             const inRoom = byRoom[room.id] || [];
             const readyCount = inRoom.filter(p => p.is_ready).length;
             const count = readyCount;
@@ -16230,12 +16326,12 @@ async function loadPlayRooms() {
             const isLeader = String(room.leader_id) === String(currentUser.telegram_id);
 
             const leader = leaderMap[room.leader_id] || {};
-const src = leader.custom_avatar || leader.photo_url;
-const initial = (leader.display_name || 'U')[0].toUpperCase();
-const av = src ? `<img src="${src}" alt="">` : initial;
-const leaderElo = leader.elo ?? 1000;
-const lvl = eloToLevel(leaderElo);
-const progress = Math.min(100, Math.round((count / room.max_players) * 100));
+            const src = leader.custom_avatar || leader.photo_url;
+            const initial = (leader.display_name || 'U')[0].toUpperCase();
+            const av = src ? `<img src="${src}" alt="">` : initial;
+            const leaderElo = leader.elo ?? 1000;
+            const lvl = eloToLevel(leaderElo);
+            const progress = Math.min(100, Math.round((count / room.max_players) * 100));
 
             let actionHTML;
             if (alreadyInThis) {
@@ -16248,32 +16344,102 @@ const progress = Math.min(100, Math.round((count / room.max_players) * 100));
                 actionHTML = `<button class="prc-action" onclick="event.stopPropagation(); joinRoom(${room.id})">Войти в комнату</button>`;
             }
 
-            return `
-                <div class="play-room-card" onclick="openRoomInfoPreview(${room.id})">
-                    <div class="prc-row">
-                        <div class="prc-avatar">${av}</div>
-                        <div class="prc-info">
-                            <div class="prc-name">${escapeHtml(leader.display_name || 'Игрок')}${isLeader ? ' <span style="color:var(--gold);">👑</span>' : ''}</div>
-                            <div class="prc-meta">
-                                <span class="prc-badge">⚡ ${lvl} ур.</span>
-                                <span class="prc-badge gold">${leaderElo} DXP</span>
-                            </div>
-                        </div>
-                        <div class="prc-count">
-                            <div class="prc-count-num">${count}<small>/${room.max_players}</small></div>
-                            <div class="prc-count-label">Игроков</div>
+            const newHTML = `
+                <div class="prc-row">
+                    <div class="prc-avatar">${av}</div>
+                    <div class="prc-info">
+                        <div class="prc-name">${escapeHtml(leader.display_name || 'Игрок')}${isLeader ? ' <span style="color:var(--gold);">👑</span>' : ''}</div>
+                        <div class="prc-meta">
+                            <span class="prc-badge">⚡ ${lvl} ур.</span>
+                            <span class="prc-badge gold">${leaderElo} DXP</span>
                         </div>
                     </div>
-                    <div class="prc-bar"><div class="prc-bar-fill" style="width: ${progress}%;"></div></div>
-                    <div style="margin-top: 10px;">
-                        ${actionHTML}
+                    <div class="prc-count">
+                        <div class="prc-count-num" data-count>${count}<small>/${room.max_players}</small></div>
+                        <div class="prc-count-label">Игроков</div>
                     </div>
                 </div>
+                <div class="prc-bar"><div class="prc-bar-fill" data-progress style="width: ${progress}%;"></div></div>
+                <div style="margin-top: 10px;">
+                    ${actionHTML}
+                </div>
             `;
-        }).join('');
+
+            const existing = existingMap[String(room.id)];
+
+            if (existing) {
+                // === Карточка существует — точечно обновляем ===
+                const oldCount = existing.querySelector('[data-count]')?.textContent.trim();
+                const newCount = `${count}/${room.max_players}`;
+                const countChanged = oldCount && oldCount !== newCount;
+
+                // Обновляем счётчик с анимацией
+                const countEl = existing.querySelector('[data-count]');
+                if (countEl && countChanged) {
+                    countEl.innerHTML = `${count}<small>/${room.max_players}</small>`;
+                    countEl.classList.add('prc-count-bump');
+                    setTimeout(() => countEl.classList.remove('prc-count-bump'), 500);
+                }
+
+                // Обновляем прогресс-бар
+                const progressEl = existing.querySelector('[data-progress]');
+                if (progressEl) {
+                    progressEl.style.width = `${progress}%`;
+                }
+
+                // Обновляем action-кнопку
+                const oldAction = existing.querySelector('.prc-action');
+                if (oldAction) {
+                    const newActionTmp = document.createElement('div');
+                    newActionTmp.innerHTML = actionHTML;
+                    const newAction = newActionTmp.querySelector('.prc-action');
+                    if (newAction && oldAction.outerHTML !== newAction.outerHTML) {
+                        oldAction.replaceWith(newAction);
+                    }
+                }
+
+                // Обновляем аватар/имя на случай смены лидера
+                const oldAvatar = existing.querySelector('.prc-avatar');
+                const newAvatarTmp = document.createElement('div');
+                newAvatarTmp.innerHTML = newHTML;
+                const newAvatar = newAvatarTmp.querySelector('.prc-avatar');
+                if (oldAvatar && newAvatar) {
+                    oldAvatar.innerHTML = newAvatar.innerHTML;
+                }
+
+                // Если карточка "подсвечена" (например, только что появилась) — не трогаем
+            } else {
+                // === Новая карточка — создаём с анимацией ===
+                const card = document.createElement('div');
+                card.className = 'play-room-card play-room-card-enter';
+                card.dataset.roomId = String(room.id);
+                card.onclick = () => openRoomInfoPreview(room.id);
+                card.innerHTML = newHTML;
+
+                // Вставляем по порядку (rooms отсортированы по created_at desc)
+                const existingNodes = container.querySelectorAll('.play-room-card');
+                let inserted = false;
+                for (const node of existingNodes) {
+                    const nodeIndex = rooms.findIndex(r => String(r.id) === node.dataset.roomId);
+                    if (nodeIndex > index) {
+                        container.insertBefore(card, node);
+                        inserted = true;
+                        break;
+                    }
+                }
+                if (!inserted) container.appendChild(card);
+
+                // Убираем класс анимации после её завершения
+                setTimeout(() => card.classList.remove('play-room-card-enter'), 600);
+            }
+        });
+
     } catch (e) {
         console.error('Load rooms error:', e);
-        container.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
+        const container2 = document.getElementById('playRoomsList');
+        if (container2 && !container2.querySelector('.play-room-card')) {
+            container2.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${escapeHtml(e.message)}</div>`;
+        }
     }
 }
 
