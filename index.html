@@ -13672,18 +13672,36 @@ async function pickMap(map) {
 
         haptic('medium');
 
-        const { data } = await sb.from('game_matches')
-            .select('*').eq('id', currentMatch.id).single();
+        // 🔥 ЛОКАЛЬНО обновляем состояние сразу — не ждём realtime
+        currentMatch = { ...currentMatch, ...update };
+        currentMatch.veto_log = newLog;
 
-        if (data) {
-            currentMatch = data;
-            if (data.status === 'side_pick') {
-                showToast(`🗺️ Карта: ${data.final_map}`);
-            } else {
-                showToast(`🚫 ${map} забанена`);
-            }
-            renderVeto();
+        if (currentMatch.status === 'side_pick') {
+            showToast(`🗺️ Карта: ${currentMatch.final_map}`);
+        } else {
+            showToast(`🚫 ${map} забанена`);
         }
+
+        // 🔥 Мгновенно перерисовываем — если side_pick, renderVeto сам покажет renderVetoFinal
+        renderVeto();
+
+        // 🔥 И запускаем таймер заново для нового хода
+        if (currentMatch.status === 'side_pick') {
+            startVetoCountdown();
+        } else {
+            startVetoCountdown();
+        }
+
+        // Дополнительно подтягиваем свежие данные из БД (для надёжности)
+        setTimeout(async () => {
+            const { data } = await sb.from('game_matches')
+                .select('*').eq('id', currentMatch.id).single();
+            if (data) {
+                currentMatch = data;
+                renderVeto();
+            }
+        }, 500);
+
     } catch (e) {
         console.error('pickMap:', e);
         showToast('Ошибка бана: ' + (e.message || e));
@@ -13749,24 +13767,54 @@ function renderVetoFinal(content, match, userMap) {
     const canPickSide = iAmSidePicker && !sideChosen;
     const vetoLog = match.veto_log || [];
 
-    // Моя сторона (если я в команде)
+    // Моя сторона
     const mySide = myTeam === 'A' ? match.side_a
                  : myTeam === 'B' ? match.side_b
                  : null;
 
-    // Что рисуем справа:
-    // - если я в команде и сторона выбрана — моделька моей стороны
-    // - если сторона не выбрана — нейтральный фон без модельки
-    const displaySide = sideChosen ? (mySide || match.side_a) : null;
+    // Сторона противника
+    const enemySide = mySide === 'Спецназ' ? 'Террорист'
+                    : mySide === 'Террорист' ? 'Спецназ'
+                    : null;
+
     const bgUrl = mapBgUrl(finalMap);
-    const modelUrl = displaySide ? sideModelUrl(displaySide) : null;
+
+    // ============================================================
+    // МОДЕЛЬКИ НА ФОНЕ
+    // ============================================================
+    // Логика:
+    // - Сторона не выбрана → показываем обе модельки (как было)
+    // - Я в команде и сторона выбрана → показываем МОЮ модельку справа
+    // - Я зритель → показываем модельку команды A (она выбирает первой)
+    // ============================================================
+    let modelT = false;   // рисовать террориста?
+    let modelCT = false;  // рисовать спецназа?
+
+    if (!sideChosen) {
+        // Стороны не выбраны — нейтрально, показываем обе
+        modelT = true;
+        modelCT = true;
+    } else if (mySide) {
+        // Я в команде → показываю МОЮ сторону крупно справа
+        modelCT = (mySide === 'Спецназ');
+        modelT  = (mySide === 'Террорист');
+    } else {
+        // Зритель → показываю сторону команды A (она выбирала первой)
+        const aSide = match.side_a;
+        modelCT = (aSide === 'Спецназ');
+        modelT  = (aSide === 'Террорист');
+    }
+
+    // Что рисуем для "чужой" команды (если я не в матче — не рисуем)
+    // Если стороны выбраны и я в команде — показываю ТОЛЬКО свою модельку,
+    // чтобы было чётко видно "за кого я"
+    // Если хочу обе — оставить modelT/modelCT так, как выше.
 
     // Заголовок "Вы — за ..."
     let mySideText = '';
     if (sideChosen && mySide) {
         mySideText = mySide === 'Спецназ' ? 'Вы — за спецназ' : 'Вы — за террористов';
     } else if (sideChosen && !mySide) {
-        // Зритель — показываем стороны нейтрально
         mySideText = 'Стороны выбраны';
     } else {
         mySideText = iAmSidePicker
@@ -13774,13 +13822,21 @@ function renderVetoFinal(content, match, userMap) {
             : `Капитан команды ${sidePickerTeam} выбирает сторону`;
     }
 
+    // Модели
+    const modelTHTML = modelT
+        ? `<img class="vf3-model t" src="${MAPS_BUCKET_URL}/t.png" alt="" onerror="this.style.display='none'">`
+        : '';
+    const modelCTHTML = modelCT
+        ? `<img class="vf3-model ct" src="${MAPS_BUCKET_URL}/ct.png" alt="" onerror="this.style.display='none'">`
+        : '';
+
     content.innerHTML = `
         <div class="veto-wrap-v3">
             <div class="veto-final-v3">
                 <div class="vf3-bg" style="background-image: url('${bgUrl}');"></div>
                 <div class="vf3-overlay"></div>
-                <img class="vf3-model t" src="${MAPS_BUCKET_URL}/t.png" alt="" onerror="this.style.display='none'">
-<img class="vf3-model ct" src="${MAPS_BUCKET_URL}/ct.png" alt="" onerror="this.style.display='none'">
+                ${modelTHTML}
+                ${modelCTHTML}
 
                 <div class="vf3-content">
                     <div class="vf3-label">Карта выбрана</div>
@@ -13806,7 +13862,7 @@ function renderVetoFinal(content, match, userMap) {
                     <div class="vf3-sub">
                         ${sideChosen
                             ? (myTeam
-                                ? `Противник играет за ${escapeHtml(mySide === 'Спецназ' ? 'террористов' : 'спецназ')}`
+                                ? `Противник играет за ${escapeHtml(enemySide || '—')}`
                                 : `A — ${escapeHtml(match.side_a || '—')} · B — ${escapeHtml(match.side_b || '—')}`)
                             : (iAmSidePicker ? 'Выбери сторону ↓' : `Ждём капитана команды ${sidePickerTeam}`)
                         }
@@ -13903,6 +13959,18 @@ async function pickSideVeto(side) {
         haptic('medium');
         showToast(`✅ Сторона ${sidePickerTeam}: ${side}`);
 
+        // 🔥 ЛОКАЛЬНО обновляем и сразу перерисовываем
+        currentMatch = {
+            ...currentMatch,
+            side_a: side,
+            side_b: opposite,
+            status: 'in_game'
+        };
+
+        // Перерисовываем финальный экран — теперь покажет выбранную сторону + модельку
+        renderVeto();
+
+        // Уведомляем всех
         const allPlayers = [
             ...(currentMatch.team_a_players || []),
             ...(currentMatch.team_b_players || [])
@@ -13914,13 +13982,14 @@ async function pickSideVeto(side) {
             );
         }
 
-        const { data } = await sb.from('game_matches')
-            .select('*').eq('id', currentMatch.id).single();
-        if (data) {
-            currentMatch = data;
-            // Показываем экран in-game с ссылкой
+        // Через секунду уходим на in-game экран
+        setTimeout(async () => {
+            const { data } = await sb.from('game_matches')
+                .select('*').eq('id', currentMatch.id).single();
+            if (data) currentMatch = data;
             showInGameScreen();
-        }
+        }, 1500);
+
     } catch (e) {
         console.error('pickSideVeto:', e);
         showToast('Ошибка выбора стороны');
@@ -13945,16 +14014,17 @@ function startVetoCountdown() {
             Date.now()
         ).getTime();
 
-const elapsed = Math.floor((Date.now() - last) / 1000);
-const left = Math.max(0, 60 - elapsed);   // ← 60 секунд
+        const elapsed = Math.floor((Date.now() - last) / 1000);
+        const left = Math.max(0, 60 - elapsed);
 
+        // Обновляем таймер на экране
         const timerEl = document.getElementById('vetoTimer');
         if (timerEl) {
             timerEl.textContent = `${String(Math.floor(left / 60)).padStart(2, '0')}:${String(left % 60).padStart(2, '0')}`;
             if (left <= 3) timerEl.classList.add('warning');
         }
 
-        // Время вышло — пробуем отменить
+        // Время вышло
         if (left <= 0) {
             await tryCancelByTimeout();
             return;
@@ -13970,7 +14040,6 @@ const left = Math.max(0, 60 - elapsed);   // ← 60 секунд
 async function tryCancelByTimeout() {
     if (!currentMatch) return;
 
-    // Сначала читаем свежий статус
     try {
         const { data } = await sb.from('game_matches')
             .select('*').eq('id', currentMatch.id).single();
@@ -13978,54 +14047,53 @@ async function tryCancelByTimeout() {
 
         currentMatch = data;
 
-        // Уже отменён — просто показываем экран
         if (data.status === 'cancelled') {
             showVetoCancelledScreen(data.cancelled_reason);
             return;
         }
 
-        // Уже in_game — кто-то успел
-        if (data.status === 'in_game' || data.status === 'ready') {
+        if (data.status === 'in_game' || data.status === 'ready' || data.status === 'finished') {
+            // Кто-то успел — не отменяем
             return;
         }
 
-const last = new Date(data.last_action_at || data.veto_started_at).getTime();
-if (Date.now() - last <= 60 * 1000) {   // ← 60 * 1000
-    startVetoCountdown();
-    return;
-}
+        const last = new Date(data.last_action_at || data.veto_started_at).getTime();
+        if (Date.now() - last <= 60 * 1000) {
+            startVetoCountdown();
+            return;
+        }
 
-        // Атомарно отменяем: только если статус всё ещё veto/side_pick
-const { error } = await sb.from('game_matches')
-    .update({
-        status: 'cancelled',
-        cancelled_reason: 'veto_timeout',
-        cancelled_at: new Date().toISOString()
-    })
-    .eq('id', data.id)
-    .in('status', ['veto', 'side_pick']);
+        // 🔥 Правильная причина в зависимости от фазы
+        const reason = data.status === 'side_pick' ? 'side_timeout' : 'veto_timeout';
 
-if (error) {
-    console.warn('tryCancelByTimeout update:', error);
-}
+        const { error } = await sb.from('game_matches')
+            .update({
+                status: 'cancelled',
+                cancelled_reason: reason,
+                cancelled_at: new Date().toISOString()
+            })
+            .eq('id', data.id)
+            .in('status', ['veto', 'side_pick']);
 
-// Отменяем комнату и уведомляем всех
-// Гарантированно закрываем комнату
-try {
-    if (data.room_id) {
-        await sb.from('rooms').update({
-            status: 'cancelled',
-            cancelled_reason: 'veto_timeout',
-            cancelled_at: new Date().toISOString()
-        }).eq('id', data.room_id);
-        await sb.from('room_players').delete().eq('room_id', data.room_id);
-    }
-} catch (e) {}
-if (data.room_id) {
-    await cancelMatch(data.room_id, 'veto_timeout');
-}
+        if (error) console.warn('tryCancelByTimeout update:', error);
 
-showVetoCancelledScreen('veto_timeout');
+        // Гасим комнату
+        try {
+            if (data.room_id) {
+                await sb.from('rooms').update({
+                    status: 'cancelled',
+                    cancelled_reason: reason,
+                    cancelled_at: new Date().toISOString()
+                }).eq('id', data.room_id);
+                await sb.from('room_players').delete().eq('room_id', data.room_id);
+            }
+        } catch (e) {}
+
+        if (data.room_id) {
+            await cancelMatch(data.room_id, reason);
+        }
+
+        showVetoCancelledScreen(reason);
     } catch (e) {
         console.warn('tryCancelByTimeout:', e);
     }
@@ -14071,22 +14139,52 @@ function showVetoCancelledScreen(reason) {
     const content = document.getElementById('vetoContent');
     if (!content) return;
 
-    const text = reason === 'veto_timeout'
-        ? 'Капитан не сделал выбор за 60 секунд.'
-        : 'Матч отменён.';
+    // 🔥 Расширенная карта причин
+    const reasonsMap = {
+        'veto_timeout':  'капитан не сделал выбор за 60 секунд',
+        'side_timeout':  'капитан не выбрал сторону за 60 секунд',
+        'vote':          'игроки проголосовали за отмену',
+        'host_closed':   'хост закрыл комнату',
+        'stale_cleanup': 'игроки слишком долго не проявляли активность',
+        'no_match':      'матч не был создан',
+        'other':         'неизвестная причина'
+    };
+
+    const reasonText = reasonsMap[reason] || reasonsMap['other'];
 
     content.innerHTML = `
         <div class="veto-wrap">
             <div class="ig-cancelled-box" style="margin-top: 40px;">
                 <span class="ig-cancelled-icon">⏰</span>
                 <div class="ig-cancelled-title">МАТЧ ОТМЕНЁН</div>
-                <div class="ig-cancelled-sub">
-                    ${escapeHtml(text)}<br>
+                <div class="ig-cancelled-sub" style="margin-bottom: 14px;">
+                    Матч был отменён.<br>
                     Комната будет закрыта.
                 </div>
             </div>
 
-            <button class="profile-action-btn save" onclick="returnAfterVetoCancel()">
+            <!-- 🔥 Подсказка с причиной снизу -->
+            <div style="
+                margin-top: 16px;
+                padding: 14px 16px;
+                background: rgba(255, 84, 112, 0.08);
+                border: 1px solid rgba(255, 84, 112, 0.35);
+                border-left: 3px solid var(--red);
+                border-radius: 12px;
+                font-size: 13px;
+                color: var(--text);
+                line-height: 1.5;
+                animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            ">
+                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--red); font-weight: 800; margin-bottom: 6px;">
+                    ⚠️ Причина отмены
+                </div>
+                <div style="color: var(--text);">
+                    Матч отменён по причине: <b style="color: var(--red);">${escapeHtml(reasonText)}</b>
+                </div>
+            </div>
+
+            <button class="profile-action-btn save" style="margin-top: 20px;" onclick="returnAfterVetoCancel()">
                 ← ВЕРНУТЬСЯ К КОМНАТАМ
             </button>
         </div>
@@ -14128,13 +14226,13 @@ function subscribeVetoRealtime(matchId) {
             const fresh = payload.new;
             if (!fresh) return;
 
-            const prevStatus = currentMatch?.status;
             currentMatch = fresh;
 
             if (fresh.status === 'veto') {
                 renderVeto();
                 startVetoCountdown();
-            } else if (fresh.status === 'side_pick' || fresh.status === 'ready') {
+            } else if (fresh.status === 'side_pick') {
+                // 🔥 Явно перерисовываем финальный экран
                 renderVeto();
                 startVetoCountdown();
             } else if (fresh.status === 'in_game') {
