@@ -11953,30 +11953,68 @@ async function openResolveDisputeSheet(matchId) {
 }
 
 function closeResolveDisputeSheet() {
-    document.getElementById('resolveOverlay')?.remove();
-    document.getElementById('resolveSheet')?.remove();
+    const ov = document.getElementById('resolveOverlay');
+    if (ov) ov.remove();
+    const sh = document.getElementById('resolveSheet');
+    if (sh) sh.remove();
 }
 
 async function submitResolveDispute(matchId) {
-    const a = parseInt(document.getElementById('resolveScoreA').value) || 0;
-    const b = parseInt(document.getElementById('resolveScoreB').value) || 0;
+    const btn = document.querySelector('#resolveSheet button.profile-action-btn.save');
+    if (btn?.disabled) return; // 🔥 защита от двойного клика
+
+    const a = parseInt(document.getElementById('resolveScoreA')?.value) || 0;
+    const b = parseInt(document.getElementById('resolveScoreB')?.value) || 0;
 
     if (a === b) { showToast('Счёт не может быть равным'); return; }
 
     const winner = a > b ? 'A' : 'B';
 
+    // 🔥 Блокируем кнопку СРАЗУ
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'ОБРАБОТКА...';
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+    }
+
     try {
-        await mmCall('resolve_dispute', {
+        const result = await mmCall('resolve_dispute', {
             match_id: matchId,
             moderator_id: currentUser.telegram_id,
             winner,
             score_a: a,
             score_b: b
         });
+
+        // Проверяем ответ от edge-функции
+        if (result && result.error) {
+            throw new Error(result.error);
+        }
+
+        haptic('medium');
         showToast(`✅ Решено: ${a}:${b} → Команда ${winner}`);
+
+        // 🔥 Закрываем модалку СРАЗУ после успеха
         closeResolveDisputeSheet();
-        renderModeratorPanel();
-    } catch (e) { showToast('Ошибка: ' + e.message); }
+
+        // Небольшая задержка перед перерисовкой, чтобы визуально всё улеглось
+        setTimeout(() => {
+            renderModeratorPanel();
+        }, 200);
+
+    } catch (e) {
+        console.error('submitResolveDispute:', e);
+        showToast('Ошибка: ' + e.message);
+
+        // Разблокируем кнопку при ошибке
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '💾 СОХРАНИТЬ РЕШЕНИЕ';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+        }
+    }
 }
 
             // ============================================================
@@ -12148,16 +12186,27 @@ async function closeReport(reportId) {
             .eq('id', reportId)
             .select();
 
-        if (error) throw error;
-        if (!data?.length) {
-            showToast('⚠️ Не удалось закрыть — возможно, уже закрыто');
-        } else {
-            showToast('✅ Закрыто');
+        console.log('🔒 closeReport result:', { data, error });
+
+        if (error) {
+            console.error('closeReport error:', error);
+            showToast('❌ ' + error.message);
+            return;
         }
+
+        if (!data || data.length === 0) {
+            showToast('⚠️ Не удалось закрыть — нет доступа (RLS?)');
+            console.warn('closeReport: 0 rows updated — проверь RLS на match_reports');
+            return;
+        }
+
+        showToast('✅ Закрыто');
         haptic('medium');
-        renderModeratorPanel();
+
+        // 🔥 Перерисовываем модератор-панель
+        await renderModeratorPanel();
     } catch (e) {
-        console.error('closeReport:', e);
+        console.error('closeReport exception:', e);
         showToast('Ошибка: ' + e.message);
     }
 }
