@@ -7789,6 +7789,49 @@ html.lite-mode * {
     border: 1px solid rgba(var(--emerald-rgb), 0.3);
     white-space: nowrap;
 }
+
+    /* ============ БЛОКИРОВКА НАВИГАЦИИ ВО ВРЕМЯ МАТЧА ============ */
+.bottom-nav.nav-locked .nav-item {
+    opacity: 0.35;
+    pointer-events: none;
+    filter: grayscale(100%);
+    transition: opacity 0.25s ease, filter 0.25s ease;
+}
+.bottom-nav.nav-locked::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 8, 7, 0.4);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    pointer-events: none;
+    z-index: 5;
+}
+.bottom-nav {
+    position: fixed; /* это уже есть */
+    /* для ::after нужен relative-контекст — position: fixed сам его даёт */
+}
+
+    /* ============ КВАДРАТНАЯ КНОПКА "СКОПИРОВАТЬ" ============ */
+.ig-copy-square {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.22s ease, border-color 0.22s ease;
+    font-family: inherit;
+}
+.ig-copy-square:active { transform: scale(0.92); background: rgba(0,0,0,0.7); }
+.ig-copy-square:hover { border-color: rgba(var(--emerald-rgb), 0.6); }
     
 </style>
 </head>
@@ -14767,12 +14810,17 @@ function stopVetoPolling() {
         // ============================================================
         // RESULT
         // ============================================================
-        function showResultScreen() {
-        stopVetoPolling();
-            selectedWinner = null;
-            switchPage('result');
-            renderResultScreen();
-        }
+function showResultScreen() {
+    stopVetoPolling();
+
+    // 🔥 Дошли до результатов — разблокируем навигацию
+    unlockNav();
+    if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
+
+    selectedWinner = null;
+    switchPage('result');
+    renderResultScreen();
+}
 
 async function renderResultScreen() {
     if (matchPollTimer) clearInterval(matchPollTimer);
@@ -15546,6 +15594,9 @@ async function finishMatch(matchId, result) {
         // FINISHED
         // ============================================================
 function showFinishedScreen() {
+    unlockNav();
+    if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
+
     switchPage('finished');
     renderFinishedScreen();
 }
@@ -15806,6 +15857,9 @@ async function renderFinishedScreen() {
 }
 
 function returnToDashboard() {
+    unlockNav();
+    if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
+
     currentMatch = null;
     if (matchPollTimer) { clearInterval(matchPollTimer); matchPollTimer = null; }
     if (currentMatchChannel) { sb.removeChannel(currentMatchChannel); currentMatchChannel = null; }
@@ -17906,7 +17960,7 @@ async function submitHostLink(roomId) {
 let inGameChannel = null;
 
 async function showInGameScreen(roomId, room) {
-    stopVetoPolling(); 
+    stopVetoPolling();
     stopWaitingLinkChannel();
     switchPage('veto');
     const content = document.getElementById('vetoContent');
@@ -17917,6 +17971,12 @@ async function showInGameScreen(roomId, room) {
         showWaitingLinkScreen(roomId, room);
         return;
     }
+
+    // 🔥 Фиксируем момент старта матча (один раз)
+    markInGameStarted(roomId);
+
+    // 🔥 Блокируем навигацию — игрок не может уйти пока не загрузит результаты
+    lockNav();
 
     const me = Number(currentUser.telegram_id);
 
@@ -17942,6 +18002,11 @@ async function showInGameScreen(roomId, room) {
     } else {
         titleText = 'Матч готов';
     }
+
+    // 🔥 Таймер до разблокировки
+    const remaining = getResultUnlockRemaining(roomId);
+    const unlocked = remaining <= 0;
+    const timerLabel = unlocked ? '' : formatMMSS(remaining);
 
     content.innerHTML = `
         <div class="ig-v3-screen">
@@ -17974,16 +18039,31 @@ async function showInGameScreen(roomId, room) {
                     </div>
                 `}
 
+                <!-- 🔥 Перейти к игре + квадратная копировалка -->
                 <div class="ig-v3-actions">
-                    <button class="ig-v3-btn-primary" onclick="copyInGameLink('${escapeHtml(room.host_link)}')">
-                        🔗 ОТКРЫТЬ И СКОПИРОВАТЬ ССЫЛКУ
-                    </button>
+                    <div style="display: flex; gap: 10px; width: 100%; max-width: 360px;">
+                        <button class="ig-v3-btn-primary" style="flex: 1;" onclick="openInGameLink('${escapeHtml(room.host_link)}')">
+                            ▶ ПЕРЕЙТИ К ИГРЕ
+                        </button>
+                        <button class="ig-copy-square" onclick="copyInGameLink('${escapeHtml(room.host_link)}')" title="Скопировать ссылку">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 14px; max-width: 360px;">
-                    <button class="ig-v3-btn-secondary" style="padding: 14px; font-weight: 900;" onclick="goToResultFromInGame(${roomId})">
-                        📊 ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ
-                    </button>
+                    ${unlocked ? `
+                        <button class="ig-v3-btn-secondary" style="padding: 14px; font-weight: 900;" onclick="goToResultFromInGame(${roomId})">
+                            📊 ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ
+                        </button>
+                    ` : `
+                        <button class="ig-v3-btn-secondary" style="padding: 14px; font-weight: 900; opacity: 0.55; cursor: not-allowed;" disabled>
+                            🔒 РЕЗУЛЬТАТЫ ЧЕРЕЗ ${timerLabel}
+                        </button>
+                    `}
                     <button class="ig-cancel-square ${iVoted ? 'voted' : ''}"
                             onclick="voteCancelMatch(${roomId})"
                             title="${iVoted ? 'Снять голос' : 'Голосовать за отмену'}"
@@ -17996,16 +18076,73 @@ async function showInGameScreen(roomId, room) {
                 </div>
 
                 <div style="margin-top: 10px; font-size: 10px; color: rgba(255,255,255,0.55); font-weight: 700; max-width: 360px; text-align: center;">
-                    ${iVoted
-                        ? `Ты проголосовал. Нажми ещё раз, чтобы снять голос (${cancelVotes}/${neededVotes})`
-                        : `Отмена требует ${neededVotes} ${neededVotes === 1 ? 'голос' : neededVotes < 5 ? 'голоса' : 'голосов'} из ${playersTotalInMatch(room.mode)}`
+                    ${unlocked
+                        ? (iVoted
+                            ? `Ты проголосовал. Нажми ещё раз, чтобы снять голос (${cancelVotes}/${neededVotes})`
+                            : `Отмена требует ${neededVotes} ${neededVotes === 1 ? 'голос' : neededVotes < 5 ? 'голоса' : 'голосов'} из ${playersTotalInMatch(room.mode)}`)
+                        : `Загрузка результатов откроется через ${timerLabel}. Пока можешь играть или проголосовать за отмену.`
                     }
                 </div>
             </div>
         </div>
     `;
+
+    // 🔥 Тикающий таймер — каждую секунду обновляем лейбл кнопки
+    startResultUnlockTimer(roomId, room.mode);
+
     subscribeInGameRealtime(roomId);
 }
+            // ============================================================
+// 5 МИНУТ ДО РАЗБЛОКИРОВКИ КНОПКИ "ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ"
+// ============================================================
+const RESULT_UNLOCK_DELAY_MS = 5 * 60 * 1000; // 5 минут
+
+// В localStorage храним: какая комната и когда получила ссылку
+// Ключ: inGameStartedAt_<roomId> = ISO-тайм
+function markInGameStarted(roomId) {
+    if (!roomId) return;
+    try {
+        const key = 'inGameStartedAt_' + roomId;
+        if (!localStorage.getItem(key)) {
+            localStorage.setItem(key, new Date().toISOString());
+        }
+    } catch (e) {}
+}
+
+function getInGameStartedAt(roomId) {
+    if (!roomId) return 0;
+    try {
+        const raw = localStorage.getItem('inGameStartedAt_' + roomId);
+        return raw ? new Date(raw).getTime() : 0;
+    } catch (e) { return 0; }
+}
+
+function getResultUnlockRemaining(roomId) {
+    const startedAt = getInGameStartedAt(roomId);
+    if (!startedAt) return RESULT_UNLOCK_DELAY_MS;
+    const passed = Date.now() - startedAt;
+    return Math.max(0, RESULT_UNLOCK_DELAY_MS - passed);
+}
+
+function formatMMSS(ms) {
+    const total = Math.ceil(ms / 1000);
+    const m = String(Math.floor(total / 60)).padStart(2, '0');
+    const s = String(total % 60).padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+// ============================================================
+// БЛОКИРОВКА НАВИГАЦИИ ВО ВРЕМЯ МАТЧА
+// ============================================================
+function lockNav() {
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) nav.classList.add('nav-locked');
+}
+
+function unlockNav() {
+    const nav = document.querySelector('.bottom-nav');
+    if (nav) nav.classList.remove('nav-locked');
+} 
 
 // Кнопка "Зайти в игру" — открывает ссылку и переводит всех на результат
 // Просто открывает ссылку, НЕ переводит в result
@@ -18204,6 +18341,9 @@ async function cancelMatchAndExitAll(roomId, reason = 'vote') {
 
 // Полный выход из матча/комнаты (локальный state + UI + переход на главную)
 async function fullExitFromMatch(roomId) {
+    unlockNav();
+    if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
+
     stopWaitingLinkChannel();
     try {
         stopVetoPolling();
@@ -18373,6 +18513,9 @@ function showCancelledOnce(roomId) {
 }
 
 async function cleanupAfterCancel(roomId) {
+    unlockNav();
+    if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
+    
     try {
         await sb.from('room_players').delete()
             .eq('telegram_id', currentUser.telegram_id);
@@ -18535,7 +18678,7 @@ function unsubscribeInGameRealtime() {
         sb.removeChannel(inGameChannel);
         inGameChannel = null;
     }
-}
+} 
 
 // Кнопки
 function copyInGameLink(url) {
@@ -18550,23 +18693,85 @@ function copyInGameLink(url) {
     }
 }
 
-            async function backToInGameFromResult(roomId) {
+            // ============================================================
+// ОТКРЫТЬ ССЫЛКУ ХОСТА (кнопка "Перейти к игре")
+// ============================================================
+function openInGameLink(url) {
+    if (!url) { showToast('Ссылка отсутствует'); return; }
+    try {
+        if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank');
+        haptic('medium');
+    } catch (e) {
+        window.open(url, '_blank');
+    }
+}
+
+// ============================================================
+// ТИКАЮЩИЙ ТАЙМЕР ДО РАЗБЛОКИРОВКИ "ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ"
+// ============================================================
+let _resultUnlockTimer = null;
+
+function startResultUnlockTimer(roomId, mode) {
+    if (_resultUnlockTimer) clearInterval(_resultUnlockTimer);
+
+    _resultUnlockTimer = setInterval(() => {
+        // Если экран уже не in-game — стоп
+        const pageVeto = document.getElementById('page-veto');
+        if (!pageVeto?.classList.contains('active')) {
+            clearInterval(_resultUnlockTimer);
+            _resultUnlockTimer = null;
+            return;
+        }
+
+        const remaining = getResultUnlockRemaining(roomId);
+        const btn = document.querySelector('.ig-v3-btn-secondary[disabled], .ig-v3-btn-secondary');
+        // Проще — найти кнопку по тексту
+        const buttons = document.querySelectorAll('.ig-v3-btn-secondary');
+        let targetBtn = null;
+        buttons.forEach(b => {
+            if (b.textContent.includes('РЕЗУЛЬТАТЫ') || b.textContent.includes('РЕЗУЛЬТАТЫ ЧЕРЕЗ')) {
+                targetBtn = b;
+            }
+        });
+
+        if (remaining <= 0) {
+            // Разблокировали
+            if (targetBtn && targetBtn.disabled) {
+                targetBtn.disabled = false;
+                targetBtn.style.opacity = '1';
+                targetBtn.style.cursor = 'pointer';
+                targetBtn.textContent = '📊 ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ';
+                targetBtn.setAttribute('onclick', `goToResultFromInGame(${roomId})`);
+                haptic('medium');
+                showToast('🔓 Результаты разблокированы');
+            }
+            clearInterval(_resultUnlockTimer);
+            _resultUnlockTimer = null;
+        } else if (targetBtn && targetBtn.disabled) {
+            // Обновляем лейбл
+            targetBtn.textContent = `🔒 РЕЗУЛЬТАТЫ ЧЕРЕЗ ${formatMMSS(remaining)}`;
+        }
+    }, 1000);
+}
+
+async function backToInGameFromResult(roomId) {
     if (!roomId) { showToast('Комната не найдена'); return; }
     try {
         const { data: room } = await sb.from('rooms')
             .select('*').eq('id', roomId).maybeSingle();
         if (!room) { showToast('Комната не найдена'); return; }
 
-        // Возвращаем комнату в статус in_game
         await sb.from('rooms').update({ status: 'in_game' }).eq('id', roomId);
 
-        // И матч тоже
         if (currentMatch?.id) {
             await sb.from('game_matches').update({ status: 'in_game' }).eq('id', currentMatch.id);
             currentMatch = { ...currentMatch, status: 'in_game' };
         }
 
-        // Открываем in-game экран
+        // 🔥 Снова блокируем навигацию — вернулись в матч
+        lockNav();
+
         showInGameScreen(roomId, room);
     } catch (e) {
         console.error('backToInGameFromResult:', e);
@@ -18575,10 +18780,17 @@ function copyInGameLink(url) {
 }
 
 async function goToResultFromInGame(roomId) {
+    // 🔥 Проверка: прошло ли 5 минут
+    const remaining = getResultUnlockRemaining(roomId);
+    if (remaining > 0) {
+        showToast(`🔒 Ещё рано. Осталось ${formatMMSS(remaining)}`);
+        haptic('heavy');
+        return;
+    }
+
     try {
-        // Переводим комнату в result
         await sb.from('rooms').update({ status: 'result' }).eq('id', roomId);
-        // Обновляем статус game_match
+
         const { data: match } = await sb.from('game_matches')
             .select('*').eq('room_id', roomId)
             .order('created_at', { ascending: false }).limit(1).maybeSingle();
@@ -18586,7 +18798,12 @@ async function goToResultFromInGame(roomId) {
             await sb.from('game_matches').update({ status: 'result' }).eq('id', match.id);
             currentMatch = { ...match, status: 'result' };
         }
-        // Переходим на экран результата
+
+        // 🔥 Разблокируем навигацию — игрок дошёл до результата
+        unlockNav();
+
+        if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
+
         showResultScreen();
     } catch (e) {
         console.error('goToResultFromInGame:', e);
