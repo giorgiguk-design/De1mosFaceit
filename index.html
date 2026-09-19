@@ -18505,7 +18505,7 @@ async function renderRoomContent(roomId) {
         <span class="rv-lbl">Чат</span>
         <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
     </button>
-    ${myTeam ? `
+        ${myTeam && !isDesktopTelegram() ? `
         <button class="rv-icon-btn" id="voiceBtn" onclick="voiceBtnClick(${roomId}, '${myTeam}')" title="Голос команды ${myTeam}">
             <span class="rv-ico">
                 <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
@@ -24361,8 +24361,38 @@ let voiceWidgetExpanded = false;
 // ============================================================
 // ПОДКЛЮЧЕНИЕ
 // ============================================================
+// ============================================================
+// ОПРЕДЕЛЕНИЕ ДЕСКТОПНОГО TELEGRAM / AYUGRAM
+// ============================================================
+function isDesktopTelegram() {
+    const ua = navigator.userAgent.toLowerCase();
+    
+    // Electron / WebView2 / AyuGram desktop
+    if (ua.includes('electron')) return true;
+    if (ua.includes('telegramdesktop')) return true;
+    if (ua.includes('webview2')) return true;
+    
+    // Telegram Desktop инжектит свой API
+    if (window.TelegramWebviewProxy) return true;
+    if (window.external?.notify) return true;
+    if (window.external?.receiveEvent) return true;
+    
+    // Если не мобильный UA — считаем десктопом
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(ua);
+    if (!isMobile) return true;
+    
+    return false;
+}
+
 async function joinVoiceChat(roomId, team) {
     console.log('🎤 joinVoiceChat START:', roomId, team);
+    
+    // 🔥 ЗАГЛУШКА ДЛЯ ДЕСКТОПА
+    if (isDesktopTelegram()) {
+        showToast('🎤 Голосовой чат работает только в мобильном Telegram');
+        haptic('heavy');
+        return;
+    }
     
     if (voiceRoom) {
         showToast('🎤 Ты уже в голосовом чате');
@@ -24515,36 +24545,11 @@ async function joinVoiceChat(roomId, team) {
                 console.log('✅ LiveKit: переподключено');
             });
 
-                console.log('📡 Подключаюсь к LiveKit:', data.url);
-        console.log('📡 Комната:', data.channelName);
-
-        // 🔥 Ждём публикации трека с таймаутом 15 сек
-        const pubPromise = new Promise((resolve, reject) => {
-            const timeout = setTimeout(
-                () => reject(new Error('❌ Публикация трека timeout (15 сек)')),
-                15000
-            );
-            voiceRoom.once(LivekitClient.RoomEvent.LocalTrackPublished, (pub) => {
-                clearTimeout(timeout);
-                console.log('✅ Локальный трек опубликован:', pub.trackSid, pub.kind);
-                resolve(pub);
-            });
-        });
-
         await voiceRoom.connect(data.url, data.token);
         console.log('✅ LiveKit подключён');
 
-        console.log('📤 Включаю микрофон...');
         await voiceRoom.localParticipant.setMicrophoneEnabled(true);
-        console.log('📤 Команда отправлена, жду публикации...');
-
-        try {
-            await pubPromise;
-            console.log('🎉 ВСЁ ГОТОВО — трек опубликован');
-        } catch (e) {
-            console.error('❌', e.message);
-            showToast('Не удалось опубликовать микрофон');
-        }
+        console.log('✅ Микрофон включён');
 
         voiceMuted = false;
 
