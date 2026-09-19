@@ -7746,6 +7746,49 @@ html.lite-mode * {
     0%   { box-shadow: 0 0 0 0 rgba(var(--emerald-rgb), 0.55); }
     100% { box-shadow: 0 0 0 14px rgba(var(--emerald-rgb), 0); }
 }
+
+/* ============ TELEGRAM-ГАЛОЧКИ ============ */
+.chat-check {
+    display: inline-block;
+    vertical-align: -2px;
+    margin-left: 4px;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+.chat-check-sent { color: rgba(255, 255, 255, 0.55); }
+.chat-check-read { color: #4fc3f7; }
+
+/* На моих сообщениях (зелёный фон) — контраст */
+.chat-bubble.me .chat-check-sent { color: rgba(4, 20, 14, 0.55); }
+.chat-bubble.me .chat-check-read { color: #0a2540; }
+
+/* ============ РАЗДЕЛИТЕЛЬ «НЕПРОЧИТАННЫЕ» ============ */
+.unread-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--emerald);
+    opacity: 0.85;
+    animation: fadeInScale 0.4s ease;
+}
+.unread-divider::before,
+.unread-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(var(--emerald-rgb), 0.6), transparent);
+}
+.unread-divider span {
+    padding: 3px 10px;
+    border-radius: 8px;
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid rgba(var(--emerald-rgb), 0.3);
+    white-space: nowrap;
+}
     
 </style>
 </head>
@@ -8752,6 +8795,24 @@ try {
 } catch (e) {
     console.warn('localStorage shim failed:', e);
 }
+
+            // ============================================================
+// TELEGRAM-ГАЛОЧКИ (SVG)
+// ============================================================
+// sent  — одна галочка (отправлено)
+// read  — две галочки (прочитано)
+function checkIcon(status, size = 14) {
+    if (status === 'read') {
+        return `<svg class="chat-check chat-check-read" width="${size + 4}" height="${size}" viewBox="0 0 20 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M1 8.5L4.5 12L11 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 8.5L10.5 12L17 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+    }
+    return `<svg class="chat-check chat-check-sent" width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+}
+            
         // ============================================================
         // SUPABASE CONFIG
         // ============================================================
@@ -12226,7 +12287,19 @@ container.innerHTML = items.map(it => {
             } catch (e) { console.error(e); showToast('Ошибка чата'); }
         }
 
-function closeChatView() {
+async function closeChatView() {
+    // 🔥 На выходе тоже помечаем прочитанным
+    if (currentChat?.type === 'dm') {
+        await markConversationRead(currentChat.id);
+    }
+
+    document.getElementById('chatView').classList.remove('active');
+    if (chatChannel) { sb.removeChannel(chatChannel); chatChannel = null; }
+    currentChat = null;
+    cancelReply();
+    markChatsAsRead();
+    openChatPage();
+}() {
     document.getElementById('chatView').classList.remove('active');
     if (chatChannel) { sb.removeChannel(chatChannel); chatChannel = null; }
     currentChat = null;
@@ -12235,61 +12308,121 @@ function closeChatView() {
     openChatPage();
 }
 
+        // Помечаем все входящие сообщения от партнёра прочитанными
+async function markConversationRead(partnerId) {
+    if (!currentUser || !partnerId) return;
+    try {
+        const me = currentUser.telegram_id;
+        const nowIso = new Date().toISOString();
+
+        await sb.from('messages')
+            .update({ read_at: nowIso })
+            .eq('sender_id', partnerId)
+            .eq('recipient_id', me)
+            .is('read_at', null);
+    } catch (e) {
+        console.warn('markConversationRead:', e);
+    }
+}    
+
         async function loadMessages() {
-            if (!currentChat || !currentUser) return;
-            const me = currentUser.telegram_id;
-            const container = document.getElementById('chatMessages');
+    if (!currentChat || !currentUser) return;
+    const me = currentUser.telegram_id;
+    const container = document.getElementById('chatMessages');
 
-            let query;
-            if (currentChat.type === 'club') {
-                query = sb.from('messages').select('*')
-                    .eq('club_id', currentChat.id).order('created_at', { ascending: true }).limit(200);
-            } else {
-                query = sb.from('messages').select('*')
-                    .or(`and(sender_id.eq.${me},recipient_id.eq.${currentChat.id}),and(sender_id.eq.${currentChat.id},recipient_id.eq.${me})`)
-                    .order('created_at', { ascending: true }).limit(200);
-            }
+    let query;
+    if (currentChat.type === 'club') {
+        query = sb.from('messages').select('*')
+            .eq('club_id', currentChat.id).order('created_at', { ascending: true }).limit(200);
+    } else {
+        query = sb.from('messages').select('*')
+            .or(`and(sender_id.eq.${me},recipient_id.eq.${currentChat.id}),and(sender_id.eq.${currentChat.id},recipient_id.eq.${me})`)
+            .order('created_at', { ascending: true }).limit(200);
+    }
 
-            const { data, error } = await query;
-            if (error) { console.error(error); return; }
+    const { data, error } = await query;
+    if (error) { console.error(error); return; }
 
-            const senderIds = [...new Set((data || []).map(m => m.sender_id))];
-            const { data: users } = await sb.from('users')
-                .select('telegram_id, display_name, custom_avatar, photo_url')
-                .in('telegram_id', senderIds.length ? senderIds : [0]);
-            const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+    const senderIds = [...new Set((data || []).map(m => m.sender_id))];
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url')
+        .in('telegram_id', senderIds.length ? senderIds : [0]);
+    const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
 
-            container.innerHTML = (data || []).map(m => renderBubble(m, userMap[m.sender_id], me)).join('');
-            container.scrollTop = container.scrollHeight;
-            attachBubbleHandlers();
-        }
+    // 🔥 Находим первое непрочитанное
+    let firstUnreadId = null;
+    if (currentChat.type === 'dm') {
+        const firstUnread = (data || []).find(m =>
+            m.sender_id !== me && !m.read_at
+        );
+        firstUnreadId = firstUnread?.id || null;
+    } else {
+        const firstUnread = (data || []).find(m => m.sender_id !== me);
+        firstUnreadId = firstUnread?.id || null;
+    }
 
-        function renderBubble(msg, user, me) {
-            const isMe = msg.sender_id === me;
-            const cls = isMe ? 'me' : 'them';
-            const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            const author = (!isMe && currentChat.type === 'club')
-                ? `<div class="chat-bubble-author">${escapeHtml(user?.display_name || 'Игрок')}</div>` : '';
-
-            let quote = '';
-            if (msg.reply_to_id && msg.reply_to_text) {
-                quote = `<div class="chat-quote">
-                            <div class="chat-quote-author">${escapeHtml(msg.reply_to_name || 'Игрок')}</div>
-                            <div class="chat-quote-text">${escapeHtml(msg.reply_to_text.slice(0, 80))}</div>
-                         </div>`;
-            }
-
-            let body = '';
-            if (msg.image_url) body += `<img class="chat-img" src="${msg.image_url}" onclick="event.stopPropagation();openImageView('${msg.image_url}')" alt="">`;
-            if (msg.text) body += `<div>${escapeHtml(msg.text)}</div>`;
-
-            const edited = msg.edited_at ? ' <span style="font-size:10px;opacity:0.7;">(ред.)</span>' : '';
-
-            return `<div class="chat-bubble ${cls}" data-msg-id="${msg.id}" data-sender-id="${msg.sender_id}">
-                ${quote}${author}${body}
-                <div class="chat-bubble-time">${time}${edited}${isMe ? ' <span class="chat-bubble-status">✓</span>' : ''}</div>
+    // Рисуем сообщения + вставляем разделитель
+    let html = '';
+    (data || []).forEach(m => {
+        if (firstUnreadId && m.id === firstUnreadId) {
+            html += `<div class="unread-divider" id="unreadDivider">
+                <span>Непрочитанные</span>
             </div>`;
         }
+        html += renderBubble(m, userMap[m.sender_id], me);
+    });
+
+    container.innerHTML = html;
+    attachBubbleHandlers();
+
+    // 🔥 Скролл: к разделителю или в самый низ
+    const divider = document.getElementById('unreadDivider');
+    if (divider) {
+        requestAnimationFrame(() => {
+            divider.scrollIntoView({ behavior: 'auto', block: 'start' });
+        });
+    } else {
+        container.scrollTop = container.scrollHeight;
+    }
+
+    // 🔥 Помечаем прочитанными на сервере
+    if (currentChat.type === 'dm' && firstUnreadId) {
+        await markConversationRead(currentChat.id);
+    }
+}
+
+function renderBubble(msg, user, me) {
+    const isMe = msg.sender_id === me;
+    const cls = isMe ? 'me' : 'them';
+    const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const author = (!isMe && currentChat.type === 'club')
+        ? `<div class="chat-bubble-author">${escapeHtml(user?.display_name || 'Игрок')}</div>` : '';
+
+    let quote = '';
+    if (msg.reply_to_id && msg.reply_to_text) {
+        quote = `<div class="chat-quote">
+                    <div class="chat-quote-author">${escapeHtml(msg.reply_to_name || 'Игрок')}</div>
+                    <div class="chat-quote-text">${escapeHtml(msg.reply_to_text.slice(0, 80))}</div>
+                 </div>`;
+    }
+
+    let body = '';
+    if (msg.image_url) body += `<img class="chat-img" src="${msg.image_url}" onclick="event.stopPropagation();openImageView('${msg.image_url}')" alt="">`;
+    if (msg.text) body += `<div>${escapeHtml(msg.text)}</div>`;
+
+    const edited = msg.edited_at ? ' <span style="font-size:10px;opacity:0.7;">(ред.)</span>' : '';
+
+    // 🔥 Галочки: для DM — sent/read, для клуба — без галочек
+    let statusIcon = '';
+    if (isMe && currentChat.type === 'dm') {
+        statusIcon = msg.read_at ? checkIcon('read') : checkIcon('sent');
+    }
+
+    return `<div class="chat-bubble ${cls}" data-msg-id="${msg.id}" data-sender-id="${msg.sender_id}">
+        ${quote}${author}${body}
+        <div class="chat-bubble-time">${time}${edited}${statusIcon}</div>
+    </div>`;
+}
 
         function attachBubbleHandlers() {
             document.querySelectorAll('.chat-bubble').forEach(bubble => {
@@ -12366,61 +12499,43 @@ function closeChatView() {
             if (bar) bar.classList.remove('active');
         }
 
-        async function sendMessage() {
-            if (!currentChat || !currentUser) return;
-            const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-            input.value = '';
-            try {
-                const payload = {
-                    sender_id: currentUser.telegram_id, text,
-                    club_id: currentChat.type === 'club' ? currentChat.id : null,
-                    recipient_id: currentChat.type === 'dm' ? currentChat.id : null
-                };
-                if (replyTo) {
-                    payload.reply_to_id = parseInt(replyTo.id);
-                    payload.reply_to_name = replyTo.sender_name;
-                    payload.reply_to_text = replyTo.text;
-                }
-                const { error } = await sb.from('messages').insert(payload);
-                if (error) throw error;
-                if (currentChat.type === 'dm') {
-                    notify(currentChat.id, `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`, 'message');
-                }
-                cancelReply();
-            } catch (e) { console.error(e); showToast('Ошибка отправки'); }
+async function sendMessage() {
+    if (!currentChat || !currentUser) return;
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    try {
+        const payload = {
+            sender_id: currentUser.telegram_id,
+            text,
+            club_id: currentChat.type === 'club' ? currentChat.id : null,
+            recipient_id: currentChat.type === 'dm' ? currentChat.id : null,
+            read_at: null
+        };
+        if (replyTo) {
+            payload.reply_to_id = parseInt(replyTo.id);
+            payload.reply_to_name = replyTo.sender_name;
+            payload.reply_to_text = replyTo.text;
         }
+        const { error } = await sb.from('messages').insert(payload);
+        if (error) throw error;
+        if (currentChat.type === 'dm') {
+            notify(currentChat.id, `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`, 'message');
+        }
+        cancelReply();
 
-        document.getElementById('chatInput')?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-        });
-
-        document.getElementById('chatImageInput')?.addEventListener('change', async (e) => {
-            const file = e.target.files?.[0]; e.target.value = '';
-            if (!file || !currentChat || !currentUser) return;
-            if (file.size > 10_000_000) { showToast('Макс 10MB'); return; }
-            showToast('Загрузка...');
-            try {
-                const blob = await compressImage(file, 1024, 0.85);
-                const folder = currentChat.type === 'club'
-                    ? `club_${currentChat.id}`
-                    : `dm_${[currentUser.telegram_id, currentChat.id].sort().join('_')}`;
-                const path = `${folder}/${Date.now()}_${currentUser.telegram_id}.jpg`;
-                const { error: upErr } = await sb.storage.from(BUCKETS.chat)
-                    .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-                if (upErr) throw upErr;
-                const { data: urlData } = sb.storage.from(BUCKETS.chat).getPublicUrl(path);
-                const payload = {
-                    sender_id: currentUser.telegram_id, text: null,
-                    image_url: urlData.publicUrl,
-                    club_id: currentChat.type === 'club' ? currentChat.id : null,
-                    recipient_id: currentChat.type === 'dm' ? currentChat.id : null
-                };
-                const { error } = await sb.from('messages').insert(payload);
-                if (error) throw error;
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        });
+        // 🔥 После ответа — убираем разделитель «Непрочитанные»
+        const divider = document.getElementById('unreadDivider');
+        if (divider) {
+            divider.style.transition = 'opacity 0.3s ease, height 0.3s ease, margin 0.3s ease';
+            divider.style.opacity = '0';
+            divider.style.height = '0';
+            divider.style.margin = '0';
+            setTimeout(() => divider.remove(), 300);
+        }
+    } catch (e) { console.error(e); showToast('Ошибка отправки'); }
+}
 
         function openImageView(url) {
             const overlay = document.createElement('div');
@@ -12430,37 +12545,61 @@ function closeChatView() {
             document.body.appendChild(overlay);
         }
 
-        function subscribeChatRealtime() {
-            if (!currentChat) return;
-            if (chatChannel) sb.removeChannel(chatChannel);
-            const me = currentUser.telegram_id;
-            chatChannel = sb.channel('chat_' + currentChat.type + '_' + currentChat.id)
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-                    const m = payload.new;
-                    if (currentChat.type === 'club') { if (m.club_id !== currentChat.id) return; }
-                    else {
-                        const isForMe = m.recipient_id === me && m.sender_id === currentChat.id;
-                        const isFromMe = m.sender_id === me && m.recipient_id === currentChat.id;
-                        if (!isForMe && !isFromMe) return;
-                    }
-                    appendMessage(m);
-                }).subscribe();
-        }
+function subscribeChatRealtime() {
+    if (!currentChat) return;
+    if (chatChannel) sb.removeChannel(chatChannel);
+    const me = currentUser.telegram_id;
 
-        async function appendMessage(m) {
-            const container = document.getElementById('chatMessages');
-            if (!container) return;
-            let user = null;
-            if (m.sender_id !== currentUser.telegram_id) {
-                const { data } = await sb.from('users')
-                    .select('telegram_id, display_name, custom_avatar, photo_url')
-                    .eq('telegram_id', m.sender_id).single();
-                user = data;
+    chatChannel = sb.channel('chat_' + currentChat.type + '_' + currentChat.id)
+        // ==== INSERT: пришло новое сообщение ====
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+            const m = payload.new;
+            if (currentChat.type === 'club') { if (m.club_id !== currentChat.id) return; }
+            else {
+                const isForMe = m.recipient_id === me && m.sender_id === currentChat.id;
+                const isFromMe = m.sender_id === me && m.recipient_id === currentChat.id;
+                if (!isForMe && !isFromMe) return;
             }
-            container.insertAdjacentHTML('beforeend', renderBubble(m, user, currentUser.telegram_id));
-            container.scrollTop = container.scrollHeight;
-            attachBubbleHandlers();
-        }
+            appendMessage(m);
+        })
+        // ==== UPDATE: прочитано → у отправителя две галочки ====
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+            const m = payload.new;
+            if (!m || m.sender_id !== me) return;
+            const myMsg = document.querySelector(`.chat-bubble[data-msg-id="${m.id}"]`);
+            if (!myMsg) return;
+            const statusWrap = myMsg.querySelector('.chat-bubble-time');
+            if (!statusWrap) return;
+
+            statusWrap.querySelectorAll('.chat-check').forEach(el => el.remove());
+            if (m.read_at) {
+                statusWrap.insertAdjacentHTML('beforeend', checkIcon('read'));
+            } else {
+                statusWrap.insertAdjacentHTML('beforeend', checkIcon('sent'));
+            }
+        })
+        .subscribe();
+}
+
+async function appendMessage(m) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    let user = null;
+    if (m.sender_id !== currentUser.telegram_id) {
+        const { data } = await sb.from('users')
+            .select('telegram_id, display_name, custom_avatar, photo_url')
+            .eq('telegram_id', m.sender_id).single();
+        user = data;
+    }
+    container.insertAdjacentHTML('beforeend', renderBubble(m, user, currentUser.telegram_id));
+    container.scrollTop = container.scrollHeight;
+    attachBubbleHandlers();
+
+    // 🔥 Если чат открыт и пришло от собеседника — сразу read
+    if (currentChat?.type === 'dm' && m.sender_id === currentChat.id) {
+        await markConversationRead(currentChat.id);
+    }
+}
 
         function openMsgMenu(msgId, senderId) {
             currentMsgMenuId = msgId;
@@ -20031,7 +20170,14 @@ const { data: unreadMsgs } = await sb.from('messages')
 
 async function updateNotifBadge() {
     const list = await loadNotifications();
-    const count = list.length;
+
+    // 🔥 Показываем только те, что новее notifSeenAt
+    let seenAt = 0;
+    try { seenAt = new Date(localStorage.getItem('notifSeenAt') || 0).getTime(); } catch (e) {}
+
+    const fresh = list.filter(n => new Date(n.time).getTime() > seenAt);
+    const count = fresh.length;
+
     const btn = document.getElementById('notifBtn');
     const badge = document.getElementById('notifBadge');
     if (!btn || !badge) return;
@@ -20050,6 +20196,22 @@ async function openNotificationsSheet() {
     document.getElementById('sheetOverlay').classList.add('active');
     document.getElementById('notifSheet').classList.add('active');
     await renderNotifList();
+
+    // 🔥 Через 800мс — сбрасываем бейдж (пользователь «увидел» уведомления)
+    setTimeout(() => {
+        markAllNotificationsSeen();
+        const badge = document.getElementById('notifBadge');
+        const btn = document.getElementById('notifBtn');
+        if (badge) badge.style.display = 'none';
+        if (btn) btn.classList.remove('has-notif');
+    }, 800);
+}
+
+// Сбрасываем счётчик уведомлений (запоминаем время просмотра)
+function markAllNotificationsSeen() {
+    try {
+        localStorage.setItem('notifSeenAt', new Date().toISOString());
+    } catch (e) {}
 }
 
 async function renderNotifList() {
