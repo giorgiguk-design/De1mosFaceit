@@ -16859,11 +16859,10 @@ function updateTeamZoneDOM(content, team, list, perTeamCount, room, iAmReady, my
         }
     }
 
-    // 4. Plus-кнопка / статус
-    // Удаляем старый plus/status
-    const oldPlus = zone.querySelector('.tz-plus, [data-plus-status]');
-    if (oldPlus) oldPlus.remove();
+    // 🔥 ФИКС: удаляем ВСЕ старые plus/status элементы
+    zone.querySelectorAll('.tz-plus, [data-plus-status]').forEach(el => el.remove());
 
+    // 4. Plus-кнопка / статус — добавляем одну
     let plusHTML = '';
     if (!full && !isMyTeam && !iAmReady) {
         plusHTML = `
@@ -16884,9 +16883,10 @@ function updateTeamZoneDOM(content, team, list, perTeamCount, room, iAmReady, my
             </div>
         `;
     }
+
     if (plusHTML) zone.insertAdjacentHTML('beforeend', plusHTML);
 
-    // 5. Обновляем onClick для зоны (только если надо)
+    // 5. onClick для зоны
     const clickable = !full && !isMyTeam;
     if (clickable) {
         zone.setAttribute('onclick', `chooseTeam(${room.id}, '${team}')`);
