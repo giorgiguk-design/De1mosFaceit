@@ -31,7 +31,7 @@
 <link rel="preconnect" href="https://ksmuopoasgzyromdjtnt.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://ksmuopoasgzyromdjtnt.supabase.co">
 <!-- Telegram SDK — официальный CDN -->
-<script src="./telegram-web-app.js" onerror="console.warn('Telegram SDK не загрузился');"></script>
+<script src="https://telegram.org/js/telegram-web-app.js" onerror="console.warn('Telegram SDK не загрузился');"></script>
 
 <!-- Supabase — тоже лучше скачать локально, но CDN обычно работает -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -9993,11 +9993,40 @@ function getDXP(user) {
     console.warn('⚠️ Supabase не загружен при старте скрипта');
 }
 
-        // tg может быть undefined, если SDK не загрузился
-const tg = window.Telegram?.WebApp || null;
+// ============================================================
+// TG SDK — расширенная инициализация (mobile + desktop + AyuGram)
+// ============================================================
+let tg = window.Telegram?.WebApp || null;
 
-// Пытаемся инициализировать, если доступен
-if (tg) {
+// Иногда SDK грузится позже — подождём
+if (!tg) {
+    try {
+        // Пробуем найти в window через некоторое время
+        let _tgAttempts = 0;
+        const _tgTimer = setInterval(() => {
+            _tgAttempts++;
+            if (window.Telegram?.WebApp) {
+                tg = window.Telegram.WebApp;
+                clearInterval(_tgTimer);
+                try { tg.ready(); tg.expand(); } catch (e) {}
+                // Перезапускаем инициализацию
+                if (typeof init === 'function' && !window._initDone) {
+                    window._initDone = true;
+                    init();
+                }
+            } else if (_tgAttempts > 50) {
+                clearInterval(_tgTimer);
+                console.warn('⚠️ Telegram SDK так и не загрузился');
+                if (typeof init === 'function' && !window._initDone) {
+                    window._initDone = true;
+                    init();
+                }
+            }
+        }, 100);
+    } catch (e) {
+        console.warn('tg wait failed:', e);
+    }
+} else {
     try {
         tg.ready();
         tg.expand();
@@ -10766,7 +10795,20 @@ function getModeConfig(mode) {
 function needPerTeam(mode) { return getModeConfig(mode).perTeam; }
 function maxPlayers(mode)  { return getModeConfig(mode).maxPlayers; }
 
-        function haptic(style = 'light') { try { tg?.HapticFeedback?.impactOccurred(style); } catch (e) {} }
+        function haptic(style = 'light') {
+    try {
+        // Мобильный Telegram
+        if (tg?.HapticFeedback?.impactOccurred) {
+            tg.HapticFeedback.impactOccurred(style);
+            return;
+        }
+        // Web версия / десктоп — Vibration API
+        if (navigator.vibrate) {
+            const map = { light: 10, medium: 20, heavy: 30, rigid: 15, soft: 8 };
+            navigator.vibrate(map[style] || 10);
+        }
+    } catch (e) {}
+}
         function escapeHtml(str) {
             return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
@@ -10867,11 +10909,49 @@ async function notify(telegramId, text, type = null) {
         // ============================================================
         // INIT
         // ============================================================
-        async function init() {
-    // Пытаемся получить пользователя из Telegram
+async function init() {
+    // Защита от повторного вызова
+    if (window._initDone) return;
+    window._initDone = true;
+
+    // ============================================================
+    // ПОЛУЧАЕМ ПОЛЬЗОВАТЕЛЯ — 3 СПОСОБА
+    // ============================================================
     let user = tg?.initDataUnsafe?.user;
 
-    // Dev-режим (через ?dev=1)
+    // Способ 2: парсим initData вручную (для AyuGram / desktop)
+    if (!user && tg?.initData) {
+        try {
+            const params = new URLSearchParams(tg.initData);
+            const userRaw = params.get('user');
+            if (userRaw) {
+                user = JSON.parse(userRaw);
+                console.log('✅ User получен через initData parse:', user);
+            }
+        } catch (e) {
+            console.warn('initData parse failed:', e);
+        }
+    }
+
+    // Способ 3: пробуем из хеша URL (deep-link)
+    if (!user && location.hash.includes('tgWebAppData')) {
+        try {
+            const hash = location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            const userRaw = params.get('tgWebAppData');
+            if (userRaw) {
+                const decoded = decodeURIComponent(userRaw);
+                const innerParams = new URLSearchParams(decoded);
+                const u = innerParams.get('user');
+                if (u) user = JSON.parse(u);
+                console.log('✅ User получен через hash:', user);
+            }
+        } catch (e) {
+            console.warn('hash parse failed:', e);
+        }
+    }
+
+    // Способ 4: Dev-режим
     if (!user && (location.hostname === 'localhost' || location.search.includes('dev=1'))) {
         const params = new URLSearchParams(location.search);
         const devId = Number(params.get('id')) || 999999999;
@@ -10880,22 +10960,27 @@ async function notify(telegramId, text, type = null) {
         console.warn('⚠️ DEV MODE', user);
     }
 
-    // 🔥 ГЛАВНОЕ: НЕ выходим, если tg нет. Пробуем работать в ограниченном режиме.
+    // ============================================================
+    // ЕСЛИ ЮЗЕРА НЕТ — ПОКАЗЫВАЕМ ЗАГЛУШКУ
+    // ============================================================
     if (!user) {
-        console.warn('⚠️ Telegram SDK не загрузился или пользователь не найден');
+        console.warn('⚠️ Не удалось получить пользователя');
 
-        // Показываем заглушку
+        const isDesktop = !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         const container = document.getElementById('profileContent');
+
         if (container) {
             container.innerHTML = `
                 <div class="profile-hero" style="text-align:center; padding: 40px 20px;">
-                    <div style="font-size: 64px; margin-bottom: 16px;">📡</div>
+                    <div style="font-size: 64px; margin-bottom: 16px;">${isDesktop ? '💻' : '📡'}</div>
                     <div style="font-size: 18px; font-weight: 800; margin-bottom: 10px;">
-                        Нет соединения
+                        ${isDesktop ? 'Открой с телефона' : 'Нет соединения'}
                     </div>
                     <div style="font-size: 13px; color: var(--hint); line-height: 1.6; margin-bottom: 20px;">
-                        Не удалось загрузить Telegram SDK.<br>
-                        Проверь интернет и перезапусти приложение.
+                        ${isDesktop
+                            ? 'De1mos Faceit работает как <b>Telegram Mini App</b>.<br>Открой через официальный клиент Telegram на смартфоне.'
+                            : 'Не удалось загрузить Telegram SDK.<br>Проверь интернет и перезапусти приложение.'
+                        }
                     </div>
                     <button onclick="location.reload()" style="
                         padding: 12px 28px;
@@ -10912,26 +10997,14 @@ async function notify(telegramId, text, type = null) {
             `;
         }
 
-        // Пытаемся перезагрузить страницу один раз через 3 секунды
-        setTimeout(() => {
-            if (!tg?.initDataUnsafe?.user) {
-                console.warn('Повторная попытка загрузки Telegram SDK...');
-                const script = document.createElement('script');
-                script.src = './telegram-web-app.js';
-                script.onload = () => {
-                    console.log('SDK загружен со второй попытки');
-                    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-                        location.reload();
-                    }
-                };
-                document.head.appendChild(script);
-            }
-        }, 3000);
-
         return;
     }
 
-    // Дальше — основная логика (та же, что была)
+    console.log('✅ init() запущен с user:', user);
+
+    // ============================================================
+    // ДАЛЬШЕ — ОСНОВНАЯ ЛОГИКА (без изменений)
+    // ============================================================
     try {
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
@@ -11002,13 +11075,11 @@ async function notify(telegramId, text, type = null) {
         updateChatsBadge();
         subscribeChatsRealtime();
         subscribeDxpHistoryRealtime();
-        // 🔥 НОВЫЕ:
         subscribeUsersRealtime();
         subscribeFriendshipsRealtime();
         subscribeClubsRealtime();
         subscribeMatchesHistoryRealtime();
         subscribeMessagesListRealtime();
-        // Уже есть в файле, если не вызывались — раскомментируй:
         if (typeof subscribePartyInvitesRealtime === 'function') subscribePartyInvitesRealtime();
         if (typeof subscribeClubInvitesRealtime === 'function') subscribeClubInvitesRealtime();
 
@@ -11017,7 +11088,7 @@ async function notify(telegramId, text, type = null) {
             openOnboarding();
         }
 
-        // Автoочистка
+        // Автоочистка
         cleanupStaleRooms();
         setInterval(cleanupStaleRooms, 60000);
 
@@ -23778,22 +23849,40 @@ async function updatePlayBtnSub() {
 // ============================================================
 // BOOT (safe — ждём, пока Supabase загрузится)
 // ============================================================
+// ============================================================
+// BOOT — ждём Supabase И Telegram SDK
+// ============================================================
+let _bootAttempts = 0;
+let _bootDone = false;
+
 function safeBoot() {
-    if (typeof window.supabase === 'undefined' || !window.supabase?.createClient) {
-        console.warn('⏳ Supabase ещё не загрузился, ждём...');
+    if (_bootDone) return true;
+
+    const sbReady = typeof window.supabase !== 'undefined' && window.supabase?.createClient;
+    const tgReady = !!window.Telegram?.WebApp;
+
+    if (!sbReady) {
+        console.warn('⏳ Supabase ещё не загрузился...');
         return false;
     }
+
+    // Supabase готов — запускаем
+    _bootDone = true;
+    console.log('🚀 Запуск приложения. TG SDK:', tgReady ? 'есть' : 'нет');
+
+    // Если TG уже есть — init сразу
+    // Если нет — init всё равно (init умеет ждать tg внутри)
     init();
     return true;
 }
 
+// Пытаемся сразу
 if (!safeBoot()) {
-    let _bootAttempts = 0;
     const _bootTimer = setInterval(() => {
         _bootAttempts++;
         if (safeBoot() || _bootAttempts > 50) {
             clearInterval(_bootTimer);
-            if (_bootAttempts > 50) {
+            if (_bootAttempts > 50 && !_bootDone) {
                 document.body.innerHTML = `
                     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
                                 min-height:100vh;text-align:center;padding:30px;background:#050807;color:#e6f5ee;font-family:sans-serif;">
@@ -23818,6 +23907,16 @@ if (!safeBoot()) {
 registerInterval('notifBadge', setInterval(() => {
     if (isAppVisible && currentUser) updateNotifBadge();
 }, 45000));
+
+// ============================================================
+// ДОП. ВЫЗОВ INIT — если SDK Telegram загрузился позже
+// ============================================================
+if (window.Telegram?.WebApp && !window._initDone) {
+    setTimeout(() => {
+        console.log('🔄 Повторный вызов init (SDK подгрузился позже)');
+        init();
+    }, 300);
+}
 
             // ============================================================
 // СКРИНШОТ МАТЧА — обработчик (через делегирование, надёжно)
