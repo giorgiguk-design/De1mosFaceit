@@ -24446,13 +24446,16 @@ async function joinVoiceChat(roomId, team) {
         voiceRoomId = roomId;
         voiceTeam = team;
 
-                voiceRoom = new LivekitClient.Room({
+                        voiceRoom = new LivekitClient.Room({
             adaptiveStream: true,
             dynacast: true,
-            // 🔥 Форсируем TURN, если UDP не проходит
             rtcConfig: {
-    iceTransportPolicy: 'relay',  // только TURN, обход UDP
-},
+                iceTransportPolicy: 'relay',
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                ],
+            },
             audioCaptureDefaults: {
                 echoCancellation: true,
                 noiseSuppression: true,
@@ -24507,7 +24510,7 @@ async function joinVoiceChat(roomId, team) {
             .on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
                 track.detach().forEach(el => el.remove());
             })
-            .on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (speakers) => {
+                        .on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (speakers) => {
                 const ids = speakers.map(s => s.identity);
                 document.querySelectorAll('.vw-participant').forEach(el => {
                     el.classList.toggle('speaking', ids.includes(el.dataset.identity));
@@ -24515,16 +24518,30 @@ async function joinVoiceChat(roomId, team) {
             })
             .on(LivekitClient.RoomEvent.Disconnected, () => {
                 cleanupVoiceState();
+            })
+            .on(LivekitClient.RoomEvent.LocalTrackPublished, (pub) => {
+                console.log('✅ Локальный трек опубликован:', pub.trackSid, pub.kind);
+            })
+            .on(LivekitClient.RoomEvent.LocalTrackUnpublished, (pub) => {
+                console.warn('⚠️ Локальный трек снят:', pub.trackSid);
+            })
+            .on(LivekitClient.RoomEvent.Reconnecting, () => {
+                console.warn('🔄 LiveKit: переподключение...');
+            })
+            .on(LivekitClient.RoomEvent.Reconnected, () => {
+                console.log('✅ LiveKit: переподключено');
             });
 
         console.log('📡 Подключаюсь к LiveKit:', data.url);
         console.log('📡 Комната:', data.channelName);
         
-        await voiceRoom.connect(data.url, data.token);
+               await voiceRoom.connect(data.url, data.token);
         console.log('✅ LiveKit подключён');
         
-        await voiceRoom.localParticipant.setMicrophoneEnabled(true);
-        console.log('✅ Микрофон включён в LiveKit');
+        // 🔥 ВРЕМЕННО: не включаем микрофон — только подключаемся
+        console.log('⏸️ Микрофон НЕ включаем (тест соединения)');
+        // await voiceRoom.localParticipant.setMicrophoneEnabled(true);
+        // console.log('✅ Микрофон включён в LiveKit');
         voiceMuted = false;
 
         renderVoiceWidget();
