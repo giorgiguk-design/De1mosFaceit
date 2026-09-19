@@ -13150,6 +13150,8 @@ async function askJoinRoom(partyId) {
 // REALTIME — список открытых комнат (play-screen)
 // ============================================================
 let playRoomsChannel = null;
+let _refreshRoomsTimer = null;
+let _pendingRoomIds = new Set();
 
 function subscribePlayRoomsRealtime() {
     if (playRoomsChannel) sb.removeChannel(playRoomsChannel);
@@ -13163,14 +13165,16 @@ function subscribePlayRoomsRealtime() {
             if (currentPlayRoomId) return;
             if (roomChatOpen) return;
 
-            // Если комната не в текущем режиме — не дёргаем
             const changedRoom = payload.new || payload.old;
             if (changedRoom && changedRoom.mode && changedRoom.mode !== selectedMode) {
                 return;
             }
 
-            // 🔥 Точечное обновление — только список карточек
-            refreshPlayRoomsList();
+            // 🔥 Дебаунс 400мс
+            clearTimeout(_refreshRoomsTimer);
+            _refreshRoomsTimer = setTimeout(() => {
+                loadPlayRooms();
+            }, 400);
         })
         .on('postgres_changes', {
             event: '*', schema: 'public', table: 'room_players'
@@ -13180,25 +13184,28 @@ function subscribePlayRoomsRealtime() {
             if (currentPlayRoomId) return;
             if (roomChatOpen) return;
 
-            // Точечное — обновляем только затронутую комнату, если знаем какая
-            refreshPlayRoomsList();
+            // 🔥 Дебаунс 400мс
+            clearTimeout(_refreshRoomsTimer);
+            _refreshRoomsTimer = setTimeout(() => {
+                loadPlayRooms();
+            }, 400);
         })
         .subscribe((status) => console.log('📡 play_rooms_rt status:', status));
 }
 
-// Точечное обновление списка комнат (с дебаунсом, чтобы не спамить)
-let _refreshRoomsTimer = null;
 function refreshPlayRoomsList() {
     clearTimeout(_refreshRoomsTimer);
     _refreshRoomsTimer = setTimeout(() => {
         loadPlayRooms();
-    }, 150);
+    }, 400);
 }
+
 function unsubscribePlayRoomsRealtime() {
     if (playRoomsChannel) {
         sb.removeChannel(playRoomsChannel);
         playRoomsChannel = null;
     }
+    clearTimeout(_refreshRoomsTimer);
 }
 
         // ============================================================
@@ -16313,6 +16320,23 @@ function openStandoffLink(url) {
 
 function renderPlayList() {
     const content = document.getElementById('playScreenContent');
+    if (!content) return;
+
+    // 🔥 Если скелет уже есть — обновляем только активный режим и не трогаем список
+    const hasSkeleton = content.querySelector('#playRoomsList');
+    if (hasSkeleton) {
+        // Обновляем только активную карточку режима
+        content.querySelectorAll('.mode-selector .mode-card').forEach(card => {
+            const onclick = card.getAttribute('onclick') || '';
+            const isActive = onclick.includes(`'${selectedMode}'`);
+            card.classList.toggle('active', isActive);
+        });
+        // Перезагружаем список с новым режимом
+        loadPlayRooms();
+        return;
+    }
+
+    // Первый рендер — собираем скелет
     content.innerHTML = `
         <div class="play-hero-compact">
             <div class="phc-icon">
@@ -16404,7 +16428,7 @@ async function loadPlayRooms() {
     if (!container) return;
 
     // Шиммеры — только если список совсем пустой
-    if (!container.querySelector('.play-room-card') && !container.querySelector('.empty-rooms')) {
+    if (!container.querySelector('.play-room-card') && !container.querySelector('.loading-shimmer')) {
         container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
     }
 
@@ -16414,12 +16438,15 @@ async function loadPlayRooms() {
             .select('*')
             .eq('status', 'open')
             .eq('mode', selectedMode)
-            .order('created_at', { ascending: false });   // ← новые сверху
+            .order('created_at', { ascending: false });
         if (error) throw error;
+
+        const container2 = container;
 
         // === Нет комнат ===
         if (!rooms || rooms.length === 0) {
-            const existing = container.querySelectorAll('.play-room-card');
+            container2.querySelectorAll('.loading-shimmer').forEach(el => el.remove());
+            const existing = container2.querySelectorAll('.play-room-card');
             if (existing.length) {
                 existing.forEach(el => {
                     el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -16427,7 +16454,7 @@ async function loadPlayRooms() {
                     el.style.transform = 'scale(0.95)';
                 });
                 setTimeout(() => {
-                    container.innerHTML = `
+                    container2.innerHTML = `
                         <div class="empty-rooms">
                             <span class="er-icon">🎯</span>
                             Открытых комнат нет.<br>
@@ -16435,8 +16462,8 @@ async function loadPlayRooms() {
                         </div>
                     `;
                 }, 300);
-            } else {
-                container.innerHTML = `
+            } else if (!container2.querySelector('.empty-rooms')) {
+                container2.innerHTML = `
                     <div class="empty-rooms">
                         <span class="er-icon">🎯</span>
                         Открытых комнат нет.<br>
@@ -16470,33 +16497,24 @@ async function loadPlayRooms() {
         const myRoom = (players || []).find(p => String(p.telegram_id) === String(currentUser.telegram_id));
         const amInSomeRoom = !!myRoom;
 
-        // === Собираем все карточки в правильном порядке ===
-        const existingCards = {};
-        container.querySelectorAll('.play-room-card').forEach(card => {
-            existingCards[card.dataset.roomId] = card;
-        });
-
-        // Убираем заглушку, если была
-        const emptyEl = container.querySelector('.empty-rooms');
+        // Убираем шиммеры и заглушку
+        container2.querySelectorAll('.loading-shimmer').forEach(el => el.remove());
+        const emptyEl = container2.querySelector('.empty-rooms');
         if (emptyEl) emptyEl.remove();
 
-        // Удаляем карточки, которых больше нет
         const newIds = new Set(rooms.map(r => String(r.id)));
-        Object.keys(existingCards).forEach(cardId => {
-            if (!newIds.has(cardId)) {
-                const card = existingCards[cardId];
+
+        // === 1. Удаляем карточки, которых больше нет ===
+        container2.querySelectorAll('.play-room-card').forEach(card => {
+            if (!newIds.has(card.dataset.roomId)) {
                 card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 card.style.opacity = '0';
                 card.style.transform = 'translateX(-20px) scale(0.95)';
                 setTimeout(() => card.remove(), 300);
-                delete existingCards[cardId];
             }
         });
 
-        // Создаём DocumentFragment с карточками в правильном порядке
-        const fragment = document.createDocumentFragment();
-        const seenIds = new Set();
-
+        // === 2. Обновляем/создаём карточки ===
         rooms.forEach((room, index) => {
             const inRoom = byRoom[room.id] || [];
             const readyCount = inRoom.filter(p => p.is_ready).length;
@@ -16545,80 +16563,99 @@ async function loadPlayRooms() {
                 </div>
             `;
 
-            const existing = existingCards[String(room.id)];
+            const existing = container2.querySelector(`.play-room-card[data-room-id="${room.id}"]`);
 
             if (existing) {
-                // === Существующая карточка — точечно обновляем содержимое ===
-                const oldCountText = existing.querySelector('[data-count]')?.textContent.trim();
-                const newCountText = `${count}/${room.max_players}`;
-                const countChanged = oldCountText && oldCountText !== newCountText;
+                // === ТОЧЕЧНОЕ ОБНОВЛЕНИЕ существующей карточки ===
 
-                // Обновляем счётчик (с анимацией)
+                // 1. Счётчик
                 const countEl = existing.querySelector('[data-count]');
-                if (countEl && countChanged) {
-                    countEl.innerHTML = `${count}<small>/${room.max_players}</small>`;
-                    countEl.classList.add('prc-count-bump');
-                    setTimeout(() => countEl.classList.remove('prc-count-bump'), 500);
+                if (countEl) {
+                    const oldCount = countEl.textContent.trim().split('/')[0];
+                    if (oldCount !== String(count)) {
+                        countEl.innerHTML = `${count}<small>/${room.max_players}</small>`;
+                        countEl.classList.remove('prc-count-bump');
+                        void countEl.offsetWidth;
+                        countEl.classList.add('prc-count-bump');
+                        setTimeout(() => countEl.classList.remove('prc-count-bump'), 500);
+                    }
                 }
 
-                // Прогресс
+                // 2. Прогресс
                 const progressEl = existing.querySelector('[data-progress]');
                 if (progressEl) progressEl.style.width = `${progress}%`;
 
-                // Action-кнопка
+                // 3. Action-кнопка (только если текст реально изменился)
                 const oldAction = existing.querySelector('.prc-action');
                 if (oldAction) {
                     const tmp = document.createElement('div');
                     tmp.innerHTML = actionHTML;
                     const newAction = tmp.querySelector('.prc-action');
-                    if (newAction && oldAction.outerHTML !== newAction.outerHTML) {
+                    if (newAction && oldAction.outerHTML.trim() !== newAction.outerHTML.trim()) {
                         oldAction.replaceWith(newAction);
                     }
                 }
 
-                // Аватар / имя лидера (на случай смены)
-                const oldAvatar = existing.querySelector('.prc-avatar');
+                // 4. Имя/аватар лидера (только если поменялись)
                 const oldName = existing.querySelector('.prc-name');
-                if (oldAvatar) {
-                    const tmp = document.createElement('div');
-                    tmp.innerHTML = newInnerHTML;
-                    const newAvatar = tmp.querySelector('.prc-avatar');
-                    if (newAvatar) oldAvatar.innerHTML = newAvatar.innerHTML;
-                }
                 if (oldName) {
                     const tmp = document.createElement('div');
                     tmp.innerHTML = newInnerHTML;
                     const newName = tmp.querySelector('.prc-name');
-                    if (newName) oldName.innerHTML = newName.innerHTML;
+                    if (newName && oldName.innerHTML.trim() !== newName.innerHTML.trim()) {
+                        oldName.innerHTML = newName.innerHTML;
+                    }
+                }
+                const oldAvatar = existing.querySelector('.prc-avatar');
+                if (oldAvatar) {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = newInnerHTML;
+                    const newAvatar = tmp.querySelector('.prc-avatar');
+                    if (newAvatar && oldAvatar.innerHTML.trim() !== newAvatar.innerHTML.trim()) {
+                        oldAvatar.innerHTML = newAvatar.innerHTML;
+                    }
                 }
 
-                // 🔥 ВАЖНО: добавляем существующую карточку в fragment — она встанет в правильном порядке
-                fragment.appendChild(existing);
-                seenIds.add(String(room.id));
+                // 🔥 НЕ трогаем position — карточка остаётся на месте
             } else {
-                // === Новая карточка — создаём с анимацией появления ===
+                // === НОВАЯ карточка — создаём в правильном порядке ===
                 const card = document.createElement('div');
                 card.className = 'play-room-card play-room-card-enter';
                 card.dataset.roomId = String(room.id);
                 card.onclick = () => openRoomInfoPreview(room.id);
                 card.innerHTML = newInnerHTML;
-                fragment.appendChild(card);
-                seenIds.add(String(room.id));
+
+                // Вставляем в правильное место по индексу
+                const existingCards = container2.querySelectorAll('.play-room-card');
+                if (existingCards[index]) {
+                    container2.insertBefore(card, existingCards[index]);
+                } else {
+                    container2.appendChild(card);
+                }
 
                 setTimeout(() => card.classList.remove('play-room-card-enter'), 600);
             }
         });
 
-        // 🔥 Очищаем контейнер и вставляем пересобранные карточки в правильном порядке
-        // (никаких "прыжков" — только правильная сортировка)
-        container.innerHTML = '';
-        container.appendChild(fragment);
+        // === 3. Переупорядочиваем карточки, если порядок изменился ===
+        const orderedIds = rooms.map(r => String(r.id));
+        orderedIds.forEach((id, idx) => {
+            const card = container2.querySelector(`.play-room-card[data-room-id="${id}"]`);
+            if (!card) return;
+            const currentIdx = Array.from(container2.children).indexOf(card);
+            if (currentIdx !== idx) {
+                const refNode = container2.children[idx] || null;
+                if (refNode !== card) {
+                    container2.insertBefore(card, refNode);
+                }
+            }
+        });
 
     } catch (e) {
         console.error('Load rooms error:', e);
-        const container2 = document.getElementById('playRoomsList');
-        if (container2 && !container2.querySelector('.play-room-card')) {
-            container2.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${escapeHtml(e.message)}</div>`;
+        const c = document.getElementById('playRoomsList');
+        if (c && !c.querySelector('.play-room-card')) {
+            c.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${escapeHtml(e.message)}</div>`;
         }
     }
 }
@@ -16770,6 +16807,127 @@ async function openRoomView(roomId) {
     subscribeRoomRealtime(roomId);
 }
 
+            // Точечное обновление team-zone (без пересоздания всей карточки)
+function updateTeamZoneDOM(content, team, list, perTeamCount, room, iAmReady, myTeam, userById) {
+    const zone = content.querySelector(`.team-zone.team-${team.toLowerCase()}`);
+    if (!zone) return;
+
+    const isMyTeam = myTeam === team;
+    const full = list.length >= perTeamCount;
+
+    // 1. Активный класс
+    zone.classList.toggle('active', isMyTeam);
+    zone.classList.toggle('full', full);
+
+    // 2. Счётчик
+    const countEl = zone.querySelector('.tz-count');
+    if (countEl) {
+        const newCount = `${list.length}/${perTeamCount}`;
+        if (countEl.textContent !== newCount) countEl.textContent = newCount;
+    }
+
+    // 3. Игроки
+    const playersEl = zone.querySelector('.tz-players');
+    if (playersEl) {
+        const newHTML = list.length === 0
+            ? `<div class="tz-empty">Пусто — нажми, чтобы войти</div>`
+            : list.map(p => {
+                const u = userById[p.telegram_id] || {};
+                const av = renderAvatar(u);
+                const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
+                const isHost = String(p.telegram_id) === String(room.leader_id);
+                const uElo = u.elo ?? 1000;
+                const lvl = eloToLevel(uElo);
+                return `
+                    <div class="tz-player ${isMe ? 'you' : ''}"
+                         onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
+                        <div class="tz-avatar">${av}</div>
+                        <div class="tz-info">
+                            <div class="tz-name">
+                        ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
+                        ${isHost ? '👑' : ''}
+                                ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
+                            </div>
+                            <div class="tz-stats">⚡ ${lvl} ур. · ${uElo} DXP</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        if (playersEl.innerHTML.trim() !== newHTML.trim()) {
+            playersEl.innerHTML = newHTML;
+        }
+    }
+
+    // 4. Plus-кнопка / статус
+    // Удаляем старый plus/status
+    const oldPlus = zone.querySelector('.tz-plus, [data-plus-status]');
+    if (oldPlus) oldPlus.remove();
+
+    let plusHTML = '';
+    if (!full && !isMyTeam && !iAmReady) {
+        plusHTML = `
+            <button class="tz-plus team-${team.toLowerCase()}" onclick="event.stopPropagation(); chooseTeam(${room.id}, '${team}')">
+                ➕ Войти в ${team}
+            </button>
+        `;
+    } else if (isMyTeam && iAmReady) {
+        plusHTML = `
+            <div data-plus-status style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--emerald); font-weight: 800; letter-spacing: 0.5px;">
+                ✓ ТЫ В ЭТОЙ КОМАНДЕ
+            </div>
+        `;
+    } else if (full) {
+        plusHTML = `
+            <div data-plus-status style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--hint); font-weight: 700; letter-spacing: 0.5px;">
+                КОМАНДА ЗАПОЛНЕНА
+            </div>
+        `;
+    }
+    if (plusHTML) zone.insertAdjacentHTML('beforeend', plusHTML);
+
+    // 5. Обновляем onClick для зоны (только если надо)
+    const clickable = !full && !isMyTeam;
+    if (clickable) {
+        zone.setAttribute('onclick', `chooseTeam(${room.id}, '${team}')`);
+    } else {
+        zone.removeAttribute('onclick');
+    }
+}
+
+// Точечное обновление списка зрителей
+function updateSpectatorsDOM(content, spectators, userById, mode) {
+    const oldContainer = content.querySelector('.spectators-container');
+    const oldLabel = content.querySelector('.spectators-label');
+
+    if (spectators.length === 0 || mode === '1x1') {
+        if (oldContainer) oldContainer.remove();
+        if (oldLabel) oldLabel.remove();
+        return;
+    }
+
+    const newHTML = spectators.map(s => {
+        const u = userById[s.telegram_id] || {};
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        const av = src
+            ? `<img src="${src}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
+            : `<span style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #04140e;">${initial}</span>`;
+        return `
+            <div class="spectator-chip" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; font-weight: 600;">
+                ${av}
+                <span>${escapeHtml(u.display_name || 'Игрок')}</span>
+            </div>
+        `;
+    }).join('');
+
+    if (oldContainer) {
+        if (oldContainer.innerHTML.trim() !== newHTML.trim()) {
+            oldContainer.innerHTML = newHTML;
+        }
+    }
+}
+
 async function renderRoomContent(roomId) {
     const content = document.getElementById('playScreenContent');
     if (!content) return;
@@ -16778,67 +16936,54 @@ async function renderRoomContent(roomId) {
         const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
         const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
 
-if (!room) {
-    // Комнаты нет — гасим и чистим
-    activeRoomId = null;
-    hideActiveRoomBanner();
-    const indicator = document.getElementById('headerRoomIndicator');
-    if (indicator) indicator.style.display = 'none';
-    const enterFloat = document.getElementById('playEnterFloat');
-    if (enterFloat) enterFloat.classList.remove('active');
+        if (!room) {
+            activeRoomId = null;
+            hideActiveRoomBanner();
+            const indicator = document.getElementById('headerRoomIndicator');
+            if (indicator) indicator.style.display = 'none';
+            const enterFloat = document.getElementById('playEnterFloat');
+            if (enterFloat) enterFloat.classList.remove('active');
 
-    try {
-        await sb.from('room_players').delete()
-            .eq('telegram_id', currentUser.telegram_id);
-    } catch (e) {}
+            try {
+                await sb.from('room_players').delete()
+                    .eq('telegram_id', currentUser.telegram_id);
+            } catch (e) {}
 
-    closePlayScreen();
-    showToast('Комната больше не существует');
-    return;
-}
+            closePlayScreen();
+            showToast('Комната больше не существует');
+            return;
+        }
 
-if (room.status === 'cancelled') {
-    showCancelledOnce(roomId);
-    return;
-}
-if (room.status === 'veto' || room.status === 'side_pick') {
-    const { data: match } = await sb.from('game_matches')
-        .select('*').eq('room_id', roomId)
-        .order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (match) {
-        currentMatch = match;
-        showVetoScreen();
-        subscribeVetoRealtime(match.id);
-        subscribeMatchRealtime();
-    }
-    return;
-}
-if (room.status === 'waiting_link') {
-    showWaitingLinkScreen(roomId, room);
-    return;
-}
-if (room.status === 'in_game') {
-    const { data: match } = await sb.from('game_matches')
-        .select('*').eq('room_id', roomId)
-        .order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (match) {
-        currentMatch = match;
-        subscribeMatchRealtime();
-    }
-    showInGameScreen(roomId, room);
-    return;
-}
-if (room.status === 'result') {
-    const { data: match } = await sb.from('game_matches')
-        .select('*').eq('room_id', roomId)
-        .order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (match) {
-        currentMatch = match;
-        showResultScreen();
-        subscribeMatchRealtime();
-    }
-    return;
-}
+        // Перенаправления по статусу — как было
+        if (room.status === 'cancelled') { showCancelledOnce(roomId); return; }
+        if (room.status === 'veto' || room.status === 'side_pick') {
+            const { data: match } = await sb.from('game_matches')
+                .select('*').eq('room_id', roomId)
+                .order('created_at', { ascending: false }).limit(1).maybeSingle();
+            if (match) {
+                currentMatch = match;
+                showVetoScreen();
+                subscribeMatchRealtime();
+            }
+            return;
+        }
+        if (room.status === 'waiting_link') { showWaitingLinkScreen(roomId, room); return; }
+        if (room.status === 'in_game') {
+            const { data: match } = await sb.from('game_matches')
+                .select('*').eq('room_id', roomId)
+                .order('created_at', { ascending: false }).limit(1).maybeSingle();
+            if (match) currentMatch = match;
+            showInGameScreen(roomId, room);
+            return;
+        }
+        if (room.status === 'result') {
+            const { data: match } = await sb.from('game_matches')
+                .select('*').eq('room_id', roomId)
+                .order('created_at', { ascending: false }).limit(1).maybeSingle();
+            if (match) currentMatch = match;
+            showResultScreen();
+            return;
+        }
 
         const playerIds = (players || []).map(p => p.telegram_id);
         let users = [];
@@ -16862,33 +17007,77 @@ if (room.status === 'result') {
 
         const perTeamCount = needPerTeam(room.mode);
         const totalReady = teamA.length + teamB.length;
-const canStart = teamA.length >= perTeamCount && teamB.length >= perTeamCount;
-const teamAFull = teamA.length >= perTeamCount;
-const teamBFull = teamB.length >= perTeamCount;
+        const canStart = teamA.length >= perTeamCount && teamB.length >= perTeamCount;
+        const teamAFull = teamA.length >= perTeamCount;
+        const teamBFull = teamB.length >= perTeamCount;
 
-        // Рендер игрока в team-zone
+        // 🔥 ЕСЛИ скелет уже есть для этой комнаты — точечное обновление
+        const skeletonExists = content.dataset.roomId === String(roomId)
+                            && content.querySelector('.team-zones');
+
+        if (skeletonExists) {
+            // 1. Заголовок
+            const metaEl = content.querySelector('.rv-meta');
+            if (metaEl) {
+                metaEl.innerHTML = `
+                    <span class="rv-meta-badge">${room.mode}</span>
+                    <span>${totalReady}/${room.max_players} игроков</span>
+                    ${iAmLeader ? '<span class="rv-meta-badge gold">👑 ХОСТ</span>' : ''}
+                `;
+            }
+
+            // 2. Team A
+            updateTeamZoneDOM(content, 'A', teamA, perTeamCount, room, iAmReady, myTeam, userById);
+
+            // 3. Team B
+            updateTeamZoneDOM(content, 'B', teamB, perTeamCount, room, iAmReady, myTeam, userById);
+
+            // 4. Кнопка старта (только текст меняется)
+            const launchBtn = content.querySelector('.room-launch-btn');
+            if (launchBtn && iAmLeader) {
+                const newText = canStart ? 'ЗАПУСТИТЬ МАТЧ' : 'ОЖИДАНИЕ ИГРОКОВ';
+                const textEl = launchBtn.querySelector('.rlb-text');
+                if (textEl && textEl.textContent !== newText) {
+                    textEl.textContent = newText;
+                    launchBtn.classList.toggle('ready', canStart);
+                    launchBtn.classList.toggle('waiting', !canStart);
+                    launchBtn.disabled = !canStart;
+                }
+            }
+
+            // 5. Зрители
+            updateSpectatorsDOM(content, spectators, userById, room.mode);
+
+            // 6. Бейдж чата
+            setTimeout(() => updateRoomChatButton(room.id), 100);
+            return;
+        }
+
+        // === ПЕРВЫЙ РЕНДЕР — полный HTML ===
+        content.dataset.roomId = String(roomId);
+
         const renderTZPlayer = (p, teamSide) => {
-    const u = userById[p.telegram_id] || {};
-    const av = renderAvatar(u);
-    const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
-    const isHost = String(p.telegram_id) === String(room.leader_id);
-    const uElo = u.elo ?? 1000;
-    const lvl = eloToLevel(uElo);
-    return `
-        <div class="tz-player ${isMe ? 'you' : ''}"
-             onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
-            <div class="tz-avatar">${av}</div>
-            <div class="tz-info">
-                <div class="tz-name">
-            ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
-            ${isHost ? '👑' : ''}
-                    ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
+            const u = userById[p.telegram_id] || {};
+            const av = renderAvatar(u);
+            const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
+            const isHost = String(p.telegram_id) === String(room.leader_id);
+            const uElo = u.elo ?? 1000;
+            const lvl = eloToLevel(uElo);
+            return `
+                <div class="tz-player ${isMe ? 'you' : ''}"
+                     onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
+                    <div class="tz-avatar">${av}</div>
+                    <div class="tz-info">
+                        <div class="tz-name">
+                    ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
+                    ${isHost ? '👑' : ''}
+                            ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
+                        </div>
+                        <div class="tz-stats">⚡ ${lvl} ур. · ${uElo} DXP</div>
+                    </div>
                 </div>
-                <div class="tz-stats">⚡ ${lvl} ур. · ${uElo} DXP</div>
-            </div>
-        </div>
-    `;
-};
+            `;
+        };
 
         const renderTeamZone = (team, list, full) => {
             const isMyTeam = myTeam === team;
@@ -16925,9 +17114,7 @@ const teamBFull = teamB.length >= perTeamCount;
             }
 
             const clickable = !full && !isMyTeam;
-            const clickAttr = clickable
-                ? `onclick="chooseTeam(${room.id}, '${team}')"`
-                : '';
+            const clickAttr = clickable ? `onclick="chooseTeam(${room.id}, '${team}')"` : '';
 
             return `
                 <div class="${cls}" ${clickAttr}>
@@ -16975,7 +17162,7 @@ const teamBFull = teamB.length >= perTeamCount;
 
             ${spectators.length > 0 && room.mode !== '1x1' ? `
     <div class="play-section-label">Зрители (${spectators.length})</div>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
+                <div class="spectators-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
                     ${spectators.map(s => {
                         const u = userById[s.telegram_id] || {};
                         const src = u.custom_avatar || u.photo_url;
@@ -16984,7 +17171,7 @@ const teamBFull = teamB.length >= perTeamCount;
                             ? `<img src="${src}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">`
                             : `<span style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #04140e;">${initial}</span>`;
                         return `
-                            <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; font-weight: 600;">
+                            <div class="spectator-chip" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 20px; font-size: 11px; font-weight: 600;">
                                 ${av}
                                 <span>${escapeHtml(u.display_name || 'Игрок')}</span>
                             </div>
@@ -17065,6 +17252,7 @@ const teamBFull = teamB.length >= perTeamCount;
             ` : ''}
         `;
 
+        // 🔥 Подписка на чат — ТОЛЬКО при первом рендере (не при каждом обновлении)
         setTimeout(() => updateRoomChatButton(room.id), 100);
         subscribeRoomChatCounter(roomId);
     } catch (e) {
@@ -17129,6 +17317,7 @@ const bDisabled = me?.team === 'B' || teamBCount >= perTeamCount;
 // REALTIME ПОДПИСКА НА КОМНАТУ
 // ============================================================
 let roomRealtimeChannel = null;
+let _roomRenderTimer = null;
 
 function subscribeRoomRealtime(roomId) {
     if (roomRealtimeChannel) sb.removeChannel(roomRealtimeChannel);
@@ -17185,7 +17374,7 @@ function subscribeRoomRealtime(roomId) {
                 if (match) {
                     currentMatch = match;
                     showVetoScreen();
-                    subscribeMatchRealtime();  // ← ЕДИНСТВЕННАЯ подписка
+                    subscribeMatchRealtime();
                 }
                 return;
             }
@@ -17209,7 +17398,6 @@ function subscribeRoomRealtime(roomId) {
                     .limit(1).maybeSingle();
                 if (match) currentMatch = match;
                 showInGameScreen(roomId, room);
-                subscribeMatchRealtime();
                 return;
             }
 
@@ -17221,7 +17409,6 @@ function subscribeRoomRealtime(roomId) {
                     .limit(1).maybeSingle();
                 if (match) currentMatch = match;
                 showResultScreen();
-                subscribeMatchRealtime();
                 return;
             }
 
@@ -17232,7 +17419,11 @@ function subscribeRoomRealtime(roomId) {
             }
 
             if (room.status === 'open') {
-                await renderRoomContent(roomId);
+                // 🔥 Дебаунс — не дёргаем на каждое событие
+                clearTimeout(_roomRenderTimer);
+                _roomRenderTimer = setTimeout(() => {
+                    renderRoomContent(roomId);
+                }, 250);
             }
         })
         .on('postgres_changes', {
@@ -17246,10 +17437,14 @@ function subscribeRoomRealtime(roomId) {
 
             if (room.status === 'open') {
                 await checkTeamsReady(roomId, room);
-                await renderRoomContent(roomId);
+
+                // 🔥 Дебаунс — не дёргаем на каждое событие
+                clearTimeout(_roomRenderTimer);
+                _roomRenderTimer = setTimeout(() => {
+                    renderRoomContent(roomId);
+                }, 250);
             }
         })
-        // 🔥 УБРАЛИ подписку на game_matches — её делает subscribeMatchRealtime()
         .subscribe((status) => {
             console.log('Room realtime status:', status);
         });
@@ -17260,6 +17455,7 @@ function unsubscribeRoomRealtime() {
         sb.removeChannel(roomRealtimeChannel);
         roomRealtimeChannel = null;
     }
+    clearTimeout(_roomRenderTimer);
 }
 
 async function checkTeamsReady(roomId, room) {
@@ -19721,7 +19917,16 @@ function subscribeRoomChat(roomId) {
 }
 
 function subscribeRoomChatCounter(roomId) {
-    if (window._roomChatCounterChannel) sb.removeChannel(window._roomChatCounterChannel);
+    // 🔥 Если уже подписаны на эту же комнату — не трогаем
+    if (window._roomChatCounterChannel && window._roomChatCounterRoomId === roomId) {
+        return;
+    }
+
+    if (window._roomChatCounterChannel) {
+        sb.removeChannel(window._roomChatCounterChannel);
+    }
+
+    window._roomChatCounterRoomId = roomId;
     window._roomChatCounterChannel = sb.channel('room_chat_counter_' + roomId)
         .on('postgres_changes', {
             event: 'INSERT',
@@ -19735,7 +19940,6 @@ function subscribeRoomChatCounter(roomId) {
 
             roomUnreadCount++;
 
-            // 🔥 Обновляем только бейдж, текст кнопки не трогаем
             const badge = document.getElementById('roomChatBadge');
             const btn = document.getElementById('roomChatBtn');
 
@@ -19749,7 +19953,6 @@ function subscribeRoomChatCounter(roomId) {
         })
         .subscribe();
 }
-
 // ============================================================
 // LITE MODE (для слабых устройств)
 // ============================================================
