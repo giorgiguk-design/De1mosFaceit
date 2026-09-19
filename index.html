@@ -24446,24 +24446,7 @@ async function joinVoiceChat(roomId, team) {
         voiceRoomId = roomId;
         voiceTeam = team;
 
-                        voiceRoom = new LivekitClient.Room({
-            adaptiveStream: true,
-            dynacast: true,
-            rtcConfig: {
-                iceTransportPolicy: 'relay',
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                ],
-            },
-            audioCaptureDefaults: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-            },
-        });
-
-                voiceRoom = new LivekitClient.Room({
+        voiceRoom = new LivekitClient.Room({
             adaptiveStream: true,
             dynacast: true,
             rtcConfig: {
@@ -24532,16 +24515,37 @@ async function joinVoiceChat(roomId, team) {
                 console.log('✅ LiveKit: переподключено');
             });
 
-        console.log('📡 Подключаюсь к LiveKit:', data.url);
+                console.log('📡 Подключаюсь к LiveKit:', data.url);
         console.log('📡 Комната:', data.channelName);
-        
-               await voiceRoom.connect(data.url, data.token);
+
+        // 🔥 Ждём публикации трека с таймаутом 15 сек
+        const pubPromise = new Promise((resolve, reject) => {
+            const timeout = setTimeout(
+                () => reject(new Error('❌ Публикация трека timeout (15 сек)')),
+                15000
+            );
+            voiceRoom.once(LivekitClient.RoomEvent.LocalTrackPublished, (pub) => {
+                clearTimeout(timeout);
+                console.log('✅ Локальный трек опубликован:', pub.trackSid, pub.kind);
+                resolve(pub);
+            });
+        });
+
+        await voiceRoom.connect(data.url, data.token);
         console.log('✅ LiveKit подключён');
-        
-        // 🔥 ВРЕМЕННО: не включаем микрофон — только подключаемся
-        console.log('⏸️ Микрофон НЕ включаем (тест соединения)');
-        // await voiceRoom.localParticipant.setMicrophoneEnabled(true);
-        // console.log('✅ Микрофон включён в LiveKit');
+
+        console.log('📤 Включаю микрофон...');
+        await voiceRoom.localParticipant.setMicrophoneEnabled(true);
+        console.log('📤 Команда отправлена, жду публикации...');
+
+        try {
+            await pubPromise;
+            console.log('🎉 ВСЁ ГОТОВО — трек опубликован');
+        } catch (e) {
+            console.error('❌', e.message);
+            showToast('Не удалось опубликовать микрофон');
+        }
+
         voiceMuted = false;
 
         renderVoiceWidget();
