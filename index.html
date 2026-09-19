@@ -8544,85 +8544,368 @@ html.lite-mode .dlm-mvp .mvp-icon {
     min-width: 0;
 }
 
-    /* ============ ГОЛОСОВОЙ ЧАТ ============ */
-.rv-icon-btn#voiceBtn.active {
-    background: linear-gradient(160deg, rgba(0, 224, 138, 0.25), rgba(0, 224, 138, 0.05));
-    border-color: var(--emerald);
-    box-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.5), inset 0 0 12px rgba(var(--emerald-rgb), 0.15);
-    animation: voiceActivePulse 2.5s ease-in-out infinite;
-}
-.rv-icon-btn#voiceBtn.muted {
-    background: linear-gradient(160deg, rgba(255, 84, 112, 0.15), rgba(255, 84, 112, 0.03));
-    border-color: rgba(255, 84, 112, 0.6);
-}
-@keyframes voiceActivePulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.5), inset 0 0 12px rgba(var(--emerald-rgb), 0.15); }
-    50%      { box-shadow: 0 0 32px rgba(var(--emerald-rgb), 0.8), inset 0 0 16px rgba(var(--emerald-rgb), 0.25); }
+/* ============================================================
+   🎤 ГОЛОСОВОЙ ВИДЖЕТ (floating)
+   ============================================================ */
+
+/* ---- СВЁРНУТЫЙ (маленькая плашка) ---- */
+.voice-widget {
+    position: fixed;
+    z-index: 9999;
+    font-family: inherit;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.25s ease;
 }
 
-.voice-participants-panel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 12px 0 14px;
-    padding: 12px;
-    background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.05) 0%, rgba(0, 0, 0, 0.35) 100%);
-    border: 1px solid var(--border-strong);
-    border-radius: 14px;
+.voice-widget-compact {
+    right: 14px;
+    bottom: 100px;
+    width: 56px;
+    height: 56px;
+    animation: voiceWidgetIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.voice-participant {
+
+@keyframes voiceWidgetIn {
+    from { opacity: 0; transform: scale(0.5) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.vw-collapsed-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,
+        rgba(var(--team-rgb), 0.95),
+        rgba(var(--team-rgb), 0.7));
+    border: 2px solid var(--team-color);
+    box-shadow:
+        0 4px 20px rgba(var(--team-rgb), 0.5),
+        0 0 40px rgba(var(--team-rgb), 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    animation: voicePulse 2.5s ease-in-out infinite;
+    transition: transform 0.2s ease;
+}
+
+.vw-collapsed-btn:active {
+    transform: scale(0.9);
+}
+
+@keyframes voicePulse {
+    0%, 100% {
+        box-shadow: 0 4px 20px rgba(var(--team-rgb), 0.5),
+                    0 0 40px rgba(var(--team-rgb), 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    50% {
+        box-shadow: 0 4px 28px rgba(var(--team-rgb), 0.8),
+                    0 0 60px rgba(var(--team-rgb), 0.5),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+}
+
+.vw-mic-icon {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.vw-team-badge {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    border: 2px solid var(--bg);
+    z-index: 2;
+}
+
+.vw-team-A {
+    background: var(--emerald);
+    color: #04140e;
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.7);
+}
+
+.vw-team-B {
+    background: #ff5470;
+    color: #fff;
+    box-shadow: 0 0 12px rgba(255, 84, 112, 0.7);
+}
+
+.vw-count {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: #0a1612;
+    border: 2px solid var(--team-color);
+    color: var(--team-color);
+    font-size: 11px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+/* ---- РАЗВЁРНУТЫЙ ---- */
+.voice-widget-expanded {
+    right: 14px;
+    bottom: 100px;
+    width: 260px;
+    max-width: calc(100vw - 28px);
+    background: linear-gradient(160deg,
+        rgba(10, 20, 16, 0.98),
+        rgba(5, 10, 8, 0.98));
+    border: 1px solid var(--team-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.6),
+        0 0 60px rgba(var(--team-rgb), 0.25);
+    animation: voiceWidgetExpand 0.35s cubic-bezier(0.34, 1.3, 0.64, 1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+@keyframes voiceWidgetExpand {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.voice-widget-expanded::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--team-color), transparent);
+    opacity: 0.9;
+}
+
+.vw-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px 6px 6px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(var(--emerald-rgb), 0.25);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text);
-    transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-    max-width: 180px;
-}
-.voice-participant.speaking {
-    border-color: var(--emerald);
-    background: rgba(var(--emerald-rgb), 0.12);
-    box-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.5);
-    transform: scale(1.03);
-}
-.voice-participant.muted { opacity: 0.55; border-color: rgba(255, 84, 112, 0.4); }
-
-.vp-avatar {
+    padding: 10px 12px;
+    background: rgba(var(--team-rgb), 0.08);
+    border-bottom: 1px solid rgba(var(--team-rgb), 0.2);
     position: relative;
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 900; color: #04140e;
-    flex-shrink: 0;
 }
-.vp-pulse {
-    position: absolute;
-    inset: -4px;
+
+.vw-header .vw-team-badge {
+    position: static;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+}
+
+.vw-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--team-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vw-close-btn {
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    border: 2px solid var(--emerald);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--hint);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.vw-close-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.vw-close-btn:active {
+    transform: scale(0.85);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.vw-participants {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vw-participant {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vw-participant.speaking {
+    background: rgba(var(--team-rgb), 0.15);
+    box-shadow: 0 0 12px rgba(var(--team-rgb), 0.4);
+}
+
+.vw-participant.muted {
+    opacity: 0.55;
+}
+
+.vw-avatar {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--team-color), rgba(var(--team-rgb), 0.6));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 900;
+    color: #04140e;
+}
+
+.vw-participant.muted .vw-avatar {
+    background: linear-gradient(135deg, #666, #444);
+    color: #ccc;
+}
+
+.vw-pulse {
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 2px solid var(--team-color);
     opacity: 0;
     pointer-events: none;
 }
-.voice-participant.speaking .vp-pulse {
+
+.vw-participant.speaking .vw-pulse {
     opacity: 1;
     animation: vpPulse 1.4s ease-out infinite;
 }
+
 @keyframes vpPulse {
     0%   { transform: scale(0.9); opacity: 0.9; }
     100% { transform: scale(1.5); opacity: 0; }
 }
-.vp-name {
-    flex: 1; min-width: 0;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: 11.5px;
+
+.vw-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 700;
+    font-size: 12px;
 }
-.vp-muted { font-size: 12px; flex-shrink: 0; }
+
+.vw-mic-on,
+.vw-mic-off {
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.vw-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vw-btn {
+    padding: 9px 8px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    border: 1px solid rgba(var(--team-rgb), 0.4);
+    background: rgba(var(--team-rgb), 0.12);
+    color: var(--team-color);
+    transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.vw-btn:active {
+    transform: scale(0.95);
+}
+
+.vw-btn.muted {
+    background: rgba(255, 84, 112, 0.15);
+    border-color: rgba(255, 84, 112, 0.5);
+    color: var(--red);
+}
+
+.vw-btn.danger {
+    background: rgba(255, 84, 112, 0.1);
+    border-color: rgba(255, 84, 112, 0.4);
+    color: var(--red);
+}
+
+/* Адаптив для маленьких экранов */
+@media (max-width: 380px) {
+    .voice-widget-expanded {
+        width: calc(100vw - 20px);
+        right: 10px;
+        bottom: 90px;
+    }
+    .voice-widget-compact {
+        right: 10px;
+        bottom: 90px;
+        width: 50px;
+        height: 50px;
+    }
+    .vw-collapsed-btn {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Lite-режим */
+html.lite-mode .voice-widget-compact .vw-collapsed-btn {
+    animation: none !important;
+}
+html.lite-mode .voice-widget-expanded {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
     
 </style>
 </head>
@@ -9758,15 +10041,6 @@ function clearResultShown() {
 }
 
         let myParty = null;
-        // ============================================================
-        // ГОЛОСОВОЙ ЧАТ
-        // ============================================================
-        let voiceRoom = null;
-        let voiceRoomId = null;
-        let voiceParticipants = {};
-        let voiceMuted = false;
-        let voiceAudioContext = null;
-        let voiceAnalyzers = {};
         let selectedMode = '5x5';
         let searchTimer = null;
         let searchTickInterval = null;
@@ -18160,16 +18434,18 @@ async function renderRoomContent(roomId) {
         <span class="rv-lbl">Чат</span>
         <span class="rv-badge" id="roomChatBadge" style="display:none;">0</span>
     </button>
-        <button class="rv-icon-btn" id="voiceBtn" onclick="voiceBtnClick(${roomId})" title="Голосовой чат">
-        <span class="rv-ico">
-            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
-                <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
-                <path d="M12 18v4M8 22h8"/>
-            </svg>
-        </span>
-        <span class="rv-lbl">Голос</span>
-    </button>
+    ${myTeam ? `
+        <button class="rv-icon-btn" id="voiceBtn" onclick="voiceBtnClick(${roomId}, '${myTeam}')" title="Голос команды ${myTeam}">
+            <span class="rv-ico">
+                <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                    <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                    <path d="M12 18v4M8 22h8"/>
+                </svg>
+            </span>
+            <span class="rv-lbl">Голос ${myTeam}</span>
+        </button>
+    ` : ''}
     <button class="rv-icon-btn" onclick="openChangeTeamSheet(${roomId})" title="Сменить команду">
         <span class="rv-ico">
             <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
@@ -18187,7 +18463,6 @@ async function renderRoomContent(roomId) {
         </span>
         <span class="rv-lbl">Выйти</span>
     </button>
-        <div id="voiceParticipants" class="voice-participants-panel" style="display:none;"></div>
     ${iAmLeader ? `
         <button class="rv-icon-btn danger" onclick="closeRoom(${roomId})" title="Закрыть">
             <span class="rv-ico">
@@ -18227,7 +18502,6 @@ async function renderRoomContent(roomId) {
         console.error('Room view error:', e);
         content.innerHTML = `<div class="empty-rooms" style="color: var(--red);">Ошибка: ${e.message}</div>`;
     }
-}
 
 async function openChangeTeamSheet(roomId) {
             const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
@@ -24006,14 +24280,41 @@ async function renderDashLastMatch(userId) {
     }
 }   
 
-            // ============================================================
-// 🎤 ГОЛОСОВОЙ ЧАТ
+// ============================================================
+// 🎤 ГОЛОСОВОЙ ЧАТ v2 — команды A/B, компактный виджет
 // ============================================================
 
-async function joinVoiceChat(roomId) {
-    if (voiceRoom) { showToast('🎤 Ты уже в голосовом чате'); return; }
+let voiceRoom = null;
+let voiceRoomId = null;
+let voiceTeam = null;
+let voiceParticipants = {};
+let voiceMuted = false;
+let voiceWidgetExpanded = false;
+let voiceWidgetHidden = false;
+
+// ============================================================
+// ПОДКЛЮЧЕНИЕ
+// ============================================================
+async function joinVoiceChat(roomId, team) {
+    if (voiceRoom) {
+        showToast('🎤 Ты уже в голосовом чате');
+        return;
+    }
     if (typeof LivekitClient === 'undefined') {
         showToast('❌ Голосовой модуль не загружен');
+        return;
+    }
+
+    // Проверяем что игрок в команде
+    const me = Number(currentUser.telegram_id);
+    const { data: myPlayer } = await sb.from('room_players')
+        .select('team, is_ready')
+        .eq('room_id', roomId)
+        .eq('telegram_id', me)
+        .maybeSingle();
+
+    if (!myPlayer || myPlayer.team !== team) {
+        showToast(`Ты не в команде ${team}`);
         return;
     }
 
@@ -24029,7 +24330,8 @@ async function joinVoiceChat(roomId) {
             },
             body: JSON.stringify({
                 roomId: Number(roomId),
-                telegramId: Number(currentUser.telegram_id),
+                team,
+                telegramId: me,
                 displayName: currentUser.display_name || 'Игрок',
             }),
         });
@@ -24038,6 +24340,8 @@ async function joinVoiceChat(roomId) {
         if (!res.ok || data.error) throw new Error(data.error || 'Ошибка токена');
 
         voiceRoomId = roomId;
+        voiceTeam = team;
+
         voiceRoom = new LivekitClient.Room({
             adaptiveStream: true,
             dynacast: true,
@@ -24051,12 +24355,12 @@ async function joinVoiceChat(roomId) {
         voiceRoom
             .on(LivekitClient.RoomEvent.ParticipantConnected, (p) => {
                 voiceParticipants[p.identity] = p;
-                renderVoiceParticipants();
-                showToast(`🎤 ${p.name || p.identity} подключился`);
+                updateVoiceWidget();
+                showToast(`🎤 ${p.name || 'Игрок'} подключился`);
             })
             .on(LivekitClient.RoomEvent.ParticipantDisconnected, (p) => {
                 delete voiceParticipants[p.identity];
-                renderVoiceParticipants();
+                updateVoiceWidget();
             })
             .on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, p) => {
                 if (track.kind !== LivekitClient.Track.Kind.Audio) return;
@@ -24065,173 +24369,540 @@ async function joinVoiceChat(roomId) {
                 el.autoplay = true;
                 el.style.display = 'none';
                 document.body.appendChild(el);
-                renderVoiceParticipants();
+                updateVoiceWidget();
             })
             .on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
                 track.detach().forEach(el => el.remove());
             })
             .on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (speakers) => {
                 const ids = speakers.map(s => s.identity);
-                document.querySelectorAll('.voice-participant').forEach(el => {
+                document.querySelectorAll('.vw-participant').forEach(el => {
                     el.classList.toggle('speaking', ids.includes(el.dataset.identity));
                 });
             })
             .on(LivekitClient.RoomEvent.Disconnected, () => {
-                voiceRoom = null;
-                voiceRoomId = null;
-                voiceParticipants = {};
-                updateVoiceButtonUI(false);
-                removeVoiceParticipantsPanel();
+                cleanupVoiceState();
             });
 
         await voiceRoom.connect(data.url, data.token);
         await voiceRoom.localParticipant.setMicrophoneEnabled(true);
         voiceMuted = false;
 
-        updateVoiceButtonUI(true);
-        renderVoiceParticipants();
+        renderVoiceWidget();
         haptic('medium');
-        showToast('🎤 Голосовой чат подключён');
+        showToast(`🎤 Голосовой чат команды ${team}`);
     } catch (e) {
         console.error('joinVoiceChat:', e);
         showToast('❌ ' + (e.message || 'Ошибка'));
-        voiceRoom = null;
-        voiceRoomId = null;
+        cleanupVoiceState();
     }
 }
 
+// ============================================================
+// ОТКЛЮЧЕНИЕ
+// ============================================================
 async function leaveVoiceChat() {
     if (!voiceRoom) return;
     try {
         await voiceRoom.disconnect();
-        if (voiceRoomId) {
-            try {
-                await sb.from('voice_participants')
-                    .update({ left_at: new Date().toISOString() })
-                    .eq('telegram_id', currentUser.telegram_id);
-            } catch (e) {}
-        }
-        voiceRoom = null;
-        voiceRoomId = null;
-        voiceParticipants = {};
-        voiceAnalyzers = {};
-        updateVoiceButtonUI(false);
-        removeVoiceParticipantsPanel();
-        showToast('🔇 Отключился');
     } catch (e) {}
+
+    if (voiceRoomId) {
+        try {
+            await sb.from('voice_participants')
+                .update({ left_at: new Date().toISOString() })
+                .eq('telegram_id', currentUser.telegram_id)
+                .is('left_at', null);
+        } catch (e) {}
+    }
+
+    cleanupVoiceState();
+    showToast('🔇 Отключился');
 }
 
+function cleanupVoiceState() {
+    // Отключаем все audio-элементы
+    document.querySelectorAll('[id^="voice-audio-"]').forEach(el => el.remove());
+
+    voiceRoom = null;
+    voiceRoomId = null;
+    voiceTeam = null;
+    voiceParticipants = {};
+    voiceMuted = false;
+    voiceWidgetExpanded = false;
+
+    const w = document.getElementById('voiceWidget');
+    if (w) w.remove();
+}
+
+// ============================================================
+// MUTE
+// ============================================================
 async function toggleVoiceMute() {
     if (!voiceRoom) return;
     voiceMuted = !voiceMuted;
     try {
         await voiceRoom.localParticipant.setMicrophoneEnabled(!voiceMuted);
-        if (voiceRoomId) {
-            await sb.from('voice_participants')
-                .update({ muted: voiceMuted })
-                .eq('telegram_id', currentUser.telegram_id)
-                .is('left_at', null);
-        }
-        updateVoiceButtonUI(true);
-        renderVoiceParticipants();
-        showToast(voiceMuted ? '🔇 Выкл' : '🎤 Вкл');
+        updateVoiceWidget();
+        showToast(voiceMuted ? '🔇 Микрофон выключен' : '🎤 Микрофон включён');
     } catch (e) {}
 }
 
-async function voiceBtnClick(roomId) {
-    if (voiceRoom) {
-        showVoiceMenu();
-    } else {
-        await joinVoiceChat(roomId);
-    }
-}
-
-function showVoiceMenu() {
-    const old = document.getElementById('voiceMenuOverlay');
-    if (old) old.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'sheet-overlay active';
-    overlay.id = 'voiceMenuOverlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="sheet active" style="z-index: 850;">
-            <div class="sheet-title">🎤 Голосовой чат</div>
-            <button class="sheet-option" onclick="toggleVoiceMute(); document.getElementById('voiceMenuOverlay').remove();">
-                <span style="font-size: 18px;">${voiceMuted ? '🎤' : '🔇'}</span>
-                ${voiceMuted ? 'Включить микрофон' : 'Выключить микрофон'}
-            </button>
-            <button class="sheet-option danger" onclick="leaveVoiceChat(); document.getElementById('voiceMenuOverlay').remove();">
-                <span style="font-size: 18px;">📴</span>
-                Отключиться
-            </button>
-            <button class="sheet-cancel" onclick="document.getElementById('voiceMenuOverlay').remove()">ОТМЕНА</button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-}
-
-function updateVoiceButtonUI(connected) {
-    const btn = document.getElementById('voiceBtn');
-    if (!btn) return;
-    btn.classList.toggle('active', connected);
-    btn.classList.toggle('muted', connected && voiceMuted);
-    const label = btn.querySelector('.rv-lbl');
-    if (label) label.textContent = connected ? (voiceMuted ? 'Mute' : 'Голос') : 'Голос';
-}
-
-function renderVoiceParticipants() {
-    const container = document.getElementById('voiceParticipants');
-    if (!container) return;
-
-    const list = Object.values(voiceParticipants);
-    if (list.length === 0 && !voiceRoom) {
-        container.innerHTML = '';
-        container.style.display = 'none';
+// ============================================================
+// ПЛАВАЮЩИЙ ВИДЖЕТ
+// ============================================================
+function renderVoiceWidget() {
+    if (!voiceRoom) {
+        const existing = document.getElementById('voiceWidget');
+        if (existing) existing.remove();
         return;
     }
 
-    container.style.display = 'flex';
+    let widget = document.getElementById('voiceWidget');
 
-    const me = voiceRoom?.localParticipant;
+    if (!widget) {
+        widget = document.createElement('div');
+        widget.id = 'voiceWidget';
+        widget.className = 'voice-widget';
+        document.body.appendChild(widget);
+    }
+
+    updateVoiceWidget();
+}
+
+function updateVoiceWidget() {
+    const widget = document.getElementById('voiceWidget');
+    if (!widget || !voiceRoom) return;
+
+    const team = voiceTeam;
+    const teamColor = team === 'A' ? 'var(--emerald)' : '#ff5470';
+    const teamColorRgb = team === 'A' ? 'var(--emerald-rgb)' : '255, 84, 112';
+
+    // Собираем участников
+    const me = voiceRoom.localParticipant;
     const all = [];
-    if (me) all.push({ p: me, isMe: true });
-    list.forEach(p => all.push({ p, isMe: false }));
 
-    container.innerHTML = all.map(({ p, isMe }) => {
-        const identity = p.identity;
-        const initial = (p.name || 'U')[0].toUpperCase();
-        const isMuted = isMe ? voiceMuted : !p.isMicrophoneEnabled;
-        return `
-            <div class="voice-participant ${isMuted ? 'muted' : ''}" data-identity="${identity}">
-                <div class="vp-avatar">
-                    <span>${initial}</span>
-                    <div class="vp-pulse"></div>
-                </div>
-                <div class="vp-name">${escapeHtml(p.name || 'Игрок')}${isMe ? ' (ты)' : ''}</div>
-                ${isMuted ? '<div class="vp-muted">🔇</div>' : ''}
-            </div>
+    if (me) {
+        all.push({
+            identity: me.identity,
+            name: me.name || 'Ты',
+            isMe: true,
+            muted: voiceMuted,
+        });
+    }
+
+    Object.values(voiceParticipants).forEach(p => {
+        all.push({
+            identity: p.identity,
+            name: p.name || 'Игрок',
+            isMe: false,
+            muted: !p.isMicrophoneEnabled,
+        });
+    });
+
+    const count = all.length;
+
+    // Компактный виджет
+    if (!voiceWidgetExpanded) {
+        widget.className = 'voice-widget voice-widget-compact';
+        widget.style.setProperty('--team-color', teamColor);
+        widget.style.setProperty('--team-rgb', teamColorRgb);
+
+        widget.innerHTML = `
+            <button class="vw-collapsed-btn" onclick="expandVoiceWidget(event)">
+                <div class="vw-team-badge vw-team-${team}">${team}</div>
+                <svg class="vw-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                    <path d="M12 18v4M8 22h8"/>
+                </svg>
+                <span class="vw-count">${count}</span>
+            </button>
         `;
-    }).join('');
+        return;
+    }
+
+    // Развёрнутый виджет
+    widget.className = 'voice-widget voice-widget-expanded';
+    widget.style.setProperty('--team-color', teamColor);
+    widget.style.setProperty('--team-rgb', teamColorRgb);
+
+    widget.innerHTML = `
+        <div class="vw-header">
+            <div class="vw-team-badge vw-team-${team}">${team}</div>
+            <div class="vw-title">Голос команды ${team}</div>
+            <button class="vw-close-btn" onclick="collapseVoiceWidget(event)" title="Свернуть">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="vw-participants">
+            ${all.map(p => `
+                <div class="vw-participant ${p.muted ? 'muted' : ''}" data-identity="${p.identity}">
+                    <div class="vw-avatar">
+                        <span>${(p.name || 'U')[0].toUpperCase()}</span>
+                        <div class="vw-pulse"></div>
+                    </div>
+                    <div class="vw-name">${escapeHtml(p.name)}${p.isMe ? ' <span style="color:var(--hint);font-size:9px;">(ты)</span>' : ''}</div>
+                    ${p.muted ? '<div class="vw-mic-off">🔇</div>' : '<div class="vw-mic-on">🎤</div>'}
+                </div>
+            `).join('')}
+        </div>
+
+        <div class="vw-actions">
+            <button class="vw-btn ${voiceMuted ? 'muted' : ''}" onclick="toggleVoiceMute(); event.stopPropagation();">
+                ${voiceMuted ? '🎤 ВКЛ' : '🔇 ВЫКЛ'}
+            </button>
+            <button class="vw-btn danger" onclick="leaveVoiceChat(); event.stopPropagation();">
+                📴 ВЫЙТИ
+            </button>
+        </div>
+    `;
 }
 
-function removeVoiceParticipantsPanel() {
-    const c = document.getElementById('voiceParticipants');
-    if (c) { c.innerHTML = ''; c.style.display = 'none'; }
+function expandVoiceWidget(e) {
+    if (e) e.stopPropagation();
+    voiceWidgetExpanded = true;
+    updateVoiceWidget();
+    haptic('light');
 }
 
-// Автоотключение при выходе из комнаты
+function collapseVoiceWidget(e) {
+    if (e) e.stopPropagation();
+    voiceWidgetExpanded = false;
+    updateVoiceWidget();
+    haptic('light');
+}
+
+    // ============================================================
+// 🎤 ГОЛОСОВОЙ ЧАТ — команды A/B, плавающий виджет
+// ============================================================
+
+let voiceRoom = null;
+let voiceRoomId = null;
+let voiceTeam = null;
+let voiceParticipants = {};
+let voiceMuted = false;
+let voiceWidgetExpanded = false;
+
+// ============================================================
+// ПОДКЛЮЧЕНИЕ
+// ============================================================
+async function joinVoiceChat(roomId, team) {
+    if (voiceRoom) {
+        showToast('🎤 Ты уже в голосовом чате');
+        return;
+    }
+    if (typeof LivekitClient === 'undefined') {
+        showToast('❌ Голосовой модуль не загружен');
+        return;
+    }
+
+    const me = Number(currentUser.telegram_id);
+    const { data: myPlayer } = await sb.from('room_players')
+        .select('team, is_ready')
+        .eq('room_id', roomId)
+        .eq('telegram_id', me)
+        .maybeSingle();
+
+    if (!myPlayer || myPlayer.team !== team) {
+        showToast(`Ты не в команде ${team}`);
+        return;
+    }
+
+    showToast('🎤 Подключение...');
+
+    try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/voice-token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'apikey': SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+                roomId: Number(roomId),
+                team,
+                telegramId: me,
+                displayName: currentUser.display_name || 'Игрок',
+            }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Ошибка токена');
+
+        voiceRoomId = roomId;
+        voiceTeam = team;
+
+        voiceRoom = new LivekitClient.Room({
+            adaptiveStream: true,
+            dynacast: true,
+            audioCaptureDefaults: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
+        });
+
+        voiceRoom
+            .on(LivekitClient.RoomEvent.ParticipantConnected, (p) => {
+                voiceParticipants[p.identity] = p;
+                updateVoiceWidget();
+                showToast(`🎤 ${p.name || 'Игрок'} подключился`);
+            })
+            .on(LivekitClient.RoomEvent.ParticipantDisconnected, (p) => {
+                delete voiceParticipants[p.identity];
+                updateVoiceWidget();
+            })
+            .on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, p) => {
+                if (track.kind !== LivekitClient.Track.Kind.Audio) return;
+                const el = track.attach();
+                el.id = `voice-audio-${p.identity}`;
+                el.autoplay = true;
+                el.style.display = 'none';
+                document.body.appendChild(el);
+                updateVoiceWidget();
+            })
+            .on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+                track.detach().forEach(el => el.remove());
+            })
+            .on(LivekitClient.RoomEvent.ActiveSpeakersChanged, (speakers) => {
+                const ids = speakers.map(s => s.identity);
+                document.querySelectorAll('.vw-participant').forEach(el => {
+                    el.classList.toggle('speaking', ids.includes(el.dataset.identity));
+                });
+            })
+            .on(LivekitClient.RoomEvent.Disconnected, () => {
+                cleanupVoiceState();
+            });
+
+        await voiceRoom.connect(data.url, data.token);
+        await voiceRoom.localParticipant.setMicrophoneEnabled(true);
+        voiceMuted = false;
+
+        renderVoiceWidget();
+        haptic('medium');
+        showToast(`🎤 Голосовой чат команды ${team}`);
+    } catch (e) {
+        console.error('joinVoiceChat:', e);
+        showToast('❌ ' + (e.message || 'Ошибка'));
+        cleanupVoiceState();
+    }
+}
+
+// ============================================================
+// ОТКЛЮЧЕНИЕ
+// ============================================================
+async function leaveVoiceChat() {
+    if (!voiceRoom) return;
+    try {
+        await voiceRoom.disconnect();
+    } catch (e) {}
+
+    if (voiceRoomId) {
+        try {
+            await sb.from('voice_participants')
+                .update({ left_at: new Date().toISOString() })
+                .eq('telegram_id', currentUser.telegram_id)
+                .is('left_at', null);
+        } catch (e) {}
+    }
+
+    cleanupVoiceState();
+    showToast('🔇 Отключился');
+}
+
+function cleanupVoiceState() {
+    document.querySelectorAll('[id^="voice-audio-"]').forEach(el => el.remove());
+
+    voiceRoom = null;
+    voiceRoomId = null;
+    voiceTeam = null;
+    voiceParticipants = {};
+    voiceMuted = false;
+    voiceWidgetExpanded = false;
+
+    const w = document.getElementById('voiceWidget');
+    if (w) w.remove();
+}
+
+// ============================================================
+// MUTE
+// ============================================================
+async function toggleVoiceMute() {
+    if (!voiceRoom) return;
+    voiceMuted = !voiceMuted;
+    try {
+        await voiceRoom.localParticipant.setMicrophoneEnabled(!voiceMuted);
+        updateVoiceWidget();
+        showToast(voiceMuted ? '🔇 Микрофон выключен' : '🎤 Микрофон включён');
+    } catch (e) {}
+}
+
+// ============================================================
+// ВИДЖЕТ
+// ============================================================
+function renderVoiceWidget() {
+    if (!voiceRoom) {
+        const existing = document.getElementById('voiceWidget');
+        if (existing) existing.remove();
+        return;
+    }
+
+    let widget = document.getElementById('voiceWidget');
+
+    if (!widget) {
+        widget = document.createElement('div');
+        widget.id = 'voiceWidget';
+        widget.className = 'voice-widget';
+        document.body.appendChild(widget);
+    }
+
+    updateVoiceWidget();
+}
+
+function updateVoiceWidget() {
+    const widget = document.getElementById('voiceWidget');
+    if (!widget || !voiceRoom) return;
+
+    const team = voiceTeam;
+    const teamColor = team === 'A' ? 'var(--emerald)' : '#ff5470';
+    const teamColorRgb = team === 'A' ? 'var(--emerald-rgb)' : '255, 84, 112';
+
+    const me = voiceRoom.localParticipant;
+    const all = [];
+
+    if (me) {
+        all.push({
+            identity: me.identity,
+            name: me.name || 'Ты',
+            isMe: true,
+            muted: voiceMuted,
+        });
+    }
+
+    Object.values(voiceParticipants).forEach(p => {
+        all.push({
+            identity: p.identity,
+            name: p.name || 'Игрок',
+            isMe: false,
+            muted: !p.isMicrophoneEnabled,
+        });
+    });
+
+    const count = all.length;
+
+    if (!voiceWidgetExpanded) {
+        widget.className = 'voice-widget voice-widget-compact';
+        widget.style.setProperty('--team-color', teamColor);
+        widget.style.setProperty('--team-rgb', teamColorRgb);
+
+        widget.innerHTML = `
+            <button class="vw-collapsed-btn" onclick="expandVoiceWidget(event)">
+                <div class="vw-team-badge vw-team-${team}">${team}</div>
+                <svg class="vw-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                    <path d="M12 18v4M8 22h8"/>
+                </svg>
+                <span class="vw-count">${count}</span>
+            </button>
+        `;
+        return;
+    }
+
+    widget.className = 'voice-widget voice-widget-expanded';
+    widget.style.setProperty('--team-color', teamColor);
+    widget.style.setProperty('--team-rgb', teamColorRgb);
+
+    widget.innerHTML = `
+        <div class="vw-header">
+            <div class="vw-team-badge vw-team-${team}">${team}</div>
+            <div class="vw-title">Голос команды ${team}</div>
+            <button class="vw-close-btn" onclick="collapseVoiceWidget(event)" title="Свернуть">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="vw-participants">
+            ${all.map(p => `
+                <div class="vw-participant ${p.muted ? 'muted' : ''}" data-identity="${p.identity}">
+                    <div class="vw-avatar">
+                        <span>${(p.name || 'U')[0].toUpperCase()}</span>
+                        <div class="vw-pulse"></div>
+                    </div>
+                    <div class="vw-name">${escapeHtml(p.name)}${p.isMe ? ' <span style="color:var(--hint);font-size:9px;">(ты)</span>' : ''}</div>
+                    ${p.muted ? '<div class="vw-mic-off">🔇</div>' : '<div class="vw-mic-on">🎤</div>'}
+                </div>
+            `).join('')}
+        </div>
+
+        <div class="vw-actions">
+            <button class="vw-btn ${voiceMuted ? 'muted' : ''}" onclick="toggleVoiceMute(); event.stopPropagation();">
+                ${voiceMuted ? '🎤 ВКЛ' : '🔇 ВЫКЛ'}
+            </button>
+            <button class="vw-btn danger" onclick="leaveVoiceChat(); event.stopPropagation();">
+                📴 ВЫЙТИ
+            </button>
+        </div>
+    `;
+}
+
+function expandVoiceWidget(e) {
+    if (e) e.stopPropagation();
+    voiceWidgetExpanded = true;
+    updateVoiceWidget();
+    haptic('light');
+}
+
+function collapseVoiceWidget(e) {
+    if (e) e.stopPropagation();
+    voiceWidgetExpanded = false;
+    updateVoiceWidget();
+    haptic('light');
+}
+
+// ============================================================
+// ОБРАБОТЧИК КНОПКИ
+// ============================================================
+async function voiceBtnClick(roomId, team) {
+    if (voiceRoom) {
+        voiceWidgetExpanded = true;
+        updateVoiceWidget();
+    } else {
+        await joinVoiceChat(roomId, team);
+    }
+}
+
+// ============================================================
+// ПАТЧ closePlayScreen — автоотключение при выходе из комнаты
+// ============================================================
 const _origClosePlayScreen = window.closePlayScreen;
 window.closePlayScreen = async function(...args) {
     if (voiceRoom) await leaveVoiceChat();
     return _origClosePlayScreen?.apply(this, args);
 };
 
-const _origLeaveRoom = window.leaveRoom;
-window.leaveRoom = async function(...args) {
+// ============================================================
+// ПАТЧ returnToDashboard — автоотключение
+// ============================================================
+const _origReturnToDashboard = window.returnToDashboard;
+window.returnToDashboard = async function(...args) {
     if (voiceRoom) await leaveVoiceChat();
-    return _origLeaveRoom?.apply(this, args);
+    return _origReturnToDashboard?.apply(this, args);
+};
+
+// ============================================================
+// ПАТЧ returnAfterVetoCancel — автоотключение
+// ============================================================
+const _origReturnAfterVetoCancel = window.returnAfterVetoCancel;
+window.returnAfterVetoCancel = async function(...args) {
+    if (voiceRoom) await leaveVoiceChat();
+    return _origReturnAfterVetoCancel?.apply(this, args);
 };
             
     </script>
