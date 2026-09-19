@@ -8760,6 +8760,17 @@ try {
         const NOTIFY_URL = SUPABASE_URL + '/functions/v1/notify';
         const MM_URL = SUPABASE_URL + '/functions/v1/mm-tick';
 
+        // ============================================================
+        // DEBOUNCE — защита от спама запросами
+        // ============================================================
+        function debounce(fn, ms = 400) {
+            let t;
+            return function(...args) {
+                clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), ms);
+            };
+        }
+
         const BUCKETS = {
             avatars: 'avatars',
             clubs:   'clubs',
@@ -8798,21 +8809,165 @@ function sideModelUrl(side) {
     return null;
 }
 
-        // Защита: ждём загрузку Supabase
+// ============================================================
+// SUPABASE CLIENT + УСТОЙЧИВОСТЬ К СЕТИ (retry / timeout / dedupe)
+// ============================================================
 let sb = null;
 if (window.supabase?.createClient) {
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // ============================================================
-// DXP HELPERS — единая точка правды
-// В БД поле называется elo, в UI показываем как DXP
-// ============================================================
+} else {
+    console.warn('⚠️ Supabase не загружен при старте скрипта');
+}
+
 function getDXP(user) {
     if (!user) return 1000;
     const v = user.elo ?? user.DXP;
     return (typeof v === 'number' && !isNaN(v)) ? v : 1000;
 }
-} else {
-    console.warn('⚠️ Supabase не загружен при старте скрипта');
+
+// ---------- Сетевые настройки ----------
+const NET = {
+    maxRetries: 3,
+    baseDelay: 400,
+    timeout: 12000,
+    dedupeWindow: 150
+};
+
+const _inflight = new Map();
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function withTimeout(promise, ms) {
+    return Promise.race([
+        promise,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), ms))
+    ]);
+}
+
+// Универсальная обёртка: retry + timeout + dedupe
+async function sbQuery(name, builder, { retries = NET.maxRetries, dedupe = false } = {}) {
+    const key = dedupe ? name : null;
+    if (key && _inflight.has(key)) return _inflight.get(key);
+
+    const run = (async () => {
+        let lastErr = null;
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const q = builder();
+                const res = await withTimeout(q, NET.timeout);
+                if (res?.error) {
+                    const code = res.error.code || '';
+                    const msg = String(res.error.message || '');
+                    const isNetwork = /ERR_|CONNECTION|TIMEOUT|FETCH|NETWORK|Failed to fetch/i.test(msg + code);
+                    if (!isNetwork) return res;
+                    lastErr = res.error;
+                } else {
+                    return res;
+                }
+            } catch (e) {
+                lastErr = e;
+            }
+            if (attempt < retries) {
+                await sleep(NET.baseDelay * Math.pow(2, attempt) + Math.random() * 200);
+            }
+        }
+        try { return await withTimeout(builder(), NET.timeout); }
+        catch (e) { return { data: null, error: lastErr || e }; }
+    })();
+
+    if (key) {
+        _inflight.set(key, run);
+        run.finally(() => setTimeout(() => _inflight.delete(key), NET.dedupeWindow));
+    }
+    return run;
+}
+
+// Удобные обёртки
+const dbSelect = (t, build, o={}) => sbQuery(`${t}:select`, () => build(sb.from(t).select()), o);
+const dbInsert = (t, p, o={})     => sbQuery(`${t}:insert`, () => sb.from(t).insert(p), o);
+const dbUpdate = (t, p, f, o={})  => sbQuery(`${t}:update`, () => f(sb.from(t).update(p)), o);
+const dbDelete = (t, f, o={})     => sbQuery(`${t}:delete`, () => f(sb.from(t).delete()), o);
+
+// ---------- Кэш ----------
+const CACHE = {
+    set(key, data) {
+        try { safeStorage.setItem('cache_' + key, JSON.stringify({ t: Date.now(), d: data })); } catch (e) {}
+    },
+    get(key, maxAgeMs = 5 * 60 * 1000) {
+        try {
+            const raw = safeStorage.getItem('cache_' + key);
+            if (!raw) return null;
+            const o = JSON.parse(raw);
+            if (Date.now() - o.t > maxAgeMs) return null;
+            return o.d;
+        } catch (e) { return null; }
+    }
+};
+
+// ---------- Монитор сети ----------
+const netStatus = { online: navigator.onLine, sbReachable: true, lastError: null };
+
+function renderNetBanner() {
+    let el = document.getElementById('netBanner');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'netBanner';
+        el.style.cssText = `
+            position: fixed; left: 0; right: 0; top: 0; z-index: 99999;
+            padding: 8px 14px; text-align: center; font-size: 12px; font-weight: 700;
+            background: linear-gradient(90deg, #cc1e38, #ff2e4d);
+            color: #fff; transform: translateY(-100%);
+            transition: transform .3s ease; font-family: -apple-system, sans-serif;
+            letter-spacing: 0.3px; box-shadow: 0 4px 16px rgba(0,0,0,.4);
+        `;
+        document.body.appendChild(el);
+    }
+    if (!netStatus.online) { el.textContent = '⚠️ Нет интернета'; el.style.transform = 'translateY(0)'; }
+    else if (!netStatus.sbReachable) { el.textContent = '⚠️ Сервер недоступен — переподключение...'; el.style.transform = 'translateY(0)'; }
+    else { el.style.transform = 'translateY(-100%)'; }
+}
+
+async function pingSupabase() {
+    try {
+        const res = await withTimeout(
+            fetch(SUPABASE_URL + '/rest/v1/', {
+                method: 'HEAD',
+                headers: { 'apikey': SUPABASE_ANON_KEY },
+                cache: 'no-store'
+            }),
+            6000
+        );
+        netStatus.sbReachable = res.ok || res.status === 400 || res.status === 401;
+    } catch (e) {
+        netStatus.sbReachable = false;
+        netStatus.lastError = e?.message || String(e);
+    }
+    netStatus.online = navigator.onLine;
+    renderNetBanner();
+    return netStatus.sbReachable;
+}
+
+window.addEventListener('online',  () => { netStatus.online = true;  pingSupabase(); });
+window.addEventListener('offline', () => { netStatus.online = false; renderNetBanner(); });
+
+setInterval(async () => {
+    if (document.hidden) return;
+    const wasOk = netStatus.sbReachable;
+    const ok = await pingSupabase();
+    if (ok && !wasOk && typeof refreshCurrentPage === 'function') refreshCurrentPage();
+}, 15000);
+
+// Перезагрузка данных текущей страницы
+function refreshCurrentPage() {
+    const active = document.querySelector('.page.active')?.id || '';
+    if (active.includes('dashboard'))   { if (currentUser) renderDashboard(currentUser); loadLeaderboard(); }
+    if (active.includes('leaderboard')) { openFullLeaderboard(); }
+    if (active.includes('friends'))     { loadFriends(); }
+    if (active.includes('chat'))        { loadChatList(); }
+    if (active.includes('club'))        { loadClub(); }
+    if (active.includes('matches'))     { loadMatchesHistory(); }
+    if (active.includes('profile'))     { if (!profileEditMode && currentUser) renderProfileView(currentUser); }
+    if (active.includes('play'))        { loadOpenRooms(); }
 }
 
         // tg может быть undefined, если SDK не загрузился
@@ -9757,30 +9912,70 @@ async function notify(telegramId, text, type = null) {
     try {
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
-        const { data: existing } = await sb.from('users')
-            .select('*').eq('telegram_id', user.id).maybeSingle();
+        let existing = null;
+try {
+    const r = await dbSelect('users',
+        q => q.select('*').eq('telegram_id', user.id).maybeSingle(),
+        { retries: 3 }
+    );
+    existing = r.data;
+} catch (e) {
+    console.warn('init: DB fetch failed, using fallback', e);
+}
 
-        let data, error;
+let data = null, error = null;
 
-        if (existing) {
-            const upd = {
-                username: user.username || existing.username,
-                photo_url: user.photo_url || existing.photo_url || null
-            };
-            ({ data, error } = await sb.from('users')
-                .update(upd).eq('telegram_id', user.id).select().single());
-        } else {
-            ({ data, error } = await sb.from('users')
-                .insert({
-                    telegram_id: user.id,
-                    username: user.username || null,
-                    display_name: user.first_name || user.username || 'Игрок',
-                    photo_url: user.photo_url || null
-                }).select().single());
-        }
-        if (error) throw error;
+if (existing) {
+    const upd = {
+        username: user.username || existing.username,
+        photo_url: user.photo_url || existing.photo_url || null
+    };
+    const r = await dbUpdate('users', upd,
+        q => q.update(upd).eq('telegram_id', user.id).select().single(),
+        { retries: 3 }
+    );
+    data = r.data; error = r.error;
+} else {
+    const payload = {
+        telegram_id: user.id,
+        username: user.username || null,
+        display_name: user.first_name || user.username || 'Игрок',
+        photo_url: user.photo_url || null
+    };
+    const r = await dbInsert('users', payload, { retries: 3 });
+    // insert с select().single() — собираем заново:
+    const r2 = await dbSelect('users',
+        q => q.select('*').eq('telegram_id', user.id).single(),
+        { retries: 2 }
+    );
+    data = r2.data; error = r2.error || r.error;
+}
 
-        currentUser = data;
+// 🆘 ОФФЛАЙН-ФОЛБЭК: если БД недоступна — рисуем профиль из Telegram-данных
+if (!data && !existing) {
+    currentUser = {
+        telegram_id: user.id,
+        username: user.username || null,
+        display_name: user.first_name || user.username || 'Игрок',
+        photo_url: user.photo_url || null,
+        custom_avatar: null,
+        elo: 1000,
+        matches_played: 0,
+        wins: 0,
+        standoff_id: null,
+        _offline: true
+    };
+    applyHeaderAvatar(currentUser);
+    renderDashboard(currentUser);
+    renderProfileView(currentUser);
+    netStatus.sbReachable = false;
+    renderNetBanner();
+    showToast('⚠️ Оффлайн-режим — часть данных недоступна');
+    return;
+}
+
+if (error) throw error;
+currentUser = data;
         applyHeaderAvatar(currentUser);
         renderDashboard(currentUser);
         loadProfile(currentUser);
@@ -10620,57 +10815,51 @@ async function loadLeaderboard() {
     const titleEl = document.getElementById('leaderboardTitle');
     if (!wrap || !container) return;
 
-    // 1. Рисуем баннер-картинку (кликабельный)
     wrap.innerHTML = `
         <div class="leaderboard-hero" onclick="openFullLeaderboard()">
-            <img src="${LEADERBOARD_BANNER_URL}"
-                 alt="Лидерборд"
+            <img src="${LEADERBOARD_BANNER_URL}" alt="Лидерборд"
                  style="width: 100%; height: auto; display: block; border-radius: 0; cursor: pointer;">
-        </div>
-    `;
+        </div>`;
 
-    // 2. Грузим данные
-    container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
-    if (titleEl) titleEl.style.display = 'none';
-
-    try {
-        const { data, error } = await sb.from('users')
-            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
-            .order('elo', { ascending: false })
-            .limit(50);
-        if (error) throw error;
-
-        const others = (data || []).filter(u => u.is_admin !== true);
-        if (!others.length) {
-            container.innerHTML = '<div class="empty">Пока никого нет</div>';
-            return;
-        }
-
-        await loadClubTagsForUsers(others.map(u => u.telegram_id));
-
-        // 3. Показываем ровно 10 игроков под баннером
-        const top10 = others.slice(0, 10);
-        container.innerHTML = top10.map((user, i) => renderLbItem(user, i + 1)).join('');
-
-        if (titleEl) titleEl.style.display = 'flex';
-    } catch (e) {
-        console.error('loadLeaderboard:', e);
-        container.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка загрузки</div>';
+    // Кэш сразу
+    const cached = CACHE.get('leaderboard_top10');
+    if (cached) {
+        renderLeaderboardList(cached, titleEl);
+    } else {
+        container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
     }
+
+    const { data, error } = await dbSelect('users',
+        q => q.select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
+              .order('elo', { ascending: false })
+              .limit(50),
+        { retries: 2 }
+    );
+
+    if (error || !data) {
+        if (!cached) {
+            container.innerHTML = '<div class="empty" style="color: var(--red);">Не удалось загрузить. Проверь сеть.</div>';
+        }
+        return;
+    }
+
+    const others = data.filter(u => u.is_admin !== true);
+    const top10 = others.slice(0, 10);
+    CACHE.set('leaderboard_top10', top10);
+    renderLeaderboardList(top10, titleEl);
 }
 
-function renderLbItem(user, rank) {
-    const src = user.custom_avatar || user.photo_url;
-    const initial = (user.display_name || 'U')[0].toUpperCase();
-    const av = src ? `<img src="${src}" alt="">` : initial;
-    const lvl = eloToLevel(user.elo);
-    return `
-        <div class="leaderboard-item" onclick="openPlayerProfile(${user.telegram_id})">
-            <span class="leaderboard-rank">#${rank}</span>
-            <div class="lb-avatar">${av}</div>
-            <span class="leaderboard-name">${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')} ${devTagHTML(user.telegram_id)} <span style="color:var(--hint);font-size:11px;">· ${lvl} ур.</span></span>
-            <span class="leaderboard-DXP">${user.elo}</span>
-        </div>`;
+function renderLeaderboardList(top10, titleEl) {
+    const container = document.getElementById('leaderboard');
+    if (!container) return;
+    if (!top10.length) {
+        container.innerHTML = '<div class="empty">Пока никого нет</div>';
+        return;
+    }
+    loadClubTagsForUsers(top10.map(u => u.telegram_id)).then(() => {
+        container.innerHTML = top10.map((u, i) => renderLbItem(u, i + 1)).join('');
+        if (titleEl) titleEl.style.display = 'flex';
+    });
 }
 
 async function openFullLeaderboard() {
@@ -10678,27 +10867,30 @@ async function openFullLeaderboard() {
     const c = document.getElementById('leaderboardFull');
     c.innerHTML = Array(8).fill('<div class="loading-shimmer"></div>').join('');
 
-    try {
-        const { data, error } = await sb.from('users')
-            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
-            .order('elo', { ascending: false })
-            .limit(500);
-        if (error) throw error;
+    const { data, error } = await dbSelect('users',
+        q => q.select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod')
+              .order('elo', { ascending: false })
+              .limit(500),
+        { retries: 2 }
+    );
 
-        const others = (data || []).filter(u => u.is_admin !== true);
-        if (!others.length) {
-            c.innerHTML = '<div class="empty">Пока никого нет</div>';
-            return;
+    if (error || !data) {
+        const cached = CACHE.get('leaderboard_full', 30 * 60 * 1000);
+        if (cached) {
+            c.innerHTML = cached.map((u, i) => renderLbItem(u, i + 1)).join('');
+            showToast('⚠️ Показан кэш — нет сети');
+        } else {
+            c.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка загрузки</div>';
         }
-
-        await loadClubTagsForUsers(others.map(u => u.telegram_id));
-
-        // Показываем ВСЕХ
-        c.innerHTML = others.map((user, i) => renderLbItem(user, i + 1)).join('');
-    } catch (e) {
-        console.error(e);
-        c.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка</div>';
+        return;
     }
+
+    const others = data.filter(u => u.is_admin !== true);
+    if (!others.length) { c.innerHTML = '<div class="empty">Пока никого нет</div>'; return; }
+
+    CACHE.set('leaderboard_full', others);
+    await loadClubTagsForUsers(others.map(u => u.telegram_id));
+    c.innerHTML = others.map((u, i) => renderLbItem(u, i + 1)).join('');
 }
                     // ============================================================
         // FRIENDS
@@ -10884,51 +11076,68 @@ function subscribeClubRealtime() {
         .subscribe();
 }
 
-async function openClubPage() {
-    switchPage('club');
-    await loadClub();
-    // Realtime уже подписан глобально через subscribeClubsRealtime()
-}
+async function loadClub() {
+    const container = document.getElementById('clubContent');
+    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+        const me = currentUser.telegram_id;
+        const { data: membership } = await dbSelect('club_members',
+            q => q.select('club_id, role').eq('telegram_id', me).maybeSingle(),
+            { retries: 2 }
+        );
 
-        async function loadClub() {
-            const container = document.getElementById('clubContent');
-            container.innerHTML = '<div class="empty">Загрузка...</div>';
-            try {
-                const me = currentUser.telegram_id;
-                const { data: membership } = await sb.from('club_members')
-                    .select('club_id, role').eq('telegram_id', me).maybeSingle();
-
-                if (!membership) {
-                    const hadClubBefore = myClub !== null;
-                    const prevClub = myClub?.club;
-                    myClub = null;
-                    if (hadClubBefore && prevClub) {
-                        wasKickedFromClub = { name: prevClub.name, tag: prevClub.tag };
-                        showToast(`🚪 Тебя исключили из клуба ${prevClub.name}`);
-                    }
-                    renderNoClub(container);
-                    return;
-                }
-
-                wasKickedFromClub = null;
-                const { data: club, error: cErr } = await sb.from('clubs').select('*').eq('id', membership.club_id).single();
-                if (cErr) throw cErr;
-
-                const { data: members } = await sb.from('club_members').select('*').eq('club_id', club.id);
-                const memberIds = (members || []).map(m => m.telegram_id);
-                const { data: users } = await sb.from('users')
-                    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, standoff_id')
-                    .in('telegram_id', memberIds.length ? memberIds : [0]);
-                const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
-
-                myClub = { club, members: (members || []).map(m => ({ ...m, user: userMap[m.telegram_id] })) };
-                myClub.club.role = membership.role;
-                renderMyClub(container);
-            } catch (e) {
-                console.error(e);
-                container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
+        if (!membership) {
+            const hadClubBefore = myClub !== null;
+            const prevClub = myClub?.club;
+            myClub = null;
+            if (hadClubBefore && prevClub) {
+                wasKickedFromClub = { name: prevClub.name, tag: prevClub.tag };
+                showToast(`🚪 Тебя исключили из клуба ${prevClub.name}`);
             }
+            renderNoClub(container);
+            return;
         }
+
+        wasKickedFromClub = null;
+
+        const { data: club, error: cErr } = await dbSelect('clubs',
+            q => q.select('*').eq('id', membership.club_id).single(),
+            { retries: 2 }
+        );
+        if (cErr || !club) throw cErr || new Error('club not found');
+
+        const { data: members } = await dbSelect('club_members',
+            q => q.select('*').eq('club_id', club.id),
+            { retries: 2 }
+        );
+
+        const memberIds = (members || []).map(m => m.telegram_id);
+        const { data: users } = await dbSelect('users',
+            q => q.select('telegram_id, display_name, username, custom_avatar, photo_url, elo, standoff_id')
+                  .in('telegram_id', memberIds.length ? memberIds : [0]),
+            { retries: 2 }
+        );
+        const userMap = {}; (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+        myClub = {
+            club,
+            members: (members || []).map(m => ({ ...m, user: userMap[m.telegram_id] }))
+        };
+        myClub.club.role = membership.role;
+        CACHE.set('my_club', myClub, 3 * 60 * 1000);
+        renderMyClub(container);
+    } catch (e) {
+        console.error(e);
+        const cached = CACHE.get('my_club', 10 * 60 * 1000);
+        if (cached) {
+            myClub = cached;
+            renderMyClub(container);
+            showToast('⚠️ Показан кэш клуба');
+        } else {
+            container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки</div>';
+        }
+    }
+}
 
         function renderNoClub(container) {
             let kickedBanner = '';
@@ -12116,91 +12325,105 @@ function openChatPage() {
             await openChat('dm', userId);
         }
 
-        async function loadChatList() {
-            if (!currentUser) return;
-            const container = document.getElementById('chatList');
-            container.innerHTML = '<div class="empty">Загрузка...</div>';
-            try {
-                const me = currentUser.telegram_id;
-                const items = [];
+async function loadChatList() {
+    if (!currentUser) return;
+    const container = document.getElementById('chatList');
+    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+        const me = currentUser.telegram_id;
+        const items = [];
 
-                const { data: membership } = await sb.from('club_members').select('club_id').eq('telegram_id', me).maybeSingle();
-                if (membership) {
-                    const { data: club } = await sb.from('clubs').select('id, name, tag, logo_url').eq('id', membership.club_id).single();
-                    if (club) {
-                        const { data: lastMsg } = await sb.from('messages')
-                            .select('text, created_at').eq('club_id', club.id)
-                            .order('created_at', { ascending: false }).limit(1).maybeSingle();
-                        items.push({
-                            type: 'club', id: club.id, name: club.name + ' [' + club.tag + ']',
-                            avatar: club.logo_url, square: true,
-                            preview: lastMsg?.text || 'Чат клуба',
-                            lastAt: lastMsg?.created_at || '1970-01-01'
-                        });
-                    }
-                }
-
-                const { data: allDMs } = await sb.from('messages')
-                    .select('id, sender_id, recipient_id, text, image_url, created_at')
-                    .or(`sender_id.eq.${me},recipient_id.eq.${me}`)
-                    .not('recipient_id', 'is', null)
-                    .order('created_at', { ascending: false }).limit(500);
-
-                const lastByPartner = {};
-                (allDMs || []).forEach(m => {
-                    const partner = m.sender_id === me ? m.recipient_id : m.sender_id;
-                    if (!partner) return;
-                    if (!lastByPartner[partner]) lastByPartner[partner] = m;
+        // Клуб
+        const { data: membership } = await dbSelect('club_members',
+            q => q.select('club_id').eq('telegram_id', me).limit(1).maybeSingle(),
+            { retries: 2 }
+        );
+        if (membership?.club_id) {
+            const { data: club } = await dbSelect('clubs',
+                q => q.select('id, name, tag, logo_url').eq('id', membership.club_id).single(),
+                { retries: 2 }
+            );
+            if (club) {
+                const { data: lastMsg } = await dbSelect('messages',
+                    q => q.select('text, created_at').eq('club_id', club.id)
+                          .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+                    { retries: 2 }
+                );
+                items.push({
+                    type: 'club', id: club.id, name: club.name + ' [' + club.tag + ']',
+                    avatar: club.logo_url, square: true,
+                    preview: lastMsg?.text || 'Чат клуба',
+                    lastAt: lastMsg?.created_at || '1970-01-01'
                 });
-
-const partnerIds = Object.keys(lastByPartner).map(Number);
-let userMap = {};
-if (partnerIds.length) {
-    const { data: users } = await sb.from('users')
-        .select('telegram_id, display_name, custom_avatar, photo_url').in('telegram_id', partnerIds);
-    (users || []).forEach(u => { userMap[u.telegram_id] = u; });
-
-    // ⬇️ Загружаем теги клубов для всех партнёров
-    await loadClubTagsForUsers(partnerIds);
-}
-
-                partnerIds.forEach(pid => {
-                    const m = lastByPartner[pid];
-                    const u = userMap[pid] || { telegram_id: pid, display_name: 'Игрок' };
-                    items.push({
-                        type: 'dm', id: pid,
-                        name: u.display_name || 'Игрок',
-                        avatar: u.custom_avatar || u.photo_url, square: false,
-                        preview: (m.image_url ? '📷 Фото' : m.text) || 'Начать чат',
-                        lastAt: m.created_at
-                    });
-                });
-
-                items.sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
-
-                if (!items.length) {
-                    container.innerHTML = '<div class="empty">Нет чатов.</div>';
-                    return;
-                }
-
-container.innerHTML = items.map(it => {
-    const av = it.avatar ? `<img src="${it.avatar}" alt="">` : (it.name[0] || '?').toUpperCase();
-    const square = it.square ? ' square' : '';
-    // Для DM — добавляем тег клуба, для club — оставляем как есть
-    const nameHTML = it.type === 'dm'
-        ? `${myClubTagHTML(it.id)}${escapeHtml(it.name)}`
-        : escapeHtml(it.name);
-    return `
-        <div class="chat-list-item" onclick="openChat('${it.type}', ${it.id})">
-            <div class="chat-list-avatar${square}">${av}</div>
-            <div class="chat-list-info">
-                <div class="chat-list-name">${nameHTML}</div>
-                <div class="chat-list-preview">${escapeHtml(it.preview)}</div>
-            </div>
-        </div>`;
-}).join('');
-            } catch (e) { console.error(e); container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>'; }
+            }
         }
+
+        // Личные
+        const { data: allDMs } = await dbSelect('messages',
+            q => q.select('id, sender_id, recipient_id, text, image_url, created_at')
+                  .or(`sender_id.eq.${me},recipient_id.eq.${me}`)
+                  .not('recipient_id', 'is', null)
+                  .order('created_at', { ascending: false }).limit(500),
+            { retries: 2 }
+        );
+
+        const lastByPartner = {};
+        (allDMs || []).forEach(m => {
+            const partner = m.sender_id === me ? m.recipient_id : m.sender_id;
+            if (!partner) return;
+            if (!lastByPartner[partner]) lastByPartner[partner] = m;
+        });
+
+        const partnerIds = Object.keys(lastByPartner).map(Number);
+        let userMap = {};
+        if (partnerIds.length) {
+            const { data: users } = await dbSelect('users',
+                q => q.select('telegram_id, display_name, custom_avatar, photo_url').in('telegram_id', partnerIds),
+                { retries: 2 }
+            );
+            (users || []).forEach(u => userMap[u.telegram_id] = u);
+            await loadClubTagsForUsers(partnerIds);
+        }
+
+        partnerIds.forEach(pid => {
+            const m = lastByPartner[pid];
+            const u = userMap[pid] || { telegram_id: pid, display_name: 'Игрок' };
+            items.push({
+                type: 'dm', id: pid,
+                name: u.display_name || 'Игрок',
+                avatar: u.custom_avatar || u.photo_url, square: false,
+                preview: (m.image_url ? '📷 Фото' : m.text) || 'Начать чат',
+                lastAt: m.created_at
+            });
+        });
+
+        items.sort((a, b) => (b.lastAt || '').localeCompare(a.lastAt || ''));
+
+        if (!items.length) {
+            container.innerHTML = '<div class="empty">Нет чатов.</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(it => {
+            const av = it.avatar ? `<img src="${it.avatar}" alt="">` : (it.name[0] || '?').toUpperCase();
+            const square = it.square ? ' square' : '';
+            const nameHTML = it.type === 'dm'
+                ? `${myClubTagHTML(it.id)}${escapeHtml(it.name)}`
+                : escapeHtml(it.name);
+            return `
+                <div class="chat-list-item" onclick="openChat('${it.type}', ${it.id})">
+                    <div class="chat-list-avatar${square}">${av}</div>
+                    <div class="chat-list-info">
+                        <div class="chat-list-name">${nameHTML}</div>
+                        <div class="chat-list-preview">${escapeHtml(it.preview)}</div>
+                    </div>
+                </div>`;
+        }).join('');
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>';
+    }
+}
 
         async function openChat(type, id) {
             try {
@@ -18851,115 +19074,76 @@ async function checkActiveRoom() {
     if (!currentUser) return;
 
     const me = currentUser.telegram_id;
-
-    // Жёсткое гашение всего UI комнаты
     const killAllRoomUI = () => {
         activeRoomId = null;
-        const banner = document.getElementById('activeRoomBanner');
-        if (banner) banner.classList.remove('active');
-        const indicator = document.getElementById('headerRoomIndicator');
-        if (indicator) indicator.style.display = 'none';
-        const enterFloat = document.getElementById('playEnterFloat');
-        if (enterFloat) enterFloat.classList.remove('active');
+        document.getElementById('activeRoomBanner')?.classList.remove('active');
+        const ind = document.getElementById('headerRoomIndicator');
+        if (ind) ind.style.display = 'none';
+        document.getElementById('playEnterFloat')?.classList.remove('active');
     };
 
+    // Если сеть недоступна — не мучаем её запросами
+    if (!netStatus.sbReachable) { killAllRoomUI(); return; }
+
     try {
-        // 1. Я в комнате?
-        const { data: players } = await sb.from('room_players')
-            .select('room_id, is_ready')
-            .eq('telegram_id', me)
-            .limit(1);
+        const { data: players } = await dbSelect('room_players',
+            q => q.select('room_id, is_ready').eq('telegram_id', me).limit(1),
+            { retries: 1 }
+        );
 
-        if (!players || !players.length) {
-            killAllRoomUI();
-            return;
-        }
-
+        if (!players?.length) { killAllRoomUI(); return; }
         const player = players[0];
 
-        // 2. Статус комнаты
-        const { data: rooms } = await sb.from('rooms')
-            .select('id, name, mode, status')
-            .eq('id', player.room_id)
-            .limit(1);
+        const { data: rooms } = await dbSelect('rooms',
+            q => q.select('id, name, mode, status').eq('id', player.room_id).limit(1),
+            { retries: 1 }
+        );
+        const room = rooms?.[0];
 
-        const room = rooms && rooms[0];
-
-        // Комната не найдена / отменена / завершена → чистим себя
         if (!room || room.status === 'cancelled' || room.status === 'finished') {
-            try {
-                await sb.from('room_players').delete().eq('telegram_id', me);
-            } catch (e) {}
+            try { await dbDelete('room_players', q => q.delete().eq('telegram_id', me), { retries: 1 }); } catch (e) {}
             killAllRoomUI();
-            if (room && room.status === 'cancelled') {
-                showCancelledOnce(room.id);
-            }
+            if (room?.status === 'cancelled') showCancelledOnce(room.id);
             return;
         }
 
-        // 3. 🔥 ГЛАВНОЕ: если комната в статусе veto / side_pick / in_game / waiting_link —
-        //    проверяем привязанный game_match. Если он отменён/завершён → комната мёртвая.
+        // Проверка матча только для "боевых" статусов
         if (['veto', 'side_pick', 'waiting_link', 'in_game', 'result'].includes(room.status)) {
+            const { data: matches } = await dbSelect('game_matches',
+                q => q.select('id, status').eq('room_id', room.id)
+                      .order('created_at', { ascending: false }).limit(1),
+                { retries: 1 }
+            );
+            const match = matches?.[0];
 
-            const { data: matches } = await sb.from('game_matches')
-                .select('id, status, result_status')
-                .eq('room_id', room.id)
-                .order('created_at', { ascending: false })
-                .limit(1);
-
-            const match = matches && matches[0];
-
-            // Нет матча — комната мёртвая
-            if (!match) {
+            if (!match || match.status === 'cancelled') {
                 try {
-                    await sb.from('room_players').delete().eq('telegram_id', me);
-                    await sb.from('rooms').update({ status: 'cancelled', cancelled_reason: 'no_match' }).eq('id', room.id);
+                    await dbDelete('room_players', q => q.delete().eq('telegram_id', me), { retries: 1 });
+                    await dbUpdate('rooms', { status: 'cancelled' }, q => q.update({ status: 'cancelled' }).eq('id', room.id), { retries: 1 });
                 } catch (e) {}
                 killAllRoomUI();
+                if (match?.status === 'cancelled') showCancelledOnce(room.id);
                 return;
             }
-
-            // Матч отменён → гасим
-            if (match.status === 'cancelled') {
-                try {
-                    await sb.from('room_players').delete().eq('telegram_id', me);
-                    await sb.from('rooms').update({ status: 'cancelled' }).eq('id', room.id);
-                } catch (e) {}
-                killAllRoomUI();
-                showCancelledOnce(room.id);
-                return;
-            }
-
-            // Матч завершён → гасим
             if (match.status === 'finished') {
-                try {
-                    await sb.from('room_players').delete().eq('telegram_id', me);
-                    await sb.from('rooms').update({ status: 'finished' }).eq('id', room.id);
-                } catch (e) {}
+                try { await dbDelete('room_players', q => q.delete().eq('telegram_id', me), { retries: 1 }); } catch (e) {}
                 killAllRoomUI();
                 return;
             }
         }
 
-        // 4. Показываем баннер + индикатор ТОЛЬКО если комната в статусе open
         if (room.status === 'open' && player.is_ready) {
             activeRoomId = player.room_id;
             showActiveRoomBanner(room);
-            const indicator = document.getElementById('headerRoomIndicator');
-            if (indicator) indicator.style.display = 'flex';
+            const ind = document.getElementById('headerRoomIndicator');
+            if (ind) ind.style.display = 'flex';
         } else {
-            // Все остальные статусы — гасим
-            activeRoomId = null;
-            hideActiveRoomBanner();
-            const indicator = document.getElementById('headerRoomIndicator');
-            if (indicator) indicator.style.display = 'none';
-            const enterFloat = document.getElementById('playEnterFloat');
-            if (enterFloat) enterFloat.classList.remove('active');
+            killAllRoomUI();
         }
     } catch (e) {
         console.warn('checkActiveRoom:', e);
     }
-}  // ✅ ВОТ ЭТА СКОБКА БЫЛА ПРОПУЩЕНА
+}
             
 function showActiveRoomBanner(room) {
     const banner = document.getElementById('activeRoomBanner');
@@ -19872,160 +20056,135 @@ let notifCache = [];
 async function loadNotifications() {
     if (!currentUser) return [];
     try {
-        // 1. Заявки в друзья
-        const { data: friendships } = await sb.from('friendships')
-            .select('id, requester_id, status, created_at')
-            .eq('addressee_id', currentUser.telegram_id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
+        const me = currentUser.telegram_id;
 
-        // 2. Приглашения в пати / комнату
-        const { data: invites } = await sb.from('party_invites')
-            .select('id, party_id, from_id, kind, status, created_at')
-            .eq('to_id', currentUser.telegram_id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
+        const [friendshipsRes, invitesRes, clubInvitesRes, unreadMsgsRes] = await Promise.all([
+            dbSelect('friendships',
+                q => q.select('id, requester_id, status, created_at')
+                      .eq('addressee_id', me).eq('status', 'pending')
+                      .order('created_at', { ascending: false }),
+                { retries: 2 }
+            ),
+            dbSelect('party_invites',
+                q => q.select('id, party_id, from_id, kind, status, created_at')
+                      .eq('to_id', me).eq('status', 'pending')
+                      .order('created_at', { ascending: false }),
+                { retries: 2 }
+            ),
+            dbSelect('club_invites',
+                q => q.select('id, club_id, from_id, created_at')
+                      .eq('to_id', me).eq('status', 'pending')
+                      .order('created_at', { ascending: false }),
+                { retries: 2 }
+            ),
+            dbSelect('messages',
+                q => q.select('id, sender_id, text, image_url, created_at')
+                      .eq('recipient_id', me)
+                      .gt('created_at', lastChatsReadAt.toISOString())
+                      .order('created_at', { ascending: false }).limit(5),
+                { retries: 2 }
+            )
+        ]);
 
-        // 3. Приглашения в клуб
-        const { data: clubInvites } = await sb.from('club_invites')
-            .select('id, club_id, from_id, created_at')
-            .eq('to_id', currentUser.telegram_id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: false });
+        const friendships = friendshipsRes.data || [];
+        const invites = invitesRes.data || [];
+        const clubInvites = clubInvitesRes.data || [];
+        const unreadMsgs = unreadMsgsRes.data || [];
 
-        // 4. Непрочитанные сообщения
-const { data: unreadMsgs } = await sb.from('messages')
-    .select('id, sender_id, text, image_url, created_at')
-    .eq('recipient_id', currentUser.telegram_id)
-    .gt('created_at', lastChatsReadAt.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-        // Собираем все userId
         const ids = new Set();
-        (friendships || []).forEach(f => ids.add(f.requester_id));
-        (invites || []).forEach(i => ids.add(i.from_id));
-        (clubInvites || []).forEach(i => ids.add(i.from_id));
+        friendships.forEach(f => ids.add(f.requester_id));
+        invites.forEach(i => ids.add(i.from_id));
+        clubInvites.forEach(i => ids.add(i.from_id));
 
         let userMap = {};
         if (ids.size) {
-            const { data: users } = await sb.from('users')
-                .select('telegram_id, display_name, username, custom_avatar, photo_url')
-                .in('telegram_id', [...ids]);
+            const { data: users } = await dbSelect('users',
+                q => q.select('telegram_id, display_name, username, custom_avatar, photo_url').in('telegram_id', [...ids]),
+                { retries: 2 }
+            );
             (users || []).forEach(u => userMap[u.telegram_id] = u);
-        }
-
-        // Подгружаем теги клубов для всех, кто фигурирует
-        if (ids.size) {
             await loadClubTagsForUsers([...ids]);
         }
 
-        // Инфа о пати
-        const partyIds = (invites || []).map(i => i.party_id);
+        const partyIds = invites.map(i => i.party_id);
         let partyMap = {};
         if (partyIds.length) {
-            const { data: parties } = await sb.from('parties')
-                .select('id, mode, is_club_party, club_id')
-                .in('id', partyIds);
+            const { data: parties } = await dbSelect('parties',
+                q => q.select('id, mode, is_club_party, club_id').in('id', partyIds),
+                { retries: 2 }
+            );
             (parties || []).forEach(p => partyMap[p.id] = p);
         }
 
-        // Инфа о клубах (для приглашений в клуб)
-        const clubIds = (clubInvites || []).map(i => i.club_id);
+        const clubIds = clubInvites.map(i => i.club_id);
         let clubMap = {};
         if (clubIds.length) {
-            const { data: clubs } = await sb.from('clubs')
-                .select('id, name, tag')
-                .in('id', clubIds);
+            const { data: clubs } = await dbSelect('clubs',
+                q => q.select('id, name, tag').in('id', clubIds),
+                { retries: 2 }
+            );
             (clubs || []).forEach(c => clubMap[c.id] = c);
         }
 
-        // Собираем список
         const list = [];
 
-        // --- Дружба ---
-        (friendships || []).forEach(f => {
+        friendships.forEach(f => {
             list.push({
-                id: 'friend_' + f.id,
-                type: 'friend_request',
-                relId: f.id,
-                userId: f.requester_id,
-                user: userMap[f.requester_id] || {},
+                id: 'friend_' + f.id, type: 'friend_request', relId: f.id,
+                userId: f.requester_id, user: userMap[f.requester_id] || {},
                 text: `<b>${escapeHtml(userMap[f.requester_id]?.display_name || 'Игрок')}</b> хочет добавить тебя в друзья`,
-                time: f.created_at,
-                unread: true
+                time: f.created_at, unread: true
             });
         });
 
-        // --- Пати / комната ---
-        (invites || []).forEach(i => {
+        invites.forEach(i => {
             const party = partyMap[i.party_id] || {};
             const kind = i.kind || 'party';
             const clubText = party.is_club_party ? ' (клановая)' : '';
-
             let label;
-            if (kind === 'room') {
-                label = `приглашает в комнату`;
-            } else if (kind === 'join_request') {
-                label = `хочет вступить в твою комнату ${party.mode || ''}`;
-            } else {
-                label = `приглашает в пати ${party.mode || ''}${clubText}`;
-            }
+            if (kind === 'room') label = `приглашает в комнату`;
+            else if (kind === 'join_request') label = `хочет вступить в твою комнату ${party.mode || ''}`;
+            else label = `приглашает в пати ${party.mode || ''}${clubText}`;
 
             list.push({
-                id: 'invite_' + i.id,
-                type: 'party_invite',
-                kind,
-                inviteId: i.id,
-                partyId: i.party_id,
-                userId: i.from_id,
+                id: 'invite_' + i.id, type: 'party_invite', kind,
+                inviteId: i.id, partyId: i.party_id, userId: i.from_id,
                 user: userMap[i.from_id] || {},
                 text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> ${label}`,
-                time: i.created_at,
-                unread: true
+                time: i.created_at, unread: true
             });
         });
 
-        (unreadMsgs || []).forEach(m => {
-    if (ids.has(m.sender_id)) return; // уже учтён
-    ids.add(m.sender_id);
-    list.push({
-        id: 'msg_' + m.id,
-        type: 'message',
-        userId: m.sender_id,
-        user: userMap[m.sender_id] || {},
-        text: `<b>${escapeHtml(userMap[m.sender_id]?.display_name || 'Игрок')}</b>: ${
-            escapeHtml((m.text || '').slice(0, 80)) || '📷 Фото'
-        }`,
-        time: m.created_at,
-        unread: true
-    });
-});
+        unreadMsgs.forEach(m => {
+            if (ids.has(m.sender_id)) return;
+            list.push({
+                id: 'msg_' + m.id, type: 'message', userId: m.sender_id,
+                user: userMap[m.sender_id] || {},
+                text: `<b>${escapeHtml(userMap[m.sender_id]?.display_name || 'Игрок')}</b>: ${
+                    escapeHtml((m.text || '').slice(0, 80)) || '📷 Фото'}`,
+                time: m.created_at, unread: true
+            });
+        });
 
-        // --- Клуб ---
-        (clubInvites || []).forEach(i => {
+        clubInvites.forEach(i => {
             const club = clubMap[i.club_id] || {};
             list.push({
-                id: 'clubin_' + i.id,
-                type: 'club_invite',
-                inviteId: i.id,
-                clubId: i.club_id,
-                userId: i.from_id,
+                id: 'clubin_' + i.id, type: 'club_invite',
+                inviteId: i.id, clubId: i.club_id, userId: i.from_id,
                 user: userMap[i.from_id] || {},
                 text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> приглашает тебя в клуб <b>${escapeHtml(club.name || '')}</b> [${escapeHtml(club.tag || '')}]`,
-                time: i.created_at,
-                unread: true
+                time: i.created_at, unread: true
             });
         });
 
-        // Сортировка по времени
         list.sort((a, b) => new Date(b.time) - new Date(a.time));
 
+        CACHE.set('notifications', list, 60 * 1000);
         notifCache = list;
         return list;
     } catch (e) {
         console.error('loadNotifications error:', e);
-        return [];
+        return CACHE.get('notifications', 60 * 1000) || [];
     }
 }
 
@@ -21172,7 +21331,7 @@ function subscribeUsersRealtime() {
 
             // 2. Лидерборд — если открыт dashboard или полный лидерборд
             if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-                loadLeaderboard();
+                debouncedLoadLeaderboard();
             }
             if (document.getElementById('page-leaderboard')?.classList.contains('active')) {
                 openFullLeaderboard();
@@ -22026,6 +22185,16 @@ document.addEventListener('change', async (e) => {
         showToast('Ошибка: ' + (err.message || err));
     }
 });
+
+// ============================================================
+// DEBOUNCED-ЗАГРУЗЧИКИ (объявляем здесь — все функции уже определены)
+// ============================================================
+const debouncedLoadLeaderboard    = debounce(() => loadLeaderboard(), 500);
+const debouncedLoadChatList       = debounce(() => loadChatList(), 500);
+const debouncedUpdateNotifBadge   = debounce(() => updateNotifBadge(), 800);
+const debouncedLoadMatchesHistory = debounce(() => loadMatchesHistory(), 500);
+const debouncedLoadFriends        = debounce(() => loadFriends(), 500);
+const debouncedLoadClub           = debounce(() => loadClub(), 500);
             
     </script>
 </body>
