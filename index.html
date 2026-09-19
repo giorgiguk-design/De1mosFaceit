@@ -11008,8 +11008,34 @@ async function init() {
     try {
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
-        const { data: existing } = await sb.from('users')
+        // 🔥 Запрос с таймаутом 8 секунд
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 8000)
+        );
+        
+        const queryPromise = sb.from('users')
             .select('*').eq('telegram_id', user.id).maybeSingle();
+        
+        let existing;
+        try {
+            const result = await Promise.race([queryPromise, timeoutPromise]);
+            existing = result.data;
+        } catch (e) {
+            console.error('❌ Supabase timeout:', e);
+            showToast('⚠️ Медленное соединение. Повторная попытка...');
+            
+            // Вторая попытка — ещё 8 сек
+            try {
+                const retry = await Promise.race([
+                    sb.from('users').select('*').eq('telegram_id', user.id).maybeSingle(),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout2')), 8000))
+                ]);
+                existing = retry.data;
+            } catch (e2) {
+                showToast('❌ Не удалось загрузить профиль. Перезагрузи приложение');
+                return;
+            }
+        }
 
         let data, error;
 
@@ -11170,6 +11196,11 @@ function renderDashboard(user) {
     const winrate = user.matches_played > 0 
         ? Math.round((user.wins / user.matches_played) * 100) 
         : 0;
+        // Убираем "—", если есть
+    const eloEl = document.getElementById('eloValue');
+    if (eloEl && eloEl.textContent === '—') {
+        eloEl.textContent = '...';  // Скелетон
+    }
     animateNumber(document.getElementById('eloValue'), user.elo ?? 1000, 1000);
     document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
 
