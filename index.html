@@ -13404,9 +13404,14 @@ function onMatchFound(match) {
 }
 
 async function subscribeMatchRealtime() {
-    if (currentMatchChannel) sb.removeChannel(currentMatchChannel);
+    if (currentMatchChannel) {
+        try { sb.removeChannel(currentMatchChannel); } catch (e) {}
+        currentMatchChannel = null;
+    }
     if (!currentMatch) return;
     const matchId = currentMatch.id;
+
+    console.log('🎬 subscribeMatchRealtime for match', matchId);
 
     currentMatchChannel = sb.channel('match_' + matchId)
         .on('postgres_changes', {
@@ -13419,9 +13424,10 @@ async function subscribeMatchRealtime() {
             const prevStatus = currentMatch?.status;
             currentMatch = fresh;
 
-            // ==== VETO (баны карт) ====
+            console.log('📥 match event:', prevStatus, '→', fresh.status);
+
+            // ==== VETO ====
             if (fresh.status === 'veto') {
-                // Только перерисовываем, без пересоздания канала
                 if (document.getElementById('page-veto')?.classList.contains('active')) {
                     renderVeto();
                     startVetoCountdown();
@@ -13431,7 +13437,7 @@ async function subscribeMatchRealtime() {
                 return;
             }
 
-            // ==== SIDE_PICK (выбор стороны) ====
+            // ==== SIDE_PICK ====
             if (fresh.status === 'side_pick') {
                 haptic('heavy');
                 if (prevStatus !== 'side_pick') {
@@ -13447,7 +13453,7 @@ async function subscribeMatchRealtime() {
                 return;
             }
 
-            // ==== IN_GAME (ссылка от хоста) ====
+            // ==== IN_GAME ====
             if (fresh.status === 'in_game') {
                 stopVetoPolling();
                 const { data: freshRoom } = await sb.from('rooms')
@@ -13480,38 +13486,8 @@ async function subscribeMatchRealtime() {
                 return;
             }
         })
-        // ==== Realtime по комнате (host_link, статус) ====
-        .on('postgres_changes', {
-            event: 'UPDATE', schema: 'public', table: 'rooms',
-            filter: `id=eq.${currentMatch.room_id}`
-        }, async (payload) => {
-            const room = payload.new;
-            if (!room) return;
-
-            // Ссылка появилась → in_game экран
-            if (room.host_link && currentMatch?.status === 'in_game') {
-                haptic('heavy');
-                showInGameScreen(room.id, room);
-                return;
-            }
-
-            if (room.status === 'cancelled') {
-                showCancelledOnce(room.id);
-                return;
-            }
-
-            if (room.status === 'result') {
-                showResultScreen();
-                return;
-            }
-
-            if (room.status === 'finished') {
-                showFinishedScreen();
-                return;
-            }
-        })
         .subscribe((status) => {
-            console.log('📡 match_rt status:', status);
+            console.log('📡 match_' + matchId + ' status:', status);
         });
 }
 
@@ -13787,15 +13763,11 @@ function showVetoScreen() {
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
 
-    unsubscribeRoomRealtime();
-    unsubscribeInGameRealtime();
+    // 🔥 НЕ трогаем подписки — они управляются снаружи через subscribeMatchRealtime
 
     switchPage('veto');
     renderVeto();
     startVetoCountdown();
-
-    // 🔥 НЕ подписываемся здесь. Подписку делает subscribeMatchRealtime()
-    // (единственная точка).
 }
 // ============================================================
 // РЕНДЕР VETO
@@ -17377,12 +17349,21 @@ let roomRealtimeChannel = null;
 let _roomRenderTimer = null;
 
 function subscribeRoomRealtime(roomId) {
-    // 🔥 Приводим к числу — на случай, если пришла строка
-    roomId = Number(roomId);
-    console.log('🔌 subscribeRoomRealtime CALLED, roomId =', roomId, 'typeof =', typeof roomId);
+    // 🔥 Валидация
+    const rid = Number(roomId);
+    if (!rid || isNaN(rid)) {
+        console.warn('❌ subscribeRoomRealtime: invalid roomId =', roomId);
+        return;
+    }
+    roomId = rid;
+
+    console.log('🔌 subscribeRoomRealtime, roomId =', roomId);
+
+    // 🔥 Отменяем старый таймер рендера ПЕРЕД пересозданием канала
+    clearTimeout(_roomRenderTimer);
+    _roomRenderTimer = null;
 
     if (roomRealtimeChannel) {
-        console.log('🔌 removing old channel');
         try { sb.removeChannel(roomRealtimeChannel); } catch (e) {}
         roomRealtimeChannel = null;
     }
@@ -17396,7 +17377,7 @@ function subscribeRoomRealtime(roomId) {
             const room = payload.new;
             if (!room) return;
 
-            console.log('📥 rooms event:', payload.eventType, 'id:', room.id, 'status:', room.status);
+            console.log('📥 rooms event:', payload.eventType, 'id:', room.id, 'status:', room.status, '| host_link:', room.host_link ? 'ЕСТЬ' : 'нет');
 
             const kicked = room.kicked_users || [];
             if (kicked.includes(Number(currentUser.telegram_id))) {
@@ -17465,7 +17446,9 @@ function subscribeRoomRealtime(roomId) {
                     .order('created_at', { ascending: false })
                     .limit(1).maybeSingle();
                 if (match) currentMatch = match;
+                haptic('heavy');
                 showInGameScreen(roomId, room);
+                subscribeMatchRealtime();
                 return;
             }
 
@@ -17477,6 +17460,7 @@ function subscribeRoomRealtime(roomId) {
                     .limit(1).maybeSingle();
                 if (match) currentMatch = match;
                 showResultScreen();
+                subscribeMatchRealtime();
                 return;
             }
 
@@ -17493,7 +17477,7 @@ function subscribeRoomRealtime(roomId) {
                 }, 250);
             }
         })
-        // ==== Изменения игроков комнаты ====
+        // ==== Изменения игроков ====
         .on('postgres_changes', {
             event: '*', schema: 'public', table: 'room_players',
             filter: 'room_id=eq.' + roomId
@@ -18373,13 +18357,6 @@ function getResultUnlockRemaining(roomId) {
     if (!startedAt) return RESULT_UNLOCK_DELAY_MS;
     const passed = Date.now() - startedAt;
     return Math.max(0, RESULT_UNLOCK_DELAY_MS - passed);
-}
-
-function formatMMSS(ms) {
-    const total = Math.ceil(ms / 1000);
-    const m = String(Math.floor(total / 60)).padStart(2, '0');
-    const s = String(total % 60).padStart(2, '0');
-    return `${m}:${s}`;
 }
 
 function formatMMSS(ms) {
@@ -19993,22 +19970,26 @@ function subscribeRoomChat(roomId) {
 }
 
 function subscribeRoomChatCounter(roomId) {
+    const rid = Number(roomId);
+    if (!rid || isNaN(rid)) return;
+
     // 🔥 Если уже подписаны на эту же комнату — не трогаем
-    if (window._roomChatCounterChannel && window._roomChatCounterRoomId === roomId) {
+    if (window._roomChatCounterChannel && Number(window._roomChatCounterRoomId) === rid) {
         return;
     }
 
     if (window._roomChatCounterChannel) {
-        sb.removeChannel(window._roomChatCounterChannel);
+        try { sb.removeChannel(window._roomChatCounterChannel); } catch (e) {}
+        window._roomChatCounterChannel = null;
     }
 
-    window._roomChatCounterRoomId = roomId;
-    window._roomChatCounterChannel = sb.channel('room_chat_counter_' + roomId)
+    window._roomChatCounterRoomId = rid;
+    window._roomChatCounterChannel = sb.channel('room_chat_counter_' + rid)
         .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public',
             table: 'room_messages',
-            filter: 'room_id=eq.' + roomId
+            filter: 'room_id=eq.' + rid
         }, async (payload) => {
             const m = payload.new;
             if (roomChatOpen) return;
