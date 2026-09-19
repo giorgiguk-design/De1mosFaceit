@@ -24458,8 +24458,20 @@ async function joinVoiceChat(roomId, team) {
             },
         });
 
-        voiceRoom
-                    // 🔥 Диагностика подключения
+                voiceRoom = new LivekitClient.Room({
+            adaptiveStream: true,
+            dynacast: true,
+            rtcConfig: {
+                iceTransportPolicy: 'all',
+            },
+            audioCaptureDefaults: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
+        });
+
+        // 🔥 Диагностика подключения
         voiceRoom.on(LivekitClient.RoomEvent.ConnectionStateChanged, (state) => {
             console.log('📡 LiveKit state:', state);
         });
@@ -24469,6 +24481,9 @@ async function joinVoiceChat(roomId, team) {
         voiceRoom.on(LivekitClient.RoomEvent.ConnectionQualityChanged, (q, p) => {
             console.log('📶 Quality:', q, p?.identity);
         });
+
+        // 🔥 Обработчики событий
+        voiceRoom
             .on(LivekitClient.RoomEvent.ParticipantConnected, (p) => {
                 voiceParticipants[p.identity] = p;
                 updateVoiceWidget();
