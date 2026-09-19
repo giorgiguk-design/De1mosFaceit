@@ -16862,15 +16862,9 @@ function updateTeamZoneDOM(content, team, list, perTeamCount, room, iAmReady, my
     // 🔥 ФИКС: удаляем ВСЕ старые plus/status элементы
     zone.querySelectorAll('.tz-plus, [data-plus-status]').forEach(el => el.remove());
 
-    // 4. Plus-кнопка / статус — добавляем одну
+    // 🔥 ФИКС: правильный приоритет — срабатывает только ОДНА ветка
     let plusHTML = '';
-    if (!full && !isMyTeam && !iAmReady) {
-        plusHTML = `
-            <button class="tz-plus team-${team.toLowerCase()}" onclick="event.stopPropagation(); chooseTeam(${room.id}, '${team}')">
-                ➕ Войти в ${team}
-            </button>
-        `;
-    } else if (isMyTeam && iAmReady) {
+    if (isMyTeam && iAmReady) {
         plusHTML = `
             <div data-plus-status style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--emerald); font-weight: 800; letter-spacing: 0.5px;">
                 ✓ ТЫ В ЭТОЙ КОМАНДЕ
@@ -16881,6 +16875,12 @@ function updateTeamZoneDOM(content, team, list, perTeamCount, room, iAmReady, my
             <div data-plus-status style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--hint); font-weight: 700; letter-spacing: 0.5px;">
                 КОМАНДА ЗАПОЛНЕНА
             </div>
+        `;
+    } else if (!iAmReady) {
+        plusHTML = `
+            <button class="tz-plus team-${team.toLowerCase()}" onclick="event.stopPropagation(); chooseTeam(${room.id}, '${team}')">
+                ➕ Войти в ${team}
+            </button>
         `;
     }
 
@@ -16921,6 +16921,33 @@ function updateSpectatorsDOM(content, spectators, userById, mode) {
         `;
     }).join('');
 
+    // Обновляем label
+    if (oldLabel) {
+        const newLabelText = `Зрители (${spectators.length})`;
+        if (oldLabel.textContent.trim() !== newLabelText.trim()) {
+            oldLabel.textContent = newLabelText;
+        }
+    } else {
+        // Вставляем label перед container
+        const container = oldContainer || document.createElement('div');
+        if (!oldContainer) {
+            container.className = 'spectators-container';
+            container.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;';
+            // Вставляем после team-zones
+            const teamZones = content.querySelector('.team-zones');
+            if (teamZones) {
+                teamZones.insertAdjacentHTML('afterend', `
+                    <div class="play-section-label spectators-label">Зрители (${spectators.length})</div>
+                `);
+                teamZones.insertAdjacentHTML('afterend', container.outerHTML);
+                // Повторно находим только что вставленный контейнер
+                const newContainer = content.querySelector('.spectators-container');
+                if (newContainer) newContainer.innerHTML = newHTML;
+                return;
+            }
+        }
+    }
+
     if (oldContainer) {
         if (oldContainer.innerHTML.trim() !== newHTML.trim()) {
             oldContainer.innerHTML = newHTML;
@@ -16929,6 +16956,7 @@ function updateSpectatorsDOM(content, spectators, userById, mode) {
 }
 
 async function renderRoomContent(roomId) {
+    roomId = Number(roomId);
     const content = document.getElementById('playScreenContent');
     if (!content) return;
 
@@ -16954,8 +16982,9 @@ async function renderRoomContent(roomId) {
             return;
         }
 
-        // Перенаправления по статусу — как было
+        // === Перенаправления по статусу ===
         if (room.status === 'cancelled') { showCancelledOnce(roomId); return; }
+
         if (room.status === 'veto' || room.status === 'side_pick') {
             const { data: match } = await sb.from('game_matches')
                 .select('*').eq('room_id', roomId)
@@ -16967,7 +16996,9 @@ async function renderRoomContent(roomId) {
             }
             return;
         }
+
         if (room.status === 'waiting_link') { showWaitingLinkScreen(roomId, room); return; }
+
         if (room.status === 'in_game') {
             const { data: match } = await sb.from('game_matches')
                 .select('*').eq('room_id', roomId)
@@ -16976,6 +17007,7 @@ async function renderRoomContent(roomId) {
             showInGameScreen(roomId, room);
             return;
         }
+
         if (room.status === 'result') {
             const { data: match } = await sb.from('game_matches')
                 .select('*').eq('room_id', roomId)
@@ -16985,6 +17017,7 @@ async function renderRoomContent(roomId) {
             return;
         }
 
+        // === Данные ===
         const playerIds = (players || []).map(p => p.telegram_id);
         let users = [];
         if (playerIds.length > 0) {
@@ -17011,28 +17044,35 @@ async function renderRoomContent(roomId) {
         const teamAFull = teamA.length >= perTeamCount;
         const teamBFull = teamB.length >= perTeamCount;
 
-        // 🔥 ЕСЛИ скелет уже есть для этой комнаты — точечное обновление
+        // 🔥 Проверяем, есть ли уже скелет для этой же комнаты
         const skeletonExists = content.dataset.roomId === String(roomId)
-                            && content.querySelector('.team-zones');
+                            && !!content.querySelector('.team-zones')
+                            && !!content.querySelector('.rv-meta');
 
         if (skeletonExists) {
+            console.log('🔧 точечное обновление room', roomId);
+
             // 1. Заголовок
             const metaEl = content.querySelector('.rv-meta');
             if (metaEl) {
-                metaEl.innerHTML = `
+                const newMetaHTML = `
                     <span class="rv-meta-badge">${room.mode}</span>
                     <span>${totalReady}/${room.max_players} игроков</span>
                     ${iAmLeader ? '<span class="rv-meta-badge gold">👑 ХОСТ</span>' : ''}
                 `;
+                if (metaEl.innerHTML.trim() !== newMetaHTML.trim()) {
+                    metaEl.innerHTML = newMetaHTML;
+                }
             }
 
-            // 2. Team A
+            // 2. Команды
             updateTeamZoneDOM(content, 'A', teamA, perTeamCount, room, iAmReady, myTeam, userById);
-
-            // 3. Team B
             updateTeamZoneDOM(content, 'B', teamB, perTeamCount, room, iAmReady, myTeam, userById);
 
-            // 4. Кнопка старта (только текст меняется)
+            // 3. Зрители
+            updateSpectatorsDOM(content, spectators, userById, room.mode);
+
+            // 4. Кнопка старта
             const launchBtn = content.querySelector('.room-launch-btn');
             if (launchBtn && iAmLeader) {
                 const newText = canStart ? 'ЗАПУСТИТЬ МАТЧ' : 'ОЖИДАНИЕ ИГРОКОВ';
@@ -17045,15 +17085,32 @@ async function renderRoomContent(roomId) {
                 }
             }
 
-            // 5. Зрители
-            updateSpectatorsDOM(content, spectators, userById, room.mode);
+            // 5. Хинт «Выбери команду»
+            const hint = content.querySelector('.choose-team-hint');
+            if (!iAmReady && !hint) {
+                // перезагружаем полностью — иначе сложно вставить в правильное место
+                content.dataset.roomId = '';
+                return renderRoomContent(roomId);
+            } else if (iAmReady && hint) {
+                hint.remove();
+            }
 
-            // 6. Бейдж чата
+            // 6. Панель кнопок (Друг/Чат/Сменить/Выйти)
+            const actionsRow = content.querySelector('.rv-actions');
+            if (!iAmReady && actionsRow) {
+                actionsRow.remove();
+            } else if (iAmReady && !actionsRow) {
+                // перезагружаем полностью — надо вставить блок
+                content.dataset.roomId = '';
+                return renderRoomContent(roomId);
+            }
+
             setTimeout(() => updateRoomChatButton(room.id), 100);
             return;
         }
 
         // === ПЕРВЫЙ РЕНДЕР — полный HTML ===
+        console.log('🎨 полный рендер room', roomId);
         content.dataset.roomId = String(roomId);
 
         const renderTZPlayer = (p, teamSide) => {
@@ -17092,24 +17149,25 @@ async function renderRoomContent(roomId) {
                 playersHTML = list.map(p => renderTZPlayer(p, team)).join('');
             }
 
+            // 🔥 Единая логика приоритета
             let plusHTML = '';
-            if (!full && !isMyTeam && !iAmReady) {
+            if (isMyTeam && iAmReady) {
                 plusHTML = `
-                    <button class="tz-plus team-${team.toLowerCase()}" onclick="event.stopPropagation(); chooseTeam(${room.id}, '${team}')">
-                        ➕ Войти в ${team}
-                    </button>
-                `;
-            } else if (isMyTeam && iAmReady) {
-                plusHTML = `
-                    <div style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--emerald); font-weight: 800; letter-spacing: 0.5px;">
+                    <div data-plus-status style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--emerald); font-weight: 800; letter-spacing: 0.5px;">
                         ✓ ТЫ В ЭТОЙ КОМАНДЕ
                     </div>
                 `;
             } else if (full) {
                 plusHTML = `
-                    <div style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--hint); font-weight: 700; letter-spacing: 0.5px;">
+                    <div data-plus-status style="text-align: center; margin-top: 8px; font-size: 10px; color: var(--hint); font-weight: 700; letter-spacing: 0.5px;">
                         КОМАНДА ЗАПОЛНЕНА
                     </div>
+                `;
+            } else if (!iAmReady) {
+                plusHTML = `
+                    <button class="tz-plus team-${team.toLowerCase()}" onclick="event.stopPropagation(); chooseTeam(${room.id}, '${team}')">
+                        ➕ Войти в ${team}
+                    </button>
                 `;
             }
 
@@ -17161,7 +17219,7 @@ async function renderRoomContent(roomId) {
             </div>
 
             ${spectators.length > 0 && room.mode !== '1x1' ? `
-    <div class="play-section-label">Зрители (${spectators.length})</div>
+    <div class="play-section-label spectators-label">Зрители (${spectators.length})</div>
                 <div class="spectators-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
                     ${spectators.map(s => {
                         const u = userById[s.telegram_id] || {};
@@ -17252,7 +17310,6 @@ async function renderRoomContent(roomId) {
             ` : ''}
         `;
 
-        // 🔥 Подписка на чат — ТОЛЬКО при первом рендере (не при каждом обновлении)
         setTimeout(() => updateRoomChatButton(room.id), 100);
         subscribeRoomChatCounter(roomId);
     } catch (e) {
@@ -17320,15 +17377,26 @@ let roomRealtimeChannel = null;
 let _roomRenderTimer = null;
 
 function subscribeRoomRealtime(roomId) {
-    if (roomRealtimeChannel) sb.removeChannel(roomRealtimeChannel);
+    // 🔥 Приводим к числу — на случай, если пришла строка
+    roomId = Number(roomId);
+    console.log('🔌 subscribeRoomRealtime CALLED, roomId =', roomId, 'typeof =', typeof roomId);
+
+    if (roomRealtimeChannel) {
+        console.log('🔌 removing old channel');
+        try { sb.removeChannel(roomRealtimeChannel); } catch (e) {}
+        roomRealtimeChannel = null;
+    }
 
     roomRealtimeChannel = sb.channel('room_rt_' + roomId)
+        // ==== Изменения комнаты ====
         .on('postgres_changes', {
             event: '*', schema: 'public', table: 'rooms',
             filter: 'id=eq.' + roomId
         }, async (payload) => {
             const room = payload.new;
             if (!room) return;
+
+            console.log('📥 rooms event:', payload.eventType, 'id:', room.id, 'status:', room.status);
 
             const kicked = room.kicked_users || [];
             if (kicked.includes(Number(currentUser.telegram_id))) {
@@ -17419,17 +17487,24 @@ function subscribeRoomRealtime(roomId) {
             }
 
             if (room.status === 'open') {
-                // 🔥 Дебаунс — не дёргаем на каждое событие
                 clearTimeout(_roomRenderTimer);
                 _roomRenderTimer = setTimeout(() => {
                     renderRoomContent(roomId);
                 }, 250);
             }
         })
+        // ==== Изменения игроков комнаты ====
         .on('postgres_changes', {
             event: '*', schema: 'public', table: 'room_players',
             filter: 'room_id=eq.' + roomId
-        }, async () => {
+        }, async (payload) => {
+            console.log('📥 room_players event:',
+                payload.eventType,
+                'room:', payload.new?.room_id || payload.old?.room_id,
+                'user:', payload.new?.telegram_id || payload.old?.telegram_id,
+                'team:', payload.new?.team,
+                'is_ready:', payload.new?.is_ready);
+
             const { data: rooms } = await sb.from('rooms')
                 .select('*').eq('id', roomId).limit(1);
             const room = rooms && rooms[0];
@@ -17438,24 +17513,25 @@ function subscribeRoomRealtime(roomId) {
             if (room.status === 'open') {
                 await checkTeamsReady(roomId, room);
 
-                // 🔥 Дебаунс — не дёргаем на каждое событие
                 clearTimeout(_roomRenderTimer);
                 _roomRenderTimer = setTimeout(() => {
+                    console.log('🔄 re-render room', roomId);
                     renderRoomContent(roomId);
                 }, 250);
             }
         })
         .subscribe((status) => {
-            console.log('Room realtime status:', status);
+            console.log('📡 room_rt_' + roomId + ' status:', status);
         });
 }
 
 function unsubscribeRoomRealtime() {
     if (roomRealtimeChannel) {
-        sb.removeChannel(roomRealtimeChannel);
+        try { sb.removeChannel(roomRealtimeChannel); } catch (e) {}
         roomRealtimeChannel = null;
     }
     clearTimeout(_roomRenderTimer);
+    _roomRenderTimer = null;
 }
 
 async function checkTeamsReady(roomId, room) {
