@@ -24018,25 +24018,8 @@ async function loadLastMatchBreakdown(userId) {
             return;
         }
 
-        // Пытаемся получить статистику K/D из БД (если есть таблица match_stats)
-        // Если нет — генерируем на основе матча (заглушка)
+                // Статистика K/D (таблица match_stats пока не создана — используем заглушку)
         let kills = 15, deaths = 5, isMVP = true;
-
-        try {
-            const { data: stats } = await sb.from('match_stats')
-                .select('kills, deaths, is_mvp')
-                .eq('match_id', myMatch.id)
-                .eq('telegram_id', userId)
-                .maybeSingle();
-
-            if (stats) {
-                kills = stats.kills ?? 0;
-                deaths = stats.deaths ?? 0;
-                isMVP = stats.is_mvp === true;
-            }
-        } catch (e) {
-            // Таблицы нет — оставляем значения по умолчанию
-        }
 
         // Обновляем K/D
         const kdEl = document.getElementById('lmbKD');
@@ -24328,24 +24311,8 @@ async function renderDashLastMatch(userId) {
             .some(p => Number(p.telegram_id) === Number(userId)) ? 'A' : 'B';
         const isWinner = myMatch.winner_team === myTeam;
 
-        // K/D (из match_stats если есть, иначе заглушка)
+                // K/D (таблица match_stats пока не создана — используем заглушку)
         let kills = 15, deaths = 5, isMVP = isWinner;
-
-        try {
-            const { data: stats } = await sb.from('match_stats')
-                .select('kills, deaths, is_mvp')
-                .eq('match_id', myMatch.id)
-                .eq('telegram_id', userId)
-                .maybeSingle();
-
-            if (stats) {
-                kills = stats.kills ?? 0;
-                deaths = stats.deaths ?? 0;
-                isMVP = stats.is_mvp === true;
-            }
-        } catch (e) {
-            // Таблицы нет — оставляем заглушку
-        }
 
         // Score
         const scoreText = (myMatch.score_a != null && myMatch.score_b != null)
@@ -24418,6 +24385,35 @@ async function joinVoiceChat(roomId, team) {
 
     showToast('🎤 Подключение...');
 
+        // 🔥 ЗАПРАШИВАЕМ МИКРОФОН ЗАРАНЕЕ — до подключения к LiveKit
+    try {
+        console.log('🎤 Запрашиваю доступ к микрофону...');
+        const testStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            } 
+        });
+        console.log('✅ Микрофон разрешён. Треки:', testStream.getAudioTracks().map(t => t.label));
+        // Освобождаем — LiveKit сам захватит
+        testStream.getTracks().forEach(t => t.stop());
+    } catch (e) {
+        console.error('❌ Микрофон недоступен:', e.name, e.message);
+        
+        let msg = 'Не удалось получить доступ к микрофону';
+        if (e.name === 'NotAllowedError') {
+            msg = '🚫 Разреши доступ к микрофону в настройках браузера';
+        } else if (e.name === 'NotFoundError') {
+            msg = '🎤 Микрофон не найден. Подключи микрофон';
+        } else if (e.name === 'NotReadableError') {
+            msg = '⚠️ Микрофон занят другим приложением';
+        }
+        
+        showToast(msg);
+        return;
+    }
+
     try {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/voice-token`, {
             method: 'POST',
@@ -24434,15 +24430,27 @@ async function joinVoiceChat(roomId, team) {
             }),
         });
 
-        const data = await res.json();
+                const data = await res.json();
+        console.log('📡 voice-token ответ:', data);
+        
         if (!res.ok || data.error) throw new Error(data.error || 'Ошибка токена');
+        if (!data.url || !data.token) {
+            throw new Error('Сервер не вернул url или token');
+        }
+        if (!data.url.startsWith('wss://') && !data.url.startsWith('ws://')) {
+            console.warn('⚠️ LIVEKIT_URL не начинается с wss:// — это подозрительно');
+        }
 
         voiceRoomId = roomId;
         voiceTeam = team;
 
-        voiceRoom = new LivekitClient.Room({
+                voiceRoom = new LivekitClient.Room({
             adaptiveStream: true,
             dynacast: true,
+            // 🔥 Форсируем TURN, если UDP не проходит
+            rtcConfig: {
+                iceTransportPolicy: 'all', // попробуй 'relay' если не работает
+            },
             audioCaptureDefaults: {
                 echoCancellation: true,
                 noiseSuppression: true,
@@ -24451,6 +24459,16 @@ async function joinVoiceChat(roomId, team) {
         });
 
         voiceRoom
+                    // 🔥 Диагностика подключения
+        voiceRoom.on(LivekitClient.RoomEvent.ConnectionStateChanged, (state) => {
+            console.log('📡 LiveKit state:', state);
+        });
+        voiceRoom.on(LivekitClient.RoomEvent.MediaDevicesError, (e) => {
+            console.error('❌ MediaDevicesError:', e);
+        });
+        voiceRoom.on(LivekitClient.RoomEvent.ConnectionQualityChanged, (q, p) => {
+            console.log('📶 Quality:', q, p?.identity);
+        });
             .on(LivekitClient.RoomEvent.ParticipantConnected, (p) => {
                 voiceParticipants[p.identity] = p;
                 updateVoiceWidget();
@@ -24482,8 +24500,14 @@ async function joinVoiceChat(roomId, team) {
                 cleanupVoiceState();
             });
 
+        console.log('📡 Подключаюсь к LiveKit:', data.url);
+        console.log('📡 Комната:', data.channelName);
+        
         await voiceRoom.connect(data.url, data.token);
+        console.log('✅ LiveKit подключён');
+        
         await voiceRoom.localParticipant.setMicrophoneEnabled(true);
+        console.log('✅ Микрофон включён в LiveKit');
         voiceMuted = false;
 
         renderVoiceWidget();
