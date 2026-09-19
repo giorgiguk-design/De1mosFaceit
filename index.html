@@ -13386,12 +13386,13 @@ function onMatchFound(match) {
     currentMatch = match;
 
     if (match.status === 'confirm') showConfirmScreen();
-    else if (match.status === 'veto') { showVetoScreen(); subscribeVetoRealtime(match.id); }
-    else if (match.status === 'side_pick') { showVetoScreen(); subscribeVetoRealtime(match.id); }
+    else if (match.status === 'veto') showVetoScreen();
+    else if (match.status === 'side_pick') showVetoScreen();
     else if (match.status === 'ready') showMatchScreen();
     else if (match.status === 'result') showResultScreen();
     else if (match.status === 'finished') showFinishedScreen();
 
+    // 🔥 Одна подписка — внутри неё уже всё есть
     subscribeMatchRealtime();
 }
 
@@ -13405,38 +13406,106 @@ async function subscribeMatchRealtime() {
             event: 'UPDATE', schema: 'public', table: 'game_matches',
             filter: `id=eq.${matchId}`
         }, async (payload) => {
-            currentMatch = payload.new;
+            const fresh = payload.new;
+            if (!fresh) return;
 
-            if (currentMatch.status === 'veto') {
-                showVetoScreen();
-            } else if (currentMatch.status === 'ready') {
-                renderVeto();
-            } else if (currentMatch.status === 'side_pick') {
-                renderVeto();
-            } else if (currentMatch.status === 'in_game') {
-                // 🔥 Грузим КОМНАТУ и показываем экран in-game
+            const prevStatus = currentMatch?.status;
+            currentMatch = fresh;
+
+            // ==== VETO (баны карт) ====
+            if (fresh.status === 'veto') {
+                // Только перерисовываем, без пересоздания канала
+                if (document.getElementById('page-veto')?.classList.contains('active')) {
+                    renderVeto();
+                    startVetoCountdown();
+                } else {
+                    showVetoScreen();
+                }
+                return;
+            }
+
+            // ==== SIDE_PICK (выбор стороны) ====
+            if (fresh.status === 'side_pick') {
+                haptic('heavy');
+                if (prevStatus !== 'side_pick') {
+                    showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
+                }
+                stopVetoPolling();
+                if (document.getElementById('page-veto')?.classList.contains('active')) {
+                    renderVeto();
+                    startVetoCountdown();
+                } else {
+                    showVetoScreen();
+                }
+                return;
+            }
+
+            // ==== IN_GAME (ссылка от хоста) ====
+            if (fresh.status === 'in_game') {
+                stopVetoPolling();
                 const { data: freshRoom } = await sb.from('rooms')
-                    .select('*').eq('id', currentMatch.room_id).single();
+                    .select('*').eq('id', fresh.room_id).single();
                 if (freshRoom) {
+                    haptic('heavy');
                     showInGameScreen(freshRoom.id, freshRoom);
                 }
-            } else if (currentMatch.status === 'result') {
+                return;
+            }
+
+            // ==== RESULT ====
+            if (fresh.status === 'result') {
+                stopVetoPolling();
                 showResultScreen();
-            } else if (currentMatch.status === 'finished') {
+                return;
+            }
+
+            // ==== FINISHED ====
+            if (fresh.status === 'finished') {
+                stopVetoPolling();
                 showFinishedScreen();
-            } else if (currentMatch.status === 'cancelled') {
-                showToast('Матч отменён');
-                if (matchPollTimer) clearInterval(matchPollTimer);
-                switchPage('play');
+                return;
+            }
+
+            // ==== CANCELLED ====
+            if (fresh.status === 'cancelled') {
+                stopVetoPolling();
+                showVetoCancelledScreen(fresh.cancelled_reason);
+                return;
             }
         })
+        // ==== Realtime по комнате (host_link, статус) ====
         .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'match_veto_suggestions',
-            filter: `match_id=eq.${matchId}`
-        }, () => {
-            if (currentMatch?.status === 'veto') renderVeto();
+            event: 'UPDATE', schema: 'public', table: 'rooms',
+            filter: `id=eq.${currentMatch.room_id}`
+        }, async (payload) => {
+            const room = payload.new;
+            if (!room) return;
+
+            // Ссылка появилась → in_game экран
+            if (room.host_link && currentMatch?.status === 'in_game') {
+                haptic('heavy');
+                showInGameScreen(room.id, room);
+                return;
+            }
+
+            if (room.status === 'cancelled') {
+                showCancelledOnce(room.id);
+                return;
+            }
+
+            if (room.status === 'result') {
+                showResultScreen();
+                return;
+            }
+
+            if (room.status === 'finished') {
+                showFinishedScreen();
+                return;
+            }
         })
-        .subscribe();
+        .subscribe((status) => {
+            console.log('📡 match_rt status:', status);
+        });
 }
 
         function showConfirmScreen() {
@@ -13718,13 +13787,8 @@ function showVetoScreen() {
     renderVeto();
     startVetoCountdown();
 
-    // 🔥 Единственная точка подписки на realtime veto
-    if (currentMatch?.id) {
-        console.log('🎬 showVetoScreen → subscribeVetoRealtime', currentMatch.id);
-        subscribeVetoRealtime(currentMatch.id);
-    } else {
-        console.warn('⚠️ showVetoScreen: currentMatch.id пустой');
-    }
+    // 🔥 НЕ подписываемся здесь. Подписку делает subscribeMatchRealtime()
+    // (единственная точка).
 }
 // ============================================================
 // РЕНДЕР VETO
@@ -14543,87 +14607,6 @@ stopVetoPolling();
 
 let vetoRtChannel = null;
 let vetoPollInterval = null;
-
-function subscribeVetoRealtime(matchId) {
-    console.log('🎬 subscribeVetoRealtime START, matchId =', matchId, 'sb =', !!sb);
-
-    if (vetoRtChannel) {
-        console.log('🎬 отписываемся от старого vetoRtChannel');
-        try { sb.removeChannel(vetoRtChannel); } catch (e) {}
-    }
-    vetoRtChannel = null;
-
-    if (!matchId) {
-        console.warn('❌ matchId пустой — подписка не создана');
-        return;
-    }
-
-    console.log('🎬 создаём канал veto_rt_' + matchId);
-
-    try {
-        vetoRtChannel = sb.channel('veto_rt_' + matchId)
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'game_matches',
-                filter: 'id=eq.' + matchId
-            }, async (payload) => {
-                const fresh = payload.new;
-                if (!fresh) return;
-
-                const prevStatus = currentMatch?.status;
-                const prevLen = (currentMatch?.veto_log || []).length;
-                const newLen = (fresh.veto_log || []).length;
-
-                currentMatch = fresh;
-
-                console.log('📡 veto update:', prevStatus, '→', fresh.status, '| банов:', prevLen, '→', newLen);
-
-                if (fresh.status === 'side_pick') {
-                    haptic('heavy');
-                    if (prevStatus !== 'side_pick') {
-                        showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
-                    }
-                    stopVetoPolling();
-                    renderVeto();
-                    startVetoCountdown();
-                    return;
-                }
-
-                if (fresh.status === 'veto') {
-                    renderVeto();
-                    startVetoCountdown();
-                } else if (fresh.status === 'in_game') {
-                    stopVetoPolling();
-                    // 🔥 Загружаем КОМНАТУ и передаём её
-                    const { data: freshRoom } = await sb.from('rooms')
-                        .select('*').eq('id', fresh.room_id).single();
-                    if (freshRoom) {
-                        showInGameScreen(freshRoom.id, freshRoom);
-                    }
-                } else if (fresh.status === 'cancelled') {
-                    stopVetoPolling();
-                    showVetoCancelledScreen(fresh.cancelled_reason);
-                } else if (fresh.status === 'result') {
-                    stopVetoPolling();
-                    showResultScreen();
-                }
-            })
-            .subscribe((status) => {
-                console.log('📡 veto_rt status:', status);
-                if (status === 'SUBSCRIBED') {
-                    syncVetoFromDB(matchId);
-                }
-            });
-
-        console.log('🎬 канал создан:', vetoRtChannel ? 'OK' : 'NULL');
-    } catch (e) {
-        console.error('❌ ошибка создания канала veto_rt:', e);
-        return;
-    }
-
-    startVetoPolling(matchId);
-}
 
 // ============================================================
 // Синхронизация с БД (на случай, если realtime пропустил событие)
@@ -17152,9 +17135,7 @@ function subscribeRoomRealtime(roomId) {
 
     roomRealtimeChannel = sb.channel('room_rt_' + roomId)
         .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'rooms',
+            event: '*', schema: 'public', table: 'rooms',
             filter: 'id=eq.' + roomId
         }, async (payload) => {
             const room = payload.new;
@@ -17203,8 +17184,8 @@ function subscribeRoomRealtime(roomId) {
                     .limit(1).maybeSingle();
                 if (match) {
                     currentMatch = match;
-                    showVetoScreen();      // ← сам подпишется
-                    subscribeMatchRealtime();
+                    showVetoScreen();
+                    subscribeMatchRealtime();  // ← ЕДИНСТВЕННАЯ подписка
                 }
                 return;
             }
@@ -17226,11 +17207,9 @@ function subscribeRoomRealtime(roomId) {
                     .select('*').eq('room_id', roomId)
                     .order('created_at', { ascending: false })
                     .limit(1).maybeSingle();
-                if (match) {
-                    currentMatch = match;
-                    subscribeMatchRealtime();
-                }
+                if (match) currentMatch = match;
                 showInGameScreen(roomId, room);
+                subscribeMatchRealtime();
                 return;
             }
 
@@ -17240,11 +17219,9 @@ function subscribeRoomRealtime(roomId) {
                     .select('*').eq('room_id', roomId)
                     .order('created_at', { ascending: false })
                     .limit(1).maybeSingle();
-                if (match) {
-                    currentMatch = match;
-                    showResultScreen();
-                    subscribeMatchRealtime();
-                }
+                if (match) currentMatch = match;
+                showResultScreen();
+                subscribeMatchRealtime();
                 return;
             }
 
@@ -17259,9 +17236,7 @@ function subscribeRoomRealtime(roomId) {
             }
         })
         .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'room_players',
+            event: '*', schema: 'public', table: 'room_players',
             filter: 'room_id=eq.' + roomId
         }, async () => {
             const { data: rooms } = await sb.from('rooms')
@@ -17274,40 +17249,7 @@ function subscribeRoomRealtime(roomId) {
                 await renderRoomContent(roomId);
             }
         })
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'game_matches'
-        }, async (payload) => {
-            const m = payload.new;
-            if (!m || String(m.room_id) !== String(roomId)) return;
-
-            currentMatch = m;
-
-            if (m.status !== 'confirm') {
-                activeRoomId = null;
-                hideActiveRoomBanner();
-                const _ind = document.getElementById('headerRoomIndicator');
-                if (_ind) _ind.style.display = 'none';
-                const _flt = document.getElementById('playEnterFloat');
-                if (_flt) _flt.classList.remove('active');
-                const _scr = document.getElementById('playScreen');
-                if (_scr) _scr.classList.remove('active');
-            }
-
-            if (m.status === 'veto' || m.status === 'side_pick') {
-                showVetoScreen();     // ← сам подпишется
-            } else if (m.status === 'in_game') {
-                const { data: rr } = await sb.from('rooms').select('*').eq('id', roomId).limit(1);
-                if (rr && rr[0]) showInGameScreen(roomId, rr[0]);
-            } else if (m.status === 'result') {
-                showResultScreen();
-            } else if (m.status === 'finished') {
-                showFinishedScreen();
-            } else if (m.status === 'cancelled') {
-                showCancelledOnce(roomId);
-            }
-        })
+        // 🔥 УБРАЛИ подписку на game_matches — её делает subscribeMatchRealtime()
         .subscribe((status) => {
             console.log('Room realtime status:', status);
         });
@@ -17929,20 +17871,25 @@ async function submitHostLink(roomId) {
     if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
 
     try {
-        // 🔥 Один чистый апдейт — без лишних полей
+        const nowIso = new Date().toISOString();
+
+        // 🔥 Один апдейт — и ссылка, и время старта
         const { error } = await sb.from('rooms').update({
             host_link: link,
-            status: 'in_game'
+            status: 'in_game',
+            in_game_started_at: nowIso
         }).eq('id', roomId);
 
         if (error) throw error;
 
         await touchRoom(roomId);
 
+        // Кэшируем локально
+        markInGameStarted(roomId, nowIso);
+
         showToast('✅ Ссылка отправлена игрокам');
         haptic('medium');
 
-        // Хост сразу переключается
         const { data: freshRoom } = await sb.from('rooms').select('*').eq('id', roomId).single();
         if (freshRoom) {
             showInGameScreen(freshRoom.id, freshRoom);
@@ -17972,10 +17919,20 @@ async function showInGameScreen(roomId, room) {
         return;
     }
 
-    // 🔥 Фиксируем момент старта матча (один раз)
-    markInGameStarted(roomId);
+    // 🔥 Кэшируем время старта из комнаты (общее для всех)
+    markInGameStarted(roomId, room.in_game_started_at);
 
-    // 🔥 Блокируем навигацию — игрок не может уйти пока не загрузит результаты
+    // 🔥 Если в комнате нет in_game_started_at — записываем (на всякий случай)
+    if (!room.in_game_started_at) {
+        await markInGameStartedDB(roomId);
+        // Перечитаем комнату
+        const { data: freshRoom } = await sb.from('rooms')
+            .select('in_game_started_at').eq('id', roomId).maybeSingle();
+        if (freshRoom?.in_game_started_at) {
+            markInGameStarted(roomId, freshRoom.in_game_started_at);
+        }
+    }
+
     lockNav();
 
     const me = Number(currentUser.telegram_id);
@@ -18099,29 +18056,64 @@ const RESULT_UNLOCK_DELAY_MS = 5 * 60 * 1000; // 5 минут
 
 // В localStorage храним: какая комната и когда получила ссылку
 // Ключ: inGameStartedAt_<roomId> = ISO-тайм
-function markInGameStarted(roomId) {
+// ============================================================
+// 5 МИНУТ ДО РАЗБЛОКИРОВКИ КНОПКИ "ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ"
+// Время старта храним в rooms.in_game_started_at — общее для всех
+// ============================================================
+const RESULT_UNLOCK_DELAY_MS = 5 * 60 * 1000;
+
+// Когда хост залил ссылку и комната стала in_game — фиксируем время
+async function markInGameStartedDB(roomId) {
     if (!roomId) return;
     try {
-        const key = 'inGameStartedAt_' + roomId;
-        if (!localStorage.getItem(key)) {
-            localStorage.setItem(key, new Date().toISOString());
+        const { data: room } = await sb.from('rooms')
+            .select('in_game_started_at').eq('id', roomId).maybeSingle();
+        if (room && !room.in_game_started_at) {
+            await sb.from('rooms').update({
+                in_game_started_at: new Date().toISOString()
+            }).eq('id', roomId);
         }
     } catch (e) {}
 }
 
-function getInGameStartedAt(roomId) {
-    if (!roomId) return 0;
+// Читаем общее время старта с сервера + считаем остаток
+async function getResultUnlockRemainingAsync(roomId) {
+    if (!roomId) return RESULT_UNLOCK_DELAY_MS;
     try {
-        const raw = localStorage.getItem('inGameStartedAt_' + roomId);
-        return raw ? new Date(raw).getTime() : 0;
-    } catch (e) { return 0; }
+        const { data: room } = await sb.from('rooms')
+            .select('in_game_started_at').eq('id', roomId).maybeSingle();
+        if (!room?.in_game_started_at) return RESULT_UNLOCK_DELAY_MS;
+
+        const startedAt = new Date(room.in_game_started_at).getTime();
+        const passed = Date.now() - startedAt;
+        return Math.max(0, RESULT_UNLOCK_DELAY_MS - passed);
+    } catch (e) {
+        return RESULT_UNLOCK_DELAY_MS;
+    }
+}
+
+// Синхронная версия для быстрого рендера (берём из кэша окна)
+let _inGameStartedAtCache = {};  // roomId -> timestamp
+
+function markInGameStarted(roomId, startedAtIso) {
+    if (!roomId) return;
+    _inGameStartedAtCache[roomId] = startedAtIso
+        ? new Date(startedAtIso).getTime()
+        : Date.now();
 }
 
 function getResultUnlockRemaining(roomId) {
-    const startedAt = getInGameStartedAt(roomId);
+    const startedAt = _inGameStartedAtCache[roomId];
     if (!startedAt) return RESULT_UNLOCK_DELAY_MS;
     const passed = Date.now() - startedAt;
     return Math.max(0, RESULT_UNLOCK_DELAY_MS - passed);
+}
+
+function formatMMSS(ms) {
+    const total = Math.ceil(ms / 1000);
+    const m = String(Math.floor(total / 60)).padStart(2, '0');
+    const s = String(total % 60).padStart(2, '0');
+    return `${m}:${s}`;
 }
 
 function formatMMSS(ms) {
@@ -18711,22 +18703,32 @@ function openInGameLink(url) {
 // ТИКАЮЩИЙ ТАЙМЕР ДО РАЗБЛОКИРОВКИ "ЗАГРУЗИТЬ РЕЗУЛЬТАТЫ"
 // ============================================================
 let _resultUnlockTimer = null;
+let _resultSyncTimer = null;
 
 function startResultUnlockTimer(roomId, mode) {
     if (_resultUnlockTimer) clearInterval(_resultUnlockTimer);
+    if (_resultSyncTimer) clearInterval(_resultSyncTimer);
+
+    // Первая синхронизация с БД
+    (async () => {
+        const { data: room } = await sb.from('rooms')
+            .select('in_game_started_at').eq('id', roomId).maybeSingle();
+        if (room?.in_game_started_at) {
+            markInGameStarted(roomId, room.in_game_started_at);
+        }
+    })();
 
     _resultUnlockTimer = setInterval(() => {
-        // Если экран уже не in-game — стоп
         const pageVeto = document.getElementById('page-veto');
         if (!pageVeto?.classList.contains('active')) {
             clearInterval(_resultUnlockTimer);
             _resultUnlockTimer = null;
+            clearInterval(_resultSyncTimer);
+            _resultSyncTimer = null;
             return;
         }
 
         const remaining = getResultUnlockRemaining(roomId);
-        const btn = document.querySelector('.ig-v3-btn-secondary[disabled], .ig-v3-btn-secondary');
-        // Проще — найти кнопку по тексту
         const buttons = document.querySelectorAll('.ig-v3-btn-secondary');
         let targetBtn = null;
         buttons.forEach(b => {
@@ -18736,7 +18738,6 @@ function startResultUnlockTimer(roomId, mode) {
         });
 
         if (remaining <= 0) {
-            // Разблокировали
             if (targetBtn && targetBtn.disabled) {
                 targetBtn.disabled = false;
                 targetBtn.style.opacity = '1';
@@ -18748,11 +18749,21 @@ function startResultUnlockTimer(roomId, mode) {
             }
             clearInterval(_resultUnlockTimer);
             _resultUnlockTimer = null;
+            clearInterval(_resultSyncTimer);
+            _resultSyncTimer = null;
         } else if (targetBtn && targetBtn.disabled) {
-            // Обновляем лейбл
             targetBtn.textContent = `🔒 РЕЗУЛЬТАТЫ ЧЕРЕЗ ${formatMMSS(remaining)}`;
         }
     }, 1000);
+
+    // 🔥 Раз в 30 сек — пересинхронизация с БД
+    _resultSyncTimer = setInterval(async () => {
+        const { data: room } = await sb.from('rooms')
+            .select('in_game_started_at').eq('id', roomId).maybeSingle();
+        if (room?.in_game_started_at) {
+            markInGameStarted(roomId, room.in_game_started_at);
+        }
+    }, 30000);
 }
 
 async function backToInGameFromResult(roomId) {
@@ -18780,8 +18791,8 @@ async function backToInGameFromResult(roomId) {
 }
 
 async function goToResultFromInGame(roomId) {
-    // 🔥 Проверка: прошло ли 5 минут
-    const remaining = getResultUnlockRemaining(roomId);
+    // 🔥 Проверяем актуально с сервера
+    const remaining = await getResultUnlockRemainingAsync(roomId);
     if (remaining > 0) {
         showToast(`🔒 Ещё рано. Осталось ${formatMMSS(remaining)}`);
         haptic('heavy');
@@ -18799,10 +18810,9 @@ async function goToResultFromInGame(roomId) {
             currentMatch = { ...match, status: 'result' };
         }
 
-        // 🔥 Разблокируем навигацию — игрок дошёл до результата
         unlockNav();
-
         if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
+        if (_resultSyncTimer) { clearInterval(_resultSyncTimer); _resultSyncTimer = null; }
 
         showResultScreen();
     } catch (e) {
