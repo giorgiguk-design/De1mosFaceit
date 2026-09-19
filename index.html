@@ -24362,6 +24362,8 @@ let voiceWidgetExpanded = false;
 // ПОДКЛЮЧЕНИЕ
 // ============================================================
 async function joinVoiceChat(roomId, team) {
+    console.log('🎤 joinVoiceChat START:', roomId, team);
+    
     if (voiceRoom) {
         showToast('🎤 Ты уже в голосовом чате');
         return;
@@ -24713,10 +24715,16 @@ function collapseVoiceWidget(e) {
 // ОБРАБОТЧИК КНОПКИ
 // ============================================================
 async function voiceBtnClick(roomId, team) {
+    console.log('🎤 voiceBtnClick вызван:', roomId, team);
+    console.log('   voiceRoom:', voiceRoom);
+    console.log('   currentUser:', currentUser?.telegram_id);
+
     if (voiceRoom) {
+        console.log('   → уже в голосе, разворачиваю виджет');
         voiceWidgetExpanded = true;
         updateVoiceWidget();
     } else {
+        console.log('   → вызываю joinVoiceChat');
         await joinVoiceChat(roomId, team);
     }
 }
