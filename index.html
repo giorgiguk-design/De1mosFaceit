@@ -13648,6 +13648,117 @@ html.lite-mode .has-list-bg {
         box-shadow: 0 10px 30px rgba(var(--emerald-rgb), 0.35);
     }
 }
+
+    /* ============================================================ */
+/* 🖥️ FULLSCREEN MODE (ПК / Telegram Desktop)                   */
+/* ============================================================ */
+
+/* Когда приложение в fullscreen — убираем скругления, отступы, растягиваем всё */
+body.app-fullscreen {
+    overflow: hidden;
+}
+
+body.app-fullscreen .header {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+body.app-fullscreen .bottom-nav {
+    top: 62px;   /* хедер стал ниже */
+}
+
+body.app-fullscreen .container {
+    padding-top: 20px;
+}
+
+/* Если Telegram Desktop даёт свой "хедер" сверху — прячем дубль */
+body.app-fullscreen .header-title {
+    font-size: 17px;
+}
+
+/* Индикатор, что мы в fullscreen */
+body.app-fullscreen::after {
+    content: '';
+    position: fixed;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow: 0 0 8px var(--emerald);
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.6;
+    animation: fsPulse 2s ease-in-out infinite;
+}
+
+@keyframes fsPulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 0.9; }
+}
+
+/* В lite-режиме — без пульсации */
+html.lite-mode body.app-fullscreen::after {
+    animation: none;
+    opacity: 0.5;
+}
+
+/* Кнопка "Выйти из полноэкранного режима" — плавающая */
+.fs-exit-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(10, 20, 16, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 16px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    transition: transform 0.18s ease, background 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.app-fullscreen .fs-exit-btn {
+    display: flex;
+    opacity: 0;
+    pointer-events: auto;
+    transition: opacity 0.4s ease 1.5s;  /* появляется через 1.5 сек */
+}
+
+body.app-fullscreen:hover .fs-exit-btn {
+    opacity: 1;
+}
+
+.fs-exit-btn:active {
+    transform: scale(0.9);
+}
+
+.fs-exit-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.2);
+    border-color: var(--emerald);
+}
+
+/* ============================================================ */
+/* 📱 МОБИЛЬНЫЕ — прячем кнопку, там fullscreen не нужен         */
+/* ============================================================ */
+@media (max-width: 1023px) {
+    .fs-exit-btn {
+        display: none !important;
+    }
+    body.app-fullscreen::after {
+        display: none;
+    }
+}
     
 </style>
 </head>
