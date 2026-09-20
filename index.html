@@ -284,53 +284,11 @@ body::after {
             -webkit-tap-highlight-color: transparent;
             transition: transform 0.15s ease, border-color 0.2s ease;
         }
-
-    /* 🔥 ПК: вся карточка кликабельна, дети не перехватывают клик */
-.leaderboard-item,
-.leaderboard-item * {
-    pointer-events: none;
-}
-.leaderboard-item {
-    pointer-events: auto !important;
-    cursor: pointer;
-}
-/* 🔥 Убираем shimmer-псевдоэлемент, который мешает клику */
-.leaderboard-item::after {
-    display: none !important;
-}
-/* 🔥 Кнопки-действия всё равно должны работать */
-.leaderboard-item button,
-.leaderboard-item .friend-action,
-.leaderboard-item .player-menu-btn,
-.leaderboard-item .club-mini-dots,
-.leaderboard-item .ig-report-btn,
-.leaderboard-item a {
-    pointer-events: auto !important;
-    cursor: pointer;
-}
         .leaderboard-item:active { 
             border-color: var(--border-strong);
             transform: scale(0.985);
         }
         
-        /* 🔥 Только декор не перехватывает клик */
-        .leaderboard-item .lb-avatar,
-        .leaderboard-item .leaderboard-rank,
-        .leaderboard-item .leaderboard-name,
-        .leaderboard-item .leaderboard-DXP,
-        .leaderboard-item .leaderboard-DXP-value {
-            pointer-events: none;
-        }
-        
-        /* 🔥 Кнопки — всегда кликабельны */
-        .leaderboard-item button,
-        .leaderboard-item .friend-action,
-        .leaderboard-item .player-menu-btn,
-        .leaderboard-item .club-mini-dots,
-        .leaderboard-item a {
-            pointer-events: auto !important;
-            cursor: pointer;
-        }
         .lb-avatar {
             width: 34px; height: 34px; border-radius: 50%;
             background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
@@ -13554,19 +13512,6 @@ html.lite-mode .list-frame-overlay svg * {
     animation: none !important;
 }
 
-    /* 🔥 Все дети карточки не должны перехватывать клик — только сама карточка */
-.leaderboard-item,
-.leaderboard-item * {
-    pointer-events: none;
-}
-.leaderboard-item {
-    pointer-events: auto !important;
-}
-/* 🔥 Убираем shimmer-псевдоэлемент, который перехватывает клик */
-.leaderboard-item::after {
-    display: none !important;
-}
-
 /* ============ SHOP CATEGORY MODAL ============ */
 .shop-cat-modal {
     position: fixed;
@@ -13685,22 +13630,38 @@ html.lite-mode .list-frame-overlay svg * {
     padding: 16px;
 }
 
-    /* 🔥 Глобально: кнопки и ссылки всегда кликабельны */
-button:not(:disabled),
-button:not([disabled]),
-[onclick]:not([onclick=""]),
-a[href],
-.sheet-option,
-.menu-drawer-btn,
-.menu-item,
-.shop-btn,
-.shop-cat-btn,
-.club-mini-btn,
-.rv-icon-btn,
-.friend-action,
-.nav-item,
-.profile-action-btn {
-    pointer-events: auto !important;
+    /* ============================================================ */
+/* 🖱️ КЛИКАБЕЛЬНОСТЬ — ЕДИНОЕ ПРАВИЛО                           */
+/* ============================================================ */
+
+/* Карточка кликабельна целиком */
+.leaderboard-item {
+    cursor: pointer;
+}
+
+/* Внутренние декоративные элементы не перехватывают клик —
+   клик всплывает до родителя */
+.leaderboard-item > *:not(button):not(a) {
+    pointer-events: none;
+}
+
+/* Кнопки и ссылки внутри всегда работают */
+.leaderboard-item button,
+.leaderboard-item a,
+.leaderboard-item [onclick],
+.leaderboard-item .friend-action,
+.leaderboard-item .player-menu-btn,
+.leaderboard-item .club-mini-dots,
+.leaderboard-item .ig-report-btn,
+.leaderboard-item .ig-copy-mini-btn,
+.leaderboard-item .pm2-copy-inline {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+/* Убираем shimmer-псевдоэлемент, который может перекрывать клик */
+.leaderboard-item::after {
+    display: none !important;
 }
     
 </style>
