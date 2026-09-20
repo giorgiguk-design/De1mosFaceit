@@ -33511,9 +33511,15 @@ document.addEventListener('keydown', (e) => {
     if (window._fsInitDone) return;
     window._fsInitDone = true;
 
-    function isDesktopViewport() {
-        return window.innerWidth >= 1024;
+function isDesktopViewport() {
+    const tg = window.Telegram?.WebApp;
+    // Если Telegram говорит, что платформа desktop — это точно ПК
+    if (tg?.platform === 'tdesktop' || tg?.platform === 'macos' || tg?.platform === 'web') {
+        return true;
     }
+    // Иначе — по ширине
+    return window.innerWidth >= 1024;
+}
 
     // ============================================================
     // ВЫХОД
@@ -33649,61 +33655,69 @@ document.addEventListener('keydown', (e) => {
 waitForTelegram(() => {
     const tg = window.Telegram.WebApp;
 
-    // 🔍 ЛОГ: что мы имеем
     console.log('🔍 FS init:', {
         hasTg: !!tg,
         innerWidth: window.innerWidth,
         isDesktop: isDesktopViewport(),
+        platform: tg.platform,
         initData: tg.initData ? 'есть' : 'ПУСТО',
         hasRequestFS: typeof tg.requestFullscreen,
         version: tg.version,
-        platform: tg.platform,
     });
 
     createExitButton();
     bindEvents();
 
-    if (isDesktopViewport()) {   // ← убрали tg.initData
-        try {
-            tg.ready();
-            tg.expand();
-        } catch (e) {}
+    // 🔥 ВСЕГДА пробуем, если это точно Telegram Desktop
+    const isTDesktop = tg.platform === 'tdesktop'
+                    || tg.platform === 'macos'
+                    || tg.platform === 'web';
 
+    if (isTDesktop) {
+        try { tg.ready(); tg.expand(); } catch (e) {}
+
+        // Пробуем сразу
         requestFullscreenNow();
 
-            // И ещё раз через микро-паузу — AyuGram любит подтормаживать
-            setTimeout(() => {
-                if (!document.body.classList.contains('app-fullscreen')) {
-                    console.log('🔄 Вторая попытка fullscreen...');
-                    requestFullscreenNow();
-                }
-            }, 600);
-        }
-
-        // Fallback — при первом клике
-        const firstClickFs = () => {
-            if (document.body.classList.contains('app-fullscreen')) {
-                document.removeEventListener('pointerdown', firstClickFs, true);
-                return;
-            }
-            if (isDesktopViewport()) {
+        // И ещё раз через 300мс — AyuGram тормозит
+        setTimeout(() => {
+            if (!document.body.classList.contains('app-fullscreen')) {
+                console.log('🔄 Вторая попытка...');
                 requestFullscreenNow();
             }
-        };
-        document.addEventListener('pointerdown', firstClickFs, { capture: true, passive: true });
+        }, 300);
 
-        // Диагностика
+        // И ещё через 1000мс
         setTimeout(() => {
-            console.log('🔍 FS Debug:', {
-                hasTg: !!tg,
-                tgVersion: tg.version,
-                tgPlatform: tg.platform,
-                hasRequestFS: typeof tg.requestFullscreen,
-                isFullscreen: tg.isFullscreen,
-                innerWidth: window.innerWidth,
-            });
-        }, 1500);
-    });
+            if (!document.body.classList.contains('app-fullscreen')) {
+                console.log('🔄 Третья попытка...');
+                requestFullscreenNow();
+            }
+        }, 1000);
+    }
+
+    // Fallback — при первом клике
+    const firstClickFs = () => {
+        if (document.body.classList.contains('app-fullscreen')) {
+            document.removeEventListener('pointerdown', firstClickFs, true);
+            return;
+        }
+        requestFullscreenNow();
+    };
+    document.addEventListener('pointerdown', firstClickFs, { capture: true, passive: true });
+
+    // Диагностика
+    setTimeout(() => {
+        console.log('🔍 FS Debug:', {
+            hasTg: !!tg,
+            tgVersion: tg.version,
+            tgPlatform: tg.platform,
+            hasRequestFS: typeof tg.requestFullscreen,
+            isFullscreen: tg.isFullscreen,
+            innerWidth: window.innerWidth,
+        });
+    }, 1500);
+});
 })();
             
     </script>
