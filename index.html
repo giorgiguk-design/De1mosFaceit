@@ -10502,18 +10502,36 @@ html.lite-mode .voice-widget-expanded {
 /* 🔧 ФИКС: крестик и кнопки в чужом профиле                    */
 /* ============================================================ */
 .player-modal-close {
-    z-index: 100 !important;
-    background: rgba(20, 30, 25, 0.95) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    position: fixed !important;      /* было absolute */
+    top: 14px !important;
+    right: 14px !important;
+    z-index: 900 !important;         /* выше всех в модалке */
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background: rgba(20, 30, 25, 0.92) !important;
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid var(--border-strong);
-    width: 38px !important;
-    height: 38px !important;
+    color: var(--emerald);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(var(--emerald-rgb), 0.15);
+    transition: transform 0.2s ease, background 0.2s ease,
+                border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .player-modal-close:hover {
     background: rgba(var(--emerald-rgb), 0.2) !important;
     border-color: var(--emerald);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7),
+                0 0 30px rgba(var(--emerald-rgb), 0.4);
+}
+.player-modal-close:active {
+    transform: scale(0.88);
 }
 
 .pm2-hero-inner {
@@ -11039,6 +11057,125 @@ html.lite-mode .header-coins::before {
     animation: none;
     display: none;
 }
+
+    /* Inline-кнопка копирования (в чужом профиле) */
+.pm2-id-text {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+    margin-right: 6px;
+}
+.pm2-copy-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background: rgba(var(--emerald-rgb), 0.10);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--emerald);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+    flex-shrink: 0;
+}
+.pm2-copy-inline:active {
+    transform: scale(0.88);
+    background: rgba(var(--emerald-rgb), 0.22);
+    border-color: var(--emerald);
+}
+
+    /* 👑 ГЛАВА ФЕЙСИТА — над ником, крупнее */
+.profile-admin-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.30) 0%,
+        rgba(217, 171, 90, 0.10) 100%);
+    border: 1px solid rgba(217, 171, 90, 0.6);
+    border-radius: 10px;
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(217, 171, 90, 0.6);
+    box-shadow: 0 0 16px rgba(217, 171, 90, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: adminTagGlow 2.5s ease-in-out infinite;
+    width: fit-content;
+}
+@keyframes adminTagGlow {
+    0%, 100% { box-shadow: 0 0 16px rgba(217, 171, 90, 0.25), inset 0 1px 0 rgba(255,255,255,0.1); }
+    50%      { box-shadow: 0 0 26px rgba(217, 171, 90, 0.5), inset 0 1px 0 rgba(255,255,255,0.15); }
+}
+
+    /* ============ ...последние стили... ============ */
+.last-thing {
+    /* ... */
+}
+
+/* ============================================================ */
+/* 🌌 HERO — почти чёрный, для всех тем                          */
+/* ============================================================ */
+.profile-hero-compact,
+.profile-hero {
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.75) 45%,
+        rgba(0, 0, 0, 0.92) 100%) !important;
+    border: 1px solid var(--border-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.pm2-hero {
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.75) 45%,
+        rgba(0, 0, 0, 0.92) 100%) !important;
+    border: 1px solid var(--border-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* То же для эло-карточки, графиков, целей, хитмапа */
+.elo-chart-card,
+.goals-card,
+.heatmap-card {
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.04) 0%,
+        rgba(0, 0, 0, 0.65) 50%,
+        rgba(0, 0, 0, 0.9) 100%) !important;
+}
+
+/* Для темы purple — усилить черноту */
+:root[data-theme="purple"] .profile-hero-compact,
+:root[data-theme="purple"] .profile-hero,
+:root[data-theme="purple"] .pm2-hero {
+    background: linear-gradient(160deg,
+        rgba(167, 139, 250, 0.06) 0%,
+        rgba(3, 2, 8, 0.88) 45%,
+        rgba(0, 0, 0, 0.96) 100%) !important;
+}
+
+:root[data-theme="purple"] .elo-chart-card,
+:root[data-theme="purple"] .goals-card,
+:root[data-theme="purple"] .heatmap-card {
+    background: linear-gradient(180deg,
+        rgba(167, 139, 250, 0.05) 0%,
+        rgba(3, 2, 8, 0.8) 50%,
+        rgba(0, 0, 0, 0.95) 100%) !important;
+}
+
+</style>          ← теперь </style> после нового блока
+</head>
+<body>
     
 </style>
 </head>
@@ -13979,31 +14116,35 @@ async function renderProfileView(user) {
                     <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
                 </div>
 
-                <div class="phc-info">
-                    <!-- Строка 1: ник + значок + титул -->
-                    <div class="phc-name-row">
-                        <div class="phc-name" data-nickname>${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}</div>
-                        <span class="profile-equipped-badge" data-equipped-badge></span>
-                    </div>
+               <div class="phc-info">
+    <!-- 🔥 ГЛАВА — над ником -->
+    ${user.is_admin ? `
+        <div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>
+    ` : ''}
 
-                    <!-- Титул -->
-                    <div class="phc-title" data-title></div>
+    <!-- Ник + значок -->
+    <div class="phc-name-row">
+        <div class="phc-name" data-nickname>${escapeHtml(user.display_name || 'Без имени')}</div>
+        <span class="profile-equipped-badge" data-equipped-badge></span>
+    </div>
 
-                    <!-- Юзернейм -->
-                    <div class="phc-username">${
-                        user.username && !user.hide_telegram_tag
-                            ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
-                            : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
-                    }</div>
+    <!-- Титул -->
+    <div class="phc-title" data-title></div>
 
-                    <!-- Бейджи в строку -->
-                    <div class="phc-badges">
-                        ${user.is_admin ? `<span class="phc-badge phc-badge-admin">👑 ГЛАВА</span>` : ''}
-                        ${isDev ? `<span class="dev-tag-mini" onclick="showDevTagInfo()">DEV</span>` : ''}
-                        <span class="phc-badge">⚡ Ур. ${level}</span>
-                        <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
-                    </div>
-                </div>
+    <!-- Юзернейм -->
+    <div class="phc-username">${
+        user.username && !user.hide_telegram_tag
+            ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
+            : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
+    }</div>
+
+    <!-- Бейджи -->
+    <div class="phc-badges">
+        ${isDev ? `<span class="dev-tag" onclick="showDevTagInfo()">DEV</span>` : ''}
+        <span class="phc-badge">⚡ Ур. ${level}</span>
+        <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
+    </div>
+</div>
 
                 <div class="phc-actions">
                     <button type="button" class="phc-settings" onclick="shareProfile(${user.telegram_id}); return false;" title="Поделиться">
@@ -14366,23 +14507,30 @@ async function openPlayerProfile(userId) {
                     <div class="pm2-avatar-wrap">
                         <div class="pm2-avatar" data-avatar-frame>${avatarHTML}</div>
                     </div>
-                    <div class="pm2-info">
-                        <div class="pm2-name-row">
-                            <div class="pm2-name" data-nickname>${escapeHtml(user.display_name || 'Игрок')}</div>
-                            <span class="pm2-badge" data-equipped-badge style="display:none;"></span>
-                        </div>
-                        <div class="pm2-title" data-title style="display:none;"></div>
-                        <div class="pm2-username">${
-                            user.username && !user.hide_telegram_tag
-                                ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
-                                : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
-                        }</div>
-                        <div class="pm2-badges">
-                            ${user.is_admin ? `<span class="pm2-badge-admin">👑 ГЛАВА</span>` : ''}
-                            ${isDev ? `<span class="dev-tag-mini" onclick="showDevTagInfo()">DEV</span>` : ''}
-                            <span class="pm2-lvl">⚡ Ур. ${level}</span>
-                        </div>
-                    </div>
+<div class="pm2-info">
+    <!-- ГЛАВА над ником -->
+    ${user.is_admin ? `
+        <div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>
+    ` : ''}
+
+    <div class="pm2-name-row">
+        <div class="pm2-name" data-nickname>${escapeHtml(user.display_name || 'Игрок')}</div>
+        <span class="pm2-badge" data-equipped-badge style="display:none;"></span>
+    </div>
+
+    <div class="pm2-title" data-title style="display:none;"></div>
+
+    <div class="pm2-username">${
+        user.username && !user.hide_telegram_tag
+            ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
+            : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
+    }</div>
+
+    <div class="pm2-badges">
+        ${isDev ? `<span class="dev-tag" onclick="showDevTagInfo()">DEV</span>` : ''}
+        <span class="pm2-lvl">⚡ Ур. ${level}</span>
+    </div>
+</div>
                 </div>
             </div>
 
@@ -14441,13 +14589,13 @@ async function openPlayerProfile(userId) {
             </div>
 
             <div class="pm2-rows">
-                <div class="pm2-row">
-                    <span class="pm2-row-lbl">Standoff 2 ID</span>
-                    <span class="pm2-row-val">
-                        <span id="playerStandoffId">${escapeHtml(user.standoff_id || '—')}</span>
-                        ${user.standoff_id ? `<button class="mini-stat-copy" onclick="copyStandoffId('playerStandoffId')">📋</button>` : ''}
-                    </span>
-                </div>
+<div class="pm2-row">
+    <span class="pm2-row-lbl">Standoff 2 ID</span>
+    <span class="pm2-row-val">
+        <span id="playerStandoffId" class="pm2-id-text">${escapeHtml(user.standoff_id || '—')}</span>
+        ${user.standoff_id ? `<button class="pm2-copy-inline" onclick="copyStandoffId('playerStandoffId')" title="Скопировать">📋</button>` : ''}
+    </span>
+</div>
                 ${user.hide_matches ? '' : `
                     <div class="pm2-row">
                         <span class="pm2-row-lbl">Матчей</span>
@@ -20674,7 +20822,6 @@ async function createRoomInline() {
     if (await guardMatchBan()) return;
 
     const { data: mine } = await sb.from('room_players')
-        .from('room_players')
         .select('room_id')
         .eq('telegram_id', currentUser.telegram_id);
 
@@ -20713,10 +20860,10 @@ async function createRoomInline() {
         room_id: created.id,
         telegram_id: currentUser.telegram_id,
         team: null,
-        is_ready: false                    // ← ДОБАВЛЕНО (не в команде)
+        is_ready: false
     });
 
-    await touchRoom(created.id);          // ← ДОБАВЛЕНО
+    await touchRoom(created.id);
     showToast('✅ Комната создана');
     openRoomView(created.id);
 }
@@ -29363,80 +29510,87 @@ function closeAddCustomBackgroundSheet() {
 }
 
 async function submitNewBackground() {
-    if (!isCurrentUserAdmin()) return;
+    console.log('🎨 submitNewBackground START');
+
+    if (!isCurrentUserAdmin()) {
+        showToast('❌ Только администратор');
+        console.warn('isCurrentUserAdmin() = false');
+        return;
+    }
 
     const name = document.getElementById('newBgName')?.value.trim();
     const price = parseInt(document.getElementById('newBgPrice')?.value) || 0;
     const rarity = document.getElementById('newBgRarity')?.value || 'rare';
     const blob = window._newBgBlob;
 
-    if (!name || name.length < 2) { showToast('Введи название'); return; }
-    if (!blob) { showToast('Загрузи картинку'); return; }
+    console.log('📋 Данные:', { name, price, rarity, blobSize: blob?.size });
+
+    if (!name || name.length < 2) { showToast('⚠️ Введи название'); return; }
+    if (!blob) { showToast('⚠️ Загрузи картинку'); return; }
 
     const btn = document.getElementById('addBgSubmitBtn');
     btn.disabled = true;
     btn.textContent = 'ЗАГРУЗКА...';
 
-    // 🔥 Определяем доступный bucket
-    let bucket = PROFILE_BG_BUCKET;
+    // ============ Определяем доступный bucket ============
+    let bucket = 'profile_backgrounds';
     try {
         const { data: buckets, error: listErr } = await sb.storage.listBuckets();
-        if (listErr) console.warn('listBuckets error:', listErr);
+        console.log('🪣 Buckets:', buckets?.map(b => b.name || b.id), 'err:', listErr);
 
         const found = (buckets || []).find(b =>
             b.id === 'profile_backgrounds' || b.name === 'profile_backgrounds'
         );
         if (!found) {
-            console.warn('⚠️ Bucket profile_backgrounds не найден, использую branding');
+            console.warn('⚠️ profile_backgrounds не найден, использую branding');
             bucket = 'branding';
         }
     } catch (e) {
-        console.warn('listBuckets fail, fallback к branding:', e);
+        console.warn('listBuckets fail:', e);
         bucket = 'branding';
     }
 
-    console.log('📤 Загружаю фон в bucket:', bucket);
+    console.log('📤 Загружаю в bucket:', bucket);
 
     try {
-        // 1. Загружаем картинку
+        // ============ 1. Загружаем картинку ============
         const fileName = `bg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-        const { error: upErr } = await sb.storage.from(bucket)
+        const { data: upData, error: upErr } = await sb.storage.from(bucket)
             .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
 
+        console.log('📤 Upload result:', upData, 'err:', upErr);
+
         if (upErr) {
-            console.error('Upload error:', upErr);
-            throw new Error(
-                upErr.message === 'Bucket not found'
-                    ? `Bucket "${bucket}" не создан. Создай его в Supabase Storage.`
-                    : upErr.message
-            );
+            if (upErr.message?.includes('Bucket not found')) {
+                throw new Error(`Bucket "${bucket}" не создан. Создай его в Supabase Storage.`);
+            }
+            throw new Error(upErr.message);
         }
 
         const { data: urlData } = sb.storage.from(bucket).getPublicUrl(fileName);
         const publicUrl = urlData.publicUrl;
-        console.log('✅ URL:', publicUrl);
+        console.log('✅ Public URL:', publicUrl);
 
-        // 2. Создаём товар в shop_items
+        // ============ 2. Создаём товар в shop_items ============
         const itemId = `bg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
-        const { error: insertErr } = await sb.from('shop_items').insert({
+        const { data: inserted, error: insertErr } = await sb.from('shop_items').insert({
             id: itemId,
             category: 'profile_bg',
             name: name,
-            description: `Кастомный фон профиля`,
+            description: 'Кастомный фон профиля',
             price: price,
             rarity: rarity,
             value: { url: publicUrl },
             is_available: true,
             sort_order: 100,
-        });
+        }).select();
 
-        if (insertErr) {
-            console.error('Insert error:', insertErr);
-            throw new Error('Не удалось добавить в магазин: ' + insertErr.message);
-        }
+        console.log('📥 Insert result:', inserted, 'err:', insertErr);
 
-        // 🔥 Обновляем кэш
+        if (insertErr) throw new Error('Магазин: ' + insertErr.message);
+
+        // ============ 3. Обновляем кэш ============
         SHOP_ITEMS_CACHE[itemId] = {
             id: itemId,
             category: 'profile_bg',
@@ -29447,20 +29601,17 @@ async function submitNewBackground() {
         showToast('✅ Фон добавлен в магазин');
         haptic('medium');
 
-        // 🔥 Закрываем шит ДО перезагрузки магазина
         closeAddCustomBackgroundSheet();
 
-        // 🔥 Открываем магазин на вкладке "Фоны профиля"
+        // Открываем магазин на вкладке "Фоны профиля"
         window._shopActiveCategory = 'profile_bg';
         setTimeout(() => openShop(), 300);
 
     } catch (e) {
-        console.error('submitNewBackground:', e);
+        console.error('❌ submitNewBackground:', e);
         showToast('❌ ' + e.message);
         btn.disabled = false;
         btn.textContent = '✅ ДОБАВИТЬ В МАГАЗИН';
-
-        // 🔥 НЕ закрываем шит, если ошибка — пусть юзер видит, что не так
     }
 }
             
