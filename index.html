@@ -271,20 +271,53 @@ body::after {
         }
         .menu-item:active { transform: scale(0.97); border-color: var(--border-strong); }
         .menu-icon { font-size: 18px; }
-        .leaderboard-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 12px 14px; background: var(--card); border: 1px solid var(--border);
-            border-radius: 14px; margin-bottom: 8px; cursor: pointer;
-        }
-        .leaderboard-item:active { border-color: var(--border-strong); }
+.leaderboard-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; margin-bottom: 8px;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.leaderboard-item:active { 
+    border-color: var(--border-strong);
+    transform: scale(0.985);
+}
+
+/* 🔥 Все дочерние элементы не перехватывают клик */
+.leaderboard-item > * {
+    pointer-events: none;
+}
+
+/* 🔥 НО: кнопки, ссылки и явные action'ы — перехватывают */
+.leaderboard-item button,
+.leaderboard-item a,
+.leaderboard-item .friend-action,
+.leaderboard-item .player-menu-btn,
+.leaderboard-item .club-mini-dots,
+.leaderboard-item .notif-btn-accept,
+.leaderboard-item .notif-btn-decline {
+    pointer-events: auto;
+}
         .lb-avatar {
             width: 34px; height: 34px; border-radius: 50%;
             background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
             display: flex; align-items: center; justify-content: center;
             font-weight: 800; font-size: 12px; color: #04140e;
-            overflow: hidden; flex-shrink: 0;
+            overflow: visible;           /* 🔥 было hidden — теперь visible */
+            flex-shrink: 0;
+            position: relative;          /* 🔥 для спец-рамок */
+            isolation: isolate;
         }
-        .lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .lb-avatar img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            border-radius: 50%;          /* 🔥 обрезаем картинку в круг */
+            clip-path: circle(50%);      /* 🔥 надёжнее border-radius */
+        }
     .leaderboard-hero {
     position: relative;
     border-radius: 18px;
@@ -1818,6 +1851,11 @@ body::after {
     animation: slideUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     cursor: pointer;
 }
+    .play-room-card > * { pointer-events: none; }
+.play-room-card button,
+.play-room-card a,
+.play-room-card .prc-action { pointer-events: auto; }
+    
 .play-room-card::before {
     content: '';
     position: absolute;
@@ -5571,11 +5609,17 @@ body::after {
 
     .leaderboard-item,
 .menu-item,
-.chat-list-item,
+.menu-item > * { pointer-events: none; }
+.menu-item .btn-cover-bg { pointer-events: none !important; }
+.chat-list-item
+.chat-list-item > * { pointer-events: none; }
 .play-room-card,
-.club-member-row,
+.club-member-row
+.club-member-row > * { pointer-events: none; }
+.club-member-row .club-mini-dots { pointer-events: auto; }
 .mini-stat,
 .stat-card {
+.stat-card > * { pointer-events: none; }
     position: relative;
     overflow: hidden;
 }
@@ -12711,15 +12755,22 @@ html.lite-mode .has-list-bg {
     .nav-item {
         flex-direction: row;
         justify-content: flex-start;
-        gap: 14px;
-        padding: 14px 18px;
+        gap: 12px;
+        padding: 11px 16px;
         border-radius: 12px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
         width: 100%;
         position: relative;
         transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
         letter-spacing: 0.3px;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .nav-item > * {
+        pointer-events: none;
     }
 
     .nav-item .nav-icon { font-size: 22px; flex-shrink: 0; }
@@ -12767,14 +12818,15 @@ html.lite-mode .has-list-bg {
         margin-left: 240px !important;
         margin-right: 0 !important;
         max-width: none !important;
-        padding: 28px 40px 140px 40px !important;
+        padding: 24px 32px 100px 32px !important;
     }
 
-    /* Внутренняя сетка страницы — центрируется в оставшемся пространстве */
+    /* Внутренняя сетка страницы — центрируется с отступом от правого края */
     .page.active {
-        max-width: 1500px;
+        max-width: 1280px;
         margin-left: auto;
-        margin-right: auto;
+        margin-right: 48px;   /* 🔥 отступ от правого края */
+        padding: 0 8px;
     }
 
     /* -------- DASHBOARD: сетка 2 колонки -------- */
@@ -12788,10 +12840,12 @@ html.lite-mode .has-list-bg {
 
     #page-dashboard .elo-card {
         grid-column: 1 / 2;
-        padding: 32px 28px;
-        border-radius: 24px;
+        padding: 24px 22px;
+        border-radius: 20px;
         margin-bottom: 0;
     }
+    .elo-value-wrap .elo-value { font-size: 56px; }
+    .elo-dxp-label { font-size: 20px; }
 
     .elo-value-wrap .elo-value { font-size: 72px; }
     .elo-dxp-label { font-size: 26px; }
@@ -12804,10 +12858,10 @@ html.lite-mode .has-list-bg {
         margin-bottom: 0;
     }
 
-    .stat-card { padding: 22px 14px; }
-    .stat-value { font-size: 28px; }
-    .stat-label { font-size: 10.5px; }
-    .sc-icon { font-size: 20px; margin-bottom: 8px; }
+    .stat-card { padding: 16px 12px; }
+    .stat-value { font-size: 22px; }
+    .stat-label { font-size: 9.5px; }
+    .sc-icon { font-size: 17px; margin-bottom: 6px; }
 
     #page-dashboard .play-btn-cyber {
         grid-column: 1 / -1;
@@ -12834,10 +12888,10 @@ html.lite-mode .has-list-bg {
         margin-bottom: 0;
     }
 
-    .menu-item { padding: 20px 18px; gap: 16px; }
-    .menu-item-icon { width: 52px; height: 52px; font-size: 24px; }
-    .menu-item-title { font-size: 15px; letter-spacing: 2px; }
-    .menu-item-sub { font-size: 10.5px; }
+    .menu-item { padding: 14px 16px; gap: 12px; }
+    .menu-item-icon { width: 42px; height: 42px; font-size: 20px; }
+    .menu-item-title { font-size: 13px; letter-spacing: 1.5px; }
+    .menu-item-sub { font-size: 9.5px; }
 
     #page-dashboard #leaderboardHeroWrap {
         grid-column: 1 / -1;
@@ -13419,6 +13473,44 @@ body.app-fullscreen:hover .fs-exit-btn {
     .fs-exit-btn { display: none !important; }
     body.app-fullscreen::after { display: none; }
 }
+
+    /* ============================================================ */
+/* 🎬 ПЛАВНАЯ АНИМАЦИЯ СПЕЦ-РАМОК ПРИ СКРОЛЛЕ                    */
+/* ============================================================ */
+.list-frame-overlay {
+    will-change: transform, opacity;
+    animation: listFrameIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translate(-50%, -50%) translateZ(0);
+}
+
+@keyframes listFrameIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.7);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* 🔥 Оптимизация для длинных списков — уменьшаем нагрузку */
+.leaderboard-item .list-frame-overlay svg,
+.club-member-row .list-frame-overlay svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* 🔥 Отключаем анимацию в Lite */
+html.lite-mode .list-frame-overlay {
+    animation: none !important;
+}
+html.lite-mode .list-frame-overlay svg * {
+    animation: none !important;
+}
+    
 </style>
 </head>
 <body>
@@ -15798,17 +15890,17 @@ function maxPlayers(mode)  { return getModeConfig(mode).maxPlayers; }
     }, 2500);
 }
 
-            function renderAvatar(user) {
+function renderAvatar(user) {
     const custom = user?.custom_avatar;
     const telegram = user?.photo_url;
     const src = custom || telegram;
     const initial = (user?.display_name || user?.username || 'U')[0].toUpperCase();
 
     if (src) {
-        return `<img src="${src}" alt="" onerror="this.style.display='none'; this.parentElement.classList.add('av-fallback'); this.parentElement.textContent='${initial}';">`;
+        return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" 
+                    onerror="this.style.display='none'; this.parentElement.classList.add('av-fallback'); this.parentElement.textContent='${initial}';">`;
     }
 
-    // Fallback — буква на фоне темы
     return `<span class="av-fallback-letter">${initial}</span>`;
 }
 
@@ -30947,14 +31039,66 @@ function applyListCustomization(scopeEl, user) {
         });
     }
 
-    // --- Рамка аватара ---
+     // --- Рамка аватара (включая спец-рамки) ---
     const frameId = eq.avatar_frame;
+
+    // Убираем старые спец-рамки в этом элементе
+    scopeEl.querySelectorAll('.list-frame-overlay').forEach(el => el.remove());
+
     const avEls = scopeEl.querySelectorAll('[data-list-avatar]');
+    avEls.forEach(el => {
+        el.style.boxShadow = '';
+        // Возвращаем стандартный border-radius
+        el.style.borderRadius = '';
+    });
+
     if (frameId && SHOP_ITEMS_CACHE[frameId]) {
-        const val = SHOP_ITEMS_CACHE[frameId].value || {};
-        if (val.color) {
+        const item = SHOP_ITEMS_CACHE[frameId];
+        const val = item.value || {};
+        const color = val.color || '#fff';
+        const frameStyle = val.style || 'glow';
+
+        if (val.special === true) {
+            // 🔥 СПЕЦ-РАМКА (осьминог, дракон, огонь, змей, ct, t, crystal, thunder, sakura, skull)
             avEls.forEach(el => {
-                el.style.boxShadow = `0 0 0 2px ${val.color}, 0 0 12px ${val.color}`;
+                el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 12px ${color}`;
+
+                // Убедимся что у родителя position: relative
+                if (getComputedStyle(el.parentElement).position === 'static') {
+                    el.parentElement.style.position = 'relative';
+                }
+
+                // Добавляем SVG-overlay
+                if (!el.parentElement.querySelector('.list-frame-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
+                    overlay.style.cssText = `
+                        position: absolute;
+                        top: 50%; left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: calc(100% + 20px);
+                        height: calc(100% + 20px);
+                        min-width: 52px;
+                        min-height: 52px;
+                        pointer-events: none;
+                        z-index: 3;
+                    `;
+                    overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+                    // Вставляем после аватара
+                    el.parentElement.appendChild(overlay);
+                }
+            });
+        } else if (frameStyle === 'ring') {
+            avEls.forEach(el => {
+                el.style.boxShadow = `0 0 0 2px ${color}, 0 0 14px ${color}, inset 0 0 8px ${color}`;
+            });
+        } else if (frameStyle === 'double') {
+            avEls.forEach(el => {
+                el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 0 3px rgba(0,0,0,0.7), 0 0 0 4px ${color}, 0 0 14px ${color}`;
+            });
+        } else if (val.color) {
+            avEls.forEach(el => {
+                el.style.boxShadow = `0 0 0 2px ${color}, 0 0 12px ${color}`;
             });
         }
     }
