@@ -271,52 +271,57 @@ body::after {
         }
         .menu-item:active { transform: scale(0.97); border-color: var(--border-strong); }
         .menu-icon { font-size: 18px; }
-.leaderboard-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; background: var(--card); border: 1px solid var(--border);
-    border-radius: 14px; margin-bottom: 8px;
-    cursor: pointer;
-    position: relative;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
-}
-.leaderboard-item:active { 
-    border-color: var(--border-strong);
-    transform: scale(0.985);
-}
-
-/* 🔥 Все дочерние элементы не перехватывают клик */
-.leaderboard-item > * {
-    pointer-events: none;
-}
-
-/* 🔥 НО: кнопки, ссылки и явные action'ы — перехватывают */
-.leaderboard-item button,
-.leaderboard-item a,
-.leaderboard-item .friend-action,
-.leaderboard-item .player-menu-btn,
-.leaderboard-item .club-mini-dots,
-.leaderboard-item .notif-btn-accept,
-.leaderboard-item .notif-btn-decline {
-    pointer-events: auto;
-}
+        .leaderboard-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 14px 12px 18px; 
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; margin-bottom: 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: visible;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.15s ease, border-color 0.2s ease;
+        }
+        .leaderboard-item:active { 
+            border-color: var(--border-strong);
+            transform: scale(0.985);
+        }
+        
+        /* 🔥 Только декор не перехватывает клик */
+        .leaderboard-item .lb-avatar,
+        .leaderboard-item .leaderboard-rank,
+        .leaderboard-item .leaderboard-name,
+        .leaderboard-item .leaderboard-DXP,
+        .leaderboard-item .leaderboard-DXP-value {
+            pointer-events: none;
+        }
+        
+        /* 🔥 Кнопки — всегда кликабельны */
+        .leaderboard-item button,
+        .leaderboard-item .friend-action,
+        .leaderboard-item .player-menu-btn,
+        .leaderboard-item .club-mini-dots,
+        .leaderboard-item a {
+            pointer-events: auto !important;
+            cursor: pointer;
+        }
         .lb-avatar {
             width: 34px; height: 34px; border-radius: 50%;
             background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
             display: flex; align-items: center; justify-content: center;
             font-weight: 800; font-size: 12px; color: #04140e;
-            overflow: visible;           /* 🔥 было hidden — теперь visible */
+            overflow: visible;
             flex-shrink: 0;
-            position: relative;          /* 🔥 для спец-рамок */
+            position: relative;
             isolation: isolate;
         }
-        .lb-avatar img {
-            width: 100%; height: 100%;
-            object-fit: cover;
-            border-radius: 50%;          /* 🔥 обрезаем картинку в круг */
-            clip-path: circle(50%);      /* 🔥 надёжнее border-radius */
+        .lb-avatar img { 
+            width: 100%; height: 100%; 
+            object-fit: cover; 
+            border-radius: 50%;
+            clip-path: circle(50%);
         }
     .leaderboard-hero {
     position: relative;
@@ -686,7 +691,8 @@ body::after {
 
         .chat-list-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; cursor: pointer; }
         .chat-list-item:active { border-color: var(--border-strong); }
-        .chat-list-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #04140e; overflow: hidden; flex-shrink: 0; }
+        .chat-list-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #04140e; overflow: visible; position: relative; isolation: isolate; flex-shrink: 0; }
+.chat-list-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; clip-path: circle(50%); }
         .chat-list-avatar.square { border-radius: 14px; }
         .chat-list-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .chat-list-info { flex: 1; min-width: 0; }
@@ -1851,7 +1857,6 @@ body::after {
     animation: slideUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     cursor: pointer;
 }
-    .play-room-card > * { pointer-events: none; }
 .play-room-card button,
 .play-room-card a,
 .play-room-card .prc-action { pointer-events: auto; }
@@ -5607,19 +5612,22 @@ body::after {
     background: linear-gradient(90deg, var(--border-strong), transparent);
 }
 
-    .leaderboard-item,
-.menu-item,
-.menu-item > * { pointer-events: none; }
 .menu-item .btn-cover-bg { pointer-events: none !important; }
-.chat-list-item
-.chat-list-item > * { pointer-events: none; }
-.play-room-card,
-.club-member-row
-.club-member-row > * { pointer-events: none; }
-.club-member-row .club-mini-dots { pointer-events: auto; }
+.chat-list-item .chat-list-avatar,
+.chat-list-item .chat-list-info,
+.chat-list-item .chat-list-name,
+.chat-list-item .chat-list-preview {
+    pointer-events: none;
+}
+.club-member-row .club-member-avatar,
+.club-member-row .club-member-info,
+.club-member-row .club-member-name,
+.club-member-row .club-member-sub {
+    pointer-events: none;
+}
+.club-member-row .club-mini-dots { pointer-events: auto !important; }
 .mini-stat,
 .stat-card {
-.stat-card > * { pointer-events: none; }
     position: relative;
     overflow: hidden;
 }
@@ -13474,6 +13482,17 @@ body.app-fullscreen:hover .fs-exit-btn {
     body.app-fullscreen::after { display: none; }
 }
 
+/* ============================================================ */
+/* 🖼️ ОБЁРТКА ДЛЯ АВАТАРА С РАМКОЙ                              */
+/* ============================================================ */
+.avatar-frame-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
     /* ============================================================ */
 /* 🎬 ПЛАВНАЯ АНИМАЦИЯ СПЕЦ-РАМОК ПРИ СКРОЛЛЕ                    */
 /* ============================================================ */
@@ -13510,6 +13529,8 @@ html.lite-mode .list-frame-overlay {
 html.lite-mode .list-frame-overlay svg * {
     animation: none !important;
 }
+
+    
     
 </style>
 </head>
@@ -31039,54 +31060,52 @@ function applyListCustomization(scopeEl, user) {
         });
     }
 
-     // --- Рамка аватара (включая спец-рамки) ---
-    const frameId = eq.avatar_frame;
-
-    // Убираем старые спец-рамки в этом элементе
-    scopeEl.querySelectorAll('.list-frame-overlay').forEach(el => el.remove());
-
-    const avEls = scopeEl.querySelectorAll('[data-list-avatar]');
-    avEls.forEach(el => {
-        el.style.boxShadow = '';
-        // Возвращаем стандартный border-radius
-        el.style.borderRadius = '';
-    });
-
-    if (frameId && SHOP_ITEMS_CACHE[frameId]) {
-        const item = SHOP_ITEMS_CACHE[frameId];
-        const val = item.value || {};
-        const color = val.color || '#fff';
-        const frameStyle = val.style || 'glow';
-
         if (val.special === true) {
-            // 🔥 СПЕЦ-РАМКА (осьминог, дракон, огонь, змей, ct, t, crystal, thunder, sakura, skull)
+            // 🔥 СПЕЦ-РАМКА — создаём обёртку вокруг аватара
             avEls.forEach(el => {
+                // Создаём обёртку если её нет
+                let wrap = el.parentElement;
+                if (!wrap.classList.contains('avatar-frame-wrap')) {
+                    const newWrap = document.createElement('div');
+                    newWrap.className = 'avatar-frame-wrap';
+                    const w = el.offsetWidth || 34;
+                    const h = el.offsetHeight || 34;
+                    newWrap.style.cssText = `
+                        position: relative;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+                        width: ${w}px;
+                        height: ${h}px;
+                    `;
+                    el.parentNode.insertBefore(newWrap, el);
+                    newWrap.appendChild(el);
+                    wrap = newWrap;
+                }
+
                 el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 12px ${color}`;
 
-                // Убедимся что у родителя position: relative
-                if (getComputedStyle(el.parentElement).position === 'static') {
-                    el.parentElement.style.position = 'relative';
-                }
+                // Убираем старый overlay
+                wrap.querySelectorAll('.list-frame-overlay').forEach(o => o.remove());
 
-                // Добавляем SVG-overlay
-                if (!el.parentElement.querySelector('.list-frame-overlay')) {
-                    const overlay = document.createElement('div');
-                    overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
-                    overlay.style.cssText = `
-                        position: absolute;
-                        top: 50%; left: 50%;
-                        transform: translate(-50%, -50%);
-                        width: calc(100% + 20px);
-                        height: calc(100% + 20px);
-                        min-width: 52px;
-                        min-height: 52px;
-                        pointer-events: none;
-                        z-index: 3;
-                    `;
-                    overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
-                    // Вставляем после аватара
-                    el.parentElement.appendChild(overlay);
-                }
+                // Добавляем новый
+                const overlay = document.createElement('div');
+                overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
+                overlay.style.cssText = `
+                    position: absolute;
+                    top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: calc(100% + 24px);
+                    height: calc(100% + 24px);
+                    min-width: 48px;
+                    min-height: 48px;
+                    pointer-events: none;
+                    z-index: 3;
+                    overflow: visible;
+                `;
+                overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+                wrap.appendChild(overlay);
             });
         } else if (frameStyle === 'ring') {
             avEls.forEach(el => {
