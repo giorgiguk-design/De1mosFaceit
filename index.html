@@ -11342,6 +11342,363 @@ html.lite-mode .header-coins::before {
     --tg-theme-bg-color: #0A0A0A;
     --tg-theme-secondary-bg-color: #050505;
 }
+
+    /* ============================================================ */
+/* 👤 ЧУЖОЙ ПРОФИЛЬ — ЗАЩИТА ОТ ВЫХОДА ЗА КРАЯ                  */
+/* ============================================================ */
+
+/* HERO — обрезаем всё лишнее */
+.pm2-hero {
+    position: relative;
+    overflow: hidden;         /* 🔥 ключ: обрезает всё что выходит за края */
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.75) 45%,
+        rgba(0, 0, 0, 0.92) 100%);
+    border: 1px solid var(--border-strong);
+    transition: background 0.3s ease;
+}
+.pm2-hero[data-profile-bg].has-custom-bg {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+.pm2-hero-inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+/* Аватар — рамка не выходит за hero */
+.pm2-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.pm2-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 24px;
+    color: #04140e;
+    overflow: hidden;
+    position: relative;
+    z-index: 2;
+    transition: box-shadow 0.3s ease;
+}
+.pm2-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Спец-рамки в чужом профиле — обрезаются границей hero */
+.pm2-hero .special-frame-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 100px;
+    pointer-events: none;
+    z-index: 1;
+    /* 🔥 обрезаем всё что выходит за hero */
+    clip-path: inset(0 -100vw -100vw -100vw);
+}
+.pm2-hero .special-frame-overlay svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Инфо-блок — не даём вылезать */
+.pm2-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* ГЛАВА над ником */
+.pm2-info .profile-admin-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.30) 0%,
+        rgba(217, 171, 90, 0.10) 100%);
+    border: 1px solid rgba(217, 171, 90, 0.6);
+    border-radius: 8px;
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(217, 171, 90, 0.6);
+    box-shadow: 0 0 12px rgba(217, 171, 90, 0.25);
+    width: fit-content;
+    max-width: 100%;
+}
+
+/* Ник — не обрезается, не выходит */
+.pm2-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+}
+.pm2-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.15;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Титул */
+.pm2-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    display: none;
+    line-height: 1;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Юзернейм */
+.pm2-username {
+    font-size: 12px;
+    color: var(--hint);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.pm2-username a { color: var(--emerald); text-decoration: none; }
+
+/* Бейджи — не выходят за края */
+.pm2-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    margin-top: 2px;
+    max-width: 100%;
+    min-width: 0;
+}
+.pm2-lvl {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    border-radius: 6px;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    white-space: nowrap;
+}
+
+/* DEV-тег — компактнее в hero */
+.pm2-hero .dev-tag {
+    font-size: 10px;
+    padding: 3px 10px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+/* Плавающая кнопка "Поделиться" — правый верхний угол hero */
+.pm2-share-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: transform 0.18s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.pm2-share-btn:active { transform: scale(0.88); }
+.pm2-share-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.2);
+    border-color: var(--emerald);
+}
+
+/* Статы */
+.pm2-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.pm2-stat {
+    padding: 10px 8px;
+    background: #03060a;
+    background-image: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.05) 0%,
+        rgba(0, 0, 0, 0.85) 60%,
+        #000000 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 14px rgba(0, 0, 0, 0.6);
+}
+.pm2-stat-val {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--emerald);
+    line-height: 1;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.4);
+}
+.pm2-stat-lbl {
+    font-size: 9px;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+    font-weight: 800;
+}
+
+/* Строки */
+.pm2-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.pm2-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #03060a;
+    background-image: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.05) 0%,
+        rgba(0, 0, 0, 0.85) 60%,
+        #000000 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    font-size: 13px;
+    min-width: 0;
+    gap: 10px;
+}
+.pm2-row-lbl {
+    font-size: 10px;
+    color: var(--hint);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    flex-shrink: 0;
+}
+.pm2-row-val {
+    font-weight: 800;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Кнопки действий */
+.pm2-action-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.22s ease;
+    margin-top: 8px;
+}
+.pm2-action-btn.primary {
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
+    color: #04140e;
+    box-shadow: 0 4px 14px rgba(var(--emerald-rgb), 0.3);
+}
+.pm2-action-btn.secondary {
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+}
+.pm2-action-btn:active { transform: scale(0.97); }
+.pm2-action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Кнопка копирования Standoff ID */
+.pm2-copy-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background: rgba(var(--emerald-rgb), 0.10);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--emerald);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+    flex-shrink: 0;
+}
+.pm2-copy-inline:active {
+    transform: scale(0.88);
+    background: rgba(var(--emerald-rgb), 0.22);
+    border-color: var(--emerald);
+}
+.pm2-id-text {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+}
+
+/* Модалка — общая защита */
+.player-modal-inner {
+    overflow-x: hidden !important;   /* 🔥 горизонтальный скролл запрещён */
+    overflow-y: auto;
+}
+.player-modal-inner * {
+    max-width: 100%;
+}
     
 </style>
 </head>
@@ -14591,14 +14948,15 @@ function openPrivacySheet() {
             } catch (e) { showToast('Ошибка'); }
         }
 
-        // ============================================================
-        // PUBLIC PROFILE
-        // ============================================================
+// ============================================================
+// 👤 ПРОФИЛЬ ДРУГОГО ИГРОКА — с полной кастомизацией
+// ============================================================
 async function openPlayerProfile(userId) {
     if (String(userId) === String(currentUser?.telegram_id)) {
         switchPage('profile');
         return;
     }
+
     const modal = document.getElementById('playerModal');
     const content = document.getElementById('playerModalContent');
     content.innerHTML = '<div class="empty">Загрузка...</div>';
@@ -14609,7 +14967,7 @@ async function openPlayerProfile(userId) {
             .select('*').eq('telegram_id', userId).single();
         if (error) throw error;
 
-        // 🔥 ВАЖНО: догружаем shop_items для кастомизации
+        // 🔥 Догружаем shop_items для кастомизации
         if (user.equipped_items && Object.keys(user.equipped_items).length) {
             const itemIds = Object.values(user.equipped_items);
             const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
@@ -14620,18 +14978,26 @@ async function openPlayerProfile(userId) {
             }
         }
 
-        // Проверяем, есть ли уже связь
+        // Связь (друзья)
         const { data: rel } = await sb.from('friendships')
             .select('id, status, requester_id, addressee_id')
             .or(`and(requester_id.eq.${currentUser.telegram_id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUser.telegram_id})`)
             .maybeSingle();
 
+        // Тег клуба
+        if (!clubTagCache[userId]) {
+            await loadClubTagsForUsers([userId]);
+        }
+
         const avatarSrc = user.custom_avatar || user.photo_url;
         const initial = (user.display_name || 'U')[0].toUpperCase();
-        const avatarHTML = avatarSrc ? `<img src="${avatarSrc}" alt="">` : initial;
+        const avatarHTML = avatarSrc
+            ? `<img src="${avatarSrc}" alt="">`
+            : `<div class="avatar-fallback"><span class="avatar-fallback-letter">${initial}</span></div>`;
         const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
         const hours = Math.round(((user.matches_played || 0) * 45) / 60);
         const level = eloToLevel(user.elo);
+        const isDev = clubTagCache[user.telegram_id]?.tag?.toUpperCase() === 'DEV';
 
         // Кнопка друга
         let friendBtn = '';
@@ -14652,54 +15018,50 @@ async function openPlayerProfile(userId) {
             friendBtn = `<button class="pm2-action-btn secondary" onclick="removeFriendFromProfile(${rel.id}, this)">✓ В ДРУЗЬЯХ · УДАЛИТЬ</button>`;
         }
 
-        // Загружаем тег клуба
-        if (!clubTagCache[userId]) {
-            await loadClubTagsForUsers([userId]);
-        }
-
-        const isDev = clubTagCache[user.telegram_id]?.tag?.toUpperCase() === 'DEV';
-
         content.innerHTML = `
-<div class="pm2-hero" data-profile-bg>
-    <button class="pm2-share-btn" onclick="shareProfile(${user.telegram_id})" title="Поделиться">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18" cy="5" r="3"/>
-            <circle cx="6" cy="12" r="3"/>
-            <circle cx="18" cy="19" r="3"/>
-            <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
-        </svg>
-    </button>
-    <div class="pm2-hero-inner">
+            <!-- HERO с кастомным фоном -->
+            <div class="pm2-hero" data-profile-bg>
+                <div class="pm2-hero-inner">
                     <div class="pm2-avatar-wrap">
                         <div class="pm2-avatar" data-avatar-frame>${avatarHTML}</div>
                     </div>
-<div class="pm2-info">
-    <!-- ГЛАВА над ником -->
-    ${user.is_admin ? `
-        <div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>
-    ` : ''}
+                    <div class="pm2-info">
+                        ${user.is_admin ? `
+                            <div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>
+                        ` : ''}
 
-    <div class="pm2-name-row">
-        <div class="pm2-name" data-nickname>${escapeHtml(user.display_name || 'Игрок')}</div>
-        <span class="pm2-badge" data-equipped-badge style="display:none;"></span>
-    </div>
+                        <div class="pm2-name-row">
+                            <div class="pm2-name" data-nickname>${escapeHtml(user.display_name || 'Игрок')}</div>
+                            <span class="pm2-badge" data-equipped-badge></span>
+                        </div>
 
-    <div class="pm2-title" data-title style="display:none;"></div>
+                        <div class="pm2-title" data-title></div>
 
-    <div class="pm2-username">${
-        user.username && !user.hide_telegram_tag
-            ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
-            : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
-    }</div>
+                        <div class="pm2-username">${
+                            user.username && !user.hide_telegram_tag
+                                ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
+                                : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
+                        }</div>
 
-    <div class="pm2-badges">
-        ${isDev ? `<span class="dev-tag" onclick="showDevTagInfo()">DEV</span>` : ''}
-        <span class="pm2-lvl">⚡ Ур. ${level}</span>
-    </div>
-</div>
+                        <div class="pm2-badges">
+                            ${isDev ? `<span class="dev-tag" onclick="showDevTagInfo()">DEV</span>` : ''}
+                            <span class="pm2-lvl">⚡ Ур. ${level}</span>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Плавающая кнопка "Поделиться" — внутри hero, в правом верхнем углу -->
+                <button class="pm2-share-btn" onclick="shareProfile(${userId})" title="Поделиться">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="18" cy="5" r="3"/>
+                        <circle cx="6" cy="12" r="3"/>
+                        <circle cx="18" cy="19" r="3"/>
+                        <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
+                    </svg>
+                </button>
             </div>
 
+            <!-- Статы в ряд -->
             <div class="pm2-stats">
                 <div class="pm2-stat">
                     <div class="pm2-stat-val">${user.elo ?? 1000}</div>
@@ -14715,6 +15077,7 @@ async function openPlayerProfile(userId) {
                 </div>
             </div>
 
+            <!-- График DXP -->
             <div class="elo-chart-card" id="eloChartCardPlayer" data-user-id="${user.telegram_id}">
                 <span class="ech-corner ech-tl"></span>
                 <span class="ech-corner ech-tr"></span>
@@ -14754,14 +15117,15 @@ async function openPlayerProfile(userId) {
                 </div>
             </div>
 
+            <!-- Строки данных -->
             <div class="pm2-rows">
-<div class="pm2-row">
-    <span class="pm2-row-lbl">Standoff 2 ID</span>
-    <span class="pm2-row-val">
-        <span id="playerStandoffId" class="pm2-id-text">${escapeHtml(user.standoff_id || '—')}</span>
-        ${user.standoff_id ? `<button class="pm2-copy-inline" onclick="copyStandoffId('playerStandoffId')" title="Скопировать">📋</button>` : ''}
-    </span>
-</div>
+                <div class="pm2-row">
+                    <span class="pm2-row-lbl">Standoff 2 ID</span>
+                    <span class="pm2-row-val">
+                        <span id="playerStandoffId" class="pm2-id-text">${escapeHtml(user.standoff_id || '—')}</span>
+                        ${user.standoff_id ? `<button class="pm2-copy-inline" onclick="copyStandoffId('playerStandoffId')" title="Скопировать">📋</button>` : ''}
+                    </span>
+                </div>
                 ${user.hide_matches ? '' : `
                     <div class="pm2-row">
                         <span class="pm2-row-lbl">Матчей</span>
@@ -14781,7 +15145,7 @@ async function openPlayerProfile(userId) {
             </button>
         `;
 
-        // Рисуем график + кастомизацию
+        // 🔥 Применяем кастомизацию
         currentProfileUserId = user.telegram_id;
         setTimeout(() => {
             applyCustomizationToElement(content, user);
