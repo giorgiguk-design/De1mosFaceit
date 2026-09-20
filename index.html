@@ -13759,168 +13759,6 @@ body.app-fullscreen:hover .fs-exit-btn {
         display: none;
     }
 }
-
-    // ============================================================
-// 🖥️ АВТО-FULLSCREEN ДЛЯ TELEGRAM WEB APP (только ПК)
-// ============================================================
-(function initAutoFullscreen() {
-    if (window._fsInitDone) return;
-    window._fsInitDone = true;
-
-    function isDesktopViewport() {
-        return window.innerWidth >= 1024;
-    }
-
-    // Создаём кнопку выхода
-    function createExitButton() {
-        if (document.getElementById('fsExitBtn')) return;
-        const btn = document.createElement('button');
-        btn.id = 'fsExitBtn';
-        btn.className = 'fs-exit-btn';
-        btn.title = 'Выйти из полноэкранного режима';
-        btn.innerHTML = '⤢';
-        btn.onclick = () => {
-            try { haptic('medium'); } catch (e) {}
-            exitFullscreen();
-        };
-        document.body.appendChild(btn);
-    }
-
-    async function enterFullscreen() {
-        if (!isDesktopViewport()) return false;
-
-        const tg = window.Telegram?.WebApp;
-
-        // 1. Официальный Telegram API (работает без жеста пользователя)
-        if (tg && typeof tg.requestFullscreen === 'function') {
-            try {
-                tg.requestFullscreen();
-                console.log('🖥️ tg.requestFullscreen() вызван');
-                return true;
-            } catch (e) {
-                console.warn('tg.requestFullscreen fail:', e);
-            }
-        }
-
-        // 2. Нативный Fullscreen API
-        try {
-            const el = document.documentElement;
-            if (el.requestFullscreen) {
-                await el.requestFullscreen({ navigationUI: 'hide' });
-                console.log('🖥️ native requestFullscreen() вызван');
-                return true;
-            } else if (el.webkitRequestFullscreen) {
-                el.webkitRequestFullscreen();
-                return true;
-            }
-        } catch (e) {
-            console.warn('Native requestFullscreen fail:', e);
-        }
-
-        return false;
-    }
-
-    async function exitFullscreen() {
-        const tg = window.Telegram?.WebApp;
-        try {
-            if (tg && typeof tg.exitFullscreen === 'function') tg.exitFullscreen();
-        } catch (e) {}
-        try {
-            if (document.fullscreenElement) await document.exitFullscreen();
-        } catch (e) {}
-        try {
-            if (document.webkitFullscreenElement) document.webkitExitFullscreen();
-        } catch (e) {}
-        document.body.classList.remove('app-fullscreen');
-    }
-
-    // Синхронизация UI с состоянием fullscreen
-    function syncUI() {
-        const tg = window.Telegram?.WebApp;
-        const inFs = !!(
-            (tg && tg.isFullscreen === true) ||
-            document.fullscreenElement ||
-            document.webkitFullscreenElement
-        );
-        document.body.classList.toggle('app-fullscreen', inFs);
-    }
-
-    // Подписки на события
-    function bindEvents() {
-        document.addEventListener('fullscreenchange', syncUI);
-        document.addEventListener('webkitfullscreenchange', syncUI);
-
-        const tg = window.Telegram?.WebApp;
-        if (tg && typeof tg.onEvent === 'function') {
-            tg.onEvent('fullscreenChanged', syncUI);
-            tg.onEvent('fullscreenFailed', (e) => {
-                console.warn('❌ fullscreenFailed:', e);
-                document.body.classList.remove('app-fullscreen');
-            });
-        }
-
-        window.addEventListener('resize', () => {
-            if (!isDesktopViewport() && document.body.classList.contains('app-fullscreen')) {
-                exitFullscreen();
-            }
-        });
-    }
-
-    // Ждём Telegram SDK
-    function waitForTelegram(cb, maxAttempts = 50) {
-        let attempts = 0;
-        const check = () => {
-            attempts++;
-            if (window.Telegram?.WebApp) {
-                cb();
-                return;
-            }
-            if (attempts < maxAttempts) setTimeout(check, 100);
-        };
-        check();
-    }
-
-    waitForTelegram(() => {
-        createExitButton();
-        bindEvents();
-
-        // Автозапуск только на ПК
-        if (isDesktopViewport()) {
-            setTimeout(async () => {
-                const ok = await enterFullscreen();
-                if (ok) {
-                    document.body.classList.add('app-fullscreen');
-                    console.log('✅ Авто-fullscreen включён');
-                }
-            }, 300);
-
-            // Fallback: при первом клике, если автозапуск не сработал
-            let retryDone = false;
-            document.addEventListener('click', async function retryFs() {
-                if (retryDone) return;
-                if (document.body.classList.contains('app-fullscreen')) {
-                    retryDone = true;
-                    return;
-                }
-                retryDone = true;
-                await enterFullscreen();
-            }, { passive: true });
-        }
-    });
-
-    // Диагностика
-    setTimeout(() => {
-        const tg = window.Telegram?.WebApp;
-        console.log('🔍 Fullscreen debug:', {
-            tg: !!tg,
-            requestFullscreen: typeof tg?.requestFullscreen,
-            isFullscreen: tg?.isFullscreen,
-            version: tg?.version,
-            innerWidth: window.innerWidth,
-            userAgent: navigator.userAgent.slice(0, 100)
-        });
-    }, 2000);
-})();
     
 </style>
 </head>
@@ -33666,7 +33504,7 @@ document.addEventListener('keydown', (e) => {
 // ============================================================
 // (не нужно, оставим как есть — просто красиво скроллится)
 
-            // ============================================================
+// ============================================================
 // 🖥️ АВТО-FULLSCREEN ДЛЯ TELEGRAM WEB APP (только ПК)
 // ============================================================
 (function initAutoFullscreen() {
@@ -33692,40 +33530,79 @@ document.addEventListener('keydown', (e) => {
         document.body.appendChild(btn);
     }
 
+    // ЕДИНЫЙ метод входа в fullscreen с обходом бага Windows
     async function enterFullscreen() {
         if (!isDesktopViewport()) return false;
 
         const tg = window.Telegram?.WebApp;
 
-        // 1. Официальный Telegram API (работает без жеста пользователя)
+        // ──────────────────────────────────────────────────────
+        // ШАГ 1: Пробуем Telegram API (работает на macOS/Linux)
+        // ──────────────────────────────────────────────────────
         if (tg && typeof tg.requestFullscreen === 'function') {
             try {
                 tg.requestFullscreen();
-                console.log('🖥️ tg.requestFullscreen() вызван');
-                return true;
+                console.log('🖥️ [1] tg.requestFullscreen() вызван');
+
+                // Ждём 800мс и проверяем — если не сработало, идём дальше
+                await new Promise(r => setTimeout(r, 800));
+
+                if (tg.isFullscreen === true) {
+                    console.log('✅ [1] Telegram fullscreen OK');
+                    return true;
+                }
+
+                console.warn('⚠️ [1] Telegram API не развернул окно, пробую нативный');
             } catch (e) {
-                console.warn('tg.requestFullscreen fail:', e);
+                console.warn('⚠️ [1] tg.requestFullscreen fail:', e);
             }
         }
 
-        // 2. Нативный Fullscreen API
+        // ──────────────────────────────────────────────────────
+        // ШАГ 2: Нативный Fullscreen API (обход бага Windows)
+        // ──────────────────────────────────────────────────────
         try {
             const el = document.documentElement;
+
             if (el.requestFullscreen) {
                 await el.requestFullscreen({ navigationUI: 'hide' });
-                console.log('🖥️ native requestFullscreen() вызван');
+                console.log('🖥️ [2] native requestFullscreen() вызван');
+
+                // 🔥 ОБХОД БАГА WINDOWS: принудительно двигаем окно в угол
+                setTimeout(() => {
+                    try {
+                        if (document.fullscreenElement) {
+                            // На Windows окно может «висеть» не в углу — двигаем его
+                            if (window.screenX !== 0 || window.screenY !== 0) {
+                                window.moveTo(0, 0);
+                            }
+                        }
+                    } catch (e) {
+                        // window.moveTo часто заблокирован, это не критично
+                    }
+                }, 150);
+
                 return true;
             } else if (el.webkitRequestFullscreen) {
                 el.webkitRequestFullscreen();
+                console.log('🖥️ [2] webkitRequestFullscreen() вызван');
+                return true;
+            } else if (el.mozRequestFullScreen) {
+                el.mozRequestFullScreen();
+                return true;
+            } else if (el.msRequestFullscreen) {
+                el.msRequestFullscreen();
                 return true;
             }
         } catch (e) {
-            console.warn('Native requestFullscreen fail:', e);
+            console.warn('⚠️ [2] Native requestFullscreen fail:', e);
         }
 
+        console.error('❌ Не удалось войти в fullscreen');
         return false;
     }
 
+    // Выход
     async function exitFullscreen() {
         const tg = window.Telegram?.WebApp;
         try {
@@ -33737,31 +33614,59 @@ document.addEventListener('keydown', (e) => {
         try {
             if (document.webkitFullscreenElement) document.webkitExitFullscreen();
         } catch (e) {}
+        try {
+            if (document.mozFullScreenElement) document.mozCancelFullScreen();
+        } catch (e) {}
+        try {
+            if (document.msFullscreenElement) document.msExitFullscreen();
+        } catch (e) {}
         document.body.classList.remove('app-fullscreen');
     }
 
-    // Синхронизация UI с состоянием fullscreen
+    // Синхронизация UI
     function syncUI() {
         const tg = window.Telegram?.WebApp;
         const inFs = !!(
             (tg && tg.isFullscreen === true) ||
             document.fullscreenElement ||
-            document.webkitFullscreenElement
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement
         );
         document.body.classList.toggle('app-fullscreen', inFs);
     }
 
-    // Подписки на события
+    // Подписки
     function bindEvents() {
         document.addEventListener('fullscreenchange', syncUI);
         document.addEventListener('webkitfullscreenchange', syncUI);
+        document.addEventListener('mozfullscreenchange', syncUI);
+        document.addEventListener('MSFullscreenChange', syncUI);
 
         const tg = window.Telegram?.WebApp;
         if (tg && typeof tg.onEvent === 'function') {
             tg.onEvent('fullscreenChanged', syncUI);
+
+            // 🔥 ВАЖНО: слушаем ошибку fullscreen
             tg.onEvent('fullscreenFailed', (e) => {
-                console.warn('❌ fullscreenFailed:', e);
-                document.body.classList.remove('app-fullscreen');
+                console.warn('❌ Telegram fullscreenFailed:', e);
+
+                // Если Telegram API не смог — пробуем нативный
+                if (e?.error === 'UNSUPPORTED') {
+                    console.log('🔄 Telegram не поддерживает fullscreen, пробую нативный...');
+                    (async () => {
+                        try {
+                            const el = document.documentElement;
+                            if (el.requestFullscreen) {
+                                await el.requestFullscreen({ navigationUI: 'hide' });
+                                document.body.classList.add('app-fullscreen');
+                                console.log('✅ Fallback нативный fullscreen OK');
+                            }
+                        } catch (err) {
+                            console.warn('❌ Fallback тоже не сработал:', err);
+                        }
+                    })();
+                }
             });
         }
 
@@ -33790,7 +33695,7 @@ document.addEventListener('keydown', (e) => {
         createExitButton();
         bindEvents();
 
-        // Автозапуск только на ПК
+        // Автозапуск на ПК
         if (isDesktopViewport()) {
             setTimeout(async () => {
                 const ok = await enterFullscreen();
@@ -33798,7 +33703,7 @@ document.addEventListener('keydown', (e) => {
                     document.body.classList.add('app-fullscreen');
                     console.log('✅ Авто-fullscreen включён');
                 }
-            }, 300);
+            }, 400);
 
             // Fallback: при первом клике, если автозапуск не сработал
             let retryDone = false;
@@ -33809,7 +33714,9 @@ document.addEventListener('keydown', (e) => {
                     return;
                 }
                 retryDone = true;
-                await enterFullscreen();
+                console.log('🔄 Повторная попытка fullscreen по клику...');
+                const ok = await enterFullscreen();
+                if (ok) document.body.classList.add('app-fullscreen');
             }, { passive: true });
         }
     });
@@ -33823,6 +33730,7 @@ document.addEventListener('keydown', (e) => {
             isFullscreen: tg?.isFullscreen,
             version: tg?.version,
             innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
             userAgent: navigator.userAgent.slice(0, 100)
         });
     }, 2000);
