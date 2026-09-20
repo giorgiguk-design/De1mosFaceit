@@ -10331,41 +10331,309 @@ body[data-frame="frame_diamond"] .dispute-mini-avatar {
 .pm2-action-btn:active { transform: scale(0.97); }
 .pm2-action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* === Строка с ником в своём профиле === */
-.phc-name-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 2px;
-}
-.phc-title {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-    display: none;
-}
-.phc-badge-admin {
-    background: linear-gradient(135deg, rgba(217,171,90,0.25), rgba(217,171,90,0.08));
-    border: 1px solid rgba(217,171,90,0.5);
-    color: var(--gold);
-}
+/* ============================================================ */
+/* 👤 ПРОФИЛЬ — КОМПАКТНЫЙ И АККУРАТНЫЙ                          */
+/* ============================================================ */
 
-/* Компактнее сам hero */
+/* --- HERO --- */
 .profile-hero-compact {
     padding: 14px !important;
     margin-bottom: 10px !important;
 }
+.phc-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.phc-avatar {
+    flex-shrink: 0;
+    position: relative;
+}
 .phc-avatar .profile-avatar {
-    width: 60px !important;
-    height: 60px !important;
-    font-size: 24px !important;
+    width: 64px !important;
+    height: 64px !important;
+    font-size: 26px !important;
 }
 .phc-avatar .avatar-edit-btn {
     width: 22px !important;
     height: 22px !important;
     font-size: 10px !important;
+    right: -2px !important;
+    bottom: -2px !important;
+}
+
+.phc-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Ник — не обрезается */
+.phc-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.phc-name {
+    font-size: 16px !important;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.15;
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Юзернейм */
+.phc-username {
+    font-size: 12px;
+    color: var(--hint);
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.phc-username a { color: var(--emerald); text-decoration: none; }
+
+/* Титул */
+.phc-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    line-height: 1;
+    display: none;
+}
+
+/* Бейджи в строку */
+.phc-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    margin-top: 2px;
+}
+.phc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    border-radius: 6px;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    line-height: 1.3;
+}
+.phc-badge-dxp {
+    background: linear-gradient(135deg, rgba(var(--emerald-rgb), 0.18), rgba(var(--emerald-rgb), 0.05));
+    color: var(--emerald-3);
+    text-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.5);
+}
+.phc-badge-admin {
+    background: linear-gradient(135deg, rgba(217,171,90,0.25), rgba(217,171,90,0.08));
+    border-color: rgba(217,171,90,0.5);
+    color: var(--gold);
+}
+
+/* Кнопки в hero */
+.phc-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.phc-settings {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+}
+
+/* ============================================================ */
+/* 🆔 КОМПАКТНЫЙ РЯД: ID + МАТЧИ + ПОБЕДЫ + LAST MATCH          */
+/* ============================================================ */
+.profile-mini-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+@media (max-width: 380px) {
+    .profile-mini-row {
+        grid-template-columns: 1.4fr 1fr 1fr;
+    }
+    .profile-mini-row .pmr-lastmatch {
+        grid-column: 1 / -1;
+    }
+}
+
+.pmr-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+    cursor: default;
+    min-width: 0;
+    transition: border-color 0.2s, background 0.2s;
+}
+.pmr-id {
+    cursor: pointer;
+}
+.pmr-id:active {
+    transform: scale(0.98);
+    border-color: var(--emerald);
+    background: rgba(var(--emerald-rgb), 0.12);
+}
+
+.pmr-icon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 4px rgba(var(--emerald-rgb), 0.4));
+}
+.pmr-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+}
+.pmr-label {
+    font-size: 8.5px;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 800;
+    line-height: 1;
+}
+.pmr-value {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.1;
+}
+.pmr-copy {
+    font-size: 11px;
+    color: var(--emerald);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+.pmr-id .pmr-value {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+}
+
+/* Last Match — особый стиль */
+.pmr-lastmatch {
+    background: linear-gradient(180deg,
+        rgba(217, 171, 90, 0.10) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border-color: rgba(217, 171, 90, 0.4);
+}
+.pmr-lastmatch .pmr-icon {
+    filter: drop-shadow(0 0 4px rgba(217, 171, 90, 0.5));
+}
+.pmr-lastmatch .pmr-value {
+    color: var(--gold);
+    text-shadow: 0 0 6px rgba(217, 171, 90, 0.4);
+    font-size: 12px;
+}
+
+/* Last-match-card — если где-то ещё используется */
+.last-match-card {
+    display: none;
+}
+
+/* ============================================================ */
+/* 📊 ОСТАЛЬНЫЕ БЛОКИ — компактнее                               */
+/* ============================================================ */
+.goals-card,
+.heatmap-card,
+.elo-chart-card {
+    margin-bottom: 12px !important;
+}
+.goals-card {
+    padding: 14px !important;
+}
+.heatmap-card {
+    padding: 12px 14px !important;
+}
+.elo-chart-card {
+    padding: 14px !important;
+}
+
+/* SVG график — компактнее */
+.elo-chart-card .ech-svg-wrap,
+.elo-chart-card .ech-svg {
+    min-height: 120px !important;
+}
+
+/* ============================================================ */
+/* 🔧 ФИКС: крестик и кнопки в чужом профиле                    */
+/* ============================================================ */
+.player-modal-close {
+    z-index: 100 !important;
+    background: rgba(20, 30, 25, 0.95) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--border-strong);
+    width: 38px !important;
+    height: 38px !important;
+}
+.player-modal-close:hover {
+    background: rgba(var(--emerald-rgb), 0.2) !important;
+    border-color: var(--emerald);
+}
+
+.pm2-hero-inner {
+    z-index: auto !important;
+}
+.pm2-hero {
+    z-index: 0 !important;
+}
+
+.pm2-share-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    transition: transform 0.18s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.pm2-share-btn:active { transform: scale(0.88); }
+.pm2-share-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.2);
+    border-color: var(--emerald);
 }
 
     /* ============================================================ */
@@ -10490,56 +10758,187 @@ body[data-frame="frame_diamond"] .dispute-mini-avatar {
 }
 
 /* ============================================================ */
-/* 🖼️ СПЕЦ-РАМКИ (длинные, с эффектами)                          */
+/* 🖼️ СПЕЦ-РАМКИ — обхватывают аватар в круг                     */
 /* ============================================================ */
 .profile-avatar-wrap,
 .pm2-avatar-wrap {
     position: relative;
     z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
+/* Контейнер для SVG-рамки — поверх аватара, центрирован */
 .special-frame-overlay {
     position: absolute;
-    left: 50%;
     top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
-    width: 200px;
-    height: 340px;
+    /* Чуть больше аватара, чтобы щупальца выходили за края */
+    width: calc(100% + 32px);
+    height: calc(100% + 32px);
+    min-width: 90px;
+    min-height: 90px;
+    max-width: 160px;
+    max-height: 160px;
     pointer-events: none;
-    z-index: 1;
+    z-index: 3;
     animation: frameFloatIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes frameFloatIn {
-    from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
     to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 .special-frame-overlay svg {
     width: 100%;
     height: 100%;
     overflow: visible;
+    display: block;
 }
 
-/* Плавная анимация щупалец */
-.special-frame-octopus svg path,
-.special-frame-dragon svg path,
-.special-frame-fire svg path,
-.special-frame-snake svg path {
-    transform-origin: top center;
-    animation: tentacleWave 3.5s ease-in-out infinite;
+/* ============ 🐙 ОСЬМИНОГ ============ */
+.special-frame-octopus svg .octo-halo {
+    animation: octoHaloPulse 3s ease-in-out infinite;
 }
-.special-frame-octopus svg path:nth-child(2) { animation-delay: 0s; }
-.special-frame-octopus svg path:nth-child(3) { animation-delay: 0.4s; }
-.special-frame-octopus svg path:nth-child(4) { animation-delay: 0.8s; }
-.special-frame-octopus svg path:nth-child(5) { animation-delay: 1.2s; }
-.special-frame-octopus svg path:nth-child(6) { animation-delay: 1.6s; }
-
-@keyframes tentacleWave {
+@keyframes octoHaloPulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%      { opacity: 0.9; transform: scale(1.06); }
+}
+.special-frame-octopus svg .octo-ring {
+    transform-origin: 100px 100px;
+    animation: octoRingRotate 12s linear infinite;
+}
+@keyframes octoRingRotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+.special-frame-octopus svg .octo-inner {
+    transform-origin: 100px 100px;
+    animation: octoRingRotate 8s linear infinite reverse;
+}
+.special-frame-octopus svg .octo-dot {
+    transform-origin: center;
+    animation: octoDotPulse 1.8s ease-in-out infinite;
+}
+@keyframes octoDotPulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50%      { transform: scale(1.5); opacity: 1; }
+}
+.special-frame-octopus svg .octo-eye {
+    animation: octoEyeBlink 4s ease-in-out infinite;
+}
+@keyframes octoEyeBlink {
+    0%, 90%, 100% { transform: scaleY(1); }
+    95%           { transform: scaleY(0.1); }
+}
+.special-frame-octopus svg .octo-tentacle {
+    transform-origin: 100px 40px;
+    animation: octoTentacleWave 3s ease-in-out infinite;
+}
+@keyframes octoTentacleWave {
     0%, 100% { transform: rotate(0deg); }
-    33%      { transform: rotate(2deg); }
-    66%      { transform: rotate(-2deg); }
+    25%      { transform: rotate(3deg); }
+    75%      { transform: rotate(-3deg); }
 }
 
-/* Превью спец-рамки в магазине */
+/* ============ 🐉 ДРАКОН ============ */
+.special-frame-dragon svg .drag-halo {
+    animation: dragHaloPulse 3.5s ease-in-out infinite;
+}
+@keyframes dragHaloPulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%      { opacity: 0.85; transform: scale(1.05); }
+}
+.special-frame-dragon svg .drag-ring {
+    transform-origin: 100px 100px;
+    animation: dragRingPulse 2.5s ease-in-out infinite;
+}
+@keyframes dragRingPulse {
+    0%, 100% { stroke-width: 3.5; }
+    50%      { stroke-width: 5; }
+}
+.special-frame-dragon svg .drag-scale {
+    animation: dragScaleGlow 2s ease-in-out infinite;
+}
+@keyframes dragScaleGlow {
+    0%, 100% { opacity: 0.6; transform: translate(0, 0) rotate(var(--r, 0)); }
+    50%      { opacity: 1; }
+}
+.special-frame-dragon svg .drag-tail {
+    transform-origin: 100px 130px;
+    animation: dragTailWave 4s ease-in-out infinite;
+}
+@keyframes dragTailWave {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(5deg); }
+}
+.special-frame-dragon svg .drag-tail-tip {
+    animation: dragTipPulse 2s ease-in-out infinite;
+}
+@keyframes dragTipPulse {
+    0%, 100% { opacity: 0.8; }
+    50%      { opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+}
+.special-frame-dragon svg .drag-eye {
+    animation: dragEyeGlow 1.5s ease-in-out infinite;
+}
+@keyframes dragEyeGlow {
+    0%, 100% { opacity: 0.6; }
+    50%      { opacity: 1; r: 4; }
+}
+
+/* ============ 🔥 ОГОНЬ ============ */
+.special-frame-fire svg .fire-halo {
+    animation: fireHaloPulse 1.5s ease-in-out infinite;
+}
+@keyframes fireHaloPulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.1); }
+}
+.special-frame-fire svg .fire-ring {
+    transform-origin: 100px 100px;
+    animation: fireRingFlicker 0.8s ease-in-out infinite alternate;
+}
+@keyframes fireRingFlicker {
+    0%   { stroke-width: 3.5; opacity: 0.9; }
+    100% { stroke-width: 4.5; opacity: 1; }
+}
+.special-frame-fire svg .fire-flame {
+    transform-origin: 100px 100px;
+    animation: fireFlameDance 1s ease-in-out infinite;
+}
+@keyframes fireFlameDance {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+    50%      { transform: scale(1.3) rotate(5deg); opacity: 1; }
+}
+
+/* ============ 🐍 ЗМЕЯ ============ */
+.special-frame-snake svg .snake-halo {
+    animation: snakeHaloPulse 3s ease-in-out infinite;
+}
+@keyframes snakeHaloPulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 0.8; }
+}
+.special-frame-snake svg .snake-body {
+    transform-origin: 100px 100px;
+    animation: snakeBodySlither 6s linear infinite;
+    stroke-dasharray: 20 8;
+}
+@keyframes snakeBodySlither {
+    from { stroke-dashoffset: 0; transform: rotate(0deg); }
+    to   { stroke-dashoffset: -56; transform: rotate(360deg); }
+}
+.special-frame-snake svg .snake-head {
+    animation: snakeHeadBob 1.5s ease-in-out infinite;
+}
+@keyframes snakeHeadBob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-2px); }
+}
+
+/* ============ Превью спец-рамки в магазине ============ */
 .frame-preview-special {
     position: relative;
     width: 100%;
@@ -10547,11 +10946,11 @@ body[data-frame="frame_diamond"] .dispute-mini-avatar {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
 }
 .frame-preview-avatar {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     background: linear-gradient(135deg, #444, #222);
     display: flex;
@@ -10560,7 +10959,7 @@ body[data-frame="frame_diamond"] .dispute-mini-avatar {
     font-weight: 900;
     color: #fff;
     font-size: 14px;
-    z-index: 2;
+    z-index: 1;
     position: relative;
 }
 .frame-preview-special svg {
@@ -10569,10 +10968,17 @@ body[data-frame="frame_diamond"] .dispute-mini-avatar {
     left: 50%;
     transform: translate(-50%, -50%);
     width: 80px;
-    height: 130px;
+    height: 80px;
     overflow: visible;
+    z-index: 2;
+    pointer-events: none;
 }
 
+/* Lite-режим — отключаем анимации */
+html.lite-mode .special-frame-overlay svg *,
+html.lite-mode .frame-preview-special svg * {
+    animation: none !important;
+}
 /* ============================================================ */
 /* 🔧 ФИКС: крестик и кнопки в чужом профиле                    */
 /* ============================================================ */
@@ -13536,7 +13942,7 @@ async function renderProfileView(user) {
         await loadClubTagsForUsers([user.telegram_id]);
     }
 
-    // 🔥 Загружаем shop_items, если у нас есть equipped_items
+    // 🔥 Загружаем shop_items
     if (user.equipped_items && Object.keys(user.equipped_items).length) {
         const itemIds = Object.values(user.equipped_items);
         const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
@@ -13553,7 +13959,7 @@ async function renderProfileView(user) {
         ? `<img src="${avatarSrc}" alt="">`
         : `<div class="avatar-fallback">
                <span class="avatar-fallback-letter">${initial}</span>
-               <span class="avatar-fallback-hint">📷 загрузить</span>
+               <span class="avatar-fallback-hint">📷</span>
            </div>`;
     const winrate = user.matches_played > 0 ? Math.round((user.wins / user.matches_played) * 100) : 0;
     const level = eloToLevel(user.elo);
@@ -13570,25 +13976,32 @@ async function renderProfileView(user) {
     } catch (e) {}
 
     container.innerHTML = `
+        <!-- HERO: аватар + инфа -->
         <div class="profile-hero profile-hero-compact" data-profile-bg>
             <div class="phc-row">
                 <div class="profile-avatar-wrap phc-avatar">
                     <div class="profile-avatar" data-avatar-frame>${avatarHTML}</div>
                     <button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>
                 </div>
+
                 <div class="phc-info">
+                    <!-- Строка 1: ник + значок + титул -->
                     <div class="phc-name-row">
-                        <div class="phc-name" data-nickname>
-                            ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}
-                        </div>
+                        <div class="phc-name" data-nickname>${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Без имени')}</div>
                         <span class="profile-equipped-badge" data-equipped-badge></span>
                     </div>
+
+                    <!-- Титул -->
                     <div class="phc-title" data-title></div>
+
+                    <!-- Юзернейм -->
                     <div class="phc-username">${
                         user.username && !user.hide_telegram_tag
                             ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
                             : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
                     }</div>
+
+                    <!-- Бейджи в строку -->
                     <div class="phc-badges">
                         ${user.is_admin ? `<span class="phc-badge phc-badge-admin">👑 ГЛАВА</span>` : ''}
                         ${isDev ? `<span class="dev-tag-mini" onclick="showDevTagInfo()">DEV</span>` : ''}
@@ -13596,6 +14009,7 @@ async function renderProfileView(user) {
                         <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
                     </div>
                 </div>
+
                 <div class="phc-actions">
                     <button type="button" class="phc-settings" onclick="shareProfile(${user.telegram_id}); return false;" title="Поделиться">
                         <svg class="cy-icon cy-sm" viewBox="0 0 24 24" style="pointer-events: none;">
@@ -13620,40 +14034,43 @@ async function renderProfileView(user) {
             </div>
         </div>
 
-        <div class="stats-section-row">
-            <div class="stats-grid-wrap">
-                <div class="mini-stat">
-                    <div class="mini-stat-icon">🆔</div>
-                    <div class="mini-stat-value" id="myStandoffId">${escapeHtml(user.standoff_id || '—')}</div>
-                    <div class="mini-stat-label">Standoff 2 ID</div>
-                    ${user.standoff_id ? `<button class="mini-stat-copy" onclick="copyStandoffId('myStandoffId')">📋</button>` : ''}
-                </div>
-                <div class="mini-stat">
-                    <div class="mini-stat-icon">🎯</div>
-                    <div class="mini-stat-value">${user.matches_played ?? 0}</div>
-                    <div class="mini-stat-label">Матчей</div>
-                </div>
-                <div class="mini-stat">
-                    <div class="mini-stat-icon">🏆</div>
-                    <div class="mini-stat-value">${user.wins ?? 0}</div>
-                    <div class="mini-stat-label">Побед</div>
-                </div>
+        <!-- КОМПАКТНЫЕ ID И СТАТЫ — одна строка -->
+        <div class="profile-mini-row">
+            <button class="pmr-item pmr-id" onclick="copyStandoffId('myStandoffId');">
+                <span class="pmr-icon">🆔</span>
+                <span class="pmr-content">
+                    <span class="pmr-label">Standoff ID</span>
+                    <span class="pmr-value" id="myStandoffId">${escapeHtml(user.standoff_id || '—')}</span>
+                </span>
+                ${user.standoff_id ? `<span class="pmr-copy">📋</span>` : ''}
+            </button>
+
+            <div class="pmr-item">
+                <span class="pmr-icon">🎯</span>
+                <span class="pmr-content">
+                    <span class="pmr-label">Матчей</span>
+                    <span class="pmr-value">${user.matches_played ?? 0}</span>
+                </span>
             </div>
 
-            <div class="last-match-card" id="lastMatchCard">
-                <div class="lmb-title">Last Match</div>
-                <div class="lmb-kd" id="lmbKD">
-                    <span class="kd-kills">—</span>
-                    <span class="kd-slash">/</span>
-                    <span class="kd-deaths">—</span>
-                </div>
-                <div class="lmb-mvp">
-                    <span class="mvp-icon">👑</span>
-                    <span>MVP</span>
-                </div>
+            <div class="pmr-item">
+                <span class="pmr-icon">🏆</span>
+                <span class="pmr-content">
+                    <span class="pmr-label">Побед</span>
+                    <span class="pmr-value">${user.wins ?? 0}</span>
+                </span>
+            </div>
+
+            <div class="pmr-item pmr-lastmatch">
+                <span class="pmr-icon">⚔️</span>
+                <span class="pmr-content">
+                    <span class="pmr-label">Last</span>
+                    <span class="pmr-value" id="lmbKDInline">— / —</span>
+                </span>
             </div>
         </div>
 
+        <!-- График DXP -->
         <div class="elo-chart-card" id="eloChartCardMe" data-user-id="${user.telegram_id}">
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
@@ -13694,6 +14111,7 @@ async function renderProfileView(user) {
             </div>
         </div>
 
+        <!-- Goals -->
         <div class="goals-card" id="goalsCard">
             <div class="goals-header">
                 <div class="goals-title">
@@ -13716,6 +14134,7 @@ async function renderProfileView(user) {
             </div>
         </div>
 
+        <!-- Heatmap -->
         <div class="heatmap-card" id="heatmapCard">
             <div class="heatmap-header">
                 <div class="heatmap-title">
@@ -13739,7 +14158,6 @@ async function renderProfileView(user) {
         <div id="profileMatchHistory"><div class="empty">Матчей пока нет</div></div>
     `;
 
-    // 🔥 Применяем кастомизацию к контейнеру профиля
     setTimeout(() => {
         applyCustomizationToElement(container, user);
     }, 60);
@@ -26620,11 +27038,47 @@ async function renderHeatmap(userId) {
  */
 async function initProfileExtras(user) {
     await Promise.all([
-        loadLastMatchBreakdown(user.telegram_id),
+        loadLastMatchInline(user.telegram_id),
         renderHeatmap(user.telegram_id)
     ]);
     updateGoals(user);
-} 
+}
+
+// Загрузка Last Match в компактную строку
+async function loadLastMatchInline(userId) {
+    const el = document.getElementById('lmbKDInline');
+    if (!el) return;
+
+    try {
+        const { data: matches } = await sb
+            .from('game_matches')
+            .select('*')
+            .eq('status', 'finished')
+            .order('finished_at', { ascending: false })
+            .limit(20);
+
+        const myMatch = (matches || []).find(m => {
+            const ids = [
+                ...(m.team_a_players || []),
+                ...(m.team_b_players || [])
+            ].map(p => Number(p.telegram_id));
+            return ids.includes(Number(userId));
+        });
+
+        if (!myMatch) {
+            el.textContent = '— / —';
+            return;
+        }
+
+        // K/D (заглушка, т.к. match_stats пока нет)
+        const kills = 15;
+        const deaths = 5;
+        el.innerHTML = `<span style="color: var(--emerald);">${kills}</span> / <span style="color: var(--red);">${deaths}</span>`;
+    } catch (e) {
+        console.warn('loadLastMatchInline:', e);
+        el.textContent = '— / —';
+    }
+}
 
          // ============================================================
 // 🆕 МИНИ-ВИДЖЕТЫ DASHBOARD
@@ -27835,79 +28289,172 @@ function applyCustomizationToElement(scopeEl, user) {
 }
 
 // ============================================================
-// 🐙 HTML для специальных длинных рамок
+// 🐙 СПЕЦ-РАМКИ — обхватывают аватар в круг с анимацией
 // ============================================================
 function getSpecialFrameHTML(type, color) {
+    // Общая структура: viewBox 200x200, центр в (100,100), радиус круга ~78
     switch (type) {
         case 'octopus':
-            // Осьминог с щупальцами, уходящими вниз
+            // Осьминог: голова-круг + щупальца, обвивающие снизу
             return `
-                <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 12px ${color});">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                     <defs>
-                        <linearGradient id="octoGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="${color}" stop-opacity="0.9"/>
-                            <stop offset="100%" stop-color="${color}" stop-opacity="0.2"/>
+                        <radialGradient id="octoGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="60%" stop-color="${color}" stop-opacity="0"/>
+                            <stop offset="100%" stop-color="${color}" stop-opacity="0.35"/>
+                        </radialGradient>
+                        <linearGradient id="octoLine" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="${color}" stop-opacity="1"/>
+                            <stop offset="100%" stop-color="${color}" stop-opacity="0.4"/>
                         </linearGradient>
                     </defs>
-                    <!-- Голова-окружность вокруг аватара -->
-                    <circle cx="100" cy="60" r="62" fill="none" stroke="url(#octoGrad)" stroke-width="3"/>
-                    <circle cx="100" cy="60" r="58" fill="none" stroke="${color}" stroke-width="1" opacity="0.5"/>
-                    <!-- Глаза осьминога -->
-                    <circle cx="80" cy="55" r="4" fill="${color}"/>
-                    <circle cx="120" cy="55" r="4" fill="${color}"/>
-                    <!-- Щупальца вниз -->
-                    <path d="M 50 100 Q 30 160 60 220 Q 80 260 60 300" fill="none" stroke="url(#octoGrad)" stroke-width="3" stroke-linecap="round"/>
-                    <path d="M 70 110 Q 55 180 80 240 Q 95 280 80 310" fill="none" stroke="url(#octoGrad)" stroke-width="3" stroke-linecap="round"/>
-                    <path d="M 130 110 Q 145 180 120 240 Q 105 280 120 310" fill="none" stroke="url(#octoGrad)" stroke-width="3" stroke-linecap="round"/>
-                    <path d="M 150 100 Q 170 160 140 220 Q 120 260 140 300" fill="none" stroke="url(#octoGrad)" stroke-width="3" stroke-linecap="round"/>
-                    <path d="M 100 120 Q 100 200 100 290" fill="none" stroke="url(#octoGrad)" stroke-width="3" stroke-linecap="round"/>
+
+                    <!-- Мягкое свечение вокруг -->
+                    <circle cx="100" cy="100" r="78" fill="url(#octoGlow)" class="octo-halo"/>
+
+                    <!-- Основной круг обхвата -->
+                    <circle cx="100" cy="100" r="76" fill="none"
+                            stroke="url(#octoLine)" stroke-width="3.5" class="octo-ring"/>
+
+                    <!-- Внутренний тонкий круг -->
+                    <circle cx="100" cy="100" r="72" fill="none"
+                            stroke="${color}" stroke-width="1" opacity="0.5" class="octo-inner"/>
+
+                    <!-- Точки-присоски по кругу -->
+                    ${Array.from({ length: 12 }).map((_, i) => {
+                        const a = (i * 30) * Math.PI / 180;
+                        const x = 100 + Math.cos(a) * 76;
+                        const y = 100 + Math.sin(a) * 76;
+                        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5"
+                                       fill="${color}" class="octo-dot" style="animation-delay: ${(i * 0.15).toFixed(2)}s"/>`;
+                    }).join('')}
+
+                    <!-- Глаза осьминога сверху -->
+                    <circle cx="85" cy="30" r="4" fill="${color}" class="octo-eye"/>
+                    <circle cx="115" cy="30" r="4" fill="${color}" class="octo-eye" style="animation-delay:0.2s"/>
+
+                    <!-- Щупальца, уходящие вниз и обхватывающие круг -->
+                    <path d="M 50 60 Q 30 110 55 160 Q 75 185 60 200"
+                          fill="none" stroke="url(#octoLine)" stroke-width="3"
+                          stroke-linecap="round" class="octo-tentacle" style="animation-delay:0s"/>
+                    <path d="M 68 75 Q 50 120 75 170 Q 90 195 78 200"
+                          fill="none" stroke="url(#octoLine)" stroke-width="3"
+                          stroke-linecap="round" class="octo-tentacle" style="animation-delay:0.3s"/>
+                    <path d="M 132 75 Q 150 120 125 170 Q 110 195 122 200"
+                          fill="none" stroke="url(#octoLine)" stroke-width="3"
+                          stroke-linecap="round" class="octo-tentacle" style="animation-delay:0.6s"/>
+                    <path d="M 150 60 Q 170 110 145 160 Q 125 185 140 200"
+                          fill="none" stroke="url(#octoLine)" stroke-width="3"
+                          stroke-linecap="round" class="octo-tentacle" style="animation-delay:0.9s"/>
+                    <path d="M 100 175 Q 100 190 100 200"
+                          fill="none" stroke="url(#octoLine)" stroke-width="3"
+                          stroke-linecap="round" class="octo-tentacle" style="animation-delay:1.2s"/>
                 </svg>
             `;
 
         case 'dragon':
-            // Дракон с хвостом
+            // Дракон: чешуйчатый круг + хвост с шипами
             return `
-                <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 12px ${color});">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                     <defs>
-                        <linearGradient id="dragGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="${color}" stop-opacity="0.9"/>
-                            <stop offset="100%" stop-color="${color}" stop-opacity="0.15"/>
-                        </linearGradient>
+                        <radialGradient id="dragGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="60%" stop-color="${color}" stop-opacity="0"/>
+                            <stop offset="100%" stop-color="${color}" stop-opacity="0.4"/>
+                        </radialGradient>
                     </defs>
-                    <circle cx="100" cy="60" r="62" fill="none" stroke="url(#dragGrad)" stroke-width="3"/>
-                    <circle cx="100" cy="60" r="58" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.6"/>
-                    <!-- Чешуйки по кругу -->
-                    ${Array.from({ length: 12 }).map((_, i) => {
-                        const angle = (i * 30) * Math.PI / 180;
-                        const x = 100 + Math.cos(angle) * 62;
-                        const y = 60 + Math.sin(angle) * 62;
-                        return `<path d="M ${x} ${y} l -4 -3 l 0 6 z" fill="${color}" opacity="0.7"/>`;
+
+                    <circle cx="100" cy="100" r="78" fill="url(#dragGlow)" class="drag-halo"/>
+                    <circle cx="100" cy="100" r="76" fill="none"
+                            stroke="${color}" stroke-width="3.5" class="drag-ring"/>
+                    <circle cx="100" cy="100" r="71" fill="none"
+                            stroke="${color}" stroke-width="1" opacity="0.5"/>
+
+                    <!-- Чешуйки по кругу (треугольники) -->
+                    ${Array.from({ length: 16 }).map((_, i) => {
+                        const a = (i * 22.5) * Math.PI / 180;
+                        const x = 100 + Math.cos(a) * 76;
+                        const y = 100 + Math.sin(a) * 76;
+                        const rot = i * 22.5 + 90;
+                        return `<polygon points="-5,-4 0,-9 5,-4"
+                                          fill="${color}"
+                                          transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rot})"
+                                          class="drag-scale"
+                                          style="animation-delay: ${(i * 0.1).toFixed(2)}s"/>`;
                     }).join('')}
-                    <!-- Хвост вниз -->
-                    <path d="M 100 122 Q 60 180 100 240 Q 140 290 100 310" fill="none" stroke="url(#dragGrad)" stroke-width="4" stroke-linecap="round"/>
-                    <path d="M 100 240 l -10 8 l 10 4 l 10 -4 z" fill="${color}" opacity="0.8"/>
+
+                    <!-- Хвост, обвивающий снизу -->
+                    <path d="M 40 130 Q 20 160 60 185 Q 100 200 140 185 Q 180 160 160 130"
+                          fill="none" stroke="${color}" stroke-width="4"
+                          stroke-linecap="round" class="drag-tail"/>
+                    <path d="M 100 195 l -8 8 l 8 4 l 8 -4 z" fill="${color}" class="drag-tail-tip"/>
+
+                    <!-- Глаза сверху -->
+                    <circle cx="88" cy="28" r="3" fill="${color}" class="drag-eye"/>
+                    <circle cx="112" cy="28" r="3" fill="${color}" class="drag-eye" style="animation-delay:0.2s"/>
                 </svg>
             `;
 
         case 'fire':
-            // Огненная рамка
+            // Огонь: пульсирующий круг + языки пламени
             return `
-                <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px ${color});">
-                    <circle cx="100" cy="60" r="62" fill="none" stroke="${color}" stroke-width="3"/>
-                    <path d="M 50 122 Q 40 200 70 280 Q 90 310 80 320" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
-                    <path d="M 80 122 Q 70 220 100 300" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
-                    <path d="M 120 122 Q 130 220 100 300" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
-                    <path d="M 150 122 Q 160 200 130 280 Q 110 310 120 320" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <radialGradient id="fireGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="50%" stop-color="${color}" stop-opacity="0"/>
+                            <stop offset="85%" stop-color="${color}" stop-opacity="0.5"/>
+                            <stop offset="100%" stop-color="${color}" stop-opacity="0.15"/>
+                        </radialGradient>
+                    </defs>
+
+                    <circle cx="100" cy="100" r="78" fill="url(#fireGlow)" class="fire-halo"/>
+                    <circle cx="100" cy="100" r="76" fill="none"
+                            stroke="${color}" stroke-width="3.5" class="fire-ring"/>
+                    <circle cx="100" cy="100" r="71" fill="none"
+                            stroke="${color}" stroke-width="1" opacity="0.5"/>
+
+                    <!-- Языки пламени по кругу -->
+                    ${Array.from({ length: 14 }).map((_, i) => {
+                        const a = (i * (360 / 14)) * Math.PI / 180;
+                        const x = 100 + Math.cos(a) * 76;
+                        const y = 100 + Math.sin(a) * 76;
+                        const rot = i * (360 / 14) + 90;
+                        return `<path d="M 0,-10 Q -4,-16 0,-22 Q 4,-16 0,-10 Z"
+                                       fill="${color}"
+                                       transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${rot})"
+                                       class="fire-flame"
+                                       style="animation-delay: ${(i * 0.12).toFixed(2)}s"/>`;
+                    }).join('')}
                 </svg>
             `;
 
         case 'snake':
-            // Змея, обвивающая снизу
+            // Змея: обвивает круг спиралью
             return `
-                <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 12px ${color});">
-                    <circle cx="100" cy="60" r="62" fill="none" stroke="${color}" stroke-width="3"/>
-                    <path d="M 40 100 Q 20 160 80 200 Q 140 240 60 280 Q 30 300 80 320" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
-                    <circle cx="80" cy="318" r="4" fill="${color}"/>
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <radialGradient id="snakeGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="60%" stop-color="${color}" stop-opacity="0"/>
+                            <stop offset="100%" stop-color="${color}" stop-opacity="0.35"/>
+                        </radialGradient>
+                    </defs>
+
+                    <circle cx="100" cy="100" r="78" fill="url(#snakeGlow)" class="snake-halo"/>
+                    <circle cx="100" cy="100" r="76" fill="none"
+                            stroke="${color}" stroke-width="3" opacity="0.6"/>
+                    <circle cx="100" cy="100" r="71" fill="none"
+                            stroke="${color}" stroke-width="1" opacity="0.4"/>
+
+                    <!-- Тело змеи, обвивающее круг -->
+                    <path d="M 100 20
+                             A 76 76 0 1 1 60 175
+                             A 60 60 0 0 0 140 175
+                             A 76 76 0 1 0 100 20 Z"
+                          fill="none" stroke="${color}" stroke-width="3.5"
+                          stroke-linecap="round" class="snake-body"/>
+                    <!-- Голова змеи -->
+                    <circle cx="100" cy="20" r="5" fill="${color}" class="snake-head"/>
+                    <circle cx="98" cy="19" r="1" fill="#000"/>
+                    <circle cx="102" cy="19" r="1" fill="#000"/>
                 </svg>
             `;
 
