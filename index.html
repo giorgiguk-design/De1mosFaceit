@@ -33646,22 +33646,30 @@ document.addEventListener('keydown', (e) => {
         check();
     }
 
-    waitForTelegram(() => {
-        const tg = window.Telegram.WebApp;
+waitForTelegram(() => {
+    const tg = window.Telegram.WebApp;
 
-        createExitButton();
-        bindEvents();
+    // 🔍 ЛОГ: что мы имеем
+    console.log('🔍 FS init:', {
+        hasTg: !!tg,
+        innerWidth: window.innerWidth,
+        isDesktop: isDesktopViewport(),
+        initData: tg.initData ? 'есть' : 'ПУСТО',
+        hasRequestFS: typeof tg.requestFullscreen,
+        version: tg.version,
+        platform: tg.platform,
+    });
 
-        // 🔥 СРАЗУ — синхронно, БЕЗ setTimeout
-        // Пробуем только если это точно WebApp, а не dev
-        if (tg.initData && isDesktopViewport()) {
-            try {
-                tg.ready();
-                tg.expand();
-            } catch (e) {}
+    createExitButton();
+    bindEvents();
 
-            // Пробуем fullscreen НЕМЕДЛЕННО
-            requestFullscreenNow();
+    if (isDesktopViewport()) {   // ← убрали tg.initData
+        try {
+            tg.ready();
+            tg.expand();
+        } catch (e) {}
+
+        requestFullscreenNow();
 
             // И ещё раз через микро-паузу — AyuGram любит подтормаживать
             setTimeout(() => {
