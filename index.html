@@ -12496,6 +12496,77 @@ html.lite-mode .special-frame-skull svg * {
     color: var(--emerald);
     margin-left: 6px;
 }
+
+    /* ============================================================ */
+/* 🌄 ФОН ПРОФИЛЯ ВНУТРИ ПЛАШЕК (списки, лидерборд, клуб и т.д.)  */
+/* ============================================================ */
+
+/* Все элементы с кастомным фоном */
+.has-list-bg {
+    position: relative !important;
+    overflow: hidden !important;
+    /* Убираем стандартный фон, чтобы фон из картинки был виден */
+    background: #03060a !important;
+}
+
+/* Слой с картинкой */
+.list-item-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.35;                 /* мягкая прозрачность, чтобы текст читался */
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.3s ease;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Затемняющий слой поверх картинки, чтобы текст не терялся */
+.list-item-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        rgba(0, 0, 0, 0.65) 0%,
+        rgba(0, 0, 0, 0.45) 50%,
+        rgba(0, 0, 0, 0.65) 100%);
+}
+
+/* Все дети .has-list-bg должны быть поверх фона */
+.has-list-bg > *:not(.list-item-bg) {
+    position: relative;
+    z-index: 1;
+}
+
+/* 🔥 Дополнительно — усиленный фон для крупных плашек (профиль команды, комната) */
+.has-list-bg.leaderboard-item .list-item-bg {
+    opacity: 0.4;
+}
+.has-list-bg.club-member-row .list-item-bg {
+    opacity: 0.32;
+}
+
+/* Плавное появление */
+.has-list-bg {
+    animation: listBgFadeIn 0.4s ease;
+}
+@keyframes listBgFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Lite-режим — приглушаем, чтобы не жрало ресурсы */
+html.lite-mode .list-item-bg {
+    opacity: 0.25;
+}
+html.lite-mode .has-list-bg {
+    animation: none;
+}
     
 </style>
 </head>
@@ -29951,8 +30022,8 @@ function applyCustomizationToElement(scopeEl, user) {
     }
 }
 
-            // ============================================================
-// 🎨 ПРИМЕНЕНИЕ КАСТОМИЗАЦИИ К АВАТАРУ + НИКУ (для списков)
+// ============================================================
+// 🎨 ПРИМЕНЕНИЕ КАСТОМИЗАЦИИ К АВАТАРУ + НИКУ + ФОНУ (для списков)
 // ============================================================
 function applyListCustomization(scopeEl, user) {
     if (!scopeEl || !user) return;
@@ -29988,11 +30059,7 @@ function applyListCustomization(scopeEl, user) {
     const avEls = scopeEl.querySelectorAll('[data-list-avatar]');
     if (frameId && SHOP_ITEMS_CACHE[frameId]) {
         const val = SHOP_ITEMS_CACHE[frameId].value || {};
-        if (!val.special && val.color) {
-            avEls.forEach(el => {
-                el.style.boxShadow = `0 0 0 2px ${val.color}, 0 0 10px ${val.color}`;
-            });
-        } else if (val.special && val.color) {
+        if (val.color) {
             avEls.forEach(el => {
                 el.style.boxShadow = `0 0 0 2px ${val.color}, 0 0 12px ${val.color}`;
             });
@@ -30014,6 +30081,32 @@ function applyListCustomization(scopeEl, user) {
             }
             el.style.display = 'inline-flex';
         });
+    }
+
+    // ============================================================
+    // 🌄 ФОН ПРОФИЛЯ — на всю плашку
+    // ============================================================
+    const bgId = eq.profile_bg;
+    const itemEl = scopeEl;
+
+    // Убираем старый фон, если был
+    itemEl.classList.remove('has-list-bg');
+    const oldBg = itemEl.querySelector('.list-item-bg');
+    if (oldBg) oldBg.remove();
+    itemEl.style.backgroundImage = '';
+
+    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
+        const val = SHOP_ITEMS_CACHE[bgId].value || {};
+        if (val.url) {
+            // Добавляем класс
+            itemEl.classList.add('has-list-bg');
+
+            // Создаём слой с фоном
+            const bgLayer = document.createElement('div');
+            bgLayer.className = 'list-item-bg';
+            bgLayer.style.backgroundImage = `url('${val.url}')`;
+            itemEl.insertBefore(bgLayer, itemEl.firstChild);
+        }
     }
 }
 
