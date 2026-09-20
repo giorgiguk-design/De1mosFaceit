@@ -31,7 +31,26 @@
 <link rel="preconnect" href="https://ksmuopoasgzyromdjtnt.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://ksmuopoasgzyromdjtnt.supabase.co">
 <!-- Telegram SDK — официальный CDN -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/@telegram-apps/sdk@2/dist/index.min.js"></script>
+    const { viewport, isTMA } = window.telegramAppsSdk;
+
+async function initFullscreen() {
+    if (await isTMA()) {
+        // Expand обязательно ДО fullscreen
+        if (viewport.mount.isAvailable()) {
+            await viewport.mount();
+            viewport.expand();
+        }
+        
+        // Fullscreen только если доступен
+        if (viewport.requestFullscreen.isAvailable()) {
+            await viewport.requestFullscreen();
+            document.body.classList.add('app-fullscreen');
+        }
+    }
+}
+
+initFullscreen();
 
 <!-- Supabase — тоже лучше скачать локально, но CDN обычно работает -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
