@@ -284,6 +284,30 @@ body::after {
             -webkit-tap-highlight-color: transparent;
             transition: transform 0.15s ease, border-color 0.2s ease;
         }
+
+    /* 🔥 ПК: вся карточка кликабельна, дети не перехватывают клик */
+.leaderboard-item,
+.leaderboard-item * {
+    pointer-events: none;
+}
+.leaderboard-item {
+    pointer-events: auto !important;
+    cursor: pointer;
+}
+/* 🔥 Убираем shimmer-псевдоэлемент, который мешает клику */
+.leaderboard-item::after {
+    display: none !important;
+}
+/* 🔥 Кнопки-действия всё равно должны работать */
+.leaderboard-item button,
+.leaderboard-item .friend-action,
+.leaderboard-item .player-menu-btn,
+.leaderboard-item .club-mini-dots,
+.leaderboard-item .ig-report-btn,
+.leaderboard-item a {
+    pointer-events: auto !important;
+    cursor: pointer;
+}
         .leaderboard-item:active { 
             border-color: var(--border-strong);
             transform: scale(0.985);
@@ -13530,7 +13554,154 @@ html.lite-mode .list-frame-overlay svg * {
     animation: none !important;
 }
 
-    
+    /* 🔥 Все дети карточки не должны перехватывать клик — только сама карточка */
+.leaderboard-item,
+.leaderboard-item * {
+    pointer-events: none;
+}
+.leaderboard-item {
+    pointer-events: auto !important;
+}
+/* 🔥 Убираем shimmer-псевдоэлемент, который перехватывает клик */
+.leaderboard-item::after {
+    display: none !important;
+}
+
+/* ============ SHOP CATEGORY MODAL ============ */
+.shop-cat-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 850;
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: none;
+    align-items: stretch;
+    justify-content: center;
+    padding: 0;
+    animation: shopModalIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.shop-cat-modal.active {
+    display: flex;
+}
+@keyframes shopModalIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.shop-cat-modal-inner {
+    width: 100%;
+    max-width: 640px;
+    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+    display: flex;
+    flex-direction: column;
+    animation: shopModalSlide 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
+    overflow: hidden;
+}
+@media (min-width: 1024px) {
+    .shop-cat-modal {
+        padding: 40px 20px;
+        align-items: center;
+    }
+    .shop-cat-modal-inner {
+        border-radius: 22px;
+        border: 1px solid var(--border-strong);
+        max-height: 90vh;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    }
+}
+@keyframes shopModalSlide {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.shop-cat-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border-strong);
+    background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.08), transparent);
+    flex-shrink: 0;
+    position: relative;
+}
+.shop-cat-modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.8;
+}
+.shop-cat-modal-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    color: var(--emerald);
+    flex-shrink: 0;
+}
+.shop-cat-modal-icon svg { width: 24px; height: 24px; }
+.shop-cat-modal-info { flex: 1; min-width: 0; }
+.shop-cat-modal-title {
+    font-size: 17px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: 0.3px;
+}
+.shop-cat-modal-sub {
+    font-size: 11px;
+    color: var(--hint);
+    margin-top: 2px;
+    font-weight: 600;
+}
+.shop-cat-modal-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: inherit;
+    transition: transform 0.18s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.shop-cat-modal-close:hover {
+    background: rgba(var(--emerald-rgb), 0.15);
+    border-color: var(--emerald);
+    color: var(--emerald);
+}
+.shop-cat-modal-close:active { transform: scale(0.9); }
+.shop-cat-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+    /* 🔥 Глобально: кнопки и ссылки всегда кликабельны */
+button:not(:disabled),
+button:not([disabled]),
+[onclick]:not([onclick=""]),
+a[href],
+.sheet-option,
+.menu-drawer-btn,
+.menu-item,
+.shop-btn,
+.shop-cat-btn,
+.club-mini-btn,
+.rv-icon-btn,
+.friend-action,
+.nav-item,
+.profile-action-btn {
+    pointer-events: auto !important;
+}
     
 </style>
 </head>
@@ -17248,10 +17419,10 @@ async function loadLeaderboard() {
 
     // 1. Баннер
     wrap.innerHTML = `
-        <div class="leaderboard-hero" onclick="openFullLeaderboard()">
+        <div class="leaderboard-hero" onclick="openFullLeaderboard()" style="cursor: pointer; position: relative; z-index: 2;">
             <img src="${LEADERBOARD_BANNER_URL}"
                  alt="Лидерборд"
-                 style="width: 100%; height: auto; display: block; border-radius: 0; cursor: pointer;">
+                 style="width: 100%; height: auto; display: block; border-radius: 0; pointer-events: none;">
         </div>
     `;
 
@@ -28594,6 +28765,56 @@ function subscribeUsersRealtime() {
                 openFullLeaderboard();
             }
 
+                        // ============================================================
+            // 2.5. ДРУЗЬЯ
+            // ============================================================
+            if (document.getElementById('page-friends')?.classList.contains('active')) {
+                loadFriends();
+            }
+
+            // ============================================================
+            // 2.6. КЛУБ
+            // ============================================================
+            if (document.getElementById('page-club')?.classList.contains('active') && myClub) {
+                loadClub();
+            }
+
+            // ============================================================
+            // 2.7. ОТКРЫТЫЕ КОМНАТЫ (play screen)
+            // ============================================================
+            if (document.getElementById('playScreen')?.classList.contains('active')) {
+                if (currentPlayRoomId) {
+                    renderRoomContent(currentPlayRoomId);
+                } else {
+                    loadPlayRooms();
+                }
+            }
+
+            // ============================================================
+            // 2.8. СПИСОК ЧАТОВ
+            // ============================================================
+            if (document.getElementById('page-chat')?.classList.contains('active')) {
+                loadChatList();
+            }
+
+            // ============================================================
+            // 2.9. ИСТОРИЯ МАТЧЕЙ
+            // ============================================================
+            if (document.getElementById('page-matches')?.classList.contains('active')) {
+                loadMatchesHistory();
+            }
+
+            // ============================================================
+            // 2.10. ЗАЯВКИ В КЛУБ / СПИСКИ
+            // ============================================================
+            if (document.getElementById('requestsSheet')?.classList.contains('active') && myClub) {
+                renderRequestsSheet();
+            }
+            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
+                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
+                loadAllClubsSheet(q);
+            }
+
             // ============================================================
             // 3. ОТКРЫТЫЙ ЧУЖОЙ ПРОФИЛЬ — обновить
             // ============================================================
@@ -30359,9 +30580,6 @@ window.returnAfterVetoCancel = async function(...args) {
     return _origReturnAfterVetoCancel?.apply(this, args);
 };
 
-// ============================================================
-// 🛒 SHOP — киберспортивный интерфейс
-// ============================================================
 async function openShop() {
     switchPage('shop');
     const container = document.getElementById('shopContent');
@@ -30369,7 +30587,6 @@ async function openShop() {
     container.innerHTML = '<div class="empty">Загрузка...</div>';
 
     try {
-        // Всегда догружаем ВСЕ товары с value
         const [itemsRes, invRes] = await Promise.all([
             sb.from('shop_items').select('*').eq('is_available', true).order('sort_order'),
             sb.from('user_inventory').select('item_id, is_equipped').eq('telegram_id', currentUser.telegram_id)
@@ -30380,23 +30597,177 @@ async function openShop() {
         const owned = new Set(inventory.map(i => i.item_id));
         const equipped = new Set(inventory.filter(i => i.is_equipped).map(i => i.item_id));
 
-        // Обновляем кэш
         items.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
 
-        if (!items.length) {
-            container.innerHTML = `
-                <div class="shop-hero">
-                    <div class="shop-hero-glow"></div>
-                    <div class="shop-hero-content">
-                        <div class="shop-hero-title">🏪 МАГАЗИН</div>
-                        <div class="shop-hero-sub">Скоро здесь появятся товары</div>
+        const categories = {
+            nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
+            avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
+            profile_bg:     { label: 'Фоны профиля', icon: 'bg',       desc: 'Атмосфера профиля' },
+            badge:          { label: 'Значки',       icon: 'badge',    desc: 'Особые отметки' },
+            title:          { label: 'Титулы',       icon: 'title',    desc: 'Покажи свой статус' },
+        };
+
+        const grouped = {};
+        items.forEach(i => { (grouped[i.category] ||= []).push(i); });
+
+        const catIcon = (type) => {
+            const svgs = {
+                nickname: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 12 4l8 16"/><path d="M7 14h10"/></svg>`,
+                frame: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/></svg>`,
+                bg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
+                badge: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>`,
+                title: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/><path d="M5 21h14"/></svg>`,
+            };
+            return svgs[type] || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>`;
+        };
+
+        const ownedCount = items.filter(i => owned.has(i.id)).length;
+        const equippedCount = equipped.size;
+
+        // ==== Hero + сетка категорий ====
+        container.innerHTML = `
+            <div class="shop-hero">
+                <div class="shop-hero-glow"></div>
+                <div class="shop-hero-content">
+                    <div class="shop-hero-top">
+                        <div>
+                            <div class="shop-hero-eyebrow">FACEIT STORE</div>
+                            <div class="shop-hero-title">МАГАЗИН</div>
+                        </div>
+                        <div class="shop-hero-balance" onclick="openCoinsHistory()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                            </svg>
+                            <span>${currentUser.coins || 0}</span>
+                        </div>
+                    </div>
+                    <div class="shop-hero-stats">
+                        <div class="shop-hero-stat">
+                            <span class="shop-hero-stat-val">${ownedCount}</span>
+                            <span class="shop-hero-stat-lbl">Куплено</span>
+                        </div>
+                        <div class="shop-hero-stat">
+                            <span class="shop-hero-stat-val">${equippedCount}</span>
+                            <span class="shop-hero-stat-lbl">Надето</span>
+                        </div>
+                        <div class="shop-hero-stat">
+                            <span class="shop-hero-stat-val">${items.length}</span>
+                            <span class="shop-hero-stat-lbl">Товаров</span>
+                        </div>
                     </div>
                 </div>
-                <div class="empty">Магазин пуст</div>
+            </div>
+
+            <div class="section-title">Категории</div>
+            <div class="shop-cat-tabs">
+                ${Object.entries(categories).map(([cat, meta]) => {
+                    const list = grouped[cat] || [];
+                    const ownedInCat = list.filter(i => owned.has(i.id)).length;
+                    const isEmpty = !list.length;
+                    return `
+                        <button class="shop-cat-btn ${isEmpty ? 'disabled' : ''}" 
+                                onclick="${isEmpty ? '' : `openShopCategory('${cat}')`}"
+                                ${isEmpty ? 'disabled' : ''}>
+                            <span class="shop-cat-btn-icon">${catIcon(meta.icon)}</span>
+                            <span class="shop-cat-btn-info">
+                                <span class="shop-cat-btn-name">${meta.label}</span>
+                                <span class="shop-cat-btn-count">${ownedInCat}/${list.length}</span>
+                            </span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+
+            <div class="shop-bottom-actions">
+                <button class="profile-action-btn cancel" onclick="openCoinsHistory()">📜 История транзакций</button>
                 <button class="profile-action-btn cancel" onclick="switchPage('dashboard')">◀ Назад</button>
-            `;
-            return;
-        }
+            </div>
+        `;
+    } catch (e) {
+        console.error('openShop:', e);
+        container.innerHTML = `<div class="empty" style="color:var(--red);">Ошибка: ${e.message}</div>`;
+    }
+}
+
+// ============================================================
+// 🛒 Открытие категории в модалке
+// ============================================================
+async function openShopCategory(category) {
+     window._shopActiveCategory = category;
+    const categories = {
+        nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
+        avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
+        profile_bg:     { label: 'Фоны профиля', icon: 'bg',       desc: 'Атмосфера профиля' },
+        badge:          { label: 'Значки',       icon: 'badge',    desc: 'Особые отметки' },
+        title:          { label: 'Титулы',       icon: 'title',    desc: 'Покажи свой статус' },
+    };
+    const meta = categories[category] || { label: category, icon: 'badge', desc: '' };
+
+    const catIcon = (type) => {
+        const svgs = {
+            nickname: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 12 4l8 16"/><path d="M7 14h10"/></svg>`,
+            frame: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/></svg>`,
+            bg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
+            badge: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>`,
+            title: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/><path d="M5 21h14"/></svg>`,
+        };
+        return svgs[type] || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>`;
+    };
+
+    // Закрываем старую модалку, если есть
+    document.getElementById('shopCatModal')?.remove();
+
+    // Загружаем товары
+    const { data: items } = await sb.from('shop_items')
+        .select('*').eq('is_available', true).eq('category', category).order('sort_order');
+
+    const { data: inv } = await sb.from('user_inventory')
+        .select('item_id, is_equipped').eq('telegram_id', currentUser.telegram_id);
+
+    const owned = new Set((inv || []).map(i => i.item_id));
+    const equipped = new Set((inv || []).filter(i => i.is_equipped).map(i => i.item_id));
+
+    (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+    const RARITY_ORDER = { common: 1, rare: 2, epic: 3, legendary: 4 };
+    const sorted = [...(items || [])].sort((a, b) => {
+        const rA = RARITY_ORDER[a.rarity] || 0;
+        const rB = RARITY_ORDER[b.rarity] || 0;
+        if (rA !== rB) return rA - rB;
+        return (a.price || 0) - (b.price || 0);
+    });
+
+    const modal = document.createElement('div');
+    modal.className = 'shop-cat-modal active';
+    modal.id = 'shopCatModal';
+    modal.onclick = (e) => { if (e.target === modal) closeShopCategory(); };
+
+    modal.innerHTML = `
+        <div class="shop-cat-modal-inner">
+            <div class="shop-cat-modal-header">
+                <div class="shop-cat-modal-icon">${catIcon(meta.icon)}</div>
+                <div class="shop-cat-modal-info">
+                    <div class="shop-cat-modal-title">${meta.label}</div>
+                    <div class="shop-cat-modal-sub">${meta.desc} · ${sorted.length} товаров</div>
+                </div>
+                <button class="shop-cat-modal-close" onclick="closeShopCategory()">✕</button>
+            </div>
+            <div class="shop-cat-modal-body">
+                <div class="shop-grid">
+                    ${sorted.map(item => renderShopItem(item, owned.has(item.id), equipped.has(item.id))).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    haptic('medium');
+}
+
+function closeShopCategory() {
+    const modal = document.getElementById('shopCatModal');
+    if (modal) modal.remove();
+}
 
         // Группируем
         const categories = {
@@ -30736,8 +31107,15 @@ async function buyShopItem(itemId, price) {
                 ).join('');
             }
         } else {
-            // Fallback — перезагрузка
-            openShop();
+            // Fallback — перезагрузка модалки
+            const modal = document.getElementById('shopCatModal');
+            if (modal) {
+                const cat = window._shopActiveCategory;
+                closeShopCategory();
+                setTimeout(() => openShopCategory(cat), 100);
+            } else {
+                openShop();
+            }
         }
 
         // Обновляем баланс в шапке
@@ -30803,14 +31181,14 @@ async function equipShopItem(itemId) {
         showToast('✅ Надето');
         haptic('medium');
 
-        // 🔥 Не перезагружаем страницу магазина, а точечно обновляем кнопки
-        const shopContent = document.getElementById('shopContent');
-        if (shopContent && document.getElementById('page-shop')?.classList.contains('active')) {
-            // Перерисовываем только грид активной категории
-            const grid = document.getElementById('shopGrid');
-            if (grid) {
+        // 🔥 Обновляем открытую модалку, если она есть
+        const modal = document.getElementById('shopCatModal');
+        if (modal) {
+            const body = modal.querySelector('.shop-cat-modal-body .shop-grid');
+            if (body) {
                 const { data: allItems } = await sb.from('shop_items')
-                    .select('*').eq('is_available', true).eq('category', window._shopActiveCategory).order('sort_order');
+                    .select('*').eq('is_available', true)
+                    .eq('category', window._shopActiveCategory).order('sort_order');
 
                 const { data: myInv } = await sb.from('user_inventory')
                     .select('item_id, is_equipped').eq('telegram_id', currentUser.telegram_id);
@@ -30820,7 +31198,7 @@ async function equipShopItem(itemId) {
 
                 (allItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
 
-                grid.innerHTML = (allItems || []).map(it =>
+                body.innerHTML = (allItems || []).map(it =>
                     renderShopItem(it, ownedSet.has(it.id), equippedSet.has(it.id))
                 ).join('');
             }
