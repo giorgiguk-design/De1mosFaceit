@@ -33170,18 +33170,25 @@ document.addEventListener('keydown', (e) => {
     if (window._fsInitDone) return;
     window._fsInitDone = true;
 
-function isDesktopViewport() {
-    const tg = window.Telegram?.WebApp;
-    // Если Telegram говорит, что платформа desktop — это точно ПК
-    if (tg?.platform === 'tdesktop' || tg?.platform === 'macos' || tg?.platform === 'web') {
-        return true;
+    // ============================================================
+    // ОПРЕДЕЛЕНИЕ ПЛАТФОРМЫ
+    // ============================================================
+    function isDesktopPlatform() {
+        const tg = window.Telegram?.WebApp;
+        const platform = tg?.platform || '';
+        // AyuGram / Telegram Desktop / macOS / Web — это точно ПК
+        if (platform === 'tdesktop'
+            || platform === 'macos'
+            || platform === 'web'
+            || platform === 'weba') {
+            return true;
+        }
+        // Fallback: если ширина большая — тоже считаем ПК
+        return window.innerWidth >= 1024;
     }
-    // Иначе — по ширине
-    return window.innerWidth >= 1024;
-}
 
     // ============================================================
-    // ВЫХОД
+    // ВЫХОД ИЗ FULLSCREEN
     // ============================================================
     function exitFullscreen() {
         const tg = window.Telegram?.WebApp;
@@ -33192,7 +33199,7 @@ function isDesktopViewport() {
     }
 
     // ============================================================
-    // СИНХРОНИЗАЦИЯ UI
+    // СИНХРОНИЗАЦИЯ UI С СОСТОЯНИЕМ FULLSCREEN
     // ============================================================
     function syncUI() {
         const tg = window.Telegram?.WebApp;
@@ -33206,18 +33213,17 @@ function isDesktopViewport() {
     }
 
     // ============================================================
-    // ВХОД — БЕЗ setTimeout и БЕЗ await ПЕРЕД вызовом
+    // ЗАПРОС FULLSCREEN — БЕЗ setTimeout ПЕРЕД ВЫЗОВОМ
     // ============================================================
     function requestFullscreenNow() {
         const tg = window.Telegram?.WebApp;
 
-        // 1) Telegram Desktop / AyuGram — пробуем СРАЗУ, синхронно
+        // 1) Telegram Desktop / AyuGram — пробуем синхронно
         if (tg && typeof tg.requestFullscreen === 'function') {
             try {
                 tg.requestFullscreen();
                 console.log('🖥️ tg.requestFullscreen() вызван');
-                // Не ждём 800мс — syncUI вызовется по событию
-                // Но на всякий случай — фолбэк через 300мс
+                // Fallback: если через 400мс всё ещё не fullscreen — пробуем native
                 setTimeout(() => {
                     if (!document.body.classList.contains('app-fullscreen')) {
                         console.warn('⚠️ tg FS не сработал, пробую native');
@@ -33230,7 +33236,7 @@ function isDesktopViewport() {
             }
         }
 
-        // 2) Обычный браузер — native API
+        // 2) Нативный API браузера
         tryNativeFullscreen();
     }
 
@@ -33261,7 +33267,7 @@ function isDesktopViewport() {
     }
 
     // ============================================================
-    // КНОПКА ВЫХОДА
+    // КНОПКА ВЫХОДА ИЗ FULLSCREEN
     // ============================================================
     function createExitButton() {
         if (document.getElementById('fsExitBtn')) return;
@@ -33270,7 +33276,10 @@ function isDesktopViewport() {
         btn.className = 'fs-exit-btn';
         btn.title = 'Выйти из fullscreen';
         btn.textContent = '⤢';
-        btn.onclick = () => { try { haptic('medium'); } catch(e) {} exitFullscreen(); };
+        btn.onclick = () => {
+            try { haptic('medium'); } catch (e) {}
+            exitFullscreen();
+        };
         document.body.appendChild(btn);
     }
 
@@ -33290,7 +33299,6 @@ function isDesktopViewport() {
                 console.warn('⚠️ tg fullscreenFailed:', e);
                 tryNativeFullscreen();
             });
-            // 🔥 ВАЖНО: viewportChanged часто приходит раньше fullscreenChanged
             tg.onEvent('viewportChanged', syncUI);
         }
     }
@@ -33311,72 +33319,84 @@ function isDesktopViewport() {
         check();
     }
 
-waitForTelegram(() => {
-    const tg = window.Telegram.WebApp;
+    // ============================================================
+    // 🚀 СТАРТ
+    // ============================================================
+    waitForTelegram(() => {
+        const tg = window.Telegram.WebApp;
 
-    console.log('🔍 FS init:', {
-        hasTg: !!tg,
-        innerWidth: window.innerWidth,
-        isDesktop: isDesktopViewport(),
-        platform: tg.platform,
-        initData: tg.initData ? 'есть' : 'ПУСТО',
-        hasRequestFS: typeof tg.requestFullscreen,
-        version: tg.version,
-    });
-
-    createExitButton();
-    bindEvents();
-
-    // 🔥 ВСЕГДА пробуем, если это точно Telegram Desktop
-    const isTDesktop = tg.platform === 'tdesktop'
-                    || tg.platform === 'macos'
-                    || tg.platform === 'web';
-
-    if (isTDesktop) {
-        try { tg.ready(); tg.expand(); } catch (e) {}
-
-        // Пробуем сразу
-        requestFullscreenNow();
-
-        // И ещё раз через 300мс — AyuGram тормозит
-        setTimeout(() => {
-            if (!document.body.classList.contains('app-fullscreen')) {
-                console.log('🔄 Вторая попытка...');
-                requestFullscreenNow();
-            }
-        }, 300);
-
-        // И ещё через 1000мс
-        setTimeout(() => {
-            if (!document.body.classList.contains('app-fullscreen')) {
-                console.log('🔄 Третья попытка...');
-                requestFullscreenNow();
-            }
-        }, 1000);
-    }
-
-    // Fallback — при первом клике
-    const firstClickFs = () => {
-        if (document.body.classList.contains('app-fullscreen')) {
-            document.removeEventListener('pointerdown', firstClickFs, true);
-            return;
-        }
-        requestFullscreenNow();
-    };
-    document.addEventListener('pointerdown', firstClickFs, { capture: true, passive: true });
-
-    // Диагностика
-    setTimeout(() => {
-        console.log('🔍 FS Debug:', {
+        // 🔍 Диагностика — что видим
+        console.log('🔍 FS init:', {
             hasTg: !!tg,
-            tgVersion: tg.version,
-            tgPlatform: tg.platform,
-            hasRequestFS: typeof tg.requestFullscreen,
-            isFullscreen: tg.isFullscreen,
             innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            screenWidth: screen.width,
+            screenHeight: screen.height,
+            platform: tg.platform,
+            version: tg.version,
+            initData: tg.initData ? 'есть' : 'ПУСТО',
+            hasRequestFS: typeof tg.requestFullscreen,
         });
-    }, 1500);
-});
+
+        createExitButton();
+        bindEvents();
+
+        // 🔥 Пробуем fullscreen ТОЛЬКО на ПК-платформе
+        if (isDesktopPlatform()) {
+            try { tg.ready(); tg.expand(); } catch (e) {}
+
+            // Попытка 1 — сразу
+            requestFullscreenNow();
+
+            // Попытка 2 — через 300мс (AyuGram тормозит)
+            setTimeout(() => {
+                if (!document.body.classList.contains('app-fullscreen')) {
+                    console.log('🔄 Вторая попытка fullscreen...');
+                    requestFullscreenNow();
+                }
+            }, 300);
+
+            // Попытка 3 — через 1 секунду
+            setTimeout(() => {
+                if (!document.body.classList.contains('app-fullscreen')) {
+                    console.log('🔄 Третья попытка fullscreen...');
+                    requestFullscreenNow();
+                }
+            }, 1000);
+        }
+
+        // Fallback — при первом клике пользователя
+        const firstClickFs = () => {
+            if (document.body.classList.contains('app-fullscreen')) {
+                document.removeEventListener('pointerdown', firstClickFs, true);
+                return;
+            }
+            if (isDesktopPlatform()) {
+                requestFullscreenNow();
+            }
+        };
+        document.addEventListener('pointerdown', firstClickFs, { capture: true, passive: true });
+
+        // 🔍 Финальная диагностика через 1.5 сек
+        setTimeout(() => {
+            const nav = document.querySelector('.bottom-nav');
+            const cont = document.querySelector('.container');
+            console.log('🔍 FS Debug:', {
+                hasTg: !!tg,
+                tgVersion: tg.version,
+                tgPlatform: tg.platform,
+                isFullscreen: tg.isFullscreen,
+                innerWidth: window.innerWidth,
+                screenWidth: screen.width,
+                bodyClass: document.body.className,
+                navLeft: nav ? getComputedStyle(nav).left : '—',
+                navMarginLeft: nav ? getComputedStyle(nav).marginLeft : '—',
+                navTransform: nav ? getComputedStyle(nav).transform : '—',
+                containerMarginLeft: cont ? getComputedStyle(cont).marginLeft : '—',
+                containerPaddingLeft: cont ? getComputedStyle(cont).paddingLeft : '—',
+            });
+        }, 1500);
+    });
 })();
             
     </script>
