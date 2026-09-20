@@ -29688,7 +29688,6 @@ async function submitNewBackground() {
 
     if (!isCurrentUserAdmin()) {
         showToast('❌ Только администратор');
-        console.warn('isCurrentUserAdmin() = false. username =', currentUser?.username);
         return;
     }
 
@@ -29697,7 +29696,7 @@ async function submitNewBackground() {
     const rarity = document.getElementById('newBgRarity')?.value || 'rare';
     const blob = window._newBgBlob;
 
-    console.log('📋 name:', name, '| price:', price, '| rarity:', rarity, '| blob:', blob?.size, 'bytes');
+    console.log('📋 name:', name, '| price:', price, '| rarity:', rarity, '| blob:', blob?.size);
 
     if (!name || name.length < 2) { showToast('⚠️ Введи название'); return; }
     if (!blob) { showToast('⚠️ Загрузи картинку'); return; }
@@ -29707,82 +29706,58 @@ async function submitNewBackground() {
     btn.textContent = 'ЗАГРУЗКА...';
 
     // ============================================================
-    // 🔍 ПРОВЕРКА BUCKET
+    // 🔥 ПРОБУЕМ СРАЗУ ЗАГРУЗИТЬ В profile_backgrounds
+    // Если bucket не существует — Supabase вернёт "Bucket not found"
     // ============================================================
-    let bucket = 'profile_backgrounds';
+    const tryBuckets = ['profile_backgrounds', 'branding', 'maps'];
+    let publicUrl = null;
+    let usedBucket = null;
+    let lastError = null;
 
-    try {
-        const { data: buckets, error: listErr } = await sb.storage.listBuckets();
-        console.log('🪣 ВСЕ BUCKETS:', buckets);
+    const fileName = `bg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
 
-        if (listErr) {
-            console.error('❌ listBuckets error:', listErr);
-        }
+    for (const bucket of tryBuckets) {
+        try {
+            console.log(`📤 Пробую bucket: ${bucket}`);
 
-        const names = (buckets || []).map(b => b.name || b.id);
-        console.log('🪣 Имена buckets:', names);
+            const { data: upData, error: upErr } = await sb.storage.from(bucket)
+                .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
 
-        if (!names.includes('profile_backgrounds')) {
-            console.warn('⚠️ profile_backgrounds НЕ НАЙДЕН');
-            if (names.includes('branding')) {
-                console.warn('⚠️ Использую branding как fallback');
-                bucket = 'branding';
-            } else {
-                showToast('❌ Bucket profile_backgrounds не создан в Supabase');
-                btn.disabled = false;
-                btn.textContent = '✅ ДОБАВИТЬ В МАГАЗИН';
-                return;
+            if (upErr) {
+                console.warn(`⚠️ ${bucket}: ${upErr.message}`);
+                lastError = upErr;
+                continue;  // пробуем следующий bucket
             }
-        } else {
-            console.log('✅ profile_backgrounds найден');
+
+            // ✅ Upload прошёл
+            console.log(`✅ Загружено в ${bucket}:`, upData);
+
+            const { data: urlData } = sb.storage.from(bucket).getPublicUrl(fileName);
+            publicUrl = urlData.publicUrl;
+            usedBucket = bucket;
+            console.log(`✅ Public URL: ${publicUrl}`);
+            break;
+
+        } catch (e) {
+            console.warn(`⚠️ ${bucket} exception:`, e.message);
+            lastError = e;
         }
-    } catch (e) {
-        console.warn('listBuckets fail:', e);
-        bucket = 'branding';
     }
 
-    console.log('📤 Финальный bucket:', bucket);
+    if (!publicUrl) {
+        console.error('❌ Все buckets не сработали:', lastError);
+        showToast('❌ Не удалось загрузить. Ошибка: ' + (lastError?.message || 'unknown'));
+        btn.disabled = false;
+        btn.textContent = '✅ ДОБАВИТЬ В МАГАЗИН';
+        return;
+    }
 
+    console.log('📤 Итоговый bucket:', usedBucket);
+
+    // ============================================================
+    // 2. INSERT В shop_items
+    // ============================================================
     try {
-        // ============================================================
-        // 1. UPLOAD
-        // ============================================================
-        const fileName = `bg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-        console.log('📤 Загружаю файл:', fileName, 'в bucket:', bucket);
-
-        const { data: upData, error: upErr } = await sb.storage.from(bucket)
-            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
-
-        console.log('📤 Upload result:', upData, '| error:', upErr);
-
-        if (upErr) {
-            console.error('❌ Upload failed:', upErr);
-
-            if (upErr.message?.includes('Bucket not found')) {
-                throw new Error(`Bucket "${bucket}" не создан. Открой Supabase → Storage → New bucket.`);
-            }
-            if (upErr.message?.includes('row-level security')) {
-                throw new Error(`RLS блокирует загрузку в "${bucket}". Создай INSERT-политику.`);
-            }
-            if (upErr.message?.includes('exceeded')) {
-                throw new Error('Файл больше 5 МБ. Сожми картинку.');
-            }
-            if (upErr.message?.includes('mime')) {
-                throw new Error('Тип файла не разрешён. Используй JPEG/PNG/WEBP.');
-            }
-            throw new Error(upErr.message);
-        }
-
-        // ============================================================
-        // 2. PUBLIC URL
-        // ============================================================
-        const { data: urlData } = sb.storage.from(bucket).getPublicUrl(fileName);
-        const publicUrl = urlData.publicUrl;
-        console.log('✅ Public URL:', publicUrl);
-
-        // ============================================================
-        // 3. INSERT В shop_items
-        // ============================================================
         const itemId = `bg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
         const { data: inserted, error: insertErr } = await sb.from('shop_items').insert({
@@ -29799,10 +29774,12 @@ async function submitNewBackground() {
 
         console.log('📥 Insert result:', inserted, '| error:', insertErr);
 
-        if (insertErr) throw new Error('Магазин: ' + insertErr.message);
+        if (insertErr) {
+            throw new Error('Магазин: ' + insertErr.message);
+        }
 
         // ============================================================
-        // 4. УСПЕХ
+        // 3. УСПЕХ
         // ============================================================
         SHOP_ITEMS_CACHE[itemId] = {
             id: itemId,
@@ -29820,7 +29797,7 @@ async function submitNewBackground() {
         setTimeout(() => openShop(), 300);
 
     } catch (e) {
-        console.error('❌ submitNewBackground:', e);
+        console.error('❌ submitNewBackground (insert):', e);
         showToast('❌ ' + e.message);
         btn.disabled = false;
         btn.textContent = '✅ ДОБАВИТЬ В МАГАЗИН';
