@@ -13925,13 +13925,15 @@ button[disabled] {
 /* 🌟 ЗВЁЗДНАЯ                                                    */
 /* ============================================================ */
 .fr-star {
-    transform-origin: inherit;
-    animation: fr-star 2.2s ease-in-out infinite;
-    animation-delay: calc(var(--i) * 0.14s);
+    /* Убираем transform-origin: inherit — он центрует по 0,0 */
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: fr-star 3.5s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.12s);
 }
 @keyframes fr-star {
-    0%, 100% { opacity: 0.4; transform: scale(1) rotate(0deg); }
-    50%      { opacity: 1; transform: scale(1.7) rotate(45deg); }
+    0%, 100% { opacity: 0.35; transform: scale(0.85); }
+    50%      { opacity: 1;    transform: scale(1.25); }
 }
 
 /* ============================================================ */
@@ -14466,6 +14468,82 @@ button[disabled] {
     transform-origin: 100px 100px;
     animation: fr-snake-slither 5s linear infinite;
     stroke-dasharray: 4 12;
+}
+
+    /* ============================================================ */
+/* 👑 SECRET ADMIN FRAME — Shadow Emperor                        */
+/* ============================================================ */
+
+.fr-emperor-ring {
+    transform-origin: 100px 100px;
+    animation: fr-emperor-ring 30s linear infinite;
+}
+@keyframes fr-emperor-ring {
+    to { transform: rotate(360deg); }
+}
+
+.fr-emperor-ring-rev {
+    transform-origin: 100px 100px;
+    animation: fr-emperor-ring 45s linear infinite reverse;
+}
+
+.fr-emperor-shard {
+    transform-origin: 100px 100px;
+    animation: fr-emperor-shard 4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.3s);
+}
+@keyframes fr-emperor-shard {
+    0%, 100% { opacity: 0.55; transform: scale(1) rotate(0deg); }
+    50%      { opacity: 1;    transform: scale(1.15) rotate(10deg); }
+}
+
+.fr-emperor-wing {
+    transform-origin: 100px 100px;
+    animation: fr-emperor-wing 3.5s ease-in-out infinite;
+}
+.fr-emperor-wing[data-i="1"] { animation-delay: 1.75s; }
+@keyframes fr-emperor-wing {
+    0%, 100% { transform: scale(1) rotate(-3deg); opacity: 0.75; }
+    50%      { transform: scale(1.06) rotate(3deg); opacity: 1; }
+}
+
+.fr-emperor-crown {
+    transform-origin: 100px 100px;
+    animation: fr-emperor-crown 4s ease-in-out infinite;
+}
+@keyframes fr-emperor-crown {
+    0%, 100% { transform: translateY(0);   filter: drop-shadow(0 0 6px #ffd700); }
+    50%      { transform: translateY(-4px); filter: drop-shadow(0 0 16px #ffd700); }
+}
+
+.fr-emperor-eye {
+    transform-origin: center;
+    animation: fr-emperor-eye 2s ease-in-out infinite;
+}
+.fr-emperor-eye[data-i="1"] { animation-delay: 1s; }
+@keyframes fr-emperor-eye {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.8); filter: drop-shadow(0 0 10px #ffd700); }
+}
+
+.fr-emperor-spark {
+    transform-origin: center;
+    animation: fr-emperor-spark 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.4s);
+}
+@keyframes fr-emperor-spark {
+    0%   { opacity: 0;   transform: translateY(0)    scale(0.4); }
+    30%  { opacity: 1; }
+    100% { opacity: 0;   transform: translateY(-22px) scale(1.6); }
+}
+
+.fr-emperor-core {
+    transform-origin: 100px 100px;
+    animation: fr-emperor-core 2.6s ease-in-out infinite;
+}
+@keyframes fr-emperor-core {
+    0%, 100% { transform: scale(1);    opacity: 0.7; }
+    50%      { transform: scale(1.12); opacity: 1; filter: drop-shadow(0 0 18px #ffd700); }
 }
 
 /* ============================================================ */
@@ -33550,10 +33628,9 @@ function _getSpecialFrameHTMLRaw(type, color) {
                               d="M 0,-${s * 1.7} L ${s * 0.5},-${s * 0.5} L ${s * 1.7},0
                                  L ${s * 0.5},${s * 0.5} L 0,${s * 1.7} L -${s * 0.5},${s * 0.5}
                                  L -${s * 1.7},0 L -${s * 0.5},-${s * 0.5} Z"
-                              fill="#fff"
+                                                            fill="#fff"
                               transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"
-                              style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;
-                                     filter:drop-shadow(0 0 6px #fde047);"/>`;
+                              style="filter:drop-shadow(0 0 6px #fde047);"/>`;
             }).join('')}
         `);
 
@@ -34574,6 +34651,133 @@ function _getSpecialFrameHTMLRaw(type, color) {
             <circle cx="100" cy="100" r="60" fill="#0a0a0a"/>
             <circle cx="100" cy="100" r="60" fill="none" stroke="#ffd700"
                     stroke-width="1.2" opacity="0.6"/>
+        `);
+
+                // ============================================================
+    // 👑 SHADOW EMPEROR — секретная админская рамка
+    // ============================================================
+    case 'emperor':
+        return svgWrap('fr-emperor', `
+            <defs>
+                <radialGradient id="empGl${uid}" cx="50%" cy="50%" r="50%">
+                    <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+                    <stop offset="88%" stop-color="#ffd700" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="#ffd700" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="empGold${uid}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffe066"/>
+                    <stop offset="50%" stop-color="#ffd700"/>
+                    <stop offset="100%" stop-color="#8a6a00"/>
+                </linearGradient>
+                <linearGradient id="empBlack${uid}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#1a1a1a"/>
+                    <stop offset="100%" stop-color="#000000"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Тёмное свечение вокруг -->
+            <circle class="fr-glow" cx="100" cy="100" r="98" fill="url(#empGl${uid})"/>
+
+            <!-- Внешнее вращающееся кольцо с шипами -->
+            <g class="fr-emperor-ring">
+                ${Array.from({length: 24}).map((_, i) => {
+                    const a = i * 15;
+                    const rad = a * Math.PI / 180;
+                    const x1 = 100 + Math.cos(rad) * 90;
+                    const y1 = 100 + Math.sin(rad) * 90;
+                    const x2 = 100 + Math.cos(rad) * 100;
+                    const y2 = 100 + Math.sin(rad) * 100;
+                    return `<line class="fr-emperor-shard" data-i="${i}"
+                                  x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}"
+                                  x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                                  stroke="url(#empGold${uid})" stroke-width="2"
+                                  stroke-linecap="round"
+                                  style="filter:drop-shadow(0 0 4px #ffd700);"/>`;
+                }).join('')}
+            </g>
+
+            <!-- Основное кольцо -->
+            <circle cx="100" cy="100" r="88"
+                    fill="none" stroke="url(#empGold${uid})" stroke-width="3"
+                    style="filter:drop-shadow(0 0 6px #ffd700);"/>
+            <circle cx="100" cy="100" r="82"
+                    fill="none" stroke="#000" stroke-width="1"
+                    opacity="0.7"/>
+            <circle cx="100" cy="100" r="76"
+                    fill="none" stroke="#ffd700" stroke-width="0.8"
+                    stroke-dasharray="2 6" opacity="0.7"/>
+
+            <!-- Внутреннее обратное кольцо (тонкое) -->
+            <g class="fr-emperor-ring-rev">
+                ${Array.from({length: 12}).map((_, i) => {
+                    const a = i * 30;
+                    const rad = a * Math.PI / 180;
+                    const x = 100 + Math.cos(rad) * 70;
+                    const y = 100 + Math.sin(rad) * 70;
+                    return `<polygon points="0,-4 3,0 0,4 -3,0"
+                                     fill="#ffd700"
+                                     transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90})"
+                                     style="filter:drop-shadow(0 0 4px #ffd700);"/>`;
+                }).join('')}
+            </g>
+
+            <!-- 2 чёрных крыла (слева и справа) -->
+            <g class="fr-emperor-wing" data-i="0">
+                <path d="M 30 90 Q 15 65 30 45 Q 22 65 40 70 Q 25 78 45 85 Q 30 92 30 90 Z"
+                      fill="url(#empBlack${uid})"
+                      stroke="#ffd700" stroke-width="1"
+                      style="filter:drop-shadow(0 0 6px #ffd700);"/>
+            </g>
+            <g class="fr-emperor-wing" data-i="1">
+                <path d="M 170 90 Q 185 65 170 45 Q 178 65 160 70 Q 175 78 155 85 Q 170 92 170 90 Z"
+                      fill="url(#empBlack${uid})"
+                      stroke="#ffd700" stroke-width="1"
+                      style="filter:drop-shadow(0 0 6px #ffd700);"/>
+            </g>
+
+            <!-- Корона сверху -->
+            <g class="fr-emperor-crown">
+                <path d="M 72 48 L 80 68 L 90 52 L 100 38 L 110 52 L 120 68 L 128 48 L 128 72 L 72 72 Z"
+                      fill="url(#empGold${uid})"
+                      stroke="#8a6a00" stroke-width="1.2"/>
+                <circle cx="80" cy="46" r="2.5" fill="#ffd700"
+                        style="filter:drop-shadow(0 0 5px #ffd700);"/>
+                <circle cx="100" cy="36" r="3" fill="#ffd700"
+                        style="filter:drop-shadow(0 0 6px #ffd700);"/>
+                <circle cx="120" cy="46" r="2.5" fill="#ffd700"
+                        style="filter:drop-shadow(0 0 5px #ffd700);"/>
+                <!-- Чёрный драгоценный камень в центре -->
+                <polygon points="100,58 106,66 100,74 94,66"
+                         fill="#000" stroke="#ffd700" stroke-width="1"/>
+            </g>
+
+            <!-- 2 светящихся жёлтых глаза -->
+            <circle class="fr-emperor-eye" data-i="0"
+                    cx="84" cy="98" r="3.5"
+                    fill="#ffd700"
+                    style="filter:drop-shadow(0 0 8px #ffd700);"/>
+            <circle class="fr-emperor-eye" data-i="1"
+                    cx="116" cy="98" r="3.5"
+                    fill="#ffd700"
+                    style="filter:drop-shadow(0 0 8px #ffd700);"/>
+
+            <!-- Чёрное ядро с пульсацией -->
+            <circle class="fr-emperor-core" cx="100" cy="118" r="6"
+                    fill="url(#empBlack${uid})"
+                    stroke="#ffd700" stroke-width="1.2"
+                    style="filter:drop-shadow(0 0 10px #ffd700);"/>
+
+            <!-- Всплывающие искры -->
+            ${Array.from({length: 10}).map((_, i) => {
+                const a = i * 36;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 62;
+                const y = 100 + Math.sin(rad) * 62;
+                return `<circle class="fr-emperor-spark" data-i="${i}"
+                               cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2"
+                               fill="#ffd700"
+                               style="filter:drop-shadow(0 0 5px #ffd700);"/>`;
+            }).join('')}
         `);
 
     // ============================================================
