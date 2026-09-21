@@ -12131,8 +12131,12 @@ html.lite-mode .header-coins::before {
 .has-list-bg {
     position: relative !important;
     overflow: hidden !important;
-    /* Убираем стандартный фон, чтобы фон из картинки был виден */
     background: #03060a !important;
+    border-radius: inherit;
+}
+
+.has-list-bg .list-item-bg {
+    border-radius: inherit;
 }
 
 /* Слой с картинкой */
@@ -19481,12 +19485,12 @@ if (partnerIds.length) {
 container.innerHTML = items.map(it => {
     const av = it.avatar ? `<img src="${it.avatar}" alt="">` : (it.name[0] || '?').toUpperCase();
     const square = it.square ? ' square' : '';
-    // Для DM — добавляем тег клуба, для club — оставляем как есть
     const nameHTML = it.type === 'dm'
         ? `${myClubTagHTML(it.id)}${escapeHtml(it.name)}`
         : escapeHtml(it.name);
     return `
-        <div class="chat-list-item" onclick="openChat('${it.type}', ${it.id})">
+        <div class="chat-list-item" onclick="openChat('${it.type}', ${it.id})"
+             ${it.type === 'dm' ? `data-user-id="${it.id}"` : ''}>
             <div class="chat-list-avatar${square}">${av}</div>
             <div class="chat-list-info">
                 <div class="chat-list-name">${nameHTML}</div>
@@ -19494,6 +19498,27 @@ container.innerHTML = items.map(it => {
             </div>
         </div>`;
 }).join('');
+
+// 🔥 Применяем кастомизацию (фон, рамка, значок) к каждому DM
+if (partnerIds.length) {
+    const allItems = new Set();
+    partnerIds.forEach(pid => {
+        const u = userMap[pid];
+        if (u?.equipped_items) Object.values(u.equipped_items).forEach(id => allItems.add(id));
+    });
+    const missing = [...allItems].filter(id => !SHOP_ITEMS_CACHE[id]);
+    if (missing.length) {
+        const { data: shopItems } = await sb.from('shop_items')
+            .select('id, category, value').in('id', missing);
+        (shopItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+    }
+
+    container.querySelectorAll('.chat-list-item[data-user-id]').forEach(el => {
+        const uid = Number(el.dataset.userId);
+        const user = userMap[uid];
+        if (user) applyListCustomization(el, user);
+    });
+}
             } catch (e) { console.error(e); container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>'; }
         }
 
@@ -24222,11 +24247,11 @@ async function renderRoomContent(roomId) {
         const playerIds = (players || []).map(p => p.telegram_id);
         let users = [];
         if (playerIds.length > 0) {
-            const { data: u } = await sb
+            const { data: usersData } = await sb
                 .from('users')
-                .select('telegram_id, display_name, elo, level, custom_avatar, photo_url')
+                .select('telegram_id, display_name, elo, level, custom_avatar, photo_url, equipped_items')
                 .in('telegram_id', playerIds);
-            users = u || [];
+            users = usersData || [];
         }
         const userById = {};
         users.forEach(u => userById[u.telegram_id] = u);
@@ -24314,28 +24339,29 @@ async function renderRoomContent(roomId) {
         console.log('🎨 полный рендер room', roomId);
         content.dataset.roomId = String(roomId);
 
-        const renderTZPlayer = (p, teamSide) => {
-            const u = userById[p.telegram_id] || {};
-            const av = renderAvatar(u);
-            const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
-            const isHost = String(p.telegram_id) === String(room.leader_id);
-            const uElo = u.elo ?? 1000;
-            const lvl = eloToLevel(uElo);
-            return `
-                <div class="tz-player ${isMe ? 'you' : ''}"
-                     onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
-                    <div class="tz-avatar">${av}</div>
-                    <div class="tz-info">
-                        <div class="tz-name">
-                    ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
-                    ${isHost ? '👑' : ''}
-                            ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
-                        </div>
-                        <div class="tz-stats">⚡ ${lvl} ур. · ${uElo} DXP</div>
-                    </div>
+const renderTZPlayer = (p, teamSide) => {
+    const u = userById[p.telegram_id] || {};
+    const av = renderAvatar(u);
+    const isMe = String(p.telegram_id) === String(currentUser.telegram_id);
+    const isHost = String(p.telegram_id) === String(room.leader_id);
+    const uElo = u.elo ?? 1000;
+    const lvl = eloToLevel(uElo);
+    return `
+        <div class="tz-player ${isMe ? 'you' : ''}"
+             data-user-id="${p.telegram_id}"
+             onclick="event.stopPropagation(); ${!isMe ? `openPlayerProfile(${p.telegram_id})` : ''}">
+            <div class="tz-avatar">${av}</div>
+            <div class="tz-info">
+                <div class="tz-name">
+            ${myClubTagHTML(p.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}
+            ${isHost ? '👑' : ''}
+                    ${isMe ? '<span class="tz-you-badge">ТЫ</span>' : ''}
                 </div>
-            `;
-        };
+                <div class="tz-stats">⚡ ${lvl} ур. · ${uElo} DXP</div>
+            </div>
+        </div>
+    `;
+};
 
         const renderTeamZone = (team, list, full) => {
             const isMyTeam = myTeam === team;
@@ -24522,6 +24548,24 @@ async function renderRoomContent(roomId) {
                 ` : ''}
             ` : ''}
         `;
+
+        // 🔥 Применяем кастомизацию ко всем игрокам в командах
+const allItems = new Set();
+Object.values(userById).forEach(u => {
+    if (u.equipped_items) Object.values(u.equipped_items).forEach(id => allItems.add(id));
+});
+const missingItems = [...allItems].filter(id => !SHOP_ITEMS_CACHE[id]);
+if (missingItems.length) {
+    const { data: shopItems } = await sb.from('shop_items')
+        .select('id, category, value').in('id', missingItems);
+    (shopItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+}
+
+content.querySelectorAll('.tz-player[data-user-id]').forEach(el => {
+    const uid = Number(el.dataset.userId);
+    const user = userById[uid];
+    if (user) applyListCustomization(el, user);
+});
 
         setTimeout(() => updateRoomChatButton(room.id), 100);
         subscribeRoomChatCounter(roomId);
@@ -32212,11 +32256,29 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
 const bgId = eq.profile_bg;
 const itemEl = scopeEl;
 
-// 🔥 НЕ применяем фон в списках — только ник, рамка, значок
-// Фон профиля — только на шапке профиля
-itemEl.classList.remove('has-list-bg');
+// 🔥 ПРИМЕНЯЕМ ФОН ПРОФИЛЯ к плашке в списках
+const bgId2 = eq.profile_bg;
 const oldBg = itemEl.querySelector('.list-item-bg');
-if (oldBg) oldBg.remove();
+
+if (bgId2 && SHOP_ITEMS_CACHE[bgId2]) {
+    const bgVal = SHOP_ITEMS_CACHE[bgId2].value || {};
+    if (bgVal.url) {
+        // Создаём слой с фоном (если его нет)
+        let bgLayer = oldBg;
+        if (!bgLayer) {
+            bgLayer = document.createElement('div');
+            bgLayer.className = 'list-item-bg';
+            itemEl.insertBefore(bgLayer, itemEl.firstChild);
+        }
+        bgLayer.style.backgroundImage = `url('${bgVal.url}')`;
+        itemEl.classList.add('has-list-bg');
+    } else {
+        if (oldBg) oldBg.remove();
+        itemEl.classList.remove('has-list-bg');
+    }
+} else {
+    if (oldBg) oldBg.remove();
+    itemEl.classList.remove('has-list-bg');
 }
 
 function getSpecialFrameHTML(type, color) {
