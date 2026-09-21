@@ -31324,15 +31324,21 @@ function renderShopItem(item, isOwned, isEquipped) {
     // ============================================================
     // 🏅 ЗНАЧОК
     // ============================================================
-    else if (item.category === 'badge') {
-        if (val.url) {
-            previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
-        } else if (val.svg) {
-            previewHTML = `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;">${val.svg}</div>`;
-        } else {
-            previewHTML = `<span style="font-size: 38px;">${val.emoji || '🏅'}</span>`;
-        }
+else if (item.category === 'badge') {
+    if (val.url) {
+        // Картинка по URL
+        previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
+    } else if (val.svg) {
+        // 🔥 SVG — оборачиваем в div фиксированного размера
+        previewHTML = `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;">${val.svg}</div>`;
+    } else if (val.emoji) {
+        // Emoji
+        previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
+    } else {
+        // Fallback
+        previewHTML = `<span style="font-size: 38px;">🏅</span>`;
     }
+}
 
     // ============================================================
     // 👑 ТИТУЛ
@@ -31820,21 +31826,22 @@ if (wrap) {
     // ============================================================
     // 4. ЗНАЧОК
     // ============================================================
-    const badgeId = eq.badge;
-    const badgeEls = scopeEl.querySelectorAll('[data-equipped-badge]');
-    if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
-        const val = SHOP_ITEMS_CACHE[badgeId].value || {};
-        badgeEls.forEach(el => {
-            if (val.url) {
-                el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
-            } else if (val.svg) {
-                el.innerHTML = val.svg;
-            } else {
-                el.innerHTML = val.emoji || '🏅';
-            }
-            el.style.display = 'inline-flex';
-        });
-    } else {
+const badgeId = eq.badge;
+const badgeEls = scopeEl.querySelectorAll('[data-equipped-badge]');
+if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
+    const val = SHOP_ITEMS_CACHE[badgeId].value || {};
+    badgeEls.forEach(el => {
+        if (val.url) {
+            el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
+        } else if (val.svg) {
+            // 🔥 Добавь эту ветку
+            el.innerHTML = val.svg;
+        } else {
+            el.innerHTML = val.emoji || '🏅';
+        }
+        el.style.display = 'inline-flex';
+    });
+} else {
         badgeEls.forEach(el => { el.style.display = 'none'; el.innerHTML = ''; });
     }
 
@@ -31968,21 +31975,22 @@ if (val.special === true) {
     }
 
     // --- Значок ---
-    const badgeId = eq.badge;
-    const badgeEls = scopeEl.querySelectorAll('[data-list-badge]');
-    if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
-        const val = SHOP_ITEMS_CACHE[badgeId].value || {};
-        badgeEls.forEach(el => {
-            if (val.url) {
-                el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
-            } else if (val.svg) {
-                el.innerHTML = val.svg;
-            } else {
-                el.innerHTML = val.emoji || '🏅';
-            }
-            el.style.display = 'inline-flex';
-        });
-    }
+const badgeId = eq.badge;
+const badgeEls = scopeEl.querySelectorAll('[data-list-badge]');
+if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
+    const val = SHOP_ITEMS_CACHE[badgeId].value || {};
+    badgeEls.forEach(el => {
+        if (val.url) {
+            el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
+        } else if (val.svg) {
+            // 🔥 SVG
+            el.innerHTML = val.svg;
+        } else {
+            el.innerHTML = val.emoji || '🏅';
+        }
+        el.style.display = 'inline-flex';
+    });
+}
 
     // ============================================================
     // 🌄 ФОН ПРОФИЛЯ — на всю плашку
