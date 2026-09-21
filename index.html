@@ -13046,6 +13046,10 @@ body.app-fullscreen:hover .fs-exit-btn {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     transform: translate(-50%, -50%) translateZ(0);
+
+    /* 🔥 ВЫШЕ аватара */
+    z-index: 4;
+    overflow: visible;
 }
 
 @keyframes listFrameIn {
@@ -13408,7 +13412,7 @@ button[disabled] {
 }
 
 /* ============================================================ */
-/* 🎨 СПЕЦ-РАМКИ v7 — премиум, лёгкое перекрытие аватара        */
+/* 🎨 СПЕЦ-РАМКИ v8 — заходят на аватар                         */
 /* ============================================================ */
 
 .special-frame-overlay {
@@ -13416,16 +13420,21 @@ button[disabled] {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: calc(100% + 56px);
-    height: calc(100% + 56px);
-    min-width: 118px;
-    min-height: 118px;
-    max-width: 184px;
-    max-height: 184px;
+    /* Чуть больше аватара, чтобы эффекты заходили внутрь */
+    width: calc(100% + 44px);
+    height: calc(100% + 44px);
+    min-width: 104px;
+    min-height: 104px;
+    max-width: 170px;
+    max-height: 170px;
     pointer-events: none;
-    z-index: 1;
+
+    /* 🔥 ГЛАВНОЕ: теперь ВЫШЕ аватара */
+    z-index: 4;
+
     animation: frameFloatIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
+    overflow: visible;
 }
 .special-frame-overlay svg {
     width: 100%;
@@ -13450,7 +13459,7 @@ button[disabled] {
 .profile-avatar,
 .pm2-avatar {
     position: relative;
-    z-index: 3;
+    z-index: 2;   /* было 3 */
 }
 
 /* Keyframes */
@@ -31898,11 +31907,11 @@ if (wrap) {
     // Убираем старый
     wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
 
-    const overlay = document.createElement('div');
-    overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
-    overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
-    // 🔥 Вставляем ПЕРЕД аватаром — тогда он будет под ним
-    wrap.insertBefore(overlay, wrap.firstChild);
+const overlay = document.createElement('div');
+overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
+overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+// 🔥 вставляем ПОСЛЕ аватара — рамка точно сверху
+wrap.appendChild(overlay);
 }
         } else if (frameStyle === 'ring') {
             avEls.forEach(el => {
@@ -32074,8 +32083,8 @@ if (val.special === true) {
         `;
         overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
 
-        // 🔥 Вставляем ПЕРЕД аватаром — overlay снизу
-        wrap.insertBefore(overlay, wrap.firstChild);
+// 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
+wrap.appendChild(overlay);
     });
 } else if (frameStyle === 'ring') {
             avEls.forEach(el => {
@@ -32181,42 +32190,44 @@ function getSpecialFrameHTML(type, color) {
     /* ============================================================ */
     /* 🐙 ОСЬМИНОГ — 5 щупалец внутрь, 8 орбов снаружи               */
     /* ============================================================ */
-    case 'octopus':
-        return `
-        <svg class="fs-octopus" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
+case 'octopus':
+    return `
+    <svg class="fs-octopus" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        ${glowDef}
+        ${halo}
 
-            <!-- Внешнее кольцо -->
-            ${ring(84, 1, 0.4, '2 8', 'fs-ring-3')}
-            ${ring(78, 2.5, 0.95, null, 'fs-ring-1')}
-            <!-- Внутреннее кольцо (лёгкое касание аватара) -->
-            ${innerRing(62, 1.5, 0.5)}
-            <circle cx="100" cy="100" r="58" fill="none" stroke="${clt}" stroke-width="1" opacity="0.4"/>
+        <!-- Внешние кольца — остаются снаружи -->
+        ${ring(84, 1, 0.4, '2 8', 'fs-ring-3')}
+        ${ring(78, 2.5, 0.95, null, 'fs-ring-1')}
 
-            <!-- Орбы -->
-            <g class="fs-orbs">${orbs(78, 10, 2.5)}</g>
+        <!-- 🔥 Внутреннее кольцо — заходит НА аватар -->
+        <circle cx="100" cy="100" r="50" fill="none" stroke="${clt}" stroke-width="1.5" opacity="0.55"/>
+        <circle cx="100" cy="100" r="42" fill="none" stroke="${clt}" stroke-width="1" opacity="0.35"/>
 
-            <!-- 5 щупалец, заходят внутрь к центру -->
-            ${Array.from({length:5}).map((_, i) => {
-                const a = i * 72 - 90;
-                const rad = a * Math.PI/180;
-                const x1 = 100 + Math.cos(rad) * 78;
-                const y1 = 100 + Math.sin(rad) * 78;
-                const cx = 100 + Math.cos(rad + 0.4) * 60;
-                const cy = 100 + Math.sin(rad + 0.4) * 60;
-                const x2 = 100 + Math.cos(rad + 0.7) * 38;
-                const y2 = 100 + Math.sin(rad + 0.7) * 38;
-                return `
-                    <g class="octo-tentacle" style="--ox:${x1.toFixed(1)}px; --oy:${y1.toFixed(1)}px">
-                        <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"
-                              fill="none" stroke="${cd}" stroke-width="5" stroke-linecap="round" opacity="0.95"/>
-                        <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"
-                              fill="none" stroke="${clt}" stroke-width="1.8" stroke-linecap="round" opacity="0.9"/>
-                        <circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2.5" style="fill:${clt};"/>
-                    </g>`;
-            }).join('')}
-        </svg>`;
+        <!-- Орбы -->
+        <g class="fs-orbs">${orbs(78, 10, 2.5)}</g>
+
+        <!-- 🔥 Щупальца теперь ЗАХОДЯТ ВНУТРЬ (до r=25) -->
+        ${Array.from({length:5}).map((_, i) => {
+            const a = i * 72 - 90;
+            const rad = a * Math.PI/180;
+            const x1 = 100 + Math.cos(rad) * 78;
+            const y1 = 100 + Math.sin(rad) * 78;
+            const cx = 100 + Math.cos(rad + 0.5) * 55;
+            const cy = 100 + Math.sin(rad + 0.5) * 55;
+            // 🔥 Было 38 — стало 22 (заходят на аватар)
+            const x2 = 100 + Math.cos(rad + 0.85) * 22;
+            const y2 = 100 + Math.sin(rad + 0.85) * 22;
+            return `
+                <g class="octo-tentacle" style="--ox:${x1.toFixed(1)}px; --oy:${y1.toFixed(1)}px">
+                    <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"
+                          fill="none" stroke="${cd}" stroke-width="5" stroke-linecap="round" opacity="0.95"/>
+                    <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"
+                          fill="none" stroke="${clt}" stroke-width="1.8" stroke-linecap="round" opacity="0.9"/>
+                    <circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2.5" style="fill:${clt};"/>
+                </g>`;
+        }).join('')}
+    </svg>`;
 
     /* ============================================================ */
     /* 🐉 ДРАКОН — чешуя заходит внутрь                              */
@@ -32248,47 +32259,50 @@ function getSpecialFrameHTML(type, color) {
     /* ============================================================ */
     /* 🔥 ОГОНЬ                                                       */
     /* ============================================================ */
-    case 'fire':
-        return `
-        <svg class="fs-fire" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <radialGradient id="fireHalo" cx="50%" cy="50%" r="50%">
-                    <stop offset="40%" stop-color="${cl}" stop-opacity="0"/>
-                    <stop offset="90%" stop-color="${cl}" stop-opacity="0.7"/>
-                    <stop offset="100%" stop-color="${cl}" stop-opacity="0.1"/>
-                </radialGradient>
-                <linearGradient id="fireFlameGrad" x1="0" y1="1" x2="0" y2="0">
-                    <stop offset="0%" stop-color="#ff1f00"/>
-                    <stop offset="50%" stop-color="${cl}"/>
-                    <stop offset="100%" stop-color="#ffe066"/>
-                </linearGradient>
-            </defs>
-            ${halo}
-            ${ring(82, 2.5, 0.9, null, 'fs-ring-1')}
-            <circle cx="100" cy="100" r="60" fill="none" stroke="${cl}" stroke-width="1" opacity="0.5"/>
+case 'fire':
+    return `
+    <svg class="fs-fire" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <radialGradient id="fireHalo" cx="50%" cy="50%" r="50%">
+                <stop offset="40%" stop-color="${cl}" stop-opacity="0"/>
+                <stop offset="90%" stop-color="${cl}" stop-opacity="0.7"/>
+                <stop offset="100%" stop-color="${cl}" stop-opacity="0.1"/>
+            </radialGradient>
+            <linearGradient id="fireFlameGrad" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#ff1f00"/>
+                <stop offset="50%" stop-color="${cl}"/>
+                <stop offset="100%" stop-color="#ffe066"/>
+            </linearGradient>
+        </defs>
+        ${halo}
+        ${ring(82, 2.5, 0.9, null, 'fs-ring-1')}
 
-            <g class="fs-orbs">${orbs(78, 12, 2.5)}</g>
+        <!-- 🔥 Кольцо ЗАХОДИТ НА аватар -->
+        <circle cx="100" cy="100" r="50" fill="none" stroke="${cl}" stroke-width="1" opacity="0.5"/>
 
-            <!-- Языки пламени заходят внутрь -->
-            ${Array.from({length:18}).map((_, i) => {
-                const a = i * 20;
-                const x = 100 + Math.cos(a * Math.PI/180) * 82;
-                const y = 100 + Math.sin(a * Math.PI/180) * 82;
-                return `<g class="fire-flame" style="--fx:${x.toFixed(1)}px; --fy:${y.toFixed(1)}px">
-                    <path d="M 0,0 Q -5,-10 0,-22 Q 5,-10 0,0 Z"
-                          style="fill:url(#fireFlameGrad);"
-                          transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
-                </g>`;
-            }).join('')}
+        <g class="fs-orbs">${orbs(78, 12, 2.5)}</g>
 
-            <!-- Искры внутрь (внутри кольца) -->
-            ${Array.from({length:6}).map((_, i) => {
-                const a = i * 60 + 30;
-                const x = 100 + Math.cos(a * Math.PI/180) * 50;
-                const y = 100 + Math.sin(a * Math.PI/180) * 50;
-                return `<circle class="fire-spark" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" style="fill:${clt};"/>`;
-            }).join('')}
-        </svg>`;
+        <!-- 🔥 Языки пламени — длинные, заходят внутрь -->
+        ${Array.from({length:18}).map((_, i) => {
+            const a = i * 20;
+            const x = 100 + Math.cos(a * Math.PI/180) * 82;
+            const y = 100 + Math.sin(a * Math.PI/180) * 82;
+            // 🔥 Пламя тянется внутрь: длина 35 вместо 22
+            return `<g class="fire-flame" style="--fx:${x.toFixed(1)}px; --fy:${y.toFixed(1)}px">
+                <path d="M 0,0 Q -7,-16 0,-35 Q 7,-16 0,0 Z"
+                      style="fill:url(#fireFlameGrad);"
+                      transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
+            </g>`;
+        }).join('')}
+
+        <!-- 🔥 Искры внутри аватара -->
+        ${Array.from({length:8}).map((_, i) => {
+            const a = i * 45 + 22;
+            const x = 100 + Math.cos(a * Math.PI/180) * 35;
+            const y = 100 + Math.sin(a * Math.PI/180) * 35;
+            return `<circle class="fire-spark" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" style="fill:${clt};"/>`;
+        }).join('')}
+    </svg>`;
 
     /* ============================================================ */
     /* 🐍 ЗМЕЯ                                                        */
@@ -32592,53 +32606,53 @@ function getSpecialFrameHTML(type, color) {
     /* ============================================================ */
     /* ❄️ ЛЕДЯНАЯ                                                     */
     /* ============================================================ */
-    case 'ice':
-        return `
-        <svg class="fs-ice" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="icCrysGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-                    <stop offset="100%" stop-color="${cd}" stop-opacity="0.9"/>
-                </linearGradient>
-            </defs>
-            ${glowDef}
-            ${halo}
+case 'ice':
+    return `
+    <svg class="fs-ice" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="icCrysGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="${cd}" stop-opacity="0.9"/>
+            </linearGradient>
+        </defs>
+        ${glowDef}
+        ${halo}
 
-            <circle class="ice-spin" cx="100" cy="100" r="84" fill="none" stroke="${clt}" stroke-width="1.6" opacity="0.8" stroke-dasharray="4 6"/>
-            <circle class="ice-spin-rev" cx="100" cy="100" r="76" fill="none" stroke="${cl}" stroke-width="2" opacity="0.75"/>
+        <circle class="ice-spin" cx="100" cy="100" r="84" fill="none" stroke="${clt}" stroke-width="1.6" opacity="0.8" stroke-dasharray="4 6"/>
+        <circle class="ice-spin-rev" cx="100" cy="100" r="70" fill="none" stroke="${cl}" stroke-width="2" opacity="0.75"/>
 
-            <!-- 6 кристаллов снаружи (заходят чуть внутрь) -->
+        <!-- 🔥 Кристаллы теперь заходят ВНУТРЬ -->
+        ${Array.from({length:6}).map((_, i) => {
+            const a = i * 60;
+            const x = 100 + Math.cos(a * Math.PI/180) * 72;
+            const y = 100 + Math.sin(a * Math.PI/180) * 72;
+            return `<g class="ice-crystal" style="--cx:${x.toFixed(1)}px; --cy:${y.toFixed(1)}px">
+                <polygon points="0,-9 5,0 0,9 -5,0"
+                         style="fill:url(#icCrysGrad); stroke:${clt}; stroke-width:0.6;"
+                         transform="translate(${x.toFixed(1)},${y.toFixed(1)})"/>
+            </g>`;
+        }).join('')}
+
+        <!-- 🔥 Снежинка внутри аватара (r=30) -->
+        <g class="fs-float" style="transform-origin:100px 100px;">
             ${Array.from({length:6}).map((_, i) => {
                 const a = i * 60;
-                const x = 100 + Math.cos(a * Math.PI/180) * 78;
-                const y = 100 + Math.sin(a * Math.PI/180) * 78;
-                return `<g class="ice-crystal" style="--cx:${x.toFixed(1)}px; --cy:${y.toFixed(1)}px">
-                    <polygon points="0,-6 3.5,0 0,6 -3.5,0"
-                             style="fill:url(#icCrysGrad); stroke:${clt}; stroke-width:0.6;"
-                             transform="translate(${x.toFixed(1)},${y.toFixed(1)})"/>
-                </g>`;
+                const x2 = 100 + Math.cos(a * Math.PI/180) * 30;
+                const y2 = 100 + Math.sin(a * Math.PI/180) * 30;
+                return `
+                    <line x1="100" y1="100" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                          stroke="${clt}" stroke-width="1.5" opacity="0.7" stroke-linecap="round"/>
+                    <line x1="${x2.toFixed(1)}" y1="${y2.toFixed(1)}"
+                          x2="${(x2 + Math.cos(a*Math.PI/180+1)*8).toFixed(1)}"
+                          y2="${(y2 + Math.sin(a*Math.PI/180+1)*8).toFixed(1)}"
+                          stroke="${clt}" stroke-width="1" opacity="0.6"/>
+                `;
             }).join('')}
+            <circle cx="100" cy="100" r="3.5" style="fill:#fff;"/>
+        </g>
 
-            <!-- Центральная снежинка внутри -->
-            <g class="fs-float" style="transform-origin:100px 100px;">
-                ${Array.from({length:6}).map((_, i) => {
-                    const a = i * 60;
-                    const x2 = 100 + Math.cos(a * Math.PI/180) * 40;
-                    const y2 = 100 + Math.sin(a * Math.PI/180) * 40;
-                    return `
-                        <line x1="100" y1="100" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
-                              stroke="${clt}" stroke-width="1.5" opacity="0.7" stroke-linecap="round"/>
-                        <line x1="${x2.toFixed(1)}" y1="${y2.toFixed(1)}"
-                              x2="${(x2 + Math.cos(a*Math.PI/180+1)*8).toFixed(1)}"
-                              y2="${(y2 + Math.sin(a*Math.PI/180+1)*8).toFixed(1)}"
-                              stroke="${clt}" stroke-width="1" opacity="0.6"/>
-                    `;
-                }).join('')}
-                <circle cx="100" cy="100" r="4" style="fill:#fff;"/>
-            </g>
-
-            <g class="fs-orbs">${orbs(84, 8, 2)}</g>
-        </svg>`;
+        <g class="fs-orbs">${orbs(84, 8, 2)}</g>
+    </svg>`;
 
     /* ============================================================ */
     /* 🌟 ЗВЁЗДНАЯ                                                    */
