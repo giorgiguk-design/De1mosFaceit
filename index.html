@@ -10000,16 +10000,34 @@ html.lite-mode .voice-widget-expanded {
     display: none;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    font-size: 15px;
-    margin-left: 6px;
-    filter: drop-shadow(0 0 6px rgba(217, 171, 90, 0.6));
+    width: 34px;
+    height: 34px;
+    font-size: 22px;
+    margin-left: 8px;
+    filter: drop-shadow(0 0 8px rgba(217, 171, 90, 0.7));
     vertical-align: middle;
     flex-shrink: 0;
+    animation: badgeFloat 3s ease-in-out infinite;
 }
 .profile-equipped-badge svg,
-.pm2-badge svg { width: 100%; height: 100%; }
+.pm2-badge svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 4px currentColor);
+}
+.profile-equipped-badge img,
+.pm2-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 4px currentColor);
+}
+@keyframes badgeFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-2px); }
+}
+html.lite-mode .profile-equipped-badge,
+html.lite-mode .pm2-badge { animation: none; }
 
 /* Титул */
 .phc-title,
@@ -10140,11 +10158,14 @@ html.lite-mode .voice-widget-expanded {
     display: none;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
     flex-shrink: 0;
     filter: drop-shadow(0 0 6px rgba(217,171,90,0.6));
 }
-.pm2-badge svg { width: 20px; height: 20px; }
+.pm2-badge svg { width: 100%; height: 100%; }
+.pm2-badge img { width: 100%; height: 100%; object-fit: contain; }
 .pm2-title {
     font-size: 10px;
     font-weight: 800;
@@ -12071,19 +12092,28 @@ html.lite-mode .header-coins::before {
     overflow: visible;
 }
 
-    [data-list-badge] {
+[data-list-badge] {
     display: none;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
-    margin-left: 4px;
-    filter: drop-shadow(0 0 6px rgba(217, 171, 90, 0.6));
+    width: 24px;
+    height: 24px;
+    margin-left: 6px;
+    filter: drop-shadow(0 0 6px rgba(217, 171, 90, 0.7));
     vertical-align: middle;
     flex-shrink: 0;
 }
-[data-list-badge] svg { width: 100%; height: 100%; }
-[data-list-badge] img { width: 100%; height: 100%; object-fit: contain; }
+[data-list-badge] svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 3px currentColor);
+}
+[data-list-badge] img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 3px currentColor);
+}
 
 /* Старое значение ELO справа в списке */
 .leaderboard-DXP-value {
@@ -32927,6 +32957,212 @@ case 'ice':
             <circle class="fs-pulse" cx="100" cy="152" r="5" style="fill:${clt};"/>
         </svg>`;
 
+            /* ============================================================ */
+/* 🌊 ВОЛНЫ                                                       */
+/* ============================================================ */
+case 'waves':
+    return `
+    <svg class="fs-waves" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        ${glowDef}
+        ${halo}
+        <circle cx="100" cy="100" r="78" fill="none" stroke="${cl}" stroke-width="1.8" opacity="0.7"/>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="${clt}" stroke-width="1" opacity="0.45"/>
+
+        ${[0, 1, 2].map(k => `
+            <path class="wave-arc" style="--delay:${k * 0.5}s;"
+                  d="M 22 ${100 - 40 + k * 40} Q 60 ${80 - 40 + k * 40}, 100 ${100 - 40 + k * 40} T 178 ${100 - 40 + k * 40}"
+                  fill="none" stroke="${clt}" stroke-width="2.2" stroke-linecap="round" opacity="0.8"/>
+        `).join('')}
+
+        <!-- Волны внутри -->
+        ${[0, 1, 2, 3].map(k => {
+            const a = k * 90 + 45;
+            const x = 100 + Math.cos(a * Math.PI/180) * 40;
+            const y = 100 + Math.sin(a * Math.PI/180) * 40;
+            return `<g class="wave-mini" style="--cx:${x.toFixed(1)}px; --cy:${y.toFixed(1)}px;">
+                <path d="M ${x-10} ${y} Q ${x-5} ${y-5}, ${x} ${y} T ${x+10} ${y}"
+                      fill="none" stroke="${clt}" stroke-width="1.8" stroke-linecap="round"/>
+            </g>`;
+        }).join('')}
+
+        <g class="fs-orbs">${orbs(84, 14, 2.2)}</g>
+    </svg>`;
+
+/* ============================================================ */
+/* 💫 ГАЛАКТИКА                                                   */
+/* ============================================================ */
+case 'galaxy':
+    return `
+    <svg class="fs-galaxy" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        ${glowDef}
+        ${halo}
+        <circle class="galaxy-spin" cx="100" cy="100" r="82" fill="none"
+                stroke="${clt}" stroke-width="1.5" stroke-dasharray="4 10" opacity="0.6"/>
+        <circle class="galaxy-spin-rev" cx="100" cy="100" r="70" fill="none"
+                stroke="${cl}" stroke-width="2" stroke-dasharray="1 6" opacity="0.7"/>
+
+        ${Array.from({length:40}).map((_, i) => {
+            const a = (i * 137.5) % 360;
+            const r = 40 + (i % 10) * 4;
+            const x = 100 + Math.cos(a * Math.PI/180) * r;
+            const y = 100 + Math.sin(a * Math.PI/180) * r;
+            const s = 0.8 + (i % 3) * 0.7;
+            return `<circle class="galaxy-star" style="--delay:${(i * 0.1).toFixed(1)}s;"
+                            cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s.toFixed(1)}"
+                            style="fill:${i%2===0 ? clt : '#ffffff'};"/>`;
+        }).join('')}
+
+        <g class="fs-orbs">${orbs(88, 10, 2)}</g>
+    </svg>`;
+
+/* ============================================================ */
+/* ☠️ ЯД                                                          */
+/* ============================================================ */
+case 'poison':
+    return `
+    <svg class="fs-poison" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <radialGradient id="poisonGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="${clt}" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="${cd}" stop-opacity="0.4"/>
+            </radialGradient>
+        </defs>
+        ${glowDef}
+        ${halo}
+        <circle cx="100" cy="100" r="80" fill="none" stroke="${clt}" stroke-width="1.8" opacity="0.7"/>
+
+        <!-- 6 пузырьков снаружи -->
+        ${Array.from({length:6}).map((_, i) => {
+            const a = i * 60;
+            const x = 100 + Math.cos(a * Math.PI/180) * 78;
+            const y = 100 + Math.sin(a * Math.PI/180) * 78;
+            return `<g class="poison-bubble" style="--bx:${x.toFixed(1)}px; --by:${y.toFixed(1)}px;">
+                <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="url(#poisonGrad)"/>
+                <ellipse cx="${(x-1.5).toFixed(1)}" cy="${(y-1.5).toFixed(1)}" rx="1.5" ry="1"
+                         fill="#fff" opacity="0.4"/>
+            </g>`;
+        }).join('')}
+
+        <!-- Мелкие пузырьки внутри -->
+        ${Array.from({length:8}).map((_, i) => {
+            const a = i * 45 + 22;
+            const x = 100 + Math.cos(a * Math.PI/180) * 45;
+            const y = 100 + Math.sin(a * Math.PI/180) * 45;
+            return `<circle class="poison-mini" style="--delay:${(i*0.2).toFixed(1)}s;"
+                            cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5"
+                            style="fill:${clt}; opacity:0.85;"/>`;
+        }).join('')}
+
+        <!-- Череп по центру (лёгкое касание) -->
+        <g style="opacity:0.4; transform-origin:100px 100px;">
+            <ellipse cx="100" cy="98" rx="14" ry="16" fill="${cl}" opacity="0.6"/>
+            <circle cx="94" cy="95" r="3" fill="#000"/>
+            <circle cx="106" cy="95" r="3" fill="#000"/>
+            <path d="M 94 108 L 106 108 L 102 114 L 98 114 Z" fill="#000"/>
+        </g>
+
+        <g class="fs-orbs">${orbs(80, 12, 2)}</g>
+    </svg>`;
+
+/* ============================================================ */
+/* 🦁 ЛЕВ                                                         */
+/* ============================================================ */
+case 'lion':
+    return `
+    <svg class="fs-lion" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="lionManeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="${clt}"/>
+                <stop offset="50%" stop-color="${cl}"/>
+                <stop offset="100%" stop-color="${cd}"/>
+            </linearGradient>
+        </defs>
+        ${glowDef}
+        ${halo}
+        <circle class="lion-spin" cx="100" cy="100" r="82" fill="none"
+                stroke="${clt}" stroke-width="1.5" stroke-dasharray="3 7" opacity="0.7"/>
+        <circle cx="100" cy="100" r="74" fill="none" stroke="${cl}" stroke-width="2" opacity="0.8"/>
+
+        <!-- Грива — лучи внутрь -->
+        ${Array.from({length:16}).map((_, i) => {
+            const a = i * 22.5;
+            const x1 = 100 + Math.cos(a * Math.PI/180) * 82;
+            const y1 = 100 + Math.sin(a * Math.PI/180) * 82;
+            const x2 = 100 + Math.cos(a * Math.PI/180) * 60;
+            const y2 = 100 + Math.sin(a * Math.PI/180) * 60;
+            return `<g class="lion-mane" style="--mx:${x1.toFixed(1)}px; --my:${y1.toFixed(1)}px; --delay:${(i*0.1).toFixed(1)}s;">
+                <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                      stroke="url(#lionManeGrad)" stroke-width="3" stroke-linecap="round"/>
+            </g>`;
+        }).join('')}
+
+        <!-- Глаза льва (лёгкое касание) -->
+        <g style="opacity:0.7;">
+            <ellipse cx="85" cy="100" rx="4" ry="5" fill="${clt}"/>
+            <ellipse cx="115" cy="100" rx="4" ry="5" fill="${clt}"/>
+            <circle cx="85" cy="100" r="1.8" fill="#000"/>
+            <circle cx="115" cy="100" r="1.8" fill="#000"/>
+        </g>
+
+        <g class="fs-orbs">${orbs(88, 12, 2.2)}</g>
+    </svg>`;
+
+/* ============================================================ */
+/* 🕸️ ПАУК                                                        */
+/* ============================================================ */
+case 'spider':
+    return `
+    <svg class="fs-spider" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        ${glowDef}
+        ${halo}
+        <circle cx="100" cy="100" r="82" fill="none" stroke="${clt}" stroke-width="1.2" opacity="0.55"/>
+        <circle cx="100" cy="100" r="58" fill="none" stroke="${clt}" stroke-width="1" opacity="0.4"/>
+        <circle cx="100" cy="100" r="34" fill="none" stroke="${clt}" stroke-width="1" opacity="0.3"/>
+
+        <!-- Паутина — лучи из центра -->
+        ${Array.from({length:8}).map((_, i) => {
+            const a = i * 45;
+            const x1 = 100 + Math.cos(a * Math.PI/180) * 82;
+            const y1 = 100 + Math.sin(a * Math.PI/180) * 82;
+            return `<line x1="100" y1="100" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"
+                          stroke="${cl}" stroke-width="0.9" opacity="0.6"/>`;
+        }).join('')}
+
+        <!-- Соединительные дуги -->
+        ${[82, 58, 34].map(r => `
+            <circle cx="100" cy="100" r="${r}" fill="none"
+                    stroke="${clt}" stroke-width="1.2" opacity="0.6" stroke-dasharray="4 4"/>
+        `).join('')}
+
+        <!-- Кольца дрожат -->
+        <circle class="spider-web-shake" cx="100" cy="100" r="70" fill="none"
+                stroke="${clt}" stroke-width="1.5" opacity="0.75"/>
+
+        <!-- Паук в правом верхнем углу -->
+        <g class="spider-body" style="transform-origin:155px 45px;">
+            <ellipse cx="155" cy="45" rx="7" ry="9" fill="${cd}"/>
+            <ellipse cx="155" cy="45" rx="5" ry="6" fill="${cl}"/>
+            <ellipse cx="155" cy="37" rx="4" ry="4" fill="${cd}"/>
+            <circle cx="153" cy="36" r="1" fill="#ff2020"/>
+            <circle cx="157" cy="36" r="1" fill="#ff2020"/>
+            <!-- Лапки -->
+            ${Array.from({length:8}).map((_, i) => {
+                const side = i < 4 ? -1 : 1;
+                const idx = i % 4;
+                const x = 155 + side * (5 + idx);
+                const y = 41 + idx * 2.5;
+                const x2 = 155 + side * (11 + idx);
+                const y2 = 37 + idx * 2.5;
+                const x3 = 155 + side * (14 + idx);
+                const y3 = 44 + idx * 2.5;
+                return `<path d="M ${x} ${y} Q ${x2} ${y2} ${x3} ${y3}"
+                              fill="none" stroke="${cd}" stroke-width="1.2" stroke-linecap="round"/>`;
+            }).join('')}
+        </g>
+
+        <g class="fs-orbs">${orbs(84, 10, 2)}</g>
+    </svg>`;
+
     default:
         return '';
     }
@@ -34296,6 +34532,13 @@ function getValueHint(category) {
             <code>scorpion</code> — 🦂 скорпион с хвостом<br>
             <code>mask</code> — 🎭 загадочная маска<br>
             <code>trident</code> — 🔱 морской трезубец<br><br>
+
+            <b style="color: var(--purple);">✨ РАМКИ v2:</b><br>
+            <code>waves</code> — 🌊 волны<br>
+            <code>galaxy</code> — 💫 галактика<br>
+            <code>poison</code> — ☠️ ядовитые пузыри<br>
+            <code>lion</code> — 🦁 львиная грива<br>
+            <code>spider</code> — 🕸️ паутина с пауком<br><br>
 
             <b>Примеры:</b><br>
             <code>{"special": true, "special_type": "phoenix", "color": "#ff6b2e"}</code><br>
