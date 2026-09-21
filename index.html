@@ -10015,7 +10015,6 @@ html.lite-mode .voice-widget-expanded {
     overflow: visible;
 }
 
-/* 🔥 Ключевое: SVG значка рендерится как есть — с заливкой */
 .profile-equipped-badge svg,
 .pm2-badge svg {
     width: 100%;
@@ -10023,16 +10022,6 @@ html.lite-mode .voice-widget-expanded {
     display: block;
     overflow: visible;
     filter: drop-shadow(0 0 4px currentColor);
-    /* 🔥 Сбрасываем возможные наследованные стили */
-    fill: initial;
-    stroke: initial;
-}
-
-/* 🔥 Внутренние элементы SVG — тоже не переопределяем */
-.profile-equipped-badge svg *,
-.pm2-badge svg * {
-    fill: inherit;
-    stroke: inherit;
 }
 
 /* 🔥 Обёртка SVG */
@@ -12146,12 +12135,6 @@ html.lite-mode .header-coins::before {
     display: block;
     overflow: visible;
     filter: drop-shadow(0 0 3px currentColor);
-    fill: initial;
-    stroke: initial;
-}
-[data-list-badge] svg * {
-    fill: inherit;
-    stroke: inherit;
 }
 [data-list-badge] img {
     width: 100%;
@@ -13564,9 +13547,10 @@ button[disabled] {
     100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
 }
 
-    /* ============================================================ */
+/* ============================================================ */
 /* 🔄 СИНХРОНИЗАЦИЯ АНИМАЦИЙ РАМОК                              */
-/* Все SVG-анимации внутри рамок стартуют с одной фазы           */
+/* Синхронизируем только базовые кольца/орбы,                    */
+/* не трогая уникальные элементы (щупальца, языки, чешуйки)      */
 /* ============================================================ */
 
 /* Единая точка отсчёта для всех рамок */
@@ -13574,23 +13558,6 @@ button[disabled] {
 .list-frame-overlay,
 .frame-preview-overlay {
     --sync-phase: 0s;
-}
-
-/* Все внутренние элементы SVG получают одинаковую базовую задержку */
-.special-frame-overlay svg *,
-.list-frame-overlay svg *,
-.frame-preview-overlay svg * {
-    animation-delay: var(--sync-phase) !important;
-}
-
-/* Исключение: орбы и частицы сохраняют свой ритм, но в общей фазе */
-.special-frame-overlay .fs-orb,
-.list-frame-overlay .fs-orb,
-.special-frame-overlay .fs-orbs circle,
-.list-frame-overlay .fs-orbs circle,
-.special-frame-overlay .fs-orbs-r circle,
-.list-frame-overlay .fs-orbs-r circle {
-    animation-delay: var(--sync-phase) !important;
 }
 
 .profile-avatar-wrap,
@@ -32500,13 +32467,17 @@ function applyListCustomization(scopeEl, user) {
                     wrap = newWrap;
                 }
 
-                // Аватар — поверх
+                // Аватар — базовый слой
                 el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 12px ${color}`;
                 el.style.position = 'relative';
-                el.style.zIndex = '3';
+                el.style.zIndex = '2';
 
                 // Убираем старый overlay
                 wrap.querySelectorAll('.list-frame-overlay').forEach(o => o.remove());
+
+                // 🔥 Размер оверлея — 2× от аватара (как в профиле)
+                const avatarSize = el.offsetWidth || 34;
+                const overlaySize = Math.max(64, avatarSize * 2);
 
                 // Создаём новый
                 const overlay = document.createElement('div');
@@ -32515,12 +32486,12 @@ overlay.style.cssText = `
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 54px;
-    height: 54px;
-    min-width: 54px;
-    min-height: 54px;
+    width: ${overlaySize}px;
+    height: ${overlaySize}px;
+    min-width: ${overlaySize}px;
+    min-height: ${overlaySize}px;
     pointer-events: none;
-    z-index: 1;
+    z-index: 5;
     overflow: visible;
 `;
 overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
