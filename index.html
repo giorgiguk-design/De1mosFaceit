@@ -32817,35 +32817,26 @@ function applyCustomizationToElement(scopeEl, user) {
         const color = val.color || '#fff';
 
         if (val.special === true) {
-    // 🔥 Для императора — увеличенный оверлей
-    const isEmperor = val.special_type === 'emperor';
-    const overlayW = isEmperor ? 280 : 160;
-    const overlayH = isEmperor ? 280 : 160;
-
-    avEls.forEach(el => {
-        el.classList.add('has-frame', `frame-special-${val.special_type || 'default'}`);
-        el.style.boxShadow = `0 0 0 2px ${color}, 0 0 24px ${color}`;
-    });
-
-        if (val.special === true) {
-            // 🔥 СПЕЦИАЛЬНАЯ РАМКА (осьминог и т.д.)
+            // 🔥 СПЕЦИАЛЬНАЯ РАМКА (осьминог, дракон, император и т.д.)
             avEls.forEach(el => {
                 el.classList.add('has-frame', `frame-special-${val.special_type || 'default'}`);
                 el.style.boxShadow = `0 0 0 2px ${color}, 0 0 24px ${color}`;
             });
 
-// Добавляем декоративный слой — ПОД аватаром (эффекты видны по краям)
-const wrap = scopeEl.querySelector('.profile-avatar-wrap, .pm2-avatar-wrap');
-if (wrap) {
-    // Убираем старый
-wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
-const overlay = document.createElement('div');
-overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
-overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
-syncFrameAnimation(overlay);
-// 🔥 Вставляем ПОСЛЕ аватара — рамка сверху
-wrap.appendChild(overlay);
-}
+            // Добавляем декоративный слой — ПОД аватаром (эффекты видны по краям)
+            const wrap = scopeEl.querySelector('.profile-avatar-wrap, .pm2-avatar-wrap');
+            if (wrap) {
+                // Убираем старый
+                wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
+
+                const overlay = document.createElement('div');
+                overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
+                overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+                syncFrameAnimation(overlay);
+
+                // 🔥 Вставляем ПОСЛЕ аватара — рамка сверху
+                wrap.appendChild(overlay);
+            }
         } else if (frameStyle === 'ring') {
             avEls.forEach(el => {
                 el.style.boxShadow = `0 0 0 3px ${color}, 0 0 20px ${color}, inset 0 0 16px ${color}`;
