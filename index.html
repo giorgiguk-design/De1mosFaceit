@@ -27620,6 +27620,17 @@ async function reopenActiveRoom() {
 setTimeout(checkActiveRoom, 500);
 setTimeout(checkActiveRoom, 3000);
 setInterval(checkActiveRoom, 8000);   // каждые 8 сек
+// 🔥 Раз в минуту сбрасываем залипшие блокировки покупок
+setInterval(() => {
+    if (_buyInProgress && _buyInProgress.size > 0) {
+        console.log('🧹 Очистка залипших _buyInProgress:', [..._buyInProgress]);
+        _buyInProgress.clear();
+    }
+    if (_equipInProgress && _equipInProgress.size > 0) {
+        console.log('🧹 Очистка залипших _equipInProgress:', [..._equipInProgress]);
+        _equipInProgress.clear();
+    }
+}, 60000);
 
 // Также проверяем, когда приложение возвращается в фокус
 document.addEventListener('visibilitychange', async () => {
@@ -32244,12 +32255,12 @@ else if (item.category === 'badge') {
 }
 
 // ============================================================
-// 🛒 ПОКУПКА ТОВАРА — исправлена гонка и кэш
+// 🛒 ПОКУПКА ТОВАРА — исправлена гонка и залипание кликов
 // ============================================================
-let _buyInProgress = new Set(); // защита от двойных кликов
+let _buyInProgress = new Set();
 
 async function buyShopItem(itemId, price) {
-    // 🔥 Защита от двойного клика
+    // 🔥 Защита только для этой конкретной кнопки
     if (_buyInProgress.has(itemId)) {
         console.warn('⏳ Покупка уже в процессе:', itemId);
         return;
@@ -32264,12 +32275,23 @@ async function buyShopItem(itemId, price) {
 
     _buyInProgress.add(itemId);
 
+    // 🔥 Блокируем ТОЛЬКО свою кнопку
     const card = document.querySelector(`.shop-item[data-item-id="${itemId}"]`);
     const buyBtn = card?.querySelector('.shop-btn.buy');
     if (buyBtn) {
         buyBtn.disabled = true;
         buyBtn.textContent = '...';
     }
+
+    // 🔥 Страховочный таймер — если что-то зависнет, разблокируем через 10 сек
+    const unlockTimer = setTimeout(() => {
+        console.warn('⚠️ Покупка зависла, принудительно разблокируем:', itemId);
+        _buyInProgress.delete(itemId);
+        if (buyBtn && buyBtn.isConnected) {
+            buyBtn.disabled = false;
+            buyBtn.textContent = 'КУПИТЬ';
+        }
+    }, 10000);
 
     try {
         // 🔥 1. Проверяем, нет ли уже
@@ -32282,7 +32304,6 @@ async function buyShopItem(itemId, price) {
         if (checkErr) throw checkErr;
         if (existing) {
             showToast('Уже куплено');
-            _buyInProgress.delete(itemId);
             return;
         }
 
@@ -32321,8 +32342,9 @@ async function buyShopItem(itemId, price) {
         haptic('medium');
         showToast('✅ Куплено!');
 
-        // 🔥 5. Перерисовываем только карточку — БЕЗ перезагрузки всей страницы
-        await refreshShopItemCard(itemId);
+        // 🔥 5. Перерисовываем карточку — но НЕ ждём её
+        //    (не блокируем пользователя)
+        refreshShopItemCard(itemId).catch(e => console.warn('refresh card:', e));
 
         // 🔥 6. Обновляем баланс в hero
         const balanceEl = document.querySelector('.shop-hero-balance span');
@@ -32332,6 +32354,8 @@ async function buyShopItem(itemId, price) {
         console.error('❌ buyShopItem:', e);
         showToast('Ошибка: ' + (e.message || e));
     } finally {
+        // 🔥 ГАРАНТИРОВАННАЯ очистка
+        clearTimeout(unlockTimer);
         _buyInProgress.delete(itemId);
     }
 }
@@ -32341,15 +32365,11 @@ async function buyShopItem(itemId, price) {
 // ============================================================
 async function refreshShopItemCard(itemId) {
     const card = document.querySelector(`.shop-item[data-item-id="${itemId}"]`);
-    if (!card) {
-        // Если карточки нет — значит магазин вообще не открыт, ок
-        return;
-    }
+    if (!card) return; // Карточки нет — нечего обновлять
 
     try {
-        // Загружаем актуальное состояние
-        const [itemRes, invRes] = await Promise.all([
-            sb.from('shop_items').select('*').eq('id', itemId).single(),
+               const [itemRes, invRes] = await Promise.all([
+            sb.from('shop_items').select('id, name, category, rarity, price, value, is_available, sort_order').eq('id', itemId).single(),
             sb.from('user_inventory')
                 .select('item_id, is_equipped')
                 .eq('telegram_id', currentUser.telegram_id)
@@ -32365,20 +32385,20 @@ async function refreshShopItemCard(itemId) {
         const isOwned = !!invRes.data;
         const isEquipped = invRes.data?.is_equipped === true;
 
-        // Рендерим новую карточку
+        // 🔥 Находим карточку ЗАНОВО (на случай, если DOM изменился)
+        const freshCard = document.querySelector(`.shop-item[data-item-id="${itemId}"]`);
+        if (!freshCard) return;
+
         const newCardHTML = renderShopItem(item, isOwned, isEquipped);
         const tmp = document.createElement('div');
         tmp.innerHTML = newCardHTML.trim();
         const newCard = tmp.firstElementChild;
 
-        // Заменяем старую
-        card.replaceWith(newCard);
+        freshCard.replaceWith(newCard);
 
-        // Анимация
         newCard.style.animation = 'none';
         void newCard.offsetWidth;
         newCard.style.animation = 'bounceIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)';
-
     } catch (e) {
         console.warn('refreshShopItemCard:', e);
     }
@@ -32428,13 +32448,17 @@ async function equipShopItem(itemId) {
     if (_equipInProgress.has(itemId)) return;
     _equipInProgress.add(itemId);
 
+    // 🔥 Страховка на 8 сек
+    const unlockTimer = setTimeout(() => {
+        _equipInProgress.delete(itemId);
+    }, 8000);
+
     try {
-        // 1. Узнаём категорию
         const { data: item } = await sb.from('shop_items')
             .select('category').eq('id', itemId).single();
         if (!item) throw new Error('Item not found');
 
-        // 2. Снимаем все с той же категории
+        // Снять со всей категории
         const { data: sameCat } = await sb.from('shop_items')
             .select('id').eq('category', item.category);
         const sameCatIds = (sameCat || []).map(i => i.id);
@@ -32446,13 +32470,13 @@ async function equipShopItem(itemId) {
                 .in('item_id', sameCatIds);
         }
 
-        // 3. Надеваем новый
+        // Надеть новое
         await sb.from('user_inventory')
             .update({ is_equipped: true })
             .eq('telegram_id', currentUser.telegram_id)
             .eq('item_id', itemId);
 
-        // 4. Собираем equipped_items
+        // Собрать equipped_items
         const { data: inv } = await sb.from('user_inventory')
             .select('item_id, shop_items!inner(category)')
             .eq('telegram_id', currentUser.telegram_id)
@@ -32463,14 +32487,13 @@ async function equipShopItem(itemId) {
             if (i.shop_items) equipped[i.shop_items.category] = i.item_id;
         });
 
-        // 5. Обновляем users
         await sb.from('users')
             .update({ equipped_items: equipped })
             .eq('telegram_id', currentUser.telegram_id);
 
         currentUser.equipped_items = equipped;
 
-        // 6. Догружаем value всех надетых предметов
+        // Догрузить value
         const itemIds = Object.values(equipped);
         const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
         if (missing.length) {
@@ -32479,24 +32502,24 @@ async function equipShopItem(itemId) {
             (freshItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         }
 
-        // 7. Применяем локально сразу (не ждём realtime)
+        // Применить локально
         applyCustomization();
         refreshAllMyAppearances();
         refreshOpenProfileViews();
 
-        // 8. Обновляем модалку магазина
+        // Обновить модалку магазина
         const shopModal = document.getElementById('shopCatModal');
         if (shopModal) {
-            await refreshShopCategory();
+            refreshShopCategory().catch(e => console.warn(e));
         }
 
         showToast('✅ Надето');
         haptic('medium');
-
     } catch (e) {
         console.error('equipShopItem:', e);
         showToast('❌ ' + e.message);
     } finally {
+        clearTimeout(unlockTimer);
         _equipInProgress.delete(itemId);
     }
 }
