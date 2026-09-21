@@ -13142,8 +13142,9 @@ body.app-fullscreen:hover .fs-exit-btn {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) translateZ(0);
-    width: 56px;
-    height: 56px;
+    /* 🔥 Маленький размер под аватарку лидерборда */
+    width: 54px;
+    height: 54px;
     pointer-events: none;
     z-index: 4;
     overflow: visible;
@@ -13152,10 +13153,13 @@ body.app-fullscreen:hover .fs-exit-btn {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
 }
+
+/* 🔥 SVG рендерится 1-в-1 как в профиле, просто масштабируется */
 .list-frame-overlay svg {
     width: 100%;
     height: 100%;
-    overflow: visible;
+    overflow: visible;   /* 🔥 обязательно — не обрезать выходящее */
+    display: block;
 }
 
 @keyframes listFrameIn {
@@ -32507,18 +32511,18 @@ function applyListCustomization(scopeEl, user) {
                 // Создаём новый
                 const overlay = document.createElement('div');
                 overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
-                overlay.style.cssText = `
-                    position: absolute;
-                    top: 50%; left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: calc(100% + 20px);
-                    height: calc(100% + 20px);
-                    min-width: 46px;
-                    min-height: 46px;
-                    pointer-events: none;
-                    z-index: 1;
-                    overflow: visible;
-                `;
+overlay.style.cssText = `
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    min-height: 54px;
+    pointer-events: none;
+    z-index: 1;
+    overflow: visible;
+`;
 overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
 syncFrameAnimation(overlay);
 
