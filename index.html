@@ -13041,14 +13041,23 @@ body.app-fullscreen:hover .fs-exit-btn {
 /* 🎬 ПЛАВНАЯ АНИМАЦИЯ СПЕЦ-РАМОК ПРИ СКРОЛЛЕ                    */
 /* ============================================================ */
 .list-frame-overlay {
-    will-change: transform, opacity;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateZ(0);
+    width: 56px;
+    height: 56px;
+    pointer-events: none;
+    z-index: 4;
+    overflow: visible;
+    will-change: transform;
     animation: listFrameIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    transform: translate(-50%, -50%) translateZ(0);
-
-    /* 🔥 ВЫШЕ аватара */
-    z-index: 4;
+}
+.list-frame-overlay svg {
+    width: 100%;
+    height: 100%;
     overflow: visible;
 }
 
@@ -13420,21 +13429,27 @@ button[disabled] {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    /* Чуть больше аватара, чтобы эффекты заходили внутрь */
-    width: calc(100% + 44px);
-    height: calc(100% + 44px);
-    min-width: 104px;
-    min-height: 104px;
-    max-width: 170px;
-    max-height: 170px;
+    width: 170px;
+    height: 170px;
     pointer-events: none;
-
-    /* 🔥 ГЛАВНОЕ: теперь ВЫШЕ аватара */
     z-index: 4;
-
     animation: frameFloatIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
     overflow: visible;
+}
+.special-frame-overlay svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+}
+.phc-avatar .special-frame-overlay {
+    width: 110px;
+    height: 110px;
+}
+.pm2-avatar-wrap .special-frame-overlay {
+    width: 104px;
+    height: 104px;
 }
 .special-frame-overlay svg {
     width: 100%;
@@ -13841,13 +13856,8 @@ button[disabled] {
     50%     { filter: drop-shadow(0 0 14px currentColor); }
 }
 
-html.lite-mode .special-frame-overlay svg * {
-    animation: none !important;
-}
-/* ============================================================ */
-/* 🌄 ФОН ПРОФИЛЯ — точечно                                     */
-/* ============================================================ */
-html.lite-mode .special-frame-overlay svg * {
+html.lite-mode .special-frame-overlay svg *,
+html.lite-mode .list-frame-overlay svg * {
     animation: none !important;
 }
 
@@ -13855,26 +13865,23 @@ html.lite-mode .special-frame-overlay svg * {
 /* 🔥 ИЗОЛЯЦИЯ SVG ЗНАЧКОВ от глобальных стилей                  */
 /* ============================================================ */
 
+.badge-svg-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
 .badge-svg-wrap svg,
 [data-equipped-badge] svg,
 [data-list-badge] svg,
-.shop-preview svg:not(.cy-icon) {
-    /* Отменяем всё что может ломать заливку */
-    fill: revert !important;
-    stroke: revert !important;
-    stroke-width: revert !important;
+.shop-preview svg:not(.cy-icon),
+.customize-card-preview svg:not(.cy-icon) {
     width: 100%;
     height: 100%;
     max-width: 100%;
     max-height: 100%;
     display: block;
-}
-
-/* Если внутри SVG есть свои fill атрибуты — они победят */
-.badge-svg-wrap svg [fill]:not([fill="none"]),
-[data-equipped-badge] svg [fill]:not([fill="none"]),
-[data-list-badge] svg [fill]:not([fill="none"]) {
-    fill: attr(fill) !important;
+    overflow: visible;
 }
 
 /* ============================================================ */
@@ -14123,26 +14130,6 @@ html.lite-mode .special-frame-overlay svg * {
     color: var(--hint);
 }
 .customize-card.equipped .customize-card-status { color: var(--emerald); }
-
-/* ============================================================ */
-/* 🔥 ЖЁСТКАЯ ИЗОЛЯЦИЯ SVG ОТ ГЛОБАЛЬНЫХ СТИЛЕЙ                 */
-/* ============================================================ */
-
-.badge-svg-wrap svg,
-.customize-card-preview svg,
-.shop-preview svg:not(.cy-icon),
-.special-frame-overlay svg,
-.list-frame-overlay svg,
-[data-equipped-badge] svg,
-[data-list-badge] svg {
-    fill: unset !important;
-    stroke: unset !important;
-    stroke-width: unset !important;
-    width: 100%;
-    height: 100%;
-    display: block;
-    overflow: visible;
-}
 
     /* Фон шапки — только на .profile-hero-compact */
 .profile-hero-compact.has-custom-bg {
@@ -17269,7 +17256,7 @@ async function renderProfileView(user, options = {}) {
 
         <!-- График DXP -->
         <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
-        <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}" data-dxp-chart-bg>
+        <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
             <span class="ech-corner ech-bl"></span>
@@ -31478,16 +31465,12 @@ function renderShopItem(item, isOwned, isEquipped) {
     // ============================================================
 else if (item.category === 'badge') {
     if (val.url) {
-        // Картинка по URL
         previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
     } else if (val.svg) {
-        // 🔥 SVG — оборачиваем в div фиксированного размера
-        previewHTML = `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;">${val.svg}</div>`;
+        previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${val.svg}</div>`;
     } else if (val.emoji) {
-        // Emoji
         previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
     } else {
-        // Fallback
         previewHTML = `<span style="font-size: 38px;">🏅</span>`;
     }
 }
@@ -31932,10 +31915,11 @@ if (wrap) {
     // Убираем старый
     wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
 
+wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
 const overlay = document.createElement('div');
 overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
 overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
-// 🔥 вставляем ПОСЛЕ аватара — рамка точно сверху
+// 🔥 Вставляем ПОСЛЕ аватара — рамка сверху
 wrap.appendChild(overlay);
 }
         } else if (frameStyle === 'ring') {
@@ -31954,7 +31938,7 @@ wrap.appendChild(overlay);
     }
 
 // ============================================================
-// 3a. ФОН ШАПКИ ПРОФИЛЯ
+// 3. ФОН ПРОФИЛЯ
 // ============================================================
 const bgId = eq.profile_bg;
 const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
@@ -31975,28 +31959,6 @@ if (bgId && SHOP_ITEMS_CACHE[bgId]) {
     });
 }
 
-// ============================================================
-// 3b. ФОН ГРАФИКА DXP — отдельная категория
-// ============================================================
-const chartBgId = eq.dxp_chart_bg;
-const chartBgEls = scopeEl.querySelectorAll('[data-dxp-chart-bg]');
-if (chartBgId && SHOP_ITEMS_CACHE[chartBgId]) {
-    const val = SHOP_ITEMS_CACHE[chartBgId].value || {};
-    if (val.url) {
-        chartBgEls.forEach(el => {
-            el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.75), rgba(0,0,0,0.92)), url('${val.url}')`;
-            el.style.backgroundSize = 'cover';
-            el.style.backgroundPosition = 'center';
-            el.classList.add('has-dxp-bg');
-        });
-    }
-} else {
-    chartBgEls.forEach(el => {
-        el.style.backgroundImage = '';
-        el.classList.remove('has-dxp-bg');
-    });
-}
-
     // ============================================================
     // 4. ЗНАЧОК
     // ============================================================
@@ -32008,16 +31970,15 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
         if (val.url) {
             el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
         } else if (val.svg) {
-            // 🔥 Добавь эту ветку
-            el.innerHTML = val.svg;
+            el.innerHTML = `<div class="badge-svg-wrap" style="width:100%;height:100%;">${val.svg}</div>`;
         } else {
             el.innerHTML = val.emoji || '🏅';
         }
         el.style.display = 'inline-flex';
     });
 } else {
-        badgeEls.forEach(el => { el.style.display = 'none'; el.innerHTML = ''; });
-    }
+    badgeEls.forEach(el => { el.style.display = 'none'; el.innerHTML = ''; });
+}
 
     // ============================================================
     // 5. ТИТУЛ
@@ -32157,8 +32118,7 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
         if (val.url) {
             el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
         } else if (val.svg) {
-            // 🔥 SVG
-            el.innerHTML = val.svg;
+            el.innerHTML = `<div class="badge-svg-wrap" style="width:100%;height:100%;">${val.svg}</div>`;
         } else {
             el.innerHTML = val.emoji || '🏅';
         }
