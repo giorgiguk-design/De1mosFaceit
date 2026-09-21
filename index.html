@@ -212,7 +212,6 @@ body::after {
             border: 1px solid var(--border-strong); border-radius: 22px;
             padding: 22px; margin-bottom: 14px; overflow: hidden;
         }
-    <div id="dashboardHint" style="display: none;"></div>
         .elo-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--emerald); opacity: 0.65; margin-bottom: 6px; font-weight: 600; }
 .elo-value {
     font-size: 54px; font-weight: 900; line-height: 1;
@@ -13673,6 +13672,118 @@ html.lite-mode .list-frame-overlay svg * {
 .chat-list-item::after,
 .play-room-card::after,
 .club-member-row::after,
+.leaderboard-item::after {
+    pointer-events: none !important;
+}
+
+    /* ============================================================ */
+/* 🔧 УНИВЕРСАЛЬНЫЙ ФИКС КЛИКАБЕЛЬНОСТИ                          */
+/* ============================================================ */
+
+/* 1. Все декоративные слои-подложки не должны ловить клики */
+.btn-cover-bg,
+.list-item-bg,
+.special-frame-overlay,
+.list-frame-overlay,
+.sc-glow,
+.sc-corner,
+.pbc-corner,
+.pbc-scan,
+.ech-corner,
+.cth-corner,
+.cth-glow,
+.pbc-icon,
+.pbc-arrow,
+.pbc-text {
+    pointer-events: none !important;
+}
+
+/* 2. Псевдоэлементы (shimmer-эффекты) не должны ловить клики */
+.menu-item::before,
+.menu-item::after,
+.leaderboard-item::before,
+.leaderboard-item::after,
+.chat-list-item::before,
+.chat-list-item::after,
+.play-room-card::before,
+.play-room-card::after,
+.club-member-row::before,
+.club-member-row::after,
+.stat-card::before,
+.stat-card::after,
+.mini-stat::before,
+.mini-stat::after,
+.shop-item::before,
+.shop-item::after,
+.shop-cat-btn::before,
+.shop-cat-btn::after,
+.play-btn-cyber::before,
+.play-btn-cyber::after,
+.ig-v3-btn-primary::before,
+.ig-v3-btn-primary::after,
+.ig-v3-btn-secondary::before,
+.ig-v3-btn-secondary::after,
+.profile-action-btn::before,
+.profile-action-btn::after {
+    pointer-events: none !important;
+}
+
+/* 3. Кликабельные обёртки — принимаем клик на себя */
+.menu-item,
+.leaderboard-item,
+.chat-list-item,
+.play-room-card,
+.club-member-row,
+.stat-card,
+.mini-stat,
+.shop-item,
+.shop-cat-btn,
+.mode-selector .mode-card,
+.mode-card,
+.rv-icon-btn,
+.theme-option,
+.sheet-option,
+.play-btn-cyber,
+.nav-item {
+    pointer-events: auto !important;
+    cursor: pointer;
+}
+
+/* 4. Кнопки и ссылки — принимают клик всегда */
+button,
+a,
+[onclick],
+[role="button"],
+input,
+textarea,
+select {
+    pointer-events: auto;
+}
+
+button:disabled,
+button[disabled] {
+    pointer-events: auto;
+    cursor: not-allowed;
+}
+
+/* 5. Обёртки с clip-path — клик работает по всей площади */
+.menu-item,
+.play-btn-cyber,
+.stat-card,
+.shop-item,
+.shop-cat-btn,
+.mini-stat {
+    isolation: isolate;
+}
+
+    /* Перебиваем все старые .leaderboard-item * { pointer-events: none } */
+.leaderboard-item,
+.leaderboard-item * {
+    pointer-events: auto;
+}
+
+.leaderboard-item .btn-cover-bg,
+.leaderboard-item::before,
 .leaderboard-item::after {
     pointer-events: none !important;
 }
