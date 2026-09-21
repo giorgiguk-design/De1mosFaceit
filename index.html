@@ -13497,6 +13497,35 @@ button[disabled] {
     100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
 }
 
+    /* ============================================================ */
+/* 🔄 СИНХРОНИЗАЦИЯ АНИМАЦИЙ РАМОК                              */
+/* Все SVG-анимации внутри рамок стартуют с одной фазы           */
+/* ============================================================ */
+
+/* Единая точка отсчёта для всех рамок */
+.special-frame-overlay,
+.list-frame-overlay,
+.frame-preview-overlay {
+    --sync-phase: 0s;
+}
+
+/* Все внутренние элементы SVG получают одинаковую базовую задержку */
+.special-frame-overlay svg *,
+.list-frame-overlay svg *,
+.frame-preview-overlay svg * {
+    animation-delay: var(--sync-phase) !important;
+}
+
+/* Исключение: орбы и частицы сохраняют свой ритм, но в общей фазе */
+.special-frame-overlay .fs-orb,
+.list-frame-overlay .fs-orb,
+.special-frame-overlay .fs-orbs circle,
+.list-frame-overlay .fs-orbs circle,
+.special-frame-overlay .fs-orbs-r circle,
+.list-frame-overlay .fs-orbs-r circle {
+    animation-delay: var(--sync-phase) !important;
+}
+
 .profile-avatar-wrap,
 .pm2-avatar-wrap {
     position: relative;
@@ -32235,12 +32264,11 @@ function applyCustomizationToElement(scopeEl, user) {
 const wrap = scopeEl.querySelector('.profile-avatar-wrap, .pm2-avatar-wrap');
 if (wrap) {
     // Убираем старый
-    wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
-
 wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
 const overlay = document.createElement('div');
 overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
 overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+syncFrameAnimation(overlay);
 // 🔥 Вставляем ПОСЛЕ аватара — рамка сверху
 wrap.appendChild(overlay);
 }
@@ -32417,10 +32445,11 @@ function applyListCustomization(scopeEl, user) {
                     z-index: 1;
                     overflow: visible;
                 `;
-                overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+syncFrameAnimation(overlay);
 
-                // 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
-                wrap.appendChild(overlay);
+// 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
+wrap.appendChild(overlay);
             });
         } else if (frameStyle === 'ring') {
             avEls.forEach(el => {
@@ -32481,6 +32510,27 @@ function applyListCustomization(scopeEl, user) {
         if (oldBg) oldBg.remove();
         itemEl.classList.remove('has-list-bg');
     }
+}
+
+// ============================================================
+// 🔄 СИНХРОНИЗАЦИЯ АНИМАЦИЙ РАМОК
+// Устанавливает одинаковую фазу для всех SVG-анимаций внутри рамки
+// ============================================================
+let _frameAnimSyncTime = null;
+
+function syncFrameAnimation(overlayEl) {
+    if (!overlayEl) return;
+
+    // Одна общая точка отсчёта для всех рамок приложения
+    if (_frameAnimSyncTime === null) {
+        _frameAnimSyncTime = Date.now();
+    }
+
+    // Сколько секунд прошло с момента первого вызова
+    const phaseSec = (Date.now() - _frameAnimSyncTime) / 1000;
+
+    // Устанавливаем CSS-переменную — она подхватится правилом из CSS
+    overlayEl.style.setProperty('--sync-phase', `-${phaseSec}s`);
 }
 
 function getSpecialFrameHTML(type, color) {
