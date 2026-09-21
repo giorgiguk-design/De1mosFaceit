@@ -14940,7 +14940,22 @@ html.lite-mode .list-frame-overlay svg * {
     /* Закругление шапки профиля */
 .profile-hero-compact {
     border-radius: 22px !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+}
+.profile-hero-compact[style*="background"] {
+    /* Фон обрезаем через clip-path, если он кастомный */
+    clip-path: none !important;
+}
+
+/* Фон шапки — обрезается отдельно */
+.profile-hero-compact::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 22px;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
 }
 
     /* Затемнение фона на шапке профиля */
@@ -15165,6 +15180,140 @@ html.lite-mode .list-frame-overlay svg * {
 .dispute-mini-name > span {
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+    /* ============================================================
+   🔥 ЕДИНЫЙ ОТСТУП ПОД РАМКИ
+   Все игроки на одинаковом отступе, но его хватает
+   даже для широких рамок (император, дракон и т.д.)
+   ============================================================ */
+
+.leaderboard-item {
+    padding-left: 40px !important;
+    gap: 14px !important;
+    min-height: 66px !important;
+}
+
+/* На телефоне — такой же отступ, но чуть меньше gap */
+@media (max-width: 480px) {
+    .leaderboard-item {
+        padding-left: 44px !important;
+        padding-right: 12px !important;
+        gap: 12px !important;
+        min-height: 70px !important;
+    }
+}
+
+/* Номер места (#1, #2) — сдвигаем внутрь, чтобы рамка не задела */
+.leaderboard-rank {
+    min-width: 32px !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+}
+
+@media (max-width: 480px) {
+    .leaderboard-rank {
+        min-width: 26px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* Аватар — сдвигаем внутрь от края */
+.lb-avatar {
+    position: relative !important;
+    z-index: 2 !important;
+    flex-shrink: 0 !important;
+}
+
+    /* Профиль: сдвигаем инфо-блок правее, чтобы крылья рамки не закрывали */
+.phc-row {
+    gap: 16px !important;
+}
+
+.phc-info {
+    padding-left: 8px !important;
+    min-width: 0 !important;
+}
+
+@media (max-width: 480px) {
+    .phc-info {
+        padding-left: 12px !important;
+    }
+}
+
+/* Модалка чужого профиля — то же самое */
+.pm2-hero-inner {
+    gap: 16px !important;
+}
+
+.pm2-info {
+    padding-left: 8px !important;
+    min-width: 0 !important;
+}
+
+@media (max-width: 480px) {
+    .pm2-info {
+        padding-left: 12px !important;
+    }
+}
+
+.phc-avatar,
+.pm2-avatar-wrap {
+    flex-shrink: 0 !important;
+}
+
+    /* ============================================================
+   🔥 ЕДИНЫЙ ОТСТУП ПОД РАМКИ — все игроки на одном уровне
+   ============================================================ */
+
+.leaderboard-item {
+    padding-left: 40px !important;
+    gap: 14px !important;
+    min-height: 66px !important;
+}
+
+@media (max-width: 480px) {
+    .leaderboard-item {
+        padding-left: 44px !important;
+        padding-right: 12px !important;
+        gap: 12px !important;
+        min-height: 70px !important;
+    }
+}
+
+.leaderboard-rank {
+    min-width: 30px !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+}
+
+.phc-avatar,
+.pm2-avatar-wrap {
+    flex-shrink: 0 !important;
+}
+
+.phc-row,
+.pm2-hero-inner {
+    gap: 16px !important;
+}
+
+.phc-info,
+.pm2-info {
+    padding-left: 8px !important;
+    min-width: 0 !important;
+}
+
+@media (max-width: 480px) {
+    .phc-info,
+    .pm2-info {
+        padding-left: 12px !important;
+    }
+}
+
+/* Убираем особый размер императора */
+.special-frame-overlay.special-frame-emperor {
+    width: inherit;
+    height: inherit;
 }
     
 </style>
@@ -35273,6 +35422,19 @@ function _getSpecialFrameHTMLRaw(type, color) {
             <g class="fr-orbs-rotate">${orbs(92, 12, 2.5)}</g>
         `);
     }
+}
+
+            // ============================================================
+// 🔥 КАКИЕ РАМКИ «ШИРОКИЕ» — им нужно больше места
+// ============================================================
+const WIDE_FRAMES = new Set([
+    'emperor', 'dragon', 'wolf', 'sniper', 'stormdragon',
+    'reaper', 'hydra', 'swords', 'trophy', 'crown',
+    'portal', 'orb', 'eclipse'
+]);
+
+function isWideFrame(type) {
+    return WIDE_FRAMES.has(type);
 }
 
             
