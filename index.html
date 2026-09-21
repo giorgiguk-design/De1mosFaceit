@@ -32289,6 +32289,7 @@ function closeShopCategory() {
 }
 
 // ============================================================
+// ============================================================
 // 🎴 РЕНДЕР КАРТОЧКИ ТОВАРА
 // ============================================================
 function renderShopItem(item, isOwned, isEquipped) {
@@ -32349,29 +32350,32 @@ function renderShopItem(item, isOwned, isEquipped) {
         }
     }
 
-        else if (item.category === 'dxp_chart_bg') {
-    if (val.url) {
-        previewStyle = `background: url('${val.url}') center/cover;`;
-        previewCls = 'preview-bg';
-    } else {
-        previewHTML = '📈';
+    // ============================================================
+    // 📈 ФОН ГРАФИКА DXP
+    // ============================================================
+    else if (item.category === 'dxp_chart_bg') {
+        if (val.url) {
+            previewStyle = `background: url('${val.url}') center/cover;`;
+            previewCls = 'preview-bg';
+        } else {
+            previewHTML = '📈';
+        }
     }
-}
 
     // ============================================================
     // 🏅 ЗНАЧОК
     // ============================================================
-else if (item.category === 'badge') {
-    if (val.url) {
-        previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
-    } else if (val.svg) {
-        previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${val.svg}</div>`;
-    } else if (val.emoji) {
-        previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
-    } else {
-        previewHTML = `<span style="font-size: 38px;">🏅</span>`;
+    else if (item.category === 'badge') {
+        if (val.url) {
+            previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
+        } else if (val.svg) {
+            previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${val.svg}</div>`;
+        } else if (val.emoji) {
+            previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
+        } else {
+            previewHTML = `<span style="font-size: 38px;">🏅</span>`;
+        }
     }
-}
 
     // ============================================================
     // 👑 ТИТУЛ
@@ -35473,7 +35477,9 @@ function renderCustomizeCard(item, isEquipped) {
     let previewHTML = '';
     let previewStyle = '';
 
-    // Ник
+    // ============================================================
+    // 🎨 ЦВЕТ НИКА
+    // ============================================================
     if (item.category === 'nickname_color') {
         if (val.gradient) {
             previewStyle = `background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;`;
@@ -35483,10 +35489,14 @@ function renderCustomizeCard(item, isEquipped) {
             previewHTML = 'De1mos';
         }
     }
-    // Рамка
+
+    // ============================================================
+    // 🖼️ РАМКА АВАТАРА
+    // ============================================================
     else if (item.category === 'avatar_frame') {
         const color = val.color || '#fff';
         const isSpecial = val.special === true;
+
         if (isSpecial) {
             previewHTML = `
                 <div style="position:relative; width:100%; height:100%;">
@@ -35509,24 +35519,36 @@ function renderCustomizeCard(item, isEquipped) {
                 font-weight:900;color:#fff;font-size:13px;">A</div>`;
         }
     }
-    // Фон
+
+    // ============================================================
+    // 🌄 ФОН ПРОФИЛЯ
+    // ============================================================
     else if (item.category === 'profile_bg') {
-        if (val.url) previewStyle = `background: url('${val.url}') center/cover;`;
-        else previewHTML = '🌄';
+        if (val.url) {
+            previewStyle = `background: url('${val.url}') center/cover;`;
+        } else {
+            previewHTML = '🌄';
+        }
     }
-    // Значок
-else if (item.category === 'badge') {
-    if (val.url) {
-        previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
-    } else if (val.svg) {
-        previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${val.svg}</div>`;
-    } else if (val.emoji) {
-        previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
-    } else {
-        previewHTML = `<span style="font-size: 38px;">🏅</span>`;
+
+    // ============================================================
+    // 🏅 ЗНАЧОК
+    // ============================================================
+    else if (item.category === 'badge') {
+        if (val.url) {
+            previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
+        } else if (val.svg) {
+            previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${val.svg}</div>`;
+        } else if (val.emoji) {
+            previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
+        } else {
+            previewHTML = `<span style="font-size: 38px;">🏅</span>`;
+        }
     }
-}
-    // Титул
+
+    // ============================================================
+    // 👑 ТИТУЛ
+    // ============================================================
     else if (item.category === 'title') {
         previewStyle = `font-size:11px;font-weight:900;color:${val.color || 'var(--gold)'};
             text-shadow:0 0 12px ${val.color || 'var(--gold)'};letter-spacing:1px;`;
