@@ -32370,59 +32370,59 @@ function applyListCustomization(scopeEl, user) {
         const frameStyle = val.style || 'glow';
         const color = val.color || '#fff';
 
-if (val.special === true) {
-    // 🔥 СПЕЦ-РАМКА — создаём обёртку вокруг аватара
-    avEls.forEach(el => {
-        let wrap = el.parentElement;
-        if (!wrap.classList.contains('avatar-frame-wrap')) {
-            const newWrap = document.createElement('div');
-            newWrap.className = 'avatar-frame-wrap';
-            const w = el.offsetWidth || 34;
-            const h = el.offsetHeight || 34;
-            newWrap.style.cssText = `
-                position: relative;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                width: ${w}px;
-                height: ${h}px;
-                isolation: isolate;
-            `;
-            el.parentNode.insertBefore(newWrap, el);
-            newWrap.appendChild(el);
-            wrap = newWrap;
-        }
+        if (val.special === true) {
+            // 🔥 СПЕЦ-РАМКА — создаём обёртку вокруг аватара
+            avEls.forEach(el => {
+                let wrap = el.parentElement;
+                if (!wrap.classList.contains('avatar-frame-wrap')) {
+                    const newWrap = document.createElement('div');
+                    newWrap.className = 'avatar-frame-wrap';
+                    const w = el.offsetWidth || 34;
+                    const h = el.offsetHeight || 34;
+                    newWrap.style.cssText = `
+                        position: relative;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+                        width: ${w}px;
+                        height: ${h}px;
+                        isolation: isolate;
+                    `;
+                    el.parentNode.insertBefore(newWrap, el);
+                    newWrap.appendChild(el);
+                    wrap = newWrap;
+                }
 
-        // Аватар — поверх
-        el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 12px ${color}`;
-        el.style.position = 'relative';
-        el.style.zIndex = '3';
+                // Аватар — поверх
+                el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 12px ${color}`;
+                el.style.position = 'relative';
+                el.style.zIndex = '3';
 
-        // Убираем старый overlay
-        wrap.querySelectorAll('.list-frame-overlay').forEach(o => o.remove());
+                // Убираем старый overlay
+                wrap.querySelectorAll('.list-frame-overlay').forEach(o => o.remove());
 
-        // Создаём новый
-        const overlay = document.createElement('div');
-        overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
-        overlay.style.cssText = `
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: calc(100% + 20px);
-            height: calc(100% + 20px);
-            min-width: 46px;
-            min-height: 46px;
-            pointer-events: none;
-            z-index: 1;
-            overflow: visible;
-        `;
-        overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
+                // Создаём новый
+                const overlay = document.createElement('div');
+                overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
+                overlay.style.cssText = `
+                    position: absolute;
+                    top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: calc(100% + 20px);
+                    height: calc(100% + 20px);
+                    min-width: 46px;
+                    min-height: 46px;
+                    pointer-events: none;
+                    z-index: 1;
+                    overflow: visible;
+                `;
+                overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
 
-// 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
-wrap.appendChild(overlay);
-    });
-} else if (frameStyle === 'ring') {
+                // 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
+                wrap.appendChild(overlay);
+            });
+        } else if (frameStyle === 'ring') {
             avEls.forEach(el => {
                 el.style.boxShadow = `0 0 0 2px ${color}, 0 0 14px ${color}, inset 0 0 8px ${color}`;
             });
@@ -32438,51 +32438,49 @@ wrap.appendChild(overlay);
     }
 
     // --- Значок ---
-const badgeId = eq.badge;
-const badgeEls = scopeEl.querySelectorAll('[data-list-badge]');
-if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
-    const val = SHOP_ITEMS_CACHE[badgeId].value || {};
-    badgeEls.forEach(el => {
-        if (val.url) {
-            el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
-        } else if (val.svg) {
-            el.innerHTML = `<div class="badge-svg-wrap" style="width:100%;height:100%;">${val.svg}</div>`;
-        } else {
-            el.innerHTML = val.emoji || '🏅';
-        }
-        el.style.display = 'inline-flex';
-    });
-}
+    const badgeId = eq.badge;
+    const badgeEls = scopeEl.querySelectorAll('[data-list-badge]');
+    if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
+        const val = SHOP_ITEMS_CACHE[badgeId].value || {};
+        badgeEls.forEach(el => {
+            if (val.url) {
+                el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
+            } else if (val.svg) {
+                el.innerHTML = `<div class="badge-svg-wrap" style="width:100%;height:100%;">${val.svg}</div>`;
+            } else {
+                el.innerHTML = val.emoji || '🏅';
+            }
+            el.style.display = 'inline-flex';
+        });
+    }
 
     // ============================================================
     // 🌄 ФОН ПРОФИЛЯ — на всю плашку
     // ============================================================
-const bgId = eq.profile_bg;
-const itemEl = scopeEl;
+    const bgId2 = eq.profile_bg;
+    const itemEl = scopeEl;
+    const oldBg = itemEl.querySelector('.list-item-bg');
 
-// 🔥 ПРИМЕНЯЕМ ФОН ПРОФИЛЯ к плашке в списках
-const bgId2 = eq.profile_bg;
-const oldBg = itemEl.querySelector('.list-item-bg');
-
-if (bgId2 && SHOP_ITEMS_CACHE[bgId2]) {
-    const bgVal = SHOP_ITEMS_CACHE[bgId2].value || {};
-    if (bgVal.url) {
-        // Создаём слой с фоном (если его нет)
-        let bgLayer = oldBg;
-        if (!bgLayer) {
-            bgLayer = document.createElement('div');
-            bgLayer.className = 'list-item-bg';
-            itemEl.insertBefore(bgLayer, itemEl.firstChild);
+    if (bgId2 && SHOP_ITEMS_CACHE[bgId2]) {
+        const bgVal = SHOP_ITEMS_CACHE[bgId2].value || {};
+        if (bgVal.url) {
+            // Создаём слой с фоном (если его нет)
+            let bgLayer = oldBg;
+            if (!bgLayer) {
+                bgLayer = document.createElement('div');
+                bgLayer.className = 'list-item-bg';
+                itemEl.insertBefore(bgLayer, itemEl.firstChild);
+            }
+            bgLayer.style.backgroundImage = `url('${bgVal.url}')`;
+            itemEl.classList.add('has-list-bg');
+        } else {
+            if (oldBg) oldBg.remove();
+            itemEl.classList.remove('has-list-bg');
         }
-        bgLayer.style.backgroundImage = `url('${bgVal.url}')`;
-        itemEl.classList.add('has-list-bg');
     } else {
         if (oldBg) oldBg.remove();
         itemEl.classList.remove('has-list-bg');
     }
-} else {
-    if (oldBg) oldBg.remove();
-    itemEl.classList.remove('has-list-bg');
 }
 
 function getSpecialFrameHTML(type, color) {
