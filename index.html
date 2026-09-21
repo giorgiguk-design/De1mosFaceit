@@ -16742,6 +16742,7 @@ async function init() {
         subscribeChatsRealtime();
         subscribeDxpHistoryRealtime();
         subscribeUsersRealtime();
+        subscribeUserInventoryRealtime();
         subscribeFriendshipsRealtime();
         subscribeClubsRealtime();
         subscribeMatchesHistoryRealtime();
@@ -28953,24 +28954,31 @@ function subscribeDxpHistoryRealtime() {
 }
 
 // ============================================================
-// UNIVERSAL REALTIME — users
+// 🔥 REALTIME USERS — глобальные обновления кастомизации
 // ============================================================
 let usersRealtimeChannel = null;
 
 function subscribeUsersRealtime() {
-    if (usersRealtimeChannel) sb.removeChannel(usersRealtimeChannel);
+    if (usersRealtimeChannel) {
+        try { sb.removeChannel(usersRealtimeChannel); } catch (e) {}
+        usersRealtimeChannel = null;
+    }
     if (!currentUser) return;
 
     const myId = Number(currentUser.telegram_id);
 
-    usersRealtimeChannel = sb.channel('users_rt_global')
+    console.log('📡 Подписка на users realtime...');
+
+    usersRealtimeChannel = sb.channel('users_rt_global_' + Date.now())
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
             table: 'users'
-        }, (payload) => {
+        }, async (payload) => {
             const u = payload.new;
             if (!u) return;
+
+            console.log('📥 users UPDATE:', u.telegram_id, '| equipped:', u.equipped_items);
 
             // ============================================================
             // 1. ЭТО Я — обновляем currentUser и всё, что от него зависит
@@ -28981,154 +28989,318 @@ function subscribeUsersRealtime() {
                     || u.matches_played !== currentUser.matches_played
                     || u.display_name !== currentUser.display_name
                     || u.custom_avatar !== currentUser.custom_avatar;
+                const coinsChanged = u.coins !== currentUser.coins;
 
-                // 🔥 Проверяем, изменились ли equipped_items
+                // 🔥 КРИТИЧНО: сравниваем equipped_items
                 const oldEq = JSON.stringify(currentUser.equipped_items || {});
                 const newEq = JSON.stringify(u.equipped_items || {});
                 const equipChanged = oldEq !== newEq;
 
                 currentUser = { ...currentUser, ...u };
-                updateCoinsBadge();
 
-                // 🔥 Применяем глобальную кастомизацию (для себя)
+                if (coinsChanged) updateCoinsBadge();
+
+                // 🔥 Если кастомизация изменилась — обновляем ВСЁ
                 if (equipChanged) {
+                    console.log('🎨 Кастомизация изменилась! Перерисовываю всё...');
+
                     // Догружаем shop_items, если появились новые id
                     const itemIds = Object.values(currentUser.equipped_items || {});
                     const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
-                    if (missing.length) {
-                        sb.from('shop_items')
-                            .select('id, category, value')
-                            .in('id', missing)
-                            .then(({ data: items }) => {
-                                (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
-                                applyCustomization();
-                                refreshOpenProfileViews();
-                            });
-                    } else {
+
+                    const reloadAndApply = async () => {
+                        if (missing.length) {
+                            const { data: items } = await sb.from('shop_items')
+                                .select('id, category, value')
+                                .in('id', missing);
+                            (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+                        }
+
+                        // 🔥 1. Свой профиль — если открыт
+                        if (document.getElementById('page-profile')?.classList.contains('active')
+                            && !profileEditMode) {
+                            const cont = document.getElementById('profileContent');
+                            if (cont) applyCustomizationToElement(cont, currentUser);
+                        }
+
+                        // 🔥 2. Меню-дровер
+                        fillMenuDrawerUser();
                         applyCustomization();
-                        refreshOpenProfileViews();
-                    }
+
+                        // 🔥 3. Аватар в шапке
+                        applyHeaderAvatar(currentUser);
+
+                        // 🔥 4. Обновляем все открытые списки с собой
+                        refreshAllMyAppearances();
+                    };
+
+                    await reloadAndApply();
                 }
 
                 if (eloChanged || statsChanged) {
-                    // Dashboard
                     if (document.getElementById('page-dashboard')?.classList.contains('active')) {
                         renderDashboard(currentUser);
                         updatePlayBtnSub();
                     }
-                    // Профиль
                     if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
                         renderProfileView(currentUser);
                     }
-                    // Аватар в шапке + меню
                     applyHeaderAvatar(currentUser);
                     fillMenuDrawerUser();
                 }
             }
 
             // ============================================================
-            // 2. ЛИДЕРБОРД — если открыт dashboard или полный лидерборд
+            // 2. ЭТО ДРУГОЙ ИГРОК — обновляем его везде, где он есть
             // ============================================================
-            if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-                loadLeaderboard();
-            }
-            if (document.getElementById('page-leaderboard')?.classList.contains('active')) {
-                openFullLeaderboard();
-            }
 
-                        // ============================================================
-            // 2.5. ДРУЗЬЯ
-            // ============================================================
-            if (document.getElementById('page-friends')?.classList.contains('active')) {
-                loadFriends();
-            }
-
-            // ============================================================
-            // 2.6. КЛУБ
-            // ============================================================
-            if (document.getElementById('page-club')?.classList.contains('active') && myClub) {
-                loadClub();
-            }
-
-            // ============================================================
-            // 2.7. ОТКРЫТЫЕ КОМНАТЫ (play screen)
-            // ============================================================
-            if (document.getElementById('playScreen')?.classList.contains('active')) {
-                if (currentPlayRoomId) {
-                    renderRoomContent(currentPlayRoomId);
-                } else {
-                    loadPlayRooms();
+            // 🔥 Догружаем shop_items для чужих equipped_items
+            if (u.equipped_items && Object.keys(u.equipped_items).length) {
+                const itemIds = Object.values(u.equipped_items);
+                const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
+                if (missing.length) {
+                    const { data: items } = await sb.from('shop_items')
+                        .select('id, category, value').in('id', missing);
+                    (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
                 }
             }
 
-            // ============================================================
-            // 2.8. СПИСОК ЧАТОВ
-            // ============================================================
+            // 2.1. Лидерборд на главной
+            if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+                updateUserInLeaderboard(u);
+            }
+
+            // 2.2. Полный лидерборд
+            if (document.getElementById('page-leaderboard')?.classList.contains('active')) {
+                updateUserInFullLeaderboard(u);
+            }
+
+            // 2.3. Друзья
+            if (document.getElementById('page-friends')?.classList.contains('active')) {
+                updateUserInFriendsList(u);
+            }
+
+            // 2.4. Клуб
+            if (document.getElementById('page-club')?.classList.contains('active')) {
+                updateUserInClubList(u);
+            }
+
+            // 2.5. Список чатов
             if (document.getElementById('page-chat')?.classList.contains('active')) {
-                loadChatList();
+                updateUserInChatList(u);
             }
 
-            // ============================================================
-            // 2.9. ИСТОРИЯ МАТЧЕЙ
-            // ============================================================
-            if (document.getElementById('page-matches')?.classList.contains('active')) {
-                loadMatchesHistory();
-            }
-
-            // ============================================================
-            // 2.10. ЗАЯВКИ В КЛУБ / СПИСКИ
-            // ============================================================
-            if (document.getElementById('requestsSheet')?.classList.contains('active') && myClub) {
-                renderRequestsSheet();
-            }
-            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
-                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
-                loadAllClubsSheet(q);
-            }
-
-            // ============================================================
-            // 3. ОТКРЫТЫЙ ЧУЖОЙ ПРОФИЛЬ — обновить
-            // ============================================================
+            // 2.6. Открытый чужой профиль
             const playerModal = document.getElementById('playerModal');
             if (playerModal?.classList.contains('active')
                 && currentProfileUserId
                 && Number(u.telegram_id) === Number(currentProfileUserId)) {
-
-                // Догружаем shop_items, если у игрока изменилась кастомизация
-                if (u.equipped_items && Object.keys(u.equipped_items).length) {
-                    const itemIds = Object.values(u.equipped_items);
-                    const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
-                    if (missing.length) {
-                        sb.from('shop_items')
-                            .select('id, category, value')
-                            .in('id', missing)
-                            .then(({ data: items }) => {
-                                (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
-                                openPlayerProfile(currentProfileUserId);
-                            });
-                        return;
-                    }
-                }
-                openPlayerProfile(currentProfileUserId);
+                // Перерисовываем чуть позже, чтобы не спамить
+                debouncedRerenderPlayerProfile();
             }
 
-            // ============================================================
-            // 4. ОТКРЫТЫЙ ЧАТ — если это собеседник (имя/аватар)
-            // ============================================================
-            if (currentChat && currentChat.type === 'dm'
-                && Number(u.telegram_id) === Number(currentChat.id)) {
-                const avEl = document.getElementById('chatViewAvatar');
-                const titleEl = document.getElementById('chatViewTitle');
-                if (titleEl) titleEl.textContent = u.display_name || 'Игрок';
-                if (avEl) {
-                    const src = u.custom_avatar || u.photo_url;
-                    avEl.innerHTML = src
-                        ? `<img src="${src}" alt="">`
-                        : (u.display_name || '?')[0].toUpperCase();
+            // 2.7. Открытая комната (play screen)
+            if (document.getElementById('playScreen')?.classList.contains('active')) {
+                if (currentPlayRoomId) {
+                    updateUserInRoomView(u);
+                } else {
+                    updateUserInRoomsList(u);
                 }
+            }
+
+            // 2.8. In-game экран (составы команд)
+            if (document.getElementById('page-veto')?.classList.contains('active')
+                && currentMatch) {
+                updateUserInVeto(u);
+            }
+
+            // 2.9. Открытые модалки матчей
+            if (document.getElementById('playerModal')?.classList.contains('active')) {
+                updateUserInMatchDetails(u);
             }
         })
-        .subscribe();
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'users'
+        }, () => {
+            // Новый игрок — обновляем лидерборд
+            if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+                loadLeaderboard();
+            }
+        })
+        .subscribe((status) => {
+            console.log('📡 users_rt status:', status);
+        });
+}
+
+// ============================================================
+// 🔥 Утилита: обновить появление себя во всех списках
+// ============================================================
+function refreshAllMyAppearances() {
+    if (!currentUser) return;
+    const me = Number(currentUser.telegram_id);
+
+    // Все элементы с data-user-id
+    document.querySelectorAll('[data-user-id]').forEach(el => {
+        if (Number(el.dataset.userId) === me) {
+            applyListCustomization(el, currentUser);
+        }
+    });
+
+    // Элементы с data-list-avatar без data-user-id (для совместимости)
+    // (не трогаем — они обычно внутри элементов с data-user-id)
+}
+
+// ============================================================
+// 🔥 Точечные обновления для каждого списка
+// ============================================================
+function updateUserInLeaderboard(u) {
+    const el = document.querySelector(`.leaderboard-item[data-user-id="${u.telegram_id}"]`);
+    if (!el) return;
+
+    const avEl = el.querySelector('[data-list-avatar]');
+    if (avEl) {
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+    }
+
+    const nickEl = el.querySelector('[data-list-nick]');
+    if (nickEl) {
+        // Пересобираем ник с сохранением тега клуба и dev-тега
+        const clubTag = myClubTagHTML(u.telegram_id);
+        const devTag = devTagHTML(u.telegram_id);
+        const lvl = eloToLevel(u.elo);
+        nickEl.innerHTML = `${clubTag}${escapeHtml(u.display_name || 'Игрок')} ${devTag} <span style="color:var(--hint);font-size:11px;">· ${lvl} ур.</span>`;
+    }
+
+    const eloEl = el.querySelector('.leaderboard-DXP-value');
+    if (eloEl) eloEl.textContent = u.elo;
+
+    applyListCustomization(el, u);
+}
+
+function updateUserInFullLeaderboard(u) {
+    // Тот же селектор, что и в mini-лидерборде
+    updateUserInLeaderboard(u);
+}
+
+function updateUserInFriendsList(u) {
+    const el = document.querySelector(`#friendsList .leaderboard-item[data-user-id="${u.telegram_id}"]`);
+    if (!el) return;
+
+    const avEl = el.querySelector('[data-list-avatar]');
+    if (avEl) {
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+    }
+
+    const nickEl = el.querySelector('[data-list-nick]');
+    if (nickEl) {
+        nickEl.innerHTML = `${myClubTagHTML(u.telegram_id)}${escapeHtml(u.display_name || 'Игрок')}`;
+    }
+
+    applyListCustomization(el, u);
+}
+
+function updateUserInClubList(u) {
+    const el = document.querySelector(`.club-member-row[data-user-id="${u.telegram_id}"]`);
+    if (!el) return;
+
+    const avEl = el.querySelector('[data-list-avatar]');
+    if (avEl) {
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+    }
+
+    const nickEl = el.querySelector('[data-list-nick]');
+    if (nickEl) {
+        nickEl.innerHTML = `${escapeHtml(u.display_name || 'Игрок')}`;
+    }
+
+    applyListCustomization(el, u);
+}
+
+function updateUserInChatList(u) {
+    const el = document.querySelector(`#chatList .chat-list-item[data-user-id="${u.telegram_id}"]`);
+    if (!el) return;
+
+    const avEl = el.querySelector('.chat-list-avatar');
+    if (avEl) {
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+    }
+
+    applyListCustomization(el, u);
+}
+
+function updateUserInRoomView(u) {
+    const el = document.querySelector(`#playScreenContent .tz-player[data-user-id="${u.telegram_id}"]`);
+    if (el) {
+        const avEl = el.querySelector('.tz-avatar');
+        if (avEl) {
+            const src = u.custom_avatar || u.photo_url;
+            const initial = (u.display_name || 'U')[0].toUpperCase();
+            avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+        }
+        applyListCustomization(el, u);
+    }
+}
+
+function updateUserInRoomsList(u) {
+    // В списке комнат отображается только лидер — обновляем карточку
+    const cards = document.querySelectorAll('.play-room-card');
+    cards.forEach(card => {
+        const avEl = card.querySelector('.prc-avatar');
+        if (avEl && avEl.querySelector('img')?.src?.includes(u.telegram_id)) {
+            // ... сложно трекать, лучше не трогать
+        }
+    });
+}
+
+function updateUserInVeto(u) {
+    // Обновляем аватарки в veto
+    const els = document.querySelectorAll(`#vetoContent [data-user-id="${u.telegram_id}"]`);
+    els.forEach(el => {
+        const avEl = el.querySelector('.veto-cap-avatar, .veto-player-mini-avatar');
+        if (avEl) {
+            const src = u.custom_avatar || u.photo_url;
+            const initial = (u.display_name || 'U')[0].toUpperCase();
+            avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+        }
+    });
+}
+
+function updateUserInMatchDetails(u) {
+    const content = document.getElementById('playerModalContent');
+    if (!content) return;
+    const els = content.querySelectorAll(`[data-user-id="${u.telegram_id}"]`);
+    els.forEach(el => {
+        const avEl = el.querySelector('[data-list-avatar], .ig-player-avatar');
+        if (avEl) {
+            const src = u.custom_avatar || u.photo_url;
+            const initial = (u.display_name || 'U')[0].toUpperCase();
+            avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+        }
+        applyListCustomization(el, u);
+    });
+}
+
+// ============================================================
+// 🔥 Debounce для перерисовки чужого профиля
+// ============================================================
+let _rerenderProfileTimer = null;
+function debouncedRerenderPlayerProfile() {
+    clearTimeout(_rerenderProfileTimer);
+    _rerenderProfileTimer = setTimeout(() => {
+        if (currentProfileUserId) {
+            openPlayerProfile(currentProfileUserId);
+        }
+    }, 400);
 }
 
 // ============================================================
@@ -30977,10 +31149,17 @@ async function openShop() {
     if (!container) return;
     container.innerHTML = '<div class="empty">Загрузка...</div>';
 
+    // 🔥 Сбрасываем кэш перед загрузкой
+    Object.keys(SHOP_ITEMS_CACHE).forEach(k => {
+        if (!k.startsWith('frame_')) delete SHOP_ITEMS_CACHE[k];
+    });
+
     try {
         const [itemsRes, invRes] = await Promise.all([
             sb.from('shop_items').select('*').eq('is_available', true).order('sort_order'),
-            sb.from('user_inventory').select('item_id, is_equipped').eq('telegram_id', currentUser.telegram_id)
+            sb.from('user_inventory')
+                .select('item_id, is_equipped')
+                .eq('telegram_id', currentUser.telegram_id)
         ]);
 
         const items = itemsRes.data || [];
@@ -31296,83 +31475,200 @@ function renderShopItem(item, isOwned, isEquipped) {
     `;
 }
 
+// ============================================================
+// 🛒 ПОКУПКА ТОВАРА — исправлена гонка и кэш
+// ============================================================
+let _buyInProgress = new Set(); // защита от двойных кликов
+
 async function buyShopItem(itemId, price) {
-    if ((currentUser.coins || 0) < price) { showToast('❌ Недостаточно монет'); haptic('heavy'); return; }
+    // 🔥 Защита от двойного клика
+    if (_buyInProgress.has(itemId)) {
+        console.warn('⏳ Покупка уже в процессе:', itemId);
+        return;
+    }
+
+    if ((currentUser.coins || 0) < price) {
+        showToast('❌ Недостаточно монет');
+        haptic('heavy');
+        return;
+    }
     if (!confirm(`Купить за ${price} монет?`)) return;
 
-    try {
-        const { data: existing } = await sb.from('user_inventory')
-            .select('id').eq('telegram_id', currentUser.telegram_id).eq('item_id', itemId).maybeSingle();
-        if (existing) { showToast('Уже куплено'); return; }
+    _buyInProgress.add(itemId);
 
-        await sb.rpc('add_coins', {
+    const card = document.querySelector(`.shop-item[data-item-id="${itemId}"]`);
+    const buyBtn = card?.querySelector('.shop-btn.buy');
+    if (buyBtn) {
+        buyBtn.disabled = true;
+        buyBtn.textContent = '...';
+    }
+
+    try {
+        // 🔥 1. Проверяем, нет ли уже
+        const { data: existing, error: checkErr } = await sb.from('user_inventory')
+            .select('id')
+            .eq('telegram_id', currentUser.telegram_id)
+            .eq('item_id', itemId)
+            .maybeSingle();
+
+        if (checkErr) throw checkErr;
+        if (existing) {
+            showToast('Уже куплено');
+            _buyInProgress.delete(itemId);
+            return;
+        }
+
+        // 🔥 2. Списываем монеты через RPC
+        const { error: rpcErr } = await sb.rpc('add_coins', {
             p_user_id: currentUser.telegram_id,
             p_amount: -price,
             p_reason: `purchase:${itemId}`,
             p_meta: { item_id: itemId },
         });
+        if (rpcErr) throw rpcErr;
 
-        await sb.from('user_inventory').insert({
+        // 🔥 3. Записываем в инвентарь
+        const { error: invErr } = await sb.from('user_inventory').insert({
             telegram_id: currentUser.telegram_id,
             item_id: itemId,
             is_equipped: false,
         });
+        if (invErr) {
+            // Откат монет
+            try {
+                await sb.rpc('add_coins', {
+                    p_user_id: currentUser.telegram_id,
+                    p_amount: price,
+                    p_reason: `rollback:${itemId}`,
+                    p_meta: { item_id: itemId },
+                });
+            } catch (e) {}
+            throw invErr;
+        }
 
+        // 🔥 4. Обновляем локальный currentUser
         currentUser.coins = (currentUser.coins || 0) - price;
         updateCoinsBadge();
 
-        showToast('✅ Куплено!');
         haptic('medium');
+        showToast('✅ Куплено!');
 
-        // 🔥 Точечно обновляем только нужную карточку
-        const card = document.querySelector(`.shop-item[data-item-id="${itemId}"]`);
-        if (card) {
-            // Перерисовываем активную категорию
-            const grid = document.getElementById('shopGrid');
-            if (grid) {
-                const { data: allItems } = await sb.from('shop_items')
-                    .select('*').eq('is_available', true).eq('category', window._shopActiveCategory).order('sort_order');
+        // 🔥 5. Перерисовываем только карточку — БЕЗ перезагрузки всей страницы
+        await refreshShopItemCard(itemId);
 
-                const { data: myInv } = await sb.from('user_inventory')
-                    .select('item_id, is_equipped').eq('telegram_id', currentUser.telegram_id);
-
-                const ownedSet = new Set((myInv || []).map(i => i.item_id));
-                const equippedSet = new Set((myInv || []).filter(i => i.is_equipped).map(i => i.item_id));
-
-                (allItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
-
-                grid.innerHTML = (allItems || []).map(it =>
-                    renderShopItem(it, ownedSet.has(it.id), equippedSet.has(it.id))
-                ).join('');
-            }
-        } else {
-            // Fallback — перезагрузка модалки
-            const modal = document.getElementById('shopCatModal');
-            if (modal) {
-                const cat = window._shopActiveCategory;
-                closeShopCategory();
-                setTimeout(() => openShopCategory(cat), 100);
-            } else {
-                openShop();
-            }
-        }
-
-        // Обновляем баланс в шапке
-        const balanceEl = document.querySelector('.shop-balance');
+        // 🔥 6. Обновляем баланс в hero
+        const balanceEl = document.querySelector('.shop-hero-balance span');
         if (balanceEl) balanceEl.textContent = currentUser.coins || 0;
+
     } catch (e) {
-        console.error('buyShopItem:', e);
-        showToast('Ошибка: ' + e.message);
+        console.error('❌ buyShopItem:', e);
+        showToast('Ошибка: ' + (e.message || e));
+    } finally {
+        _buyInProgress.delete(itemId);
     }
 }
 
-async function equipShopItem(itemId) {
+// ============================================================
+// 🔥 Перерисовать ОДНУ карточку товара (без перезагрузки магазина)
+// ============================================================
+async function refreshShopItemCard(itemId) {
+    const card = document.querySelector(`.shop-item[data-item-id="${itemId}"]`);
+    if (!card) {
+        // Если карточки нет — значит магазин вообще не открыт, ок
+        return;
+    }
+
     try {
-        const { data: item } = await sb.from('shop_items').select('category').eq('id', itemId).single();
+        // Загружаем актуальное состояние
+        const [itemRes, invRes] = await Promise.all([
+            sb.from('shop_items').select('*').eq('id', itemId).single(),
+            sb.from('user_inventory')
+                .select('item_id, is_equipped')
+                .eq('telegram_id', currentUser.telegram_id)
+                .eq('item_id', itemId)
+                .maybeSingle()
+        ]);
+
+        const item = itemRes.data;
         if (!item) return;
 
-        // Снимаем со всех предметов этой же категории
-        const { data: sameCat } = await sb.from('shop_items').select('id').eq('category', item.category);
+        SHOP_ITEMS_CACHE[item.id] = item;
+
+        const isOwned = !!invRes.data;
+        const isEquipped = invRes.data?.is_equipped === true;
+
+        // Рендерим новую карточку
+        const newCardHTML = renderShopItem(item, isOwned, isEquipped);
+        const tmp = document.createElement('div');
+        tmp.innerHTML = newCardHTML.trim();
+        const newCard = tmp.firstElementChild;
+
+        // Заменяем старую
+        card.replaceWith(newCard);
+
+        // Анимация
+        newCard.style.animation = 'none';
+        void newCard.offsetWidth;
+        newCard.style.animation = 'bounceIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+    } catch (e) {
+        console.warn('refreshShopItemCard:', e);
+    }
+}
+
+// ============================================================
+// 🔥 Перерисовать ВСЕ карточки в активной категории
+// ============================================================
+async function refreshShopCategory() {
+    const grid = document.querySelector('.shop-cat-modal-body .shop-grid');
+    if (!grid) return;
+
+    const category = window._shopActiveCategory;
+    if (!category) return;
+
+    try {
+        const [itemsRes, invRes] = await Promise.all([
+            sb.from('shop_items')
+                .select('*').eq('is_available', true).eq('category', category)
+                .order('sort_order'),
+            sb.from('user_inventory')
+                .select('item_id, is_equipped')
+                .eq('telegram_id', currentUser.telegram_id)
+        ]);
+
+        const items = itemsRes.data || [];
+        const inv = invRes.data || [];
+        const owned = new Set(inv.map(i => i.item_id));
+        const equipped = new Set(inv.filter(i => i.is_equipped).map(i => i.item_id));
+
+        items.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+        grid.innerHTML = items.map(item =>
+            renderShopItem(item, owned.has(item.id), equipped.has(item.id))
+        ).join('');
+    } catch (e) {
+        console.warn('refreshShopCategory:', e);
+    }
+}
+
+// ============================================================
+// 🎨 НАДЕТЬ ТОВАР — точечно, без перезагрузки
+// ============================================================
+let _equipInProgress = new Set();
+
+async function equipShopItem(itemId) {
+    if (_equipInProgress.has(itemId)) return;
+    _equipInProgress.add(itemId);
+
+    try {
+        // 1. Узнаём категорию
+        const { data: item } = await sb.from('shop_items')
+            .select('category').eq('id', itemId).single();
+        if (!item) throw new Error('Item not found');
+
+        // 2. Снимаем все с той же категории
+        const { data: sameCat } = await sb.from('shop_items')
+            .select('id').eq('category', item.category);
         const sameCatIds = (sameCat || []).map(i => i.id);
 
         if (sameCatIds.length) {
@@ -31382,27 +31678,31 @@ async function equipShopItem(itemId) {
                 .in('item_id', sameCatIds);
         }
 
-        // Надеваем новый
+        // 3. Надеваем новый
         await sb.from('user_inventory')
             .update({ is_equipped: true })
             .eq('telegram_id', currentUser.telegram_id)
             .eq('item_id', itemId);
 
-        // Обновляем equipped_items
+        // 4. Собираем equipped_items
         const { data: inv } = await sb.from('user_inventory')
             .select('item_id, shop_items!inner(category)')
             .eq('telegram_id', currentUser.telegram_id)
             .eq('is_equipped', true);
 
         const equipped = {};
-        (inv || []).forEach(i => { if (i.shop_items) equipped[i.shop_items.category] = i.item_id; });
+        (inv || []).forEach(i => {
+            if (i.shop_items) equipped[i.shop_items.category] = i.item_id;
+        });
 
-        await sb.from('users').update({ equipped_items: equipped })
+        // 5. Обновляем users
+        await sb.from('users')
+            .update({ equipped_items: equipped })
             .eq('telegram_id', currentUser.telegram_id);
 
         currentUser.equipped_items = equipped;
 
-        // 🔥 Догружаем value всех надетых предметов в кэш
+        // 6. Догружаем value всех надетых предметов
         const itemIds = Object.values(equipped);
         const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
         if (missing.length) {
@@ -31411,40 +31711,25 @@ async function equipShopItem(itemId) {
             (freshItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         }
 
-        // 🔥 Применяем кастомизацию немедленно
+        // 7. Применяем локально сразу (не ждём realtime)
         applyCustomization();
-
-        // 🔥 Обновляем открытые представления
+        refreshAllMyAppearances();
         refreshOpenProfileViews();
+
+        // 8. Обновляем модалку магазина
+        const shopModal = document.getElementById('shopCatModal');
+        if (shopModal) {
+            await refreshShopCategory();
+        }
 
         showToast('✅ Надето');
         haptic('medium');
 
-        // 🔥 Обновляем открытую модалку, если она есть
-        const modal = document.getElementById('shopCatModal');
-        if (modal) {
-            const body = modal.querySelector('.shop-cat-modal-body .shop-grid');
-            if (body) {
-                const { data: allItems } = await sb.from('shop_items')
-                    .select('*').eq('is_available', true)
-                    .eq('category', window._shopActiveCategory).order('sort_order');
-
-                const { data: myInv } = await sb.from('user_inventory')
-                    .select('item_id, is_equipped').eq('telegram_id', currentUser.telegram_id);
-
-                const ownedSet = new Set((myInv || []).map(i => i.item_id));
-                const equippedSet = new Set((myInv || []).filter(i => i.is_equipped).map(i => i.item_id));
-
-                (allItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
-
-                body.innerHTML = (allItems || []).map(it =>
-                    renderShopItem(it, ownedSet.has(it.id), equippedSet.has(it.id))
-                ).join('');
-            }
-        }
     } catch (e) {
         console.error('equipShopItem:', e);
-        showToast('Ошибка: ' + e.message);
+        showToast('❌ ' + e.message);
+    } finally {
+        _equipInProgress.delete(itemId);
     }
 }
 
@@ -34597,6 +34882,35 @@ function createExitButton() {
         }, 1500);
     });
 })();
+
+            // ============================================================
+// 🔥 REALTIME USER_INVENTORY — ловим чужие покупки
+// ============================================================
+let userInventoryChannel = null;
+
+function subscribeUserInventoryRealtime() {
+    if (userInventoryChannel) {
+        try { sb.removeChannel(userInventoryChannel); } catch (e) {}
+    }
+    if (!currentUser) return;
+
+    userInventoryChannel = sb.channel('user_inv_rt')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'user_inventory'
+        }, async (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            // Если это мой инвентарь — игнорируем (мы сами обновляем)
+            if (Number(row.telegram_id) === Number(currentUser.telegram_id)) return;
+
+            // Чужой — просто логируем (главное обновление пойдёт через users.equipped_items)
+            console.log('📦 Другой игрок изменил инвентарь:', row.telegram_id, row.item_id);
+        })
+        .subscribe();
+}
             
     </script>
 </body>
