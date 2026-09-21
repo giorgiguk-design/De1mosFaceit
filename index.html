@@ -13573,6 +13573,16 @@ button[disabled] {
     height: 140px;
 }
 
+    .special-frame-overlay.special-frame-emperor {
+    width: 280px !important;
+    height: 280px !important;
+}
+
+.pm2-avatar-wrap .special-frame-overlay.special-frame-emperor {
+    width: 260px !important;
+    height: 260px !important;
+}
+
 .special-frame-overlay svg,
 .fr-svg {
     width: 100%;
@@ -14497,25 +14507,30 @@ button[disabled] {
     50%      { opacity: 1;   stroke-width: 3; filter: drop-shadow(0 0 10px #ffd700); }
 }
 
-/* Крылья — медленное парение */
+/* Крылья — машут как у дракона */
 .fr-emperor-wing {
     transform-origin: 100px 100px;
-    animation: fr-emperor-wing 4s ease-in-out infinite;
+    animation: fr-emperor-wing 2.2s ease-in-out infinite;
 }
-.fr-emperor-wing[data-i="1"] { animation-delay: 2s; }
+.fr-emperor-wing[data-i="1"] { animation-delay: 0s; }
+.fr-emperor-wing[data-i="0"] { animation-delay: 0s; }
+
 @keyframes fr-emperor-wing {
-    0%, 100% { transform: translateY(0) rotate(-2deg); filter: drop-shadow(0 0 6px #ffd700); }
-    50%      { transform: translateY(-4px) rotate(2deg); filter: drop-shadow(0 0 14px #ffd700); }
+    0%   { transform: rotate(0deg) scaleY(1); }
+    25%  { transform: rotate(-4deg) scaleY(0.94); }
+    50%  { transform: rotate(0deg) scaleY(1.04); }
+    75%  { transform: rotate(4deg) scaleY(0.94); }
+    100% { transform: rotate(0deg) scaleY(1); }
 }
 
-/* Корона — парение + пульсация */
+/* Корона — парит + пульсирует */
 .fr-emperor-crown {
-    transform-origin: 100px 30px;
-    animation: fr-emperor-crown 3.5s ease-in-out infinite;
+    transform-origin: 100px 20px;
+    animation: fr-emperor-crown 3.2s ease-in-out infinite;
 }
 @keyframes fr-emperor-crown {
-    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px #ffd700); }
-    50%      { transform: translateY(-3px) scale(1.04); filter: drop-shadow(0 0 22px #ffd700); }
+    0%, 100% { transform: translateY(0) scale(1);    filter: drop-shadow(0 0 8px #ffd700); }
+    50%      { transform: translateY(-4px) scale(1.05); filter: drop-shadow(0 0 26px #ffd700); }
 }
 
 /* Глаза — мигание с разной фазой */
@@ -14905,6 +14920,73 @@ html.lite-mode .list-frame-overlay svg * {
 .pm2-hero.has-custom-bg > * {
     position: relative;
     z-index: 2;
+}
+
+    /* ============================================================ */
+/* 🔥 ФИКС: РАМКИ ВЫХОДЯТ ЗА КРАЯ СПИСКОВ                        */
+/* ============================================================ */
+
+/* Разрешаем оверлеям выходить за пределы всех контейнеров */
+.leaderboard-item,
+.club-member-row,
+.chat-list-item,
+.ig-player-row,
+.result-mini-player,
+.dispute-mini-player,
+.report-card-player,
+.season-hero .leaderboard-item,
+.spectator-chip {
+    overflow: visible !important;
+}
+
+.lb-avatar,
+.club-member-avatar,
+.chat-list-avatar,
+.ig-player-avatar,
+.result-mini-avatar,
+.dispute-mini-avatar,
+.report-player-av,
+.ig-mini-avatar,
+.tz-avatar,
+.cp-avatar,
+.veto-cap-avatar,
+.veto-player-mini-avatar,
+.notif-avatar,
+.menu-drawer-avatar,
+.mb-avatar {
+    overflow: visible !important;
+}
+
+/* Убираем clip-path у плашек (если есть) */
+.leaderboard-item {
+    clip-path: none !important;
+}
+
+/* Крылья могут выходить за пределы — разрешаем */
+.list-frame-overlay {
+    overflow: visible !important;
+    pointer-events: none;
+}
+
+.list-frame-overlay svg {
+    overflow: visible !important;
+}
+
+    #leaderboard,
+#leaderboardFull,
+#chatList,
+#friendsList,
+#matchesHistoryList {
+    overflow: visible !important;
+}
+
+    #page-dashboard,
+#page-leaderboard,
+#page-chat,
+#page-friends,
+#page-matches,
+.container {
+    overflow: visible !important;
 }
     
 </style>
@@ -32731,6 +32813,17 @@ function applyCustomizationToElement(scopeEl, user) {
         const color = val.color || '#fff';
 
         if (val.special === true) {
+    // 🔥 Для императора — увеличенный оверлей
+    const isEmperor = val.special_type === 'emperor';
+    const overlayW = isEmperor ? 280 : 160;
+    const overlayH = isEmperor ? 280 : 160;
+
+    avEls.forEach(el => {
+        el.classList.add('has-frame', `frame-special-${val.special_type || 'default'}`);
+        el.style.boxShadow = `0 0 0 2px ${color}, 0 0 24px ${color}`;
+    });
+
+        if (val.special === true) {
             // 🔥 СПЕЦИАЛЬНАЯ РАМКА (осьминог и т.д.)
             avEls.forEach(el => {
                 el.classList.add('has-frame', `frame-special-${val.special_type || 'default'}`);
@@ -32909,7 +33002,11 @@ function applyListCustomization(scopeEl, user) {
 
                 // 🔥 Размер оверлея — 2× от аватара (как в профиле)
                 const avatarSize = el.offsetWidth || 34;
-                const overlaySize = Math.max(56, avatarSize * 1.75);
+                // Для императора — больше места для крыльев
+const isEmperor = user?.equipped_items?.avatar_frame === 'frame_emperor';
+const overlaySize = isEmperor
+    ? Math.max(120, avatarSize * 3.5)
+    : Math.max(56, avatarSize * 1.75);
 
                 // Создаём новый
                 const overlay = document.createElement('div');
@@ -34671,14 +34768,14 @@ function _getSpecialFrameHTMLRaw(type, color) {
         `);
 
     // ============================================================
-    // 👑 SHADOW EMPEROR v2 — секретная админская рамка
+    // 👑 SHADOW EMPEROR v3 — драконьи крылья
     // ============================================================
     case 'emperor':
         return svgWrap('fr-emperor', `
             <defs>
                 <radialGradient id="empGl${uid}" cx="50%" cy="50%" r="50%">
                     <stop offset="50%" stop-color="#000" stop-opacity="0"/>
-                    <stop offset="82%" stop-color="#ffd700" stop-opacity="0.5"/>
+                    <stop offset="82%" stop-color="#ffd700" stop-opacity="0.45"/>
                     <stop offset="100%" stop-color="#ffd700" stop-opacity="0"/>
                 </radialGradient>
                 <linearGradient id="empGold${uid}" x1="0" y1="0" x2="0" y2="1">
@@ -34687,14 +34784,8 @@ function _getSpecialFrameHTMLRaw(type, color) {
                     <stop offset="60%"  stop-color="#ffd700"/>
                     <stop offset="100%" stop-color="#8a6a00"/>
                 </linearGradient>
-                <linearGradient id="empGoldHoriz${uid}" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%"   stop-color="#8a6a00"/>
-                    <stop offset="50%"  stop-color="#ffe066"/>
-                    <stop offset="100%" stop-color="#8a6a00"/>
-                </linearGradient>
                 <linearGradient id="empBlack${uid}" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stop-color="#2a2a2a"/>
-                    <stop offset="50%"  stop-color="#0a0a0a"/>
+                    <stop offset="0%"   stop-color="#1a1a1a"/>
                     <stop offset="100%" stop-color="#000000"/>
                 </linearGradient>
                 <radialGradient id="empEyeGlow${uid}" cx="50%" cy="50%" r="50%">
@@ -34708,77 +34799,92 @@ function _getSpecialFrameHTMLRaw(type, color) {
             <circle class="fr-glow" cx="100" cy="100" r="98" fill="url(#empGl${uid})"/>
 
             <!-- ============================================== -->
-            <!-- ДЛИННЫЕ ДЕМОНИЧЕСКИЕ КРЫЛЬЯ (выходят далеко) -->
+            <!-- ЛЕВОЕ КРЫЛО ДРАКОНА (перепончатое) -->
             <!-- ============================================== -->
-
-            <!-- Левое крыло -->
             <g class="fr-emperor-wing" data-i="0">
-                <!-- Основной каркас -->
-                <path d="M 40 100
-                         Q 5 75, -20 55
-                         Q 0 70, 10 90
-                         Q -15 80, -35 85
-                         Q -15 92, 15 100
-                         Q -15 108, -35 115
-                         Q -15 120, 10 110
-                         Q 0 130, -20 145
-                         Q 5 125, 40 100 Z"
+                <!-- Основная перепонка — большая дуга -->
+                <path d="M 45 100
+                         C 10 60, -30 40, -55 30
+                         C -40 55, -20 80, 5 95
+                         C -25 85, -50 75, -70 75
+                         C -45 90, -15 100, 15 102
+                         C -25 105, -55 110, -75 120
+                         C -45 122, -10 118, 20 110
+                         C -15 125, -40 140, -55 160
+                         C -25 150, 5 130, 40 105 Z"
                       fill="url(#empBlack${uid})"
-                      stroke="#ffd700" stroke-width="1.2"
-                      style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <!-- Золотые прожилки на крыле -->
-                <path d="M 35 100 Q 5 85 -15 70"
-                      fill="none" stroke="#ffd700" stroke-width="0.8" opacity="0.7"/>
-                <path d="M 35 100 Q 0 95 -25 92"
-                      fill="none" stroke="#ffd700" stroke-width="0.8" opacity="0.7"/>
-                <path d="M 35 100 Q 5 115 -15 130"
-                      fill="none" stroke="#ffd700" stroke-width="0.8" opacity="0.7"/>
-                <!-- Светящиеся кончики -->
-                <circle cx="-20" cy="55" r="2.5" fill="#ffd700"
+                      stroke="#ffd700" stroke-width="1.4"
+                      style="filter:drop-shadow(0 0 8px #ffd700);"/>
+                <!-- Прожилки-«пальцы» крыла -->
+                <path d="M 45 100 C 15 75, -25 50, -50 35"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <path d="M 45 100 C 15 90, -20 82, -60 80"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <path d="M 45 100 C 20 105, -20 108, -70 115"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <path d="M 45 100 C 20 115, -10 130, -45 150"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <!-- Дополнительные прожилки -->
+                <path d="M -20 55 Q -30 60 -35 65"
+                      fill="none" stroke="#ffd700" stroke-width="0.7" opacity="0.6"/>
+                <path d="M -30 85 Q -40 88 -45 92"
+                      fill="none" stroke="#ffd700" stroke-width="0.7" opacity="0.6"/>
+                <path d="M -30 110 Q -40 115 -45 120"
+                      fill="none" stroke="#ffd700" stroke-width="0.7" opacity="0.6"/>
+                <!-- Светящиеся кончики перепонок -->
+                <circle cx="-55" cy="30" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <circle cx="-35" cy="85" r="2.5" fill="#ffd700"
+                <circle cx="-70" cy="75" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <circle cx="-35" cy="115" r="2.5" fill="#ffd700"
+                <circle cx="-75" cy="120" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <circle cx="-20" cy="145" r="2.5" fill="#ffd700"
+                <circle cx="-55" cy="160" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
             </g>
 
-            <!-- Правое крыло (зеркально) -->
+            <!-- ============================================== -->
+            <!-- ПРАВОЕ КРЫЛО ДРАКОНА (зеркально) -->
+            <!-- ============================================== -->
             <g class="fr-emperor-wing" data-i="1">
-                <path d="M 160 100
-                         Q 195 75, 220 55
-                         Q 200 70, 190 90
-                         Q 215 80, 235 85
-                         Q 215 92, 185 100
-                         Q 215 108, 235 115
-                         Q 215 120, 190 110
-                         Q 200 130, 220 145
-                         Q 195 125, 160 100 Z"
+                <path d="M 155 100
+                         C 190 60, 230 40, 255 30
+                         C 240 55, 220 80, 195 95
+                         C 225 85, 250 75, 270 75
+                         C 245 90, 215 100, 185 102
+                         C 225 105, 255 110, 275 120
+                         C 245 122, 210 118, 180 110
+                         C 215 125, 240 140, 255 160
+                         C 225 150, 195 130, 160 105 Z"
                       fill="url(#empBlack${uid})"
-                      stroke="#ffd700" stroke-width="1.2"
-                      style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <path d="M 165 100 Q 195 85 215 70"
-                      fill="none" stroke="#ffd700" stroke-width="0.8" opacity="0.7"/>
-                <path d="M 165 100 Q 200 95 225 92"
-                      fill="none" stroke="#ffd700" stroke-width="0.8" opacity="0.7"/>
-                <path d="M 165 100 Q 195 115 215 130"
-                      fill="none" stroke="#ffd700" stroke-width="0.8" opacity="0.7"/>
-                <circle cx="220" cy="55" r="2.5" fill="#ffd700"
+                      stroke="#ffd700" stroke-width="1.4"
+                      style="filter:drop-shadow(0 0 8px #ffd700);"/>
+                <path d="M 155 100 C 185 75, 225 50, 250 35"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <path d="M 155 100 C 185 90, 220 82, 260 80"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <path d="M 155 100 C 180 105, 220 108, 270 115"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <path d="M 155 100 C 180 115, 210 130, 245 150"
+                      fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
+                <path d="M 220 55 Q 230 60 235 65"
+                      fill="none" stroke="#ffd700" stroke-width="0.7" opacity="0.6"/>
+                <path d="M 230 85 Q 240 88 245 92"
+                      fill="none" stroke="#ffd700" stroke-width="0.7" opacity="0.6"/>
+                <path d="M 230 110 Q 240 115 245 120"
+                      fill="none" stroke="#ffd700" stroke-width="0.7" opacity="0.6"/>
+                <circle cx="255" cy="30" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <circle cx="235" cy="85" r="2.5" fill="#ffd700"
+                <circle cx="270" cy="75" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <circle cx="235" cy="115" r="2.5" fill="#ffd700"
+                <circle cx="275" cy="120" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <circle cx="220" cy="145" r="2.5" fill="#ffd700"
+                <circle cx="255" cy="160" r="2.8" fill="#ffd700"
                         style="filter:drop-shadow(0 0 6px #ffd700);"/>
             </g>
 
             <!-- ============================================== -->
             <!-- 3 ВРАЩАЮЩИХСЯ КОЛЬЦА -->
             <!-- ============================================== -->
-
-            <!-- Внешнее: 24 золотых шипа -->
             <g class="fr-emperor-ring">
                 ${Array.from({length: 24}).map((_, i) => {
                     const a = i * 15;
@@ -34796,7 +34902,6 @@ function _getSpecialFrameHTMLRaw(type, color) {
                 }).join('')}
             </g>
 
-            <!-- Основное двойное кольцо -->
             <circle cx="100" cy="100" r="90"
                     fill="none" stroke="url(#empGold${uid})" stroke-width="3.5"
                     style="filter:drop-shadow(0 0 8px #ffd700);"/>
@@ -34804,10 +34909,10 @@ function _getSpecialFrameHTMLRaw(type, color) {
                     fill="none" stroke="#000" stroke-width="1.4"
                     opacity="0.85"/>
             <circle cx="100" cy="100" r="82"
-                    fill="none" stroke="url(#empGoldHoriz${uid})" stroke-width="2"
+                    fill="none" stroke="#ffd700" stroke-width="1.6"
+                    opacity="0.75"
                     style="filter:drop-shadow(0 0 5px #ffd700);"/>
 
-            <!-- Среднее: обратное вращение, 12 ромбов -->
             <g class="fr-emperor-ring-rev">
                 ${Array.from({length: 12}).map((_, i) => {
                     const a = i * 30;
@@ -34821,52 +34926,65 @@ function _getSpecialFrameHTMLRaw(type, color) {
                 }).join('')}
             </g>
 
-            <!-- Внутреннее: пунктирное кольцо -->
             <circle cx="100" cy="100" r="66"
                     fill="none" stroke="#ffd700" stroke-width="0.8"
                     stroke-dasharray="3 6" opacity="0.65"/>
 
             <!-- ============================================== -->
-            <!-- КОРОНА СВЕРХУ (чёрная с золотом) -->
+            <!-- КОРОНА — БОЛЬШАЯ, ЧЁРНАЯ С ЗОЛОТОМ -->
             <!-- ============================================== -->
             <g class="fr-emperor-crown">
-                <!-- Основание короны -->
-                <rect x="70" y="22" width="60" height="8"
+                <!-- Основание -->
+                <rect x="62" y="14" width="76" height="12"
                       fill="url(#empGold${uid})"
-                      stroke="#8a6a00" stroke-width="0.8"/>
-                <!-- 5 шипов короны -->
-                <path d="M 72 22 L 78 2  L 84 22 Z"
+                      stroke="#8a6a00" stroke-width="1"/>
+                <!-- Чёрная внутренняя полоса -->
+                <rect x="64" y="16" width="72" height="8"
                       fill="url(#empBlack${uid})"
-                      stroke="#ffd700" stroke-width="1"
-                      style="filter:drop-shadow(0 0 4px #ffd700);"/>
-                <path d="M 86 22 L 93 -2 L 100 22 Z"
-                      fill="url(#empBlack${uid})"
-                      stroke="#ffd700" stroke-width="1.2"
-                      style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <path d="M 100 22 L 107 -2 L 114 22 Z"
+                      stroke="#ffd700" stroke-width="0.5"/>
+                <!-- 5 высоких шипов -->
+                <path d="M 64 14 L 72 -12 L 80 14 Z"
                       fill="url(#empBlack${uid})"
                       stroke="#ffd700" stroke-width="1.2"
                       style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <path d="M 116 22 L 122 2 L 128 22 Z"
+                <path d="M 78 14 L 87 -20 L 96 14 Z"
                       fill="url(#empBlack${uid})"
-                      stroke="#ffd700" stroke-width="1"
-                      style="filter:drop-shadow(0 0 4px #ffd700);"/>
-                <!-- Жемчужины на шипах -->
-                <circle cx="78" cy="2" r="2.5" fill="#ffd700"
-                        style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <circle cx="93" cy="-2" r="3" fill="#fff5cc"
+                      stroke="#ffd700" stroke-width="1.4"
+                      style="filter:drop-shadow(0 0 8px #ffd700);"/>
+                <path d="M 94 14 L 100 -24 L 106 14 Z"
+                      fill="url(#empBlack${uid})"
+                      stroke="#ffd700" stroke-width="1.6"
+                      style="filter:drop-shadow(0 0 10px #ffd700);"/>
+                <path d="M 104 14 L 113 -20 L 122 14 Z"
+                      fill="url(#empBlack${uid})"
+                      stroke="#ffd700" stroke-width="1.4"
+                      style="filter:drop-shadow(0 0 8px #ffd700);"/>
+                <path d="M 120 14 L 128 -12 L 136 14 Z"
+                      fill="url(#empBlack${uid})"
+                      stroke="#ffd700" stroke-width="1.2"
+                      style="filter:drop-shadow(0 0 6px #ffd700);"/>
+                <!-- Жемчужины-звёзды на шипах -->
+                <circle cx="72" cy="-12" r="3" fill="#ffd700"
                         style="filter:drop-shadow(0 0 8px #ffd700);"/>
-                <circle cx="107" cy="-2" r="3" fill="#fff5cc"
+                <circle cx="87" cy="-20" r="3.5" fill="#fff5cc"
+                        style="filter:drop-shadow(0 0 10px #ffd700);"/>
+                <circle cx="100" cy="-24" r="4" fill="#fff5cc"
+                        style="filter:drop-shadow(0 0 14px #ffd700);"/>
+                <circle cx="113" cy="-20" r="3.5" fill="#fff5cc"
+                        style="filter:drop-shadow(0 0 10px #ffd700);"/>
+                <circle cx="128" cy="-12" r="3" fill="#ffd700"
                         style="filter:drop-shadow(0 0 8px #ffd700);"/>
-                <circle cx="122" cy="2" r="2.5" fill="#ffd700"
-                        style="filter:drop-shadow(0 0 6px #ffd700);"/>
-                <!-- Камни на основании -->
-                <circle cx="80" cy="26" r="2" fill="#ff2e6d"
-                        style="filter:drop-shadow(0 0 4px #ff2e6d);"/>
-                <circle cx="100" cy="26" r="2.8" fill="#a78bfa"
-                        style="filter:drop-shadow(0 0 6px #a78bfa);"/>
-                <circle cx="120" cy="26" r="2" fill="#00e08a"
-                        style="filter:drop-shadow(0 0 4px #00e08a);"/>
+                <!-- Драгоценные камни -->
+                <circle cx="72" cy="20" r="2.5" fill="#ff2e6d"
+                        style="filter:drop-shadow(0 0 5px #ff2e6d);"/>
+                <circle cx="86" cy="20" r="2.5" fill="#00e08a"
+                        style="filter:drop-shadow(0 0 5px #00e08a);"/>
+                <circle cx="100" cy="20" r="3.2" fill="#a78bfa"
+                        style="filter:drop-shadow(0 0 7px #a78bfa);"/>
+                <circle cx="114" cy="20" r="2.5" fill="#4fc3f7"
+                        style="filter:drop-shadow(0 0 5px #4fc3f7);"/>
+                <circle cx="128" cy="20" r="2.5" fill="#ffd700"
+                        style="filter:drop-shadow(0 0 5px #ffd700);"/>
             </g>
 
             <!-- ============================================== -->
@@ -34881,9 +34999,7 @@ function _getSpecialFrameHTMLRaw(type, color) {
             <circle cx="80" cy="100" r="1.5" fill="#fff5cc"/>
             <circle cx="120" cy="100" r="1.5" fill="#fff5cc"/>
 
-            <!-- ============================================== -->
-            <!-- ПУЛЬСИРУЮЩЕЕ ЯДРО СНИЗУ -->
-            <!-- ============================================== -->
+            <!-- ЯДРО СНИЗУ -->
             <circle class="fr-emperor-core" cx="100" cy="140" r="7"
                     fill="url(#empBlack${uid})"
                     stroke="#ffd700" stroke-width="1.4"
@@ -34891,9 +35007,7 @@ function _getSpecialFrameHTMLRaw(type, color) {
             <circle cx="100" cy="140" r="3" fill="#ffd700"
                     style="filter:drop-shadow(0 0 8px #ffd700);"/>
 
-            <!-- ============================================== -->
             <!-- 16 ВСПЛЫВАЮЩИХ ИСКР -->
-            <!-- ============================================== -->
             ${Array.from({length: 16}).map((_, i) => {
                 const a = i * 22.5;
                 const rad = a * Math.PI / 180;
@@ -34905,9 +35019,7 @@ function _getSpecialFrameHTMLRaw(type, color) {
                                style="filter:drop-shadow(0 0 6px #ffd700);"/>`;
             }).join('')}
 
-            <!-- ============================================== -->
             <!-- 12 ЗОЛОТЫХ ЛУЧЕЙ -->
-            <!-- ============================================== -->
             ${Array.from({length: 12}).map((_, i) => {
                 const a = i * 30;
                 const rad = a * Math.PI / 180;
