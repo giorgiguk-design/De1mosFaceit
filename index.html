@@ -13539,454 +13539,682 @@ button[disabled] {
 }
 
 /* ============================================================ */
-/* 🎨 СПЕЦ-РАМКИ v8 — заходят на аватар                         */
+/* 🎨 СПЕЦ-РАМКИ v9 — новые, единый дизайн                      */
 /* ============================================================ */
 
 .special-frame-overlay {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 170px;
-    height: 170px;
+    transform: translate(-50%, -50%) translateZ(0);
+    width: 110px;
+    height: 110px;
     pointer-events: none;
     z-index: 4;
     animation: frameFloatIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
     overflow: visible;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
-.special-frame-overlay svg {
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    display: block;
-}
+
 .phc-avatar .special-frame-overlay {
     width: 110px;
     height: 110px;
 }
+
 .pm2-avatar-wrap .special-frame-overlay {
     width: 104px;
     height: 104px;
 }
-.special-frame-overlay svg {
+
+.special-frame-overlay svg,
+.fr-svg {
     width: 100%;
     height: 100%;
     overflow: visible;
     display: block;
 }
+
+/* В лидерборде и списках — только размер, без изменения пропорций */
+.list-frame-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateZ(0);
+    pointer-events: none;
+    z-index: 5;
+    overflow: visible;
+    animation: listFrameIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.list-frame-overlay svg,
+.list-frame-overlay .fr-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+}
+
 @keyframes frameFloatIn {
     0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(-20deg); }
     55%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
     100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
 }
 
+@keyframes listFrameIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.75); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
 /* ============================================================ */
-/* 🔄 СИНХРОНИЗАЦИЯ АНИМАЦИЙ РАМОК                              */
-/* Синхронизируем только базовые кольца/орбы,                    */
-/* не трогая уникальные элементы (щупальца, языки, чешуйки)      */
+/* 🎬 УНИВЕРСАЛЬНЫЕ АНИМАЦИИ — работают для ВСЕХ рамок           */
 /* ============================================================ */
 
-/* Единая точка отсчёта для всех рамок */
-.special-frame-overlay,
-.list-frame-overlay,
-.frame-preview-overlay {
-    --sync-phase: 0s;
+/* Пульсация свечения */
+@keyframes fr-glow {
+    0%, 100% { opacity: 0.7; }
+    50%      { opacity: 1; }
+}
+.fr-glow { transform-origin: center; animation: fr-glow 3.5s ease-in-out infinite; }
+
+/* Вращение — общее для орбов и спиралей */
+@keyframes fr-rotate {
+    to { transform: rotate(360deg); }
+}
+.fr-orbs-rotate,
+.fr-gal-spin,
+.fr-scale-ring {
+    transform-origin: 100px 100px;
+    animation: fr-rotate 20s linear infinite;
+}
+.fr-gal-spin-rev {
+    transform-origin: 100px 100px;
+    animation: fr-rotate 28s linear infinite reverse;
 }
 
-.profile-avatar-wrap,
-.pm2-avatar-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    isolation: isolate;
+/* Кольца — медленное вращение */
+.fr-ring-1 { transform-origin: 100px 100px; animation: fr-rotate 40s linear infinite; }
+.fr-ring-2 { transform-origin: 100px 100px; animation: fr-rotate 55s linear infinite reverse; }
+
+/* Лёгкое покачивание центра */
+@keyframes fr-pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.08); }
 }
-.profile-avatar,
-.pm2-avatar {
-    position: relative;
-    z-index: 2;   /* было 3 */
+.fr-ring-in,
+.fr-center-dot,
+.fr-core,
+.fr-center-bolt,
+.fr-tinner { transform-origin: 100px 100px; animation: fr-pulse 2.8s ease-in-out infinite; }
+
+/* Мерцание */
+@keyframes fr-flicker {
+    0%, 100% { opacity: 0.4; }
+    25%      { opacity: 1; }
+    40%      { opacity: 0.6; }
+    55%      { opacity: 1; }
+    80%      { opacity: 0.7; }
 }
 
-/* Keyframes */
-@keyframes fsSpin      { to { transform: rotate(360deg); } }
-@keyframes fsSpinRev   { to { transform: rotate(-360deg); } }
-@keyframes fsPulse     { 0%,100% { transform: scale(1); opacity: .85; } 50% { transform: scale(1.06); opacity: 1; } }
-@keyframes fsFloat     { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes fsFlicker   { 0%,100% { opacity: .6; } 25% { opacity: 1; } 40% { opacity: .7; } 55% { opacity: 1; } 80% { opacity: .8; } }
-@keyframes orbFlow     { to { transform: rotate(360deg); } }
-@keyframes orbTrail    { 0% { opacity: 0; transform: scale(0.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.7); } }
-
-/* Универсальные классы (используются в каждом SVG) */
-.fs-halo    { transform-origin: center; animation: fsPulse 3.4s ease-in-out infinite; }
-.fs-ring-1  { transform-origin: 100px 100px; animation: fsSpin 22s linear infinite; }
-.fs-ring-2  { transform-origin: 100px 100px; animation: fsSpinRev 16s linear infinite; }
-.fs-ring-3  { transform-origin: 100px 100px; animation: fsSpin 30s linear infinite; }
-.fs-orbs    { transform-origin: 100px 100px; animation: orbFlow 14s linear infinite; }
-.fs-orbs-r  { transform-origin: 100px 100px; animation: orbFlow 20s linear infinite reverse; }
-.fs-orb     { transform-origin: center; animation: orbTrail 2.6s ease-in-out infinite; }
-.fs-orb:nth-child(odd) { animation-delay: .4s; }
-.fs-orb:nth-child(3n)  { animation-delay: .8s; }
-.fs-orb:nth-child(5n)  { animation-delay: 1.2s; }
-.fs-pulse   { transform-origin: center; animation: fsPulse 2.4s ease-in-out infinite; }
-.fs-float   { transform-origin: center; animation: fsFloat 2.8s ease-in-out infinite; }
+/* Плавающая деталь */
+@keyframes fr-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+.fr-mask-plume,
+.fr-tri-prongs,
+.fr-phx-tail,
+.fr-snake-head,
+.fr-bomb { transform-origin: 100px 100px; animation: fr-float 3s ease-in-out infinite; }
 
 /* ============================================================ */
 /* 🐙 ОСЬМИНОГ                                                    */
 /* ============================================================ */
-.fs-octopus .octo-tentacle {
-    transform-origin: var(--ox) var(--oy);
-    animation: octoTentacle 3.6s ease-in-out infinite;
+.fr-tentacle {
+    transform-origin: var(--ox, 100px) var(--oy, 100px);
+    animation: fr-tentacle 3.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.6s);
 }
-.fs-octopus .octo-tentacle:nth-child(1) { animation-delay: 0s; }
-.fs-octopus .octo-tentacle:nth-child(2) { animation-delay: .7s; }
-.fs-octopus .octo-tentacle:nth-child(3) { animation-delay: 1.4s; }
-.fs-octopus .octo-tentacle:nth-child(4) { animation-delay: 2.1s; }
-.fs-octopus .octo-tentacle:nth-child(5) { animation-delay: 2.8s; }
-@keyframes octoTentacle {
-    0%,100% { transform: rotate(0deg) scale(1); }
-    50%     { transform: rotate(8deg) scale(1.1); }
+@keyframes fr-tentacle {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    50%      { transform: rotate(8deg) scale(1.05); }
 }
 
 /* ============================================================ */
 /* 🐉 ДРАКОН                                                      */
 /* ============================================================ */
-.fs-dragon .drag-scale {
-    transform-origin: var(--sx) var(--sy);
-    animation: dragScale 2.8s ease-in-out infinite;
+.fr-scale {
+    transform-origin: inherit;
+    animation: fr-scale 2.8s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.15s);
 }
-.fs-dragon .drag-scale:nth-child(odd) { animation-delay: .5s; }
-.fs-dragon .drag-scale:nth-child(3n)  { animation-delay: 1s; }
-@keyframes dragScale {
-    0%,100% { opacity: .5; transform: scale(1) rotate(0deg); }
-    50%     { opacity: 1; transform: scale(1.35) rotate(5deg); filter: drop-shadow(0 0 4px currentColor); }
+@keyframes fr-scale {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.35); }
 }
-.fs-dragon .drag-eye {
-    animation: fsFlicker 1.4s ease-in-out infinite;
+
+.fr-dragon-breath {
+    transform-origin: 100px 55px;
+    animation: fr-breath 3s ease-in-out infinite;
+}
+@keyframes fr-breath {
+    0%, 100% { transform: scale(1) translateY(0); opacity: 0.5; }
+    50%      { transform: scale(1.15) translateY(-3px); opacity: 0.9; }
+}
+
+.fr-spark {
+    transform-origin: center;
+    animation: fr-spark 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.3s);
+}
+@keyframes fr-spark {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; transform: scale(1.3); }
 }
 
 /* ============================================================ */
 /* 🔥 ОГОНЬ                                                       */
 /* ============================================================ */
-.fs-fire .fire-flame {
-    transform-origin: var(--fx) var(--fy);
-    animation: fireFlame 1.3s ease-in-out infinite;
+.fr-flame {
+    transform-origin: var(--ox, 100px) var(--oy, 100px);
+    animation: fr-flame 1.5s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.09s);
 }
-.fs-fire .fire-flame:nth-child(odd) { animation-delay: .18s; }
-.fs-fire .fire-flame:nth-child(3n)  { animation-delay: .36s; }
-.fs-fire .fire-flame:nth-child(5n)  { animation-delay: .54s; }
-@keyframes fireFlame {
-    0%,100% { transform: scale(1) rotate(0deg); opacity: .8; }
-    50%     { transform: scale(1.5) rotate(6deg); opacity: 1; }
+@keyframes fr-flame {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+    50%      { transform: scale(1.35) rotate(4deg); opacity: 1; }
 }
-.fs-fire .fire-spark {
+
+.fr-ember {
     transform-origin: center;
-    animation: fireSpark 2.6s ease-in-out infinite;
+    animation: fr-ember 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.4s);
 }
-@keyframes fireSpark {
+@keyframes fr-ember {
     0%   { opacity: 0; transform: translateY(0) scale(0.5); }
-    25%  { opacity: 1; }
-    100% { opacity: 0; transform: translateY(-30px) scale(1.5); }
+    30%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-16px) scale(1.4); }
 }
 
 /* ============================================================ */
 /* 🐍 ЗМЕЯ                                                        */
 /* ============================================================ */
-.fs-snake .snake-body {
+.fr-snake-body {
     transform-origin: 100px 100px;
-    animation: snakeSlither 5s linear infinite;
-    stroke-dasharray: 60 22;
+    animation: fr-snake-slither 5s linear infinite;
+    stroke-dasharray: 80 40;
 }
-@keyframes snakeSlither {
-    0%   { stroke-dashoffset: 0;    transform: rotate(0deg); }
-    100% { stroke-dashoffset: -164; transform: rotate(360deg); }
-}
-
-/* ============================================================ */
-/* 🛡️ СПЕЦНАЗ                                                     */
-/* ============================================================ */
-.fs-ct .ct-dot {
-    transform-origin: var(--cx) var(--cy);
-    animation: ctDot 2s ease-in-out infinite;
-}
-.fs-ct .ct-dot:nth-child(odd) { animation-delay: .5s; }
-.fs-ct .ct-dot:nth-child(3n)  { animation-delay: 1s; }
-@keyframes ctDot {
-    0%,100% { opacity: .5; transform: scale(1); }
-    50%     { opacity: 1; transform: scale(1.8); filter: drop-shadow(0 0 6px currentColor); }
-}
-.fs-ct .ct-scope {
-    transform-origin: var(--sx) var(--sy);
-    animation: ctScope 2.6s ease-in-out infinite;
-}
-.fs-ct .ct-scope:nth-child(even) { animation-delay: 1.3s; }
-@keyframes ctScope {
-    0%,100% { transform: scale(1); opacity: .8; }
-    50%     { transform: scale(1.4); opacity: 1; }
+@keyframes fr-snake-slither {
+    0%   { stroke-dashoffset: 0; transform: rotate(0deg); }
+    100% { stroke-dashoffset: -240; transform: rotate(360deg); }
 }
 
 /* ============================================================ */
-/* 💣 ТЕРРОРИСТ                                                   */
+/* 🛡️ СТ / 💣 T                                                  */
 /* ============================================================ */
-.fs-t .t-flame {
-    transform-origin: var(--fx) var(--fy);
-    animation: tFlame 1.2s ease-in-out infinite;
+.fr-scope {
+    transform-origin: inherit;
+    animation: fr-scope 2.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.4s);
 }
-.fs-t .t-flame:nth-child(odd) { animation-delay: .3s; }
-.fs-t .t-flame:nth-child(3n)  { animation-delay: .6s; }
-@keyframes tFlame {
-    0%,100% { opacity: .6; transform: scale(1); }
-    50%     { opacity: 1; transform: scale(1.5); }
+@keyframes fr-scope {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50%      { transform: scale(1.18); opacity: 1; }
 }
-.fs-t .t-fuse-spark {
-    animation: tFuseSpark 0.6s ease-in-out infinite;
+
+.fr-tflame {
+    transform-origin: inherit;
+    animation: fr-tflame 1.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.1s);
 }
-@keyframes tFuseSpark {
-    0%,100% { opacity: .6; r: 2.5; }
-    50%     { opacity: 1; r: 5; filter: drop-shadow(0 0 10px #ffcc00); }
+@keyframes fr-tflame {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50%      { transform: scale(1.4); opacity: 1; }
+}
+
+.fr-fuse {
+    animation: fr-fuse 0.5s ease-in-out infinite;
+}
+@keyframes fr-fuse {
+    0%, 100% { opacity: 0.6; }
+    50%      { opacity: 1; transform: scale(1.4); }
 }
 
 /* ============================================================ */
 /* 💎 КРИСТАЛЛ                                                    */
 /* ============================================================ */
-.fs-crystal .cryst-facet {
-    transform-origin: var(--cx) var(--cy);
-    animation: crystFacet 3s ease-in-out infinite;
+.fr-facet {
+    animation: fr-facet 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.2s);
 }
-.fs-crystal .cryst-facet:nth-child(odd) { animation-delay: .7s; }
-@keyframes crystFacet {
-    0%,100% { opacity: .4; }
-    50%     { opacity: 1; filter: drop-shadow(0 0 7px currentColor); }
+@keyframes fr-facet {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; filter: drop-shadow(0 0 5px currentColor); }
+}
+
+.fr-crystal-core {
+    transform-origin: 100px 100px;
+    animation: fr-crystal-core 4s ease-in-out infinite;
+}
+@keyframes fr-crystal-core {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50%      { transform: scale(1.08); opacity: 1; }
 }
 
 /* ============================================================ */
 /* ⚡ МОЛНИЯ                                                      */
 /* ============================================================ */
-.fs-thunder .thunder-bolt {
-    transform-origin: var(--bx) var(--by);
-    animation: thunderBolt 1.7s ease-in-out infinite;
+.fr-bolt {
+    animation: fr-bolt 1.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.2s);
 }
-.fs-thunder .thunder-bolt:nth-child(odd) { animation-delay: .55s; }
-.fs-thunder .thunder-bolt:nth-child(3n)  { animation-delay: 1.1s; }
-@keyframes thunderBolt {
-    0%,100% { opacity: .4; transform: scale(1); }
-    15%     { opacity: 1; transform: scale(1.5); filter: drop-shadow(0 0 10px #7dd3fc); }
-    22%     { opacity: .3; transform: scale(1); }
-    30%     { opacity: 1; transform: scale(1.4); }
-    50%     { opacity: .7; transform: scale(1); }
+@keyframes fr-bolt {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    20%      { opacity: 1; transform: scale(1.4); }
+    30%      { opacity: 0.4; transform: scale(1); }
+    40%      { opacity: 1; transform: scale(1.3); }
+    60%      { opacity: 0.8; transform: scale(1); }
 }
-.fs-thunder .thunder-ring {
+
+.fr-thunder-ring {
     transform-origin: 100px 100px;
-    animation: thunderRing 0.9s ease-in-out infinite;
+    animation: fr-thunder-ring 0.8s ease-in-out infinite;
 }
-@keyframes thunderRing {
-    0%,100% { stroke-width: 3; opacity: .8; }
-    50%     { stroke-width: 4.5; opacity: 1; }
+@keyframes fr-thunder-ring {
+    0%, 100% { stroke-width: 3; opacity: 0.85; }
+    50%      { stroke-width: 4.5; opacity: 1; }
 }
 
 /* ============================================================ */
 /* 🌸 САКУРА                                                      */
 /* ============================================================ */
-.fs-sakura .sakura-petal {
-    transform-origin: var(--px) var(--py);
-    animation: sakuraPetal 3.8s ease-in-out infinite;
+.fr-petal {
+    animation: fr-petal 3.6s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.15s);
 }
-.fs-sakura .sakura-petal:nth-child(odd) { animation-delay: .6s; }
-.fs-sakura .sakura-petal:nth-child(3n)  { animation-delay: 1.2s; }
-@keyframes sakuraPetal {
-    0%,100% { opacity: .8; transform: translate(0,0) rotate(0deg) scale(1); }
-    50%     { opacity: 1; transform: translate(0,-8px) rotate(30deg) scale(1.2); }
+@keyframes fr-petal {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.85; }
+    50%      { transform: translate(0, -5px) rotate(25deg) scale(1.15); opacity: 1; }
 }
-.fs-sakura .sakura-flower {
-    transform-origin: var(--fx) var(--fy);
-    animation: sakuraFlower 3s ease-in-out infinite;
+
+.fr-flower {
+    animation: fr-flower 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.5s);
 }
-.fs-sakura .sakura-flower:nth-child(even) { animation-delay: 1.5s; }
-@keyframes sakuraFlower {
-    0%,100% { opacity: .7; transform: scale(1) rotate(0deg); }
-    50%     { opacity: 1; transform: scale(1.35) rotate(180deg); filter: drop-shadow(0 0 8px #ffb7d5); }
+@keyframes fr-flower {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.75; }
+    50%      { transform: scale(1.3) rotate(180deg); opacity: 1; }
 }
 
 /* ============================================================ */
 /* 💀 ЧЕРЕП                                                       */
 /* ============================================================ */
-.fs-skull .skull-eye {
+.fr-rib {
+    animation: fr-rib 2.2s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.08s);
+}
+@keyframes fr-rib {
+    0%, 100% { opacity: 0.5; stroke-width: 2; }
+    50%      { opacity: 1; stroke-width: 3; }
+}
+
+.fr-eye {
     transform-origin: center;
-    animation: skullEye 1.8s ease-in-out infinite;
+    animation: fr-eye 1.8s ease-in-out infinite;
 }
-@keyframes skullEye {
-    0%,100% { opacity: .3; transform: scale(1); }
-    50%     { opacity: 1; transform: scale(2.4); filter: drop-shadow(0 0 10px #a78bfa); }
+@keyframes fr-eye {
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.8); }
 }
-.fs-skull .skull-rib {
-    transform-origin: var(--rx) var(--ry);
-    animation: skullRib 2.2s ease-in-out infinite;
+
+.fr-particle {
+    animation: fr-particle 3.2s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.4s);
 }
-.fs-skull .skull-rib:nth-child(odd) { animation-delay: .4s; }
-@keyframes skullRib {
-    0%,100% { opacity: .5; stroke-width: 1.5; }
-    50%     { opacity: 1; stroke-width: 2.8; }
-}
-.fs-skull .skull-particle {
-    transform-origin: center;
-    animation: skullParticle 3.4s ease-in-out infinite;
-}
-@keyframes skullParticle {
+@keyframes fr-particle {
     0%   { opacity: 0; transform: translateY(0) scale(0.5); }
     30%  { opacity: 1; }
-    100% { opacity: 0; transform: translateY(-22px) scale(1.5); }
+    100% { opacity: 0; transform: translateY(-18px) scale(1.4); }
 }
 
 /* ============================================================ */
 /* 🦅 ФЕНИКС                                                      */
 /* ============================================================ */
-.fs-phoenix .phx-fire {
-    transform-origin: var(--fx) var(--fy);
-    animation: phxFire 1.8s ease-in-out infinite;
+.fr-phx-fire {
+    transform-origin: center;
+    animation: fr-phx 1.8s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.15s);
 }
-.fs-phoenix .phx-fire:nth-child(even) { animation-delay: .9s; }
-@keyframes phxFire {
-    0%,100% { opacity: .5; transform: scale(1) translateY(0); }
-    50%     { opacity: 1; transform: scale(1.6) translateY(-6px); }
-}
-.fs-phoenix .phx-tail {
-    transform-origin: 100px 150px;
-    animation: phxTail 3.2s ease-in-out infinite;
-}
-@keyframes phxTail {
-    0%,100% { transform: rotate(-5deg); }
-    50%     { transform: rotate(7deg); }
+@keyframes fr-phx {
+    0%, 100% { opacity: 0.5; transform: scale(1) translateY(0); }
+    50%      { opacity: 1; transform: scale(1.5) translateY(-4px); }
 }
 
 /* ============================================================ */
 /* ❄️ ЛЕДЯНАЯ                                                     */
 /* ============================================================ */
-.fs-ice .ice-crystal {
-    transform-origin: var(--cx) var(--cy);
-    animation: iceCrystal 2.8s ease-in-out infinite;
+.fr-ice-ring-out { transform-origin: 100px 100px; animation: fr-rotate 30s linear infinite; }
+.fr-ice-ring-in  { transform-origin: 100px 100px; animation: fr-rotate 22s linear infinite reverse; }
+
+.fr-ice-crystal {
+    animation: fr-ice-crystal 2.8s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.3s);
 }
-.fs-ice .ice-crystal:nth-child(odd) { animation-delay: .65s; }
-@keyframes iceCrystal {
-    0%,100% { opacity: .55; transform: scale(1); }
-    50%     { opacity: 1; transform: scale(1.65); filter: drop-shadow(0 0 8px #7dd3fc); }
+@keyframes fr-ice-crystal {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.55); }
 }
-.fs-ice .ice-spin     { transform-origin: 100px 100px; animation: fsSpin 22s linear infinite; }
-.fs-ice .ice-spin-rev { transform-origin: 100px 100px; animation: fsSpinRev 16s linear infinite; }
+
+.fr-snowflake {
+    transform-origin: 100px 100px;
+    animation: fr-snowflake 12s linear infinite;
+}
+@keyframes fr-snowflake {
+    to { transform: rotate(360deg); }
+}
 
 /* ============================================================ */
 /* 🌟 ЗВЁЗДНАЯ                                                    */
 /* ============================================================ */
-.fs-star .star-blink {
-    transform-origin: center;
-    animation: starBlink 2.2s ease-in-out infinite;
+.fr-star {
+    transform-origin: inherit;
+    animation: fr-star 2.2s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.14s);
 }
-.fs-star .star-blink:nth-child(odd) { animation-delay: .55s; }
-.fs-star .star-blink:nth-child(3n)  { animation-delay: 1.1s; }
-@keyframes starBlink {
-    0%,100% { opacity: .4; transform: scale(1) rotate(0deg); }
-    50%     { opacity: 1; transform: scale(1.9) rotate(45deg); filter: drop-shadow(0 0 10px #fde047); }
+@keyframes fr-star {
+    0%, 100% { opacity: 0.4; transform: scale(1) rotate(0deg); }
+    50%      { opacity: 1; transform: scale(1.7) rotate(45deg); }
 }
 
 /* ============================================================ */
 /* 💧 АКВА                                                        */
 /* ============================================================ */
-.fs-aqua .aqua-drop {
-    transform-origin: var(--dx) var(--dy);
-    animation: aquaDrop 2.8s ease-in-out infinite;
+.fr-drop {
+    animation: fr-drop 2.8s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.22s);
 }
-.fs-aqua .aqua-drop:nth-child(odd) { animation-delay: .7s; }
-@keyframes aquaDrop {
-    0%,100% { opacity: .7; transform: translateY(0) scale(1); }
-    50%     { opacity: 1; transform: translateY(9px) scale(1.35); filter: drop-shadow(0 0 6px #4fc3f7); }
+@keyframes fr-drop {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.75; }
+    50%      { transform: translateY(6px) scale(1.25); opacity: 1; }
 }
-.fs-aqua .aqua-wave {
-    animation: aquaWave 3.4s ease-in-out infinite;
+
+.fr-wave {
+    animation: fr-wave 3.4s ease-in-out infinite;
 }
-@keyframes aquaWave {
-    0%,100% { transform: translateX(0); opacity: .6; }
-    50%     { transform: translateX(14px); opacity: 1; }
+@keyframes fr-wave {
+    0%, 100% { transform: translateX(0); opacity: 0.6; }
+    50%      { transform: translateX(10px); opacity: 1; }
+}
+
+.fr-drop-center {
+    transform-origin: 100px 100px;
+    animation: fr-drop-center 3s ease-in-out infinite;
+}
+@keyframes fr-drop-center {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50%      { transform: scale(1.06); opacity: 1; }
 }
 
 /* ============================================================ */
 /* 🌪️ ВИХРЬ                                                      */
 /* ============================================================ */
-.fs-vortex .vtx-arc {
+.fr-vtx {
     transform-origin: 100px 100px;
-    animation: vtxSpin 4.4s linear infinite;
+    animation: fr-vtx 4.4s linear infinite;
 }
-.fs-vortex .vtx-arc:nth-child(2) { animation-duration: 5.4s; animation-direction: reverse; }
-.fs-vortex .vtx-arc:nth-child(3) { animation-duration: 3.6s; }
-.fs-vortex .vtx-arc:nth-child(4) { animation-duration: 5.8s; animation-direction: reverse; }
-@keyframes vtxSpin {
-    0%   { transform: rotate(0deg); opacity: .6; }
+.fr-vtx[data-i="1"] { animation-duration: 5.4s; animation-direction: reverse; }
+.fr-vtx[data-i="2"] { animation-duration: 3.6s; }
+.fr-vtx[data-i="3"] { animation-duration: 5.8s; animation-direction: reverse; }
+.fr-vtx[data-i="4"] { animation-duration: 6.6s; }
+@keyframes fr-vtx {
+    0%   { transform: rotate(0deg); opacity: 0.6; }
     50%  { opacity: 1; }
-    100% { transform: rotate(360deg); opacity: .6; }
+    100% { transform: rotate(360deg); opacity: 0.6; }
 }
 
 /* ============================================================ */
 /* 🦂 СКОРПИОН                                                    */
 /* ============================================================ */
-.fs-scorpion .scorp-leg {
-    transform-origin: var(--lx) var(--ly);
-    animation: scorpLeg 1.2s ease-in-out infinite;
+.fr-scorp-leg {
+    animation: fr-scorp-leg 1.2s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.12s);
 }
-.fs-scorpion .scorp-leg:nth-child(odd) { animation-delay: .3s; }
-.fs-scorpion .scorp-leg:nth-child(3n)  { animation-delay: .6s; }
-@keyframes scorpLeg {
-    0%,100% { transform: rotate(-6deg); }
-    50%     { transform: rotate(8deg); }
+@keyframes fr-scorp-leg {
+    0%, 100% { transform: rotate(-5deg); }
+    50%      { transform: rotate(7deg); }
 }
-.fs-scorpion .scorp-tail {
-    transform-origin: var(--tx) var(--ty);
-    animation: scorpTail 3s ease-in-out infinite;
+
+.fr-scorp-tail {
+    animation: fr-scorp-tail 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.2s);
 }
-@keyframes scorpTail {
-    0%,100% { transform: rotate(0deg); }
-    50%     { transform: rotate(var(--tr, 6deg)); }
+@keyframes fr-scorp-tail {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(6deg); }
+}
+
+.fr-sting {
+    transform-origin: 130px 50px;
+    animation: fr-sting 2s ease-in-out infinite;
+}
+@keyframes fr-sting {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.25); filter: drop-shadow(0 0 6px currentColor); }
 }
 
 /* ============================================================ */
 /* 🎭 МАСКА                                                       */
 /* ============================================================ */
-.fs-mask .mask-dot {
-    transform-origin: var(--dx) var(--dy);
-    animation: maskDot 2.6s ease-in-out infinite;
-}
-.fs-mask .mask-dot:nth-child(odd) { animation-delay: .6s; }
-.fs-mask .mask-dot:nth-child(3n)  { animation-delay: 1.2s; }
-@keyframes maskDot {
-    0%,100% { opacity: .5; transform: translateY(0) scale(1); }
-    50%     { opacity: 1; transform: translateY(-6px) scale(1.6); filter: drop-shadow(0 0 6px currentColor); }
-}
-.fs-mask .mask-shape {
+.fr-mask-shape {
     transform-origin: 100px 100px;
-    animation: maskShape 3.6s ease-in-out infinite;
+    animation: fr-mask-shape 3.6s ease-in-out infinite;
 }
-@keyframes maskShape {
-    0%,100% { transform: scale(1) rotate(0deg); }
-    50%     { transform: scale(1.04) rotate(1.5deg); }
+@keyframes fr-mask-shape {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50%      { transform: scale(1.03) rotate(1.5deg); }
 }
 
 /* ============================================================ */
 /* 🔱 ТРЕЗУБЕЦ                                                    */
 /* ============================================================ */
-.fs-trident .tri-orb {
-    transform-origin: center;
-    animation: triOrb 2.2s ease-in-out infinite;
+.fr-tri-staff {
+    transform-origin: 100px 100px;
+    animation: fr-tri-staff 2.4s ease-in-out infinite;
 }
-.fs-trident .tri-orb:nth-child(even) { animation-delay: 1.1s; }
-@keyframes triOrb {
-    0%,100% { opacity: .5; transform: scale(1); }
-    50%     { opacity: 1; transform: scale(1.7); filter: drop-shadow(0 0 8px currentColor); }
-}
-.fs-trident .tri-staff {
-    animation: triStaff 2.4s ease-in-out infinite;
-}
-@keyframes triStaff {
-    0%,100% { filter: drop-shadow(0 0 4px currentColor); }
-    50%     { filter: drop-shadow(0 0 14px currentColor); }
+@keyframes fr-tri-staff {
+    0%, 100% { filter: drop-shadow(0 0 3px currentColor); }
+    50%      { filter: drop-shadow(0 0 12px currentColor); }
 }
 
+.fr-tri-tip {
+    transform-origin: center;
+    animation: fr-tri-tip 2s ease-in-out infinite;
+}
+@keyframes fr-tri-tip {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.5); }
+}
+
+/* ============================================================ */
+/* 🌊 ВОЛНЫ                                                       */
+/* ============================================================ */
+.fr-wave-flow {
+    animation: fr-wave-flow 3.5s ease-in-out infinite;
+}
+@keyframes fr-wave-flow {
+    0%, 100% { transform: translateX(0) translateY(0); opacity: 0.65; }
+    25%      { transform: translateX(5px) translateY(-3px); opacity: 1; }
+    50%      { transform: translateX(0) translateY(-5px); opacity: 0.85; }
+    75%      { transform: translateX(-5px) translateY(-3px); opacity: 1; }
+}
+
+.fr-bubble {
+    transform-origin: inherit;
+    animation: fr-bubble 3s ease-out infinite;
+}
+@keyframes fr-bubble {
+    0%   { transform: translateY(0) scale(0.4); opacity: 0; }
+    20%  { transform: translateY(-4px) scale(1); opacity: 0.9; }
+    80%  { transform: translateY(-14px) scale(1.15); opacity: 0.7; }
+    100% { transform: translateY(-22px) scale(0.4); opacity: 0; }
+}
+
+/* ============================================================ */
+/* 💫 ГАЛАКТИКА                                                   */
+/* ============================================================ */
+.fr-gal-core {
+    transform-origin: 100px 100px;
+    animation: fr-gal-core 2.8s ease-in-out infinite;
+}
+@keyframes fr-gal-core {
+    0%, 100% { transform: scale(1); opacity: 0.75; }
+    50%      { transform: scale(1.2); opacity: 1; }
+}
+
+.fr-gal-star {
+    animation: fr-gal-star 2s ease-in-out infinite;
+}
+@keyframes fr-gal-star {
+    0%, 100% { opacity: 0.4; r: 0.6; }
+    50%      { opacity: 1; r: 2; }
+}
+
+.fr-gal-ring {
+    transform-origin: 100px 100px;
+    animation: fr-rotate 25s linear infinite reverse;
+}
+
+/* ============================================================ */
+/* ☠️ ЯД                                                          */
+/* ============================================================ */
+.fr-poi-aura {
+    transform-origin: 100px 100px;
+    animation: fr-poi-aura 3.5s ease-in-out infinite;
+}
+@keyframes fr-poi-aura {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50%      { transform: scale(1.12); opacity: 0.9; }
+}
+
+.fr-poi-ring {
+    transform-origin: 100px 100px;
+    animation: fr-poi-ring 4s ease-in-out infinite;
+}
+@keyframes fr-poi-ring {
+    0%, 100% { transform: scale(1); stroke-width: 2.5; opacity: 0.7; }
+    50%      { transform: scale(1.04); stroke-width: 3.5; opacity: 1; }
+}
+
+.fr-poi-bubble {
+    animation: fr-poi-bubble 4s ease-out infinite;
+}
+@keyframes fr-poi-bubble {
+    0%   { transform: translateY(0) scale(0.5); opacity: 0.9; }
+    40%  { transform: translateY(-7px) scale(1.1); opacity: 1; }
+    80%  { transform: translateY(-18px) scale(1.25); opacity: 0.55; }
+    100% { transform: translateY(-28px) scale(0.5); opacity: 0; }
+}
+
+.fr-poi-skull {
+    animation: fr-poi-skull 1.5s ease-in-out infinite;
+}
+@keyframes fr-poi-skull {
+    0%, 100% { opacity: 0.45; filter: drop-shadow(0 0 3px #a0ff60); }
+    50%      { opacity: 0.9; filter: drop-shadow(0 0 12px #a0ff60); }
+}
+
+/* ============================================================ */
+/* 🦁 ЛЕВ                                                         */
+/* ============================================================ */
+.fr-mane-hair {
+    animation: fr-mane-hair 2.4s ease-in-out infinite;
+}
+@keyframes fr-mane-hair {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    50%      { transform: rotate(6deg) scale(1.08); }
+}
+
+.fr-lion-face {
+    transform-origin: 100px 100px;
+    animation: fr-lion-face 3s ease-in-out infinite;
+}
+@keyframes fr-lion-face {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 3px currentColor); }
+    50%      { transform: scale(1.05); filter: drop-shadow(0 0 10px currentColor); }
+}
+
+/* ============================================================ */
+/* 🕸️ ПАУК                                                       */
+/* ============================================================ */
+.fr-web-outer {
+    transform-origin: 100px 100px;
+    animation: fr-web-outer 3s ease-in-out infinite;
+}
+@keyframes fr-web-outer {
+    0%, 100% { transform: scale(1); opacity: 0.55; }
+    50%      { transform: scale(1.06); opacity: 0.9; }
+}
+
+.fr-web-ring {
+    transform-origin: 100px 100px;
+    animation: fr-web-ring 2.5s ease-in-out infinite;
+}
+@keyframes fr-web-ring {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50%      { transform: scale(1.08); opacity: 0.85; }
+}
+
+.fr-web-ray {
+    animation: fr-web-ray 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.15s);
+}
+@keyframes fr-web-ray {
+    0%, 100% { stroke-dashoffset: 0; opacity: 0.5; }
+    50%      { stroke-dashoffset: -6; opacity: 0.9; }
+}
+
+.fr-spider-crawler {
+    transform-origin: 100px 100px;
+    animation: fr-spider-crawl 9s linear infinite;
+}
+@keyframes fr-spider-crawl {
+    0%   { transform: translate(100px, 30px) rotate(0deg); }
+    12%  { transform: translate(160px, 60px) rotate(60deg); }
+    25%  { transform: translate(170px, 100px) rotate(90deg); }
+    37%  { transform: translate(160px, 140px) rotate(120deg); }
+    50%  { transform: translate(100px, 170px) rotate(180deg); }
+    62%  { transform: translate(40px, 140px) rotate(240deg); }
+    75%  { transform: translate(30px, 100px) rotate(270deg); }
+    87%  { transform: translate(40px, 60px) rotate(300deg); }
+    100% { transform: translate(100px, 30px) rotate(360deg); }
+}
+
+.fr-spider-leg {
+    animation: fr-spider-leg 0.5s ease-in-out infinite;
+}
+@keyframes fr-spider-leg {
+    0%, 100% { stroke-width: 1.2; }
+    50%      { stroke-width: 1.8; }
+}
+
+/* ============================================================ */
+/* 💎 АЛМАЗ                                                       */
+/* ============================================================ */
+.fr-diamond-facet {
+    animation: fr-diamond 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.25s);
+}
+@keyframes fr-diamond {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50%      { opacity: 1; transform: scale(1.2); filter: drop-shadow(0 0 5px currentColor); }
+}
+
+/* ============================================================ */
+/* 🚀 LITE MODE — всё выключаем                                  */
+/* ============================================================ */
 html.lite-mode .special-frame-overlay svg *,
 html.lite-mode .list-frame-overlay svg * {
     animation: none !important;
@@ -14326,210 +14554,6 @@ html.lite-mode .list-frame-overlay svg * {
 .pm2-hero.has-custom-bg > * {
     position: relative;
     z-index: 2;
-}
-
-    /* ============================================================ */
-/* 🌊 ВОЛНЫ — плавное течение + всплывающие пузыри              */
-/* ============================================================ */
-.fs-waves .waves-mist {
-    transform-origin: 100px 100px;
-    animation: wavesMist 8s linear infinite;
-}
-@keyframes wavesMist {
-    to { transform: rotate(360deg); }
-}
-.fs-waves .wave-flow {
-    animation: waveFlow 3.5s ease-in-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes waveFlow {
-    0%, 100% { transform: translateX(0) translateY(0); opacity: 0.7; }
-    25%      { transform: translateX(6px) translateY(-3px); opacity: 1; }
-    50%      { transform: translateX(0) translateY(-6px); opacity: 0.85; }
-    75%      { transform: translateX(-6px) translateY(-3px); opacity: 1; }
-}
-.fs-waves .wave-bubble {
-    transform-origin: var(--bx) var(--by);
-    animation: waveBubble 3s ease-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes waveBubble {
-    0%   { transform: translateY(0) scale(0.4); opacity: 0; }
-    20%  { transform: translateY(-4px) scale(1); opacity: 0.9; }
-    80%  { transform: translateY(-14px) scale(1.2); opacity: 0.7; }
-    100% { transform: translateY(-22px) scale(0.4); opacity: 0; }
-}
-
-/* ============================================================ */
-/* 💫 ГАЛАКТИКА — спираль вращается, звёзды мерцают             */
-/* ============================================================ */
-.fs-galaxy .galaxy-core {
-    transform-origin: 100px 100px;
-    animation: galaxyCore 2.8s ease-in-out infinite;
-}
-@keyframes galaxyCore {
-    0%, 100% { transform: scale(1); opacity: 0.7; }
-    50%      { transform: scale(1.25); opacity: 1; }
-}
-.fs-galaxy .galaxy-spiral {
-    transform-origin: 100px 100px;
-    animation: galaxySpin 12s linear infinite;
-}
-.fs-galaxy .galaxy-spiral-rev {
-    transform-origin: 100px 100px;
-    animation: galaxySpinRev 18s linear infinite;
-}
-@keyframes galaxySpin {
-    to { transform: rotate(360deg); }
-}
-@keyframes galaxySpinRev {
-    to { transform: rotate(-360deg); }
-}
-.fs-galaxy .gal-star {
-    transform-origin: center;
-    animation: galStarPulse 2s ease-in-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes galStarPulse {
-    0%, 100% { opacity: 0.4; r: 0.6; }
-    50%      { opacity: 1; r: 2.2; }
-}
-.fs-galaxy .galaxy-ring {
-    transform-origin: 100px 100px;
-    animation: galaxySpin 25s linear infinite reverse;
-}
-
-/* ============================================================ */
-/* ☠️ ЯД — пузыри всплывают, аура пульсирует, кольцо дышит      */
-/* ============================================================ */
-.fs-poison .poison-aura {
-    transform-origin: 100px 100px;
-    animation: poisonAura 3.5s ease-in-out infinite;
-}
-@keyframes poisonAura {
-    0%, 100% { transform: scale(1); opacity: 0.5; }
-    50%      { transform: scale(1.15); opacity: 0.9; }
-}
-.fs-poison .poison-ring {
-    transform-origin: 100px 100px;
-    animation: poisonRing 4s ease-in-out infinite;
-}
-@keyframes poisonRing {
-    0%, 100% { transform: scale(1); stroke-width: 2; opacity: 0.7; }
-    50%      { transform: scale(1.04); stroke-width: 3; opacity: 1; }
-}
-.fs-poison .poison-bubble-rise {
-    transform-origin: var(--bx) var(--by);
-    animation: poisonRise 4s ease-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes poisonRise {
-    0%   { transform: translateY(0) scale(0.6); opacity: 0.9; }
-    40%  { transform: translateY(-8px) scale(1.1); opacity: 1; }
-    80%  { transform: translateY(-20px) scale(1.3); opacity: 0.6; }
-    100% { transform: translateY(-30px) scale(0.5); opacity: 0; }
-}
-.fs-poison .poison-skull {
-    animation: poisonSkull 1.5s ease-in-out infinite;
-}
-@keyframes poisonSkull {
-    0%, 100% { opacity: 0.4; filter: drop-shadow(0 0 4px #a0ff60); }
-    50%      { opacity: 0.9; filter: drop-shadow(0 0 16px #a0ff60); }
-}
-
-/* ============================================================ */
-/* 🦁 ЛЕВ — грива дышит, глаза светятся, морда кивает           */
-/* ============================================================ */
-.fs-lion .lion-aura {
-    transform-origin: 100px 100px;
-    animation: lionAura 4s ease-in-out infinite;
-}
-@keyframes lionAura {
-    0%, 100% { transform: scale(1); opacity: 0.6; }
-    50%      { transform: scale(1.1); opacity: 1; }
-}
-.fs-lion .lion-hair {
-    transform-origin: var(--hx) var(--hy);
-    animation: lionHair 2.4s ease-in-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes lionHair {
-    0%, 100% { transform: rotate(0deg) scale(1); }
-    50%      { transform: rotate(6deg) scale(1.15); }
-}
-.fs-lion .lion-mane-ring {
-    transform-origin: 100px 100px;
-    animation: lionManeRing 20s linear infinite;
-}
-@keyframes lionManeRing {
-    to { transform: rotate(360deg); }
-}
-.fs-lion .lion-face {
-    transform-origin: 100px 100px;
-    animation: lionFace 3s ease-in-out infinite;
-}
-@keyframes lionFace {
-    0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 4px currentColor); }
-    50%      { transform: scale(1.08) rotate(1.5deg); filter: drop-shadow(0 0 12px currentColor); }
-}
-
-/* ============================================================ */
-/* 🕸️ ПАУК — паутина дрожит, паук ползёт по 8-ке                */
-/* ============================================================ */
-.fs-spider .spider-outer-pulse {
-    transform-origin: 100px 100px;
-    animation: spiderOuterPulse 3s ease-in-out infinite;
-}
-@keyframes spiderOuterPulse {
-    0%, 100% { transform: scale(1); opacity: 0.3; }
-    50%      { transform: scale(1.08); opacity: 0.7; }
-}
-.fs-spider .spider-inner-ring {
-    transform-origin: 100px 100px;
-    animation: spiderInnerRing 2.5s ease-in-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes spiderInnerRing {
-    0%, 100% { transform: scale(1); opacity: 0.4; }
-    50%      { transform: scale(1.1); opacity: 0.8; }
-}
-.fs-spider .spider-ray {
-    animation: spiderRay 3s ease-in-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes spiderRay {
-    0%, 100% { stroke-dashoffset: 0; opacity: 0.5; }
-    50%      { stroke-dashoffset: -8; opacity: 0.9; }
-}
-.fs-spider .spider-crawler {
-    animation: spiderCrawl8 8s linear infinite;
-    transform-origin: 100px 100px;
-}
-@keyframes spiderCrawl8 {
-    0%   { transform: translate(100px, 30px) rotate(0deg); }
-    12%  { transform: translate(160px, 60px) rotate(60deg); }
-    25%  { transform: translate(170px, 100px) rotate(90deg); }
-    37%  { transform: translate(160px, 140px) rotate(120deg); }
-    50%  { transform: translate(100px, 170px) rotate(180deg); }
-    62%  { transform: translate(40px, 140px) rotate(240deg); }
-    75%  { transform: translate(30px, 100px) rotate(270deg); }
-    87%  { transform: translate(40px, 60px) rotate(300deg); }
-    100% { transform: translate(100px, 30px) rotate(360deg); }
-}
-.fs-spider .spider-leg {
-    animation: spiderLeg 0.5s ease-in-out infinite;
-    animation-delay: var(--delay, 0s);
-}
-@keyframes spiderLeg {
-    0%, 100% { stroke-width: 1.4; }
-    50%      { stroke-width: 2; }
-}
-.fs-spider .spider-eye-glow {
-    animation: spiderEyeGlow 1.2s ease-in-out infinite;
-}
-@keyframes spiderEyeGlow {
-    0%, 100% { opacity: 0.2; transform: scale(1); }
-    50%      { opacity: 0.9; transform: scale(1.6); }
 }
     
 </style>
@@ -32611,996 +32635,1196 @@ function _getSpecialFrameHTMLRaw(type, color) {
     const cd  = shadeColor(color, -55);
     const clt = shadeColor(color, 42);
 
-    // Общий градиент halo
-    const glowDef = `
-        <defs>
-            <radialGradient id="${type}Halo" cx="50%" cy="50%" r="50%">
-                <stop offset="45%" stop-color="${cl}" stop-opacity="0"/>
-                <stop offset="85%" stop-color="${cl}" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="${cl}" stop-opacity="0"/>
-            </radialGradient>
-        </defs>
+    // ============================================================
+    // 🔥 ОБЩИЕ ХЕЛПЕРЫ — используются всеми рамками
+    // ============================================================
+
+    // Уникальный суффикс для id внутри этого SVG
+    const uid = '_' + Math.random().toString(36).slice(2, 7);
+
+    // Внешнее мягкое свечение
+    const glowDefs = `
+        <radialGradient id="glow${uid}" cx="50%" cy="50%" r="50%">
+            <stop offset="55%" stop-color="${cl}" stop-opacity="0"/>
+            <stop offset="88%" stop-color="${cl}" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="${cl}" stop-opacity="0"/>
+        </radialGradient>
     `;
+    const glow = `<circle class="fr-glow" cx="100" cy="100" r="95" fill="url(#glow${uid})"/>`;
 
-    // Хелпер: halo
-    const halo = `<circle class="fs-halo" cx="100" cy="100" r="94" fill="url(#${type}Halo)"/>`;
+    // Основное внешнее кольцо (r=86)
+    const outerRing = (sw = 2.5, op = 0.95) =>
+        `<circle class="fr-ring-1" cx="100" cy="100" r="86"
+                 fill="none" stroke="${clt}" stroke-width="${sw}" opacity="${op}"/>`;
 
-    // Хелпер: светящееся кольцо
-    const ring = (r, w, opacity, dash = null, cls = 'fs-ring-1') =>
-        `<circle class="${cls}" cx="100" cy="100" r="${r}" fill="none"
-                 stroke="${clt}" stroke-width="${w}" opacity="${opacity}"
-                 ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+    // Среднее кольцо (r=74, dashed)
+    const midRing = (dash = '3 6') =>
+        `<circle class="fr-ring-2" cx="100" cy="100" r="74"
+                 fill="none" stroke="${cl}" stroke-width="1.2"
+                 stroke-dasharray="${dash}" opacity="0.7"/>`;
 
-    // Хелпер: тонкое тёмное кольцо (создаёт глубину)
-    const innerRing = (r, w, opacity) =>
-        `<circle cx="100" cy="100" r="${r}" fill="none"
-                 stroke="${cd}" stroke-width="${w}" opacity="${opacity}"/>`;
+    // Внутреннее лёгкое кольцо (r=52, касание аватара)
+    const innerRing = (op = 0.35) =>
+        `<circle class="fr-ring-in" cx="100" cy="100" r="52"
+                 fill="none" stroke="${clt}" stroke-width="0.8" opacity="${op}"/>`;
 
-    // Хелпер: орбы по кольцу
-    const orbs = (r, count, orbR) => Array.from({length: count}).map((_, i) => {
-        const a = (i * 360 / count) * Math.PI / 180;
-        const x = 100 + Math.cos(a) * r;
-        const y = 100 + Math.sin(a) * r;
-        return `<circle class="fs-orb" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${orbR}"
-                        style="fill:${clt}; filter: drop-shadow(0 0 5px ${cl});"/>`;
-    }).join('');
+    // Круговые орбы (count точек на радиусе r, размер size)
+    const orbs = (r, count, size = 2.5, cls = 'fr-orb') =>
+        Array.from({length: count}).map((_, i) => {
+            const a = (i * 360 / count - 90) * Math.PI / 180;
+            const x = 100 + Math.cos(a) * r;
+            const y = 100 + Math.sin(a) * r;
+            return `<circle class="${cls}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}"
+                            r="${size}" fill="${clt}"
+                            style="filter:drop-shadow(0 0 3px ${cl});"
+                            data-idx="${i}"/>`;
+        }).join('');
+
+    // Общая defs-секция (gradient + glow)
+    const baseDefs = `<defs>${glowDefs}</defs>`;
+
+    // Открывающий тег SVG
+    const svgOpen = (cls) =>
+        `<svg class="fr-svg ${cls}" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">`;
+
+    // ============================================================
+    // 🔥 УНИКАЛЬНЫЕ SVG ДЛЯ КАЖДОЙ ТЕМЫ
+    // ============================================================
 
     switch (type) {
 
-    /* ============================================================ */
-    /* 🐙 ОСЬМИНОГ — 5 щупалец внутрь, 8 орбов снаружи               */
-    /* ============================================================ */
-case 'octopus':
-    return `
-    <svg class="fs-octopus" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        ${glowDef}
-        ${halo}
+    // ============================================================
+    // 🐙 ОСЬМИНОГ — 6 щупалец заходят внутрь, орбы по кольцу
+    // ============================================================
+    case 'octopus':
+        return `${svgOpen('fr-octopus')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('3 7')}
+            ${outerRing(2.5)}
 
-        <!-- Внешние кольца — остаются снаружи -->
-        ${ring(84, 1, 0.4, '2 8', 'fs-ring-3')}
-        ${ring(78, 2.5, 0.95, null, 'fs-ring-1')}
+            <!-- 10 орбов по внешнему кольцу -->
+            <g class="fr-orbs-rotate">${orbs(86, 10, 2.5)}</g>
 
-        <!-- 🔥 Внутреннее кольцо — заходит НА аватар -->
-        <circle cx="100" cy="100" r="50" fill="none" stroke="${clt}" stroke-width="1.5" opacity="0.55"/>
-        <circle cx="100" cy="100" r="42" fill="none" stroke="${clt}" stroke-width="1" opacity="0.35"/>
-
-        <!-- Орбы -->
-        <g class="fs-orbs">${orbs(78, 10, 2.5)}</g>
-
-        <!-- 🔥 Щупальца теперь ЗАХОДЯТ ВНУТРЬ (до r=25) -->
-        ${Array.from({length:5}).map((_, i) => {
-            const a = i * 72 - 90;
-            const rad = a * Math.PI/180;
-            const x1 = 100 + Math.cos(rad) * 78;
-            const y1 = 100 + Math.sin(rad) * 78;
-            const cx = 100 + Math.cos(rad + 0.5) * 55;
-            const cy = 100 + Math.sin(rad + 0.5) * 55;
-            // 🔥 Было 38 — стало 22 (заходят на аватар)
-            const x2 = 100 + Math.cos(rad + 0.85) * 22;
-            const y2 = 100 + Math.sin(rad + 0.85) * 22;
-            return `
-                <g class="octo-tentacle" style="--ox:${x1.toFixed(1)}px; --oy:${y1.toFixed(1)}px">
-                    <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"
-                          fill="none" stroke="${cd}" stroke-width="5" stroke-linecap="round" opacity="0.95"/>
-                    <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}"
-                          fill="none" stroke="${clt}" stroke-width="1.8" stroke-linecap="round" opacity="0.9"/>
-                    <circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2.5" style="fill:${clt};"/>
-                </g>`;
-        }).join('')}
-    </svg>`;
-
-    /* ============================================================ */
-    /* 🐉 ДРАКОН — чешуя заходит внутрь                              */
-    /* ============================================================ */
-    case 'dragon':
-        return `
-        <svg class="fs-dragon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
-            ${ring(84, 1, 0.4, '3 7', 'fs-ring-3')}
-            ${ring(78, 2, 0.95, null, 'fs-ring-1')}
-            <circle class="fs-ring-2" cx="100" cy="100" r="66" fill="none" stroke="${cd}" stroke-width="1.8" opacity="0.7"/>
-
-            <g class="fs-orbs">${orbs(78, 12, 2.5)}</g>
-            <g class="fs-orbs-r">${orbs(88, 8, 1.8)}</g>
-
-            <!-- Чешуя заходит внутрь (r=58-64) -->
-            ${Array.from({length:16}).map((_, i) => {
-                const a = i * 22.5;
-                const x = 100 + Math.cos(a * Math.PI/180) * 60;
-                const y = 100 + Math.sin(a * Math.PI/180) * 60;
-                return `<g class="drag-scale" style="--sx:${x.toFixed(1)}px; --sy:${y.toFixed(1)}px">
-                    <polygon points="-4,-6 0,-11 4,-6 0,-2" style="fill:${clt}; opacity:0.9;"
-                             transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
+            <!-- 6 щупалец: от внешнего кольца внутрь -->
+            ${Array.from({length: 6}).map((_, i) => {
+                const a = i * 60 - 90;
+                const rad = a * Math.PI / 180;
+                const x1 = 100 + Math.cos(rad) * 82;
+                const y1 = 100 + Math.sin(rad) * 82;
+                const cx = 100 + Math.cos(rad + 0.4) * 62;
+                const cy = 100 + Math.sin(rad + 0.4) * 62;
+                const x2 = 100 + Math.cos(rad + 0.7) * 40;
+                const y2 = 100 + Math.sin(rad + 0.7) * 40;
+                return `<g class="fr-tentacle" data-i="${i}">
+                    <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)}
+                             Q ${cx.toFixed(1)} ${cy.toFixed(1)}
+                               ${x2.toFixed(1)} ${y2.toFixed(1)}"
+                          fill="none" stroke="${cd}" stroke-width="3.5"
+                          stroke-linecap="round" opacity="0.95"/>
+                    <path d="M ${x1.toFixed(1)} ${y1.toFixed(1)}
+                             Q ${cx.toFixed(1)} ${cy.toFixed(1)}
+                               ${x2.toFixed(1)} ${y2.toFixed(1)}"
+                          fill="none" stroke="${clt}" stroke-width="1.2"
+                          stroke-linecap="round" opacity="0.9"/>
+                    <circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}"
+                            r="2.5" fill="${clt}"
+                            style="filter:drop-shadow(0 0 4px ${cl});"/>
                 </g>`;
             }).join('')}
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🔥 ОГОНЬ                                                       */
-    /* ============================================================ */
-case 'fire':
-    return `
-    <svg class="fs-fire" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <radialGradient id="fireHalo" cx="50%" cy="50%" r="50%">
-                <stop offset="40%" stop-color="${cl}" stop-opacity="0"/>
-                <stop offset="90%" stop-color="${cl}" stop-opacity="0.7"/>
-                <stop offset="100%" stop-color="${cl}" stop-opacity="0.1"/>
-            </radialGradient>
-            <linearGradient id="fireFlameGrad" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0%" stop-color="#ff1f00"/>
-                <stop offset="50%" stop-color="${cl}"/>
-                <stop offset="100%" stop-color="#ffe066"/>
-            </linearGradient>
-        </defs>
-        ${halo}
-        ${ring(82, 2.5, 0.9, null, 'fs-ring-1')}
+    // ============================================================
+    // 🐉 ДРАКОН — чешуя + летящий огонь
+    // ============================================================
+    case 'dragon':
+        return `${svgOpen('fr-dragon')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('4 6')}
+            ${outerRing(2.5)}
 
-        <!-- 🔥 Кольцо ЗАХОДИТ НА аватар -->
-        <circle cx="100" cy="100" r="50" fill="none" stroke="${cl}" stroke-width="1" opacity="0.5"/>
+            <!-- Вращающееся кольцо чешуек -->
+            <g class="fr-scale-ring">
+                ${Array.from({length: 18}).map((_, i) => {
+                    const a = i * 20 - 90;
+                    const rad = a * Math.PI / 180;
+                    const x = 100 + Math.cos(rad) * 74;
+                    const y = 100 + Math.sin(rad) * 74;
+                    return `<g class="fr-scale" data-i="${i}"
+                               style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                        <polygon points="-3.5,-5 0,-9 3.5,-5 0,-1"
+                                 fill="${clt}" opacity="0.85"
+                                 transform="rotate(${a + 90} ${x.toFixed(1)} ${y.toFixed(1)})"
+                                 transform-origin="${x.toFixed(1)} ${y.toFixed(1)}"
+                                 style="translate: ${x}px ${y}px;"/>
+                    </g>`;
+                }).join('')}
+            </g>
 
-        <g class="fs-orbs">${orbs(78, 12, 2.5)}</g>
+            <!-- Огненные искры -->
+            <g class="fr-orbs-rotate">${orbs(90, 8, 2, 'fr-spark')}</g>
 
-        <!-- 🔥 Языки пламени — длинные, заходят внутрь -->
-        ${Array.from({length:18}).map((_, i) => {
-            const a = i * 20;
-            const x = 100 + Math.cos(a * Math.PI/180) * 82;
-            const y = 100 + Math.sin(a * Math.PI/180) * 82;
-            // 🔥 Пламя тянется внутрь: длина 35 вместо 22
-            return `<g class="fire-flame" style="--fx:${x.toFixed(1)}px; --fy:${y.toFixed(1)}px">
-                <path d="M 0,0 Q -7,-16 0,-35 Q 7,-16 0,0 Z"
-                      style="fill:url(#fireFlameGrad);"
-                      transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
-            </g>`;
-        }).join('')}
+            <!-- Дыхание внутрь -->
+            <g class="fr-dragon-breath">
+                <path d="M 100 40 Q 108 55 100 70 Q 92 55 100 40 Z"
+                      fill="${clt}" opacity="0.6"
+                      style="filter:drop-shadow(0 0 6px ${cl});"/>
+            </g>
 
-        <!-- 🔥 Искры внутри аватара -->
-        ${Array.from({length:8}).map((_, i) => {
-            const a = i * 45 + 22;
-            const x = 100 + Math.cos(a * Math.PI/180) * 35;
-            const y = 100 + Math.sin(a * Math.PI/180) * 35;
-            return `<circle class="fire-spark" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" style="fill:${clt};"/>`;
-        }).join('')}
-    </svg>`;
+            ${innerRing(0.3)}
+        </svg>`;
 
-    /* ============================================================ */
-    /* 🐍 ЗМЕЯ                                                        */
-    /* ============================================================ */
-    case 'snake':
-        return `
-        <svg class="fs-snake" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    // ============================================================
+    // 🔥 ОГОНЬ — 16 языков пламени по кольцу + пульсация центра
+    // ============================================================
+    case 'fire':
+        return `${svgOpen('fr-fire')}
             <defs>
-                <linearGradient id="snakeGrad" x1="0" y1="0" x2="1" y2="1">
+                <radialGradient id="fireGlow${uid}" cx="50%" cy="50%" r="50%">
+                    <stop offset="55%" stop-color="#ff4500" stop-opacity="0"/>
+                    <stop offset="88%" stop-color="#ff4500" stop-opacity="0.4"/>
+                    <stop offset="100%" stop-color="#ff4500" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="fireFlame${uid}" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stop-color="#ff1f00"/>
+                    <stop offset="50%" stop-color="${cl}"/>
+                    <stop offset="100%" stop-color="#ffe066"/>
+                </linearGradient>
+            </defs>
+
+            <circle class="fr-glow" cx="100" cy="100" r="95" fill="url(#fireGlow${uid})"/>
+            ${midRing('2 8')}
+            ${outerRing(2.5)}
+
+            <!-- 16 языков пламени -->
+            ${Array.from({length: 16}).map((_, i) => {
+                const a = i * 22.5 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 86;
+                const y = 100 + Math.sin(rad) * 86;
+                return `<g class="fr-flame" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <path d="M 0,0 Q -5,-10 0,-22 Q 5,-10 0,0 Z"
+                          fill="url(#fireFlame${uid})"
+                          transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90})"/>
+                </g>`;
+            }).join('')}
+
+            <!-- Искры внутри (касание аватара) -->
+            ${Array.from({length: 6}).map((_, i) => {
+                const a = i * 60 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 46;
+                const y = 100 + Math.sin(rad) * 46;
+                return `<circle class="fr-ember" data-i="${i}"
+                               cx="${x.toFixed(1)}" cy="${y.toFixed(1)}"
+                               r="1.8" fill="${clt}"
+                               style="filter:drop-shadow(0 0 5px ${cl});"/>`;
+            }).join('')}
+
+            ${innerRing(0.4)}
+        </svg>`;
+
+    // ============================================================
+    // 🐍 ЗМЕЯ — спираль + голова
+    // ============================================================
+    case 'snake':
+        return `${svgOpen('fr-snake')}
+            <defs>
+                <linearGradient id="snakeG${uid}" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stop-color="${clt}"/>
                     <stop offset="50%" stop-color="${cl}"/>
                     <stop offset="100%" stop-color="${cd}"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            ${ring(84, 1, 0.4, '2 8', 'fs-ring-3')}
-            ${ring(78, 1.5, 0.6, null, 'fs-ring-2')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 8')}
+            ${outerRing(2.5)}
 
-            <!-- Тело-змея, спираль заходит внутрь -->
-            <path class="snake-body"
-                  d="M 100 22 A 78 78 0 1 1 22 100 A 58 58 0 0 0 138 138 A 78 78 0 0 1 100 22 Z"
-                  fill="none" stroke="url(#snakeGrad)" stroke-width="4.5" stroke-linecap="round"/>
+            <!-- Тело-спираль (2 витка) -->
+            <path class="fr-snake-body"
+                  d="M 100 22
+                     A 78 78 0 1 1 22 100
+                     A 62 62 0 0 0 162 100
+                     A 78 78 0 0 1 100 22 Z"
+                  fill="none" stroke="url(#snakeG${uid})"
+                  stroke-width="4" stroke-linecap="round"/>
 
-            <g class="fs-orbs">${orbs(88, 10, 2)}</g>
+            <!-- Голова наверху -->
+            <g class="fr-snake-head">
+                <ellipse cx="100" cy="30" rx="9" ry="11"
+                         fill="url(#snakeG${uid})" stroke="${clt}" stroke-width="1"/>
+                <circle cx="96" cy="28" r="1.6" fill="#ffd700"/>
+                <circle cx="104" cy="28" r="1.6" fill="#ffd700"/>
+                <path d="M 100 40 L 98 46 M 100 40 L 102 46"
+                      stroke="#ff2e4d" stroke-width="1.4" stroke-linecap="round"/>
+            </g>
 
-            <!-- Голова змеи сверху заходит внутрь -->
-            <ellipse cx="100" cy="30" rx="9" ry="11" fill="url(#snakeGrad)" stroke="${clt}" stroke-width="1.4"/>
-            <circle cx="96" cy="28" r="1.8" style="fill:#ffdd00;"/>
-            <circle cx="104" cy="28" r="1.8" style="fill:#ffdd00;"/>
+            <!-- 8 орбов по кольцу -->
+            <g class="fr-orbs-rotate">${orbs(88, 8, 2)}</g>
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🛡️ СПЕЦНАЗ                                                     */
-    /* ============================================================ */
+    // ============================================================
+    // 🛡️ СПЕЦНАЗ (CT) — 4 прицела + тактические точки
+    // ============================================================
     case 'ct':
-        return `
-        <svg class="fs-ct" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
-            ${ring(84, 0.8, 0.4, '3 7', 'fs-ring-3')}
-            ${ring(78, 2.5, 0.95, null, 'fs-ring-1')}
-            <circle class="fs-ring-2" cx="100" cy="100" r="64" fill="none" stroke="${cl}" stroke-width="1.8" opacity="0.75"/>
+        return `${svgOpen('fr-ct')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('3 6')}
+            ${outerRing(2.5)}
 
-            <g class="fs-orbs">${orbs(78, 14, 2)}</g>
-
-            <!-- 4 прицела заходят внутрь -->
-            ${[[62,62],[138,62],[62,138],[138,138]].map(([cx, cy], i) => `
-                <g class="ct-scope" style="--sx:${cx}px; --sy:${cy}px">
-                    <circle cx="${cx}" cy="${cy}" r="10" fill="none" stroke="${clt}" stroke-width="1.8" opacity="0.9"/>
-                    <circle cx="${cx}" cy="${cy}" r="2.5" style="fill:${clt};"/>
-                    <line x1="${cx-16}" y1="${cy}" x2="${cx-12}" y2="${cy}" stroke="${clt}" stroke-width="1.3"/>
-                    <line x1="${cx+12}" y1="${cy}" x2="${cx+16}" y2="${cy}" stroke="${clt}" stroke-width="1.3"/>
-                    <line x1="${cx}" y1="${cy-16}" x2="${cx}" y2="${cy-12}" stroke="${clt}" stroke-width="1.3"/>
-                    <line x1="${cx}" y1="${cy+12}" x2="${cx}" y2="${cy+16}" stroke="${clt}" stroke-width="1.3"/>
+            <!-- 4 угловых прицела -->
+            ${[[60,60],[140,60],[60,140],[140,140]].map(([cx, cy], i) => `
+                <g class="fr-scope" data-i="${i}"
+                   style="transform-origin:${cx}px ${cy}px;">
+                    <circle cx="${cx}" cy="${cy}" r="9"
+                            fill="none" stroke="${clt}" stroke-width="1.6" opacity="0.95"/>
+                    <circle cx="${cx}" cy="${cy}" r="2.2" fill="${clt}"
+                            style="filter:drop-shadow(0 0 3px ${cl});"/>
+                    <line x1="${cx-14}" y1="${cy}" x2="${cx-11}" y2="${cy}"
+                          stroke="${clt}" stroke-width="1.4" stroke-linecap="round"/>
+                    <line x1="${cx+11}" y1="${cy}" x2="${cx+14}" y2="${cy}"
+                          stroke="${clt}" stroke-width="1.4" stroke-linecap="round"/>
+                    <line x1="${cx}" y1="${cy-14}" x2="${cx}" y2="${cy-11}"
+                          stroke="${clt}" stroke-width="1.4" stroke-linecap="round"/>
+                    <line x1="${cx}" y1="${cy+11}" x2="${cx}" y2="${cy+14}"
+                          stroke="${clt}" stroke-width="1.4" stroke-linecap="round"/>
                 </g>
             `).join('')}
 
-            <!-- Тактические точки -->
-            ${Array.from({length:8}).map((_, i) => {
-                const a = i * 45 + 22.5;
-                const x = 100 + Math.cos(a * Math.PI/180) * 60;
-                const y = 100 + Math.sin(a * Math.PI/180) * 60;
-                return `<circle class="ct-dot" style="--cx:${x.toFixed(1)}px; --cy:${y.toFixed(1)}px;"
-                                cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" style="fill:${clt};"/>`;
-            }).join('')}
+            <!-- Тактические точки на внешнем кольце -->
+            <g class="fr-orbs-rotate">${orbs(86, 12, 1.6)}</g>
+
+            <!-- Центральный маркер -->
+            <circle class="fr-center-dot" cx="100" cy="100" r="3"
+                    fill="${clt}" opacity="0.5"
+                    style="filter:drop-shadow(0 0 6px ${cl});"/>
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 💣 ТЕРРОРИСТ                                                   */
-    /* ============================================================ */
+    // ============================================================
+    // 💣 ТЕРРОРИСТ (T) — как CT, но с другой символикой
+    // ============================================================
     case 't':
-        return `
-        <svg class="fs-t" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-t')}
             <defs>
-                <linearGradient id="tFlameGrad" x1="0" y1="1" x2="0" y2="0">
+                <radialGradient id="tGlow${uid}" cx="50%" cy="50%" r="50%">
+                    <stop offset="55%" stop-color="${cl}" stop-opacity="0"/>
+                    <stop offset="88%" stop-color="${cl}" stop-opacity="0.5"/>
+                    <stop offset="100%" stop-color="${cl}" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="tFlame${uid}" x1="0" y1="1" x2="0" y2="0">
                     <stop offset="0%" stop-color="${cd}"/>
                     <stop offset="100%" stop-color="${clt}"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            ${ring(82, 2.5, 0.9, null, 'fs-ring-1')}
-            <circle cx="100" cy="100" r="62" fill="none" stroke="${cl}" stroke-width="1" opacity="0.5"/>
+            <circle class="fr-glow" cx="100" cy="100" r="95" fill="url(#tGlow${uid})"/>
 
-            <g class="fs-orbs">${orbs(78, 10, 3)}</g>
+            <!-- Внутреннее красное кольцо — СИМВОЛ Т -->
+            <circle class="fr-tinner" cx="100" cy="100" r="60"
+                    fill="none" stroke="${cl}" stroke-width="2.5" opacity="0.85"/>
 
-            <!-- 16 огоньков -->
-            ${Array.from({length:16}).map((_, i) => {
-                const a = i * 22.5;
-                const x = 100 + Math.cos(a * Math.PI/180) * 84;
-                const y = 100 + Math.sin(a * Math.PI/180) * 84;
-                return `<g class="t-flame" style="--fx:${x.toFixed(1)}px; --fy:${y.toFixed(1)}px">
-                    <path d="M 0,0 Q -4.5,-9 0,-18 Q 4.5,-9 0,0 Z"
-                          style="fill:url(#tFlameGrad); opacity:0.9;"
-                          transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
+            ${midRing('3 5')}
+            ${outerRing(2.5)}
+
+            <!-- 12 маленьких огоньков по кольцу -->
+            ${Array.from({length: 12}).map((_, i) => {
+                const a = i * 30 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 86;
+                const y = 100 + Math.sin(rad) * 86;
+                return `<g class="fr-tflame" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <path d="M 0,0 Q -4,-7 0,-15 Q 4,-7 0,0 Z"
+                          fill="url(#tFlame${uid})"
+                          transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90})"/>
                 </g>`;
             }).join('')}
 
-            <!-- Мини-бомба внутри (лёгкое касание) -->
-            <g style="transform-origin:100px 155px;">
-                <circle cx="100" cy="155" r="7" style="fill:#1a1a1a; stroke:${clt}; stroke-width:1.2;"/>
-                <circle cx="98" cy="153" r="1.6" style="fill:#fff; opacity:0.4;"/>
-                <line x1="100" y1="148" x2="100" y2="145" stroke="${clt}" stroke-width="1.4"/>
-                <path d="M 100 145 Q 105 141 110 138" fill="none" stroke="${clt}" stroke-width="1.6" stroke-linecap="round"/>
-                <circle class="t-fuse-spark" cx="110" cy="138" r="2.5" style="fill:#ffcc00;"/>
+            <!-- Мини-бомба внизу (символика T) -->
+            <g class="fr-bomb">
+                <circle cx="100" cy="140" r="6"
+                        fill="#0a0a0a" stroke="${clt}" stroke-width="1"/>
+                <circle cx="98" cy="138" r="1.4" fill="#fff" opacity="0.4"/>
+                <path d="M 100 134 L 100 130 Q 106 126 110 122"
+                      fill="none" stroke="${clt}" stroke-width="1.4"
+                      stroke-linecap="round"/>
+                <circle class="fr-fuse" cx="110" cy="122" r="2.2"
+                        fill="#ffd700"
+                        style="filter:drop-shadow(0 0 4px #ffd700);"/>
             </g>
+
+            ${innerRing(0.4)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 💎 КРИСТАЛЛ                                                    */
-    /* ============================================================ */
+    // ============================================================
+    // 💎 КРИСТАЛЛ — грани внутрь, ромбовидный паттерн
+    // ============================================================
     case 'crystal':
-        return `
-        <svg class="fs-crystal" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
-            ${ring(82, 2, 0.9, null, 'fs-ring-1')}
-            ${ring(88, 0.8, 0.4, '3 7', 'fs-ring-3')}
+        return `${svgOpen('fr-crystal')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 6')}
+            ${outerRing(2.5)}
 
-            <!-- Ромбический внутренний паттерн -->
-            ${Array.from({length:12}).map((_, i) => {
+            <!-- 12 лучей-граней -->
+            ${Array.from({length: 12}).map((_, i) => {
                 const a1 = i * 30;
-                const a2 = (i+1) * 30;
-                const x1 = 100 + Math.cos(a1 * Math.PI/180) * 78;
-                const y1 = 100 + Math.sin(a1 * Math.PI/180) * 78;
-                const x2 = 100 + Math.cos(a2 * Math.PI/180) * 78;
-                const y2 = 100 + Math.sin(a2 * Math.PI/180) * 78;
-                const cx = 100 + Math.cos((a1+a2)/2 * Math.PI/180) * 58;
-                const cy = 100 + Math.sin((a1+a2)/2 * Math.PI/180) * 58;
-                return `<g class="cryst-facet" style="--cx:${cx.toFixed(1)}px; --cy:${cy.toFixed(1)}px">
+                const a2 = (i + 1) * 30;
+                const r = 78;
+                const x1 = 100 + Math.cos(a1 * Math.PI / 180) * r;
+                const y1 = 100 + Math.sin(a1 * Math.PI / 180) * r;
+                const x2 = 100 + Math.cos(a2 * Math.PI / 180) * r;
+                const y2 = 100 + Math.sin(a2 * Math.PI / 180) * r;
+                const cx = 100 + Math.cos((a1 + a2) / 2 * Math.PI / 180) * 55;
+                const cy = 100 + Math.sin((a1 + a2) / 2 * Math.PI / 180) * 55;
+                return `<g class="fr-facet" data-i="${i}"
+                           style="transform-origin:${cx.toFixed(1)}px ${cy.toFixed(1)}px;">
                     <polygon points="${x1.toFixed(1)},${y1.toFixed(1)} ${cx.toFixed(1)},${cy.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}"
-                             fill="none" stroke="${clt}" stroke-width="1.3" opacity="0.9"/>
+                             fill="none" stroke="${clt}" stroke-width="1.2" opacity="0.8"/>
                 </g>`;
             }).join('')}
 
-            <!-- Ромб внутри (лёгкое касание) -->
-            <path d="M 100 62 L 118 100 L 100 138 L 82 100 Z"
-                  fill="none" stroke="${clt}" stroke-width="1.8" opacity="0.85"/>
-            <path d="M 100 80 L 108 100 L 100 120 L 92 100 Z"
-                  style="fill:${cl};" opacity="0.4"/>
+            <!-- Большой ромб по центру -->
+            <g class="fr-crystal-core">
+                <path d="M 100 60 L 122 100 L 100 140 L 78 100 Z"
+                      fill="${cl}" opacity="0.15"
+                      stroke="${clt}" stroke-width="1.5"/>
+                <path d="M 100 78 L 110 100 L 100 122 L 90 100 Z"
+                      fill="${clt}" opacity="0.35"/>
+            </g>
 
-            <g class="fs-orbs">${orbs(88, 12, 2)}</g>
+            <g class="fr-orbs-rotate">${orbs(86, 6, 2.5)}</g>
+
+            ${innerRing(0.35)}
         </svg>`;
 
-    /* ============================================================ */
-    /* ⚡ МОЛНИЯ                                                      */
-    /* ============================================================ */
+    // ============================================================
+    // ⚡ МОЛНИЯ — 8 болтов + центральный разряд
+    // ============================================================
     case 'thunder':
-        return `
-        <svg class="fs-thunder" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-thunder')}
             <defs>
-                <linearGradient id="thBoltGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="thBolt${uid}" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="#fff"/>
                     <stop offset="50%" stop-color="${clt}"/>
                     <stop offset="100%" stop-color="${cd}"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            <circle class="thunder-ring" cx="100" cy="100" r="80" fill="none" stroke="${cl}" stroke-width="3" opacity="0.9"/>
-            <circle cx="100" cy="100" r="70" fill="none" stroke="${clt}" stroke-width="0.9" opacity="0.4" stroke-dasharray="2 7"/>
+            ${baseDefs}
+            ${glow}
 
-            <!-- Молнии снаружи -->
-            ${Array.from({length:10}).map((_, i) => {
-                const a = i * 36;
-                const x = 100 + Math.cos(a * Math.PI/180) * 82;
-                const y = 100 + Math.sin(a * Math.PI/180) * 82;
-                return `<g class="thunder-bolt" style="--bx:${x.toFixed(1)}px; --by:${y.toFixed(1)}px">
-                    <path d="M 0,-12 L 4.5,-4 L -2,-1.5 L 5.5,4 L 0,3 L -4.5,11 L -3,1.5 L 4,0 Z"
-                          style="fill:url(#thBoltGrad);"
-                          transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
+            <circle class="fr-ring-2" cx="100" cy="100" r="74"
+                    fill="none" stroke="${cl}" stroke-width="1.5"
+                    stroke-dasharray="3 6" opacity="0.7"/>
+            <circle class="fr-thunder-ring" cx="100" cy="100" r="86"
+                    fill="none" stroke="${clt}" stroke-width="3" opacity="0.9"/>
+
+            <!-- 8 молний по кольцу -->
+            ${Array.from({length: 8}).map((_, i) => {
+                const a = i * 45 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 92;
+                const y = 100 + Math.sin(rad) * 92;
+                return `<g class="fr-bolt" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <path d="M 0,-10 L 3.5,-3 L -1.5,-1.2 L 4.5,3.5 L 0,2.5 L -3.5,9 L -2.5,1.2 L 3,0 Z"
+                          fill="url(#thBolt${uid})"
+                          transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90})"
+                          style="filter:drop-shadow(0 0 5px ${cl});"/>
                 </g>`;
             }).join('')}
 
-            <!-- Центральный зигзаг внутрь -->
-            <path class="fs-float" d="M 100 65 L 105 80 L 96 82 L 108 97 L 100 98 L 108 108"
-                  fill="none" stroke="${clt}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+            <!-- Центральный разряд (внутри, еле касается) -->
+            <g class="fr-center-bolt">
+                <path d="M 100 62 L 106 78 L 96 80 L 108 96 L 98 97 L 106 110"
+                      fill="none" stroke="${clt}" stroke-width="2.2"
+                      stroke-linecap="round" stroke-linejoin="round"
+                      style="filter:drop-shadow(0 0 6px ${cl});"/>
+            </g>
 
-            <circle cx="100" cy="100" r="4" style="fill:#fff;"/>
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🌸 САКУРА                                                      */
-    /* ============================================================ */
+    // ============================================================
+    // 🌸 САКУРА — лепестки + цветки
+    // ============================================================
     case 'sakura':
-        return `
-        <svg class="fs-sakura" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
-            ${ring(84, 0.8, 0.4, '2 6', 'fs-ring-3')}
-            ${ring(78, 2, 0.85, null, 'fs-ring-1')}
+        return `${svgOpen('fr-sakura')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 7')}
+            ${outerRing(2.2, 0.9)}
 
-            <!-- Лепестки снаружи -->
-            ${Array.from({length:18}).map((_, i) => {
-                const a = i * 20;
-                const x = 100 + Math.cos(a * Math.PI/180) * 84;
-                const y = 100 + Math.sin(a * Math.PI/180) * 84;
-                return `<g class="sakura-petal" style="--px:${x.toFixed(1)}px; --py:${y.toFixed(1)}px">
-                    <path d="M 0,0 Q -5.5,-6 0,-14 Q 5.5,-6 0,0 Z"
-                          style="fill:${clt}; opacity:0.95;"
-                          transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
+            <!-- 16 лепестков по кольцу -->
+            ${Array.from({length: 16}).map((_, i) => {
+                const a = i * 22.5 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 86;
+                const y = 100 + Math.sin(rad) * 86;
+                return `<g class="fr-petal" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <path d="M 0,0 Q -4.5,-5 0,-11 Q 4.5,-5 0,0 Z"
+                          fill="${clt}" opacity="0.95"
+                          transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90})"/>
                 </g>`;
             }).join('')}
 
-            <!-- Цветки внутри (заходят внутрь кольца) -->
-            ${Array.from({length:4}).map((_, i) => {
+            <!-- 4 цветка внутри (касание аватара) -->
+            ${Array.from({length: 4}).map((_, i) => {
                 const a = i * 90 + 45;
-                const x = 100 + Math.cos(a * Math.PI/180) * 55;
-                const y = 100 + Math.sin(a * Math.PI/180) * 55;
-                return `<g class="sakura-flower" style="--fx:${x.toFixed(1)}px; --fy:${y.toFixed(1)}px">
-                    ${Array.from({length:5}).map((_, j) => {
-                        const pa = (j*72) * Math.PI/180;
-                        const px = x + Math.cos(pa) * 5;
-                        const py = y + Math.sin(pa) * 5;
-                        return `<ellipse cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" rx="3.5" ry="5"
-                                          style="fill:#ffb7d5; opacity:0.9;"/>`;
+                const rad = a * Math.PI / 180;
+                const cx = 100 + Math.cos(rad) * 50;
+                const cy = 100 + Math.sin(rad) * 50;
+                return `<g class="fr-flower" data-i="${i}"
+                           style="transform-origin:${cx.toFixed(1)}px ${cy.toFixed(1)}px;">
+                    ${Array.from({length: 5}).map((_, j) => {
+                        const pa = (j * 72) * Math.PI / 180;
+                        const px = cx + Math.cos(pa) * 4;
+                        const py = cy + Math.sin(pa) * 4;
+                        return `<ellipse cx="${px.toFixed(1)}" cy="${py.toFixed(1)}"
+                                         rx="3" ry="4.5"
+                                         fill="#ffb7d5" opacity="0.9"/>`;
                     }).join('')}
-                    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8" fill="#ff86b3"/>
+                    <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}"
+                            r="2.2" fill="#ff86b3"/>
                 </g>`;
             }).join('')}
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 💀 ЧЕРЕП                                                       */
-    /* ============================================================ */
+    // ============================================================
+    // 💀 ЧЕРЕП — рёбра + глаза
+    // ============================================================
     case 'skull':
-        return `
-        <svg class="fs-skull" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
-            ${ring(80, 2, 0.75, null, 'fs-ring-1')}
+        return `${svgOpen('fr-skull')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 6')}
+            ${outerRing(2.5)}
 
-            <!-- 20 рёбер -->
-            ${Array.from({length:20}).map((_, i) => {
+            <!-- 20 коротких рёбер -->
+            ${Array.from({length: 20}).map((_, i) => {
                 const a = i * 18;
-                const x1 = 100 + Math.cos(a * Math.PI/180) * 80;
-                const y1 = 100 + Math.sin(a * Math.PI/180) * 80;
-                const x2 = 100 + Math.cos(a * Math.PI/180) * 90;
-                const y2 = 100 + Math.sin(a * Math.PI/180) * 90;
-                return `<line class="skull-rib" style="--rx:${((x1+x2)/2).toFixed(1)}px; --ry:${((y1+y2)/2).toFixed(1)}px"
-                              x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
-                              stroke="${clt}" stroke-width="2" stroke-linecap="round"/>`;
+                const rad = a * Math.PI / 180;
+                const x1 = 100 + Math.cos(rad) * 86;
+                const y1 = 100 + Math.sin(rad) * 86;
+                const x2 = 100 + Math.cos(rad) * 92;
+                const y2 = 100 + Math.sin(rad) * 92;
+                return `<line class="fr-rib" data-i="${i}"
+                              x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}"
+                              x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                              stroke="${clt}" stroke-width="2"
+                              stroke-linecap="round"/>`;
             }).join('')}
 
-            <!-- Светящиеся глаза (заходят внутрь) -->
-            <circle class="skull-eye" cx="72" cy="72" r="3.5" style="fill:${clt}; filter: drop-shadow(0 0 10px ${cl});"/>
-            <circle class="skull-eye" cx="128" cy="128" r="3.5" style="fill:${clt}; filter: drop-shadow(0 0 10px ${cl});"/>
-
-            <g class="fs-orbs">${orbs(88, 12, 2)}</g>
+            <!-- 2 светящихся глаза внутри -->
+            <circle class="fr-eye" data-i="0" cx="80" cy="80" r="3"
+                    fill="${clt}" style="filter:drop-shadow(0 0 8px ${cl});"/>
+            <circle class="fr-eye" data-i="1" cx="120" cy="120" r="3"
+                    fill="${clt}" style="filter:drop-shadow(0 0 8px ${cl});"/>
 
             <!-- Частицы -->
-            ${Array.from({length:6}).map((_, i) => {
+            ${Array.from({length: 6}).map((_, i) => {
                 const a = i * 60 + 30;
-                const x = 100 + Math.cos(a * Math.PI/180) * 55;
-                const y = 100 + Math.sin(a * Math.PI/180) * 55;
-                return `<circle class="skull-particle" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" style="fill:${clt};"/>`;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 55;
+                const y = 100 + Math.sin(rad) * 55;
+                return `<circle class="fr-particle" data-i="${i}"
+                               cx="${x.toFixed(1)}" cy="${y.toFixed(1)}"
+                               r="1.5" fill="${clt}"/>`;
             }).join('')}
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🦅 ФЕНИКС                                                      */
-    /* ============================================================ */
+    // ============================================================
+    // 🦅 ФЕНИКС — крылья + огненный хвост
+    // ============================================================
     case 'phoenix':
-        return `
-        <svg class="fs-phoenix" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-phoenix')}
             <defs>
-                <linearGradient id="phFireGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="phFire${uid}" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="#ffe066"/>
                     <stop offset="50%" stop-color="${clt}"/>
                     <stop offset="100%" stop-color="#cc2e00"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            ${ring(78, 2.5, 0.9, null, 'fs-ring-1')}
-            ${ring(86, 0.8, 0.4, '3 8', 'fs-ring-3')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('3 6')}
+            ${outerRing(2.5)}
 
-            <!-- Огненные искры снаружи -->
-            ${Array.from({length:14}).map((_, i) => {
-                const a = i * (360/14);
-                const x = 100 + Math.cos(a * Math.PI/180) * 86;
-                const y = 100 + Math.sin(a * Math.PI/180) * 86;
-                return `<g class="phx-fire" style="--fx:${x.toFixed(1)}px; --fy:${y.toFixed(1)}px">
-                    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"
-                            style="fill:url(#phFireGrad); filter: drop-shadow(0 0 8px ${clt});"/>
+            <!-- 14 огненных искр -->
+            ${Array.from({length: 14}).map((_, i) => {
+                const a = i * (360 / 14) - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 90;
+                const y = 100 + Math.sin(rad) * 90;
+                return `<circle class="fr-phx-fire" data-i="${i}"
+                               cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"
+                               fill="url(#phFire${uid})"
+                               style="filter:drop-shadow(0 0 6px ${clt});"/>`;
+            }).join('')}
+
+            <!-- Хвост перьев внизу (внутрь) -->
+            <g class="fr-phx-tail">
+                <path d="M 88 142 Q 100 168 112 142 L 106 158 L 100 172 L 94 158 Z"
+                      fill="url(#phFire${uid})" opacity="0.9"/>
+            </g>
+
+            <g class="fr-orbs-rotate">${orbs(80, 8, 2)}</g>
+
+            ${innerRing(0.3)}
+        </svg>`;
+
+    // ============================================================
+    // ❄️ ЛЕДЯНАЯ — кристаллы + снежинка внутри
+    // ============================================================
+    case 'ice':
+        return `${svgOpen('fr-ice')}
+            <defs>
+                <linearGradient id="icCrys${uid}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+                    <stop offset="100%" stop-color="${cd}" stop-opacity="0.9"/>
+                </linearGradient>
+            </defs>
+            ${baseDefs}
+            ${glow}
+
+            <circle class="fr-ice-ring-out" cx="100" cy="100" r="86"
+                    fill="none" stroke="${clt}" stroke-width="2" opacity="0.9"
+                    stroke-dasharray="4 6"/>
+            <circle class="fr-ice-ring-in" cx="100" cy="100" r="74"
+                    fill="none" stroke="${cl}" stroke-width="1.5" opacity="0.7"/>
+
+            <!-- 6 кристаллов-ромбов -->
+            ${Array.from({length: 6}).map((_, i) => {
+                const a = i * 60 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 80;
+                const y = 100 + Math.sin(rad) * 80;
+                return `<g class="fr-ice-crystal" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <polygon points="0,-9 5,0 0,9 -5,0"
+                             fill="url(#icCrys${uid})"
+                             stroke="${clt}" stroke-width="0.8"
+                             transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"/>
                 </g>`;
             }).join('')}
 
-            <g class="fs-orbs">${orbs(78, 10, 2.5)}</g>
-
-            <!-- Хвост перьев внизу (заходит внутрь) -->
-            <g class="phx-tail">
-                <path d="M 90 145 Q 100 165 110 145 L 105 158 L 100 170 L 95 158 Z"
-                      style="fill:url(#phFireGrad); opacity:0.9;"/>
-                <line x1="97" y1="148" x2="97" y2="165" stroke="${clt}" stroke-width="0.8" opacity="0.7"/>
-                <line x1="103" y1="148" x2="103" y2="165" stroke="${clt}" stroke-width="0.8" opacity="0.7"/>
+            <!-- Снежинка внутри -->
+            <g class="fr-snowflake">
+                ${Array.from({length: 6}).map((_, i) => {
+                    const a = i * 60;
+                    const x2 = 100 + Math.cos(a * Math.PI / 180) * 34;
+                    const y2 = 100 + Math.sin(a * Math.PI / 180) * 34;
+                    return `
+                        <line x1="100" y1="100" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                              stroke="${clt}" stroke-width="1.4" opacity="0.65" stroke-linecap="round"/>
+                        <line x1="${x2.toFixed(1)}" y1="${y2.toFixed(1)}"
+                              x2="${(x2 + Math.cos(a * Math.PI / 180 + 0.5) * 6).toFixed(1)}"
+                              y2="${(y2 + Math.sin(a * Math.PI / 180 + 0.5) * 6).toFixed(1)}"
+                              stroke="${clt}" stroke-width="1" opacity="0.55" stroke-linecap="round"/>
+                    `;
+                }).join('')}
+                <circle cx="100" cy="100" r="3" fill="#fff"/>
             </g>
+
+            ${innerRing(0.4)}
         </svg>`;
 
-    /* ============================================================ */
-    /* ❄️ ЛЕДЯНАЯ                                                     */
-    /* ============================================================ */
-case 'ice':
-    return `
-    <svg class="fs-ice" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="icCrysGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-                <stop offset="100%" stop-color="${cd}" stop-opacity="0.9"/>
-            </linearGradient>
-        </defs>
-        ${glowDef}
-        ${halo}
-
-        <circle class="ice-spin" cx="100" cy="100" r="84" fill="none" stroke="${clt}" stroke-width="1.6" opacity="0.8" stroke-dasharray="4 6"/>
-        <circle class="ice-spin-rev" cx="100" cy="100" r="70" fill="none" stroke="${cl}" stroke-width="2" opacity="0.75"/>
-
-        <!-- 🔥 Кристаллы теперь заходят ВНУТРЬ -->
-        ${Array.from({length:6}).map((_, i) => {
-            const a = i * 60;
-            const x = 100 + Math.cos(a * Math.PI/180) * 72;
-            const y = 100 + Math.sin(a * Math.PI/180) * 72;
-            return `<g class="ice-crystal" style="--cx:${x.toFixed(1)}px; --cy:${y.toFixed(1)}px">
-                <polygon points="0,-9 5,0 0,9 -5,0"
-                         style="fill:url(#icCrysGrad); stroke:${clt}; stroke-width:0.6;"
-                         transform="translate(${x.toFixed(1)},${y.toFixed(1)})"/>
-            </g>`;
-        }).join('')}
-
-        <!-- 🔥 Снежинка внутри аватара (r=30) -->
-        <g class="fs-float" style="transform-origin:100px 100px;">
-            ${Array.from({length:6}).map((_, i) => {
-                const a = i * 60;
-                const x2 = 100 + Math.cos(a * Math.PI/180) * 30;
-                const y2 = 100 + Math.sin(a * Math.PI/180) * 30;
-                return `
-                    <line x1="100" y1="100" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
-                          stroke="${clt}" stroke-width="1.5" opacity="0.7" stroke-linecap="round"/>
-                    <line x1="${x2.toFixed(1)}" y1="${y2.toFixed(1)}"
-                          x2="${(x2 + Math.cos(a*Math.PI/180+1)*8).toFixed(1)}"
-                          y2="${(y2 + Math.sin(a*Math.PI/180+1)*8).toFixed(1)}"
-                          stroke="${clt}" stroke-width="1" opacity="0.6"/>
-                `;
-            }).join('')}
-            <circle cx="100" cy="100" r="3.5" style="fill:#fff;"/>
-        </g>
-
-        <g class="fs-orbs">${orbs(84, 8, 2)}</g>
-    </svg>`;
-
-    /* ============================================================ */
-    /* 🌟 ЗВЁЗДНАЯ                                                    */
-    /* ============================================================ */
+    // ============================================================
+    // 🌟 ЗВЁЗДНАЯ — 20 звёзд
+    // ============================================================
     case 'star':
-        return `
-        <svg class="fs-star" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
+        return `${svgOpen('fr-star')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 8')}
+            ${outerRing(2.2, 0.85)}
 
-            <!-- 24 звезды (заходят внутрь) -->
-            ${Array.from({length:24}).map((_, i) => {
-                const a = i * 15;
-                const x = 100 + Math.cos(a * Math.PI/180) * 80;
-                const y = 100 + Math.sin(a * Math.PI/180) * 80;
-                const s = i%3===0 ? 4 : (i%3===1 ? 3 : 2.2);
-                return `<path class="star-blink" style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px; fill:${clt};"
-                              d="M 0,-${s*2} L ${s*0.5},-${s*0.5} L ${s*2},0 L ${s*0.5},${s*0.5} L 0,${s*2} L -${s*0.5},${s*0.5} L -${s*2},0 L -${s*0.5},-${s*0.5} Z"
-                              transform="translate(${x.toFixed(1)},${y.toFixed(1)})"/>`;
+            <!-- 20 звёзд по 2 кольцам -->
+            ${Array.from({length: 20}).map((_, i) => {
+                const ring = i < 12 ? 86 : 70;
+                const a = (i < 12 ? i * 30 : (i - 12) * 45 + 22) - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * ring;
+                const y = 100 + Math.sin(rad) * ring;
+                const s = i < 12 ? 4 : 2.8;
+                return `<path class="fr-star" data-i="${i}"
+                              d="M 0,-${s * 2} L ${s * 0.55},-${s * 0.55} L ${s * 2},0 L ${s * 0.55},${s * 0.55}
+                                 L 0,${s * 2} L -${s * 0.55},${s * 0.55} L -${s * 2},0 L -${s * 0.55},-${s * 0.55} Z"
+                              fill="${clt}"
+                              transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"
+                              style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;
+                                     filter:drop-shadow(0 0 5px ${cl});"/>`;
             }).join('')}
 
-            <g class="fs-orbs">${orbs(70, 8, 2)}</g>
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 💧 АКВА                                                        */
-    /* ============================================================ */
+    // ============================================================
+    // 💧 АКВА — капли + волны
+    // ============================================================
     case 'aqua':
-        return `
-        <svg class="fs-aqua" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-aqua')}
             <defs>
-                <linearGradient id="aqGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="aqGrad${uid}" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="#4fc3f7"/>
                     <stop offset="100%" stop-color="#0066cc"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            ${ring(78, 2, 0.75, null, 'fs-ring-1')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 8')}
+            ${outerRing(2.2, 0.9)}
 
-            <g class="aqua-wave">
-                <path d="M 15 55 Q 45 45 75 55 T 135 55 T 195 55"
-                      fill="none" stroke="${clt}" stroke-width="1.8" opacity="0.8" stroke-linecap="round"/>
-            </g>
-            <g class="aqua-wave" style="animation-delay:1.5s">
-                <path d="M 5 145 Q 35 135 65 145 T 125 145 T 185 145"
-                      fill="none" stroke="${clt}" stroke-width="1.8" opacity="0.8" stroke-linecap="round"/>
-            </g>
-
-            <!-- 14 капель -->
-            ${Array.from({length:14}).map((_, i) => {
-                const a = i * (360/14);
-                const x = 100 + Math.cos(a * Math.PI/180) * 82;
-                const y = 100 + Math.sin(a * Math.PI/180) * 82;
-                return `<g class="aqua-drop" style="--dx:${x.toFixed(1)}px; --dy:${y.toFixed(1)}px">
-                    <path d="M 0,0 Q -3.5,5 0,10 Q 3.5,5 0,0 Z"
-                          style="fill:url(#aqGrad);"
-                          transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${(a+90).toFixed(1)})"/>
+            <!-- 12 капель по кольцу -->
+            ${Array.from({length: 12}).map((_, i) => {
+                const a = i * 30 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 88;
+                const y = 100 + Math.sin(rad) * 88;
+                return `<g class="fr-drop" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <path d="M 0,0 Q -3,4.5 0,9 Q 3,4.5 0,0 Z"
+                          fill="url(#aqGrad${uid})"
+                          transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${a + 90})"/>
                 </g>`;
             }).join('')}
 
-            <!-- Центральная капля -->
-            <g class="fs-float" style="transform-origin:100px 100px;">
-                <path d="M 100 78 Q 86 100 86 110 Q 86 122 100 122 Q 114 122 114 110 Q 114 100 100 78 Z"
-                      style="fill:url(#aqGrad); stroke:${clt}; stroke-width:1.3;"/>
-                <ellipse cx="94" cy="108" rx="4" ry="6" fill="#fff" opacity="0.4"/>
+            <!-- Волны внутри -->
+            <g class="fr-wave">
+                <path d="M 55 90 Q 72 82 90 90 T 125 90 T 145 90"
+                      fill="none" stroke="${clt}" stroke-width="1.6"
+                      opacity="0.7" stroke-linecap="round"/>
+            </g>
+            <g class="fr-wave" style="animation-delay:1.2s">
+                <path d="M 55 110 Q 72 102 90 110 T 125 110 T 145 110"
+                      fill="none" stroke="${clt}" stroke-width="1.6"
+                      opacity="0.7" stroke-linecap="round"/>
             </g>
 
-            <g class="fs-orbs">${orbs(72, 8, 2)}</g>
+            <!-- Центральная капля -->
+            <path class="fr-drop-center"
+                  d="M 100 78 Q 88 100 88 110 Q 88 122 100 122 Q 112 122 112 110 Q 112 100 100 78 Z"
+                  fill="url(#aqGrad${uid})" stroke="${clt}" stroke-width="1.2"/>
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🌪️ ВИХРЬ                                                      */
-    /* ============================================================ */
+    // ============================================================
+    // 🌪️ ВИХРЬ — спираль
+    // ============================================================
     case 'vortex':
-        return `
-        <svg class="fs-vortex" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            ${glowDef}
-            ${halo}
+        return `${svgOpen('fr-vortex')}
+            ${baseDefs}
+            ${glow}
 
-            ${Array.from({length:5}).map((_, i) => {
-                const r = 80 - i * 8;
+            <!-- 5 спиралей разного радиуса -->
+            ${Array.from({length: 5}).map((_, i) => {
+                const r = 86 - i * 9;
                 const startA = i * 72;
                 const endA = startA + 280;
-                const x1 = 100 + Math.cos(startA * Math.PI/180) * r;
-                const y1 = 100 + Math.sin(startA * Math.PI/180) * r;
-                const x2 = 100 + Math.cos(endA * Math.PI/180) * r;
-                const y2 = 100 + Math.sin(endA * Math.PI/180) * r;
-                return `<path class="vtx-arc"
-                              d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r} ${r} 0 1 1 ${x2.toFixed(1)} ${y2.toFixed(1)}"
-                              fill="none" stroke="${clt}" stroke-width="${3.2 - i * 0.3}" opacity="${0.9 - i * 0.1}"
+                const x1 = 100 + Math.cos(startA * Math.PI / 180) * r;
+                const y1 = 100 + Math.sin(startA * Math.PI / 180) * r;
+                const x2 = 100 + Math.cos(endA * Math.PI / 180) * r;
+                const y2 = 100 + Math.sin(endA * Math.PI / 180) * r;
+                return `<path class="fr-vtx" data-i="${i}"
+                              d="M ${x1.toFixed(1)} ${y1.toFixed(1)}
+                                 A ${r} ${r} 0 1 1 ${x2.toFixed(1)} ${y2.toFixed(1)}"
+                              fill="none" stroke="${clt}"
+                              stroke-width="${3 - i * 0.3}"
+                              opacity="${0.9 - i * 0.1}"
                               stroke-linecap="round"/>`;
             }).join('')}
 
-            <g class="fs-orbs">${orbs(84, 12, 2)}</g>
+            <!-- Ядро -->
+            <circle class="fr-core" cx="100" cy="100" r="5"
+                    fill="${clt}" opacity="0.7"
+                    style="filter:drop-shadow(0 0 10px ${cl});"/>
 
-            <!-- Ядро внутри -->
-            <circle class="fs-pulse" cx="100" cy="100" r="5" style="fill:#fff;"/>
+            <g class="fr-orbs-rotate">${orbs(80, 10, 2)}</g>
         </svg>`;
 
-    /* ============================================================ */
-    /* 🦂 СКОРПИОН                                                    */
-    /* ============================================================ */
+    // ============================================================
+    // 🦂 СКОРПИОН — 8 ног + хвост
+    // ============================================================
     case 'scorpion':
-        return `
-        <svg class="fs-scorpion" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-scorpion')}
             <defs>
-                <linearGradient id="scGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="scGrad${uid}" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="${clt}"/>
                     <stop offset="100%" stop-color="${cd}"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            ${ring(82, 2, 0.75, null, 'fs-ring-1')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('3 6')}
+            ${outerRing(2.5)}
 
-            <!-- 8 ног по краю (заходят внутрь) -->
-            ${Array.from({length:8}).map((_, i) => {
-                const a = i * 45 + 22.5;
-                const x = 100 + Math.cos(a * Math.PI/180) * 82;
-                const y = 100 + Math.sin(a * Math.PI/180) * 82;
-                const x2 = 100 + Math.cos(a * Math.PI/180) * 66;
-                const y2 = 100 + Math.sin(a * Math.PI/180) * 66;
-                return `<g class="scorp-leg" style="--lx:${x.toFixed(1)}px; --ly:${y.toFixed(1)}px">
-                    <line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
-                          stroke="${clt}" stroke-width="2.6" stroke-linecap="round"/>
-                    <circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2" style="fill:${clt};"/>
+            <!-- 8 ног по кольцу -->
+            ${Array.from({length: 8}).map((_, i) => {
+                const a = i * 45 + 22.5 - 90;
+                const rad = a * Math.PI / 180;
+                const x1 = 100 + Math.cos(rad) * 86;
+                const y1 = 100 + Math.sin(rad) * 86;
+                const x2 = 100 + Math.cos(rad) * 70;
+                const y2 = 100 + Math.sin(rad) * 70;
+                return `<g class="fr-scorp-leg" data-i="${i}"
+                           style="transform-origin:${x1.toFixed(1)}px ${y1.toFixed(1)}px;">
+                    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}"
+                          x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                          stroke="${clt}" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}"
+                            r="1.8" fill="${clt}"/>
                 </g>`;
             }).join('')}
 
-            <!-- Хвост из сегментов заходит внутрь -->
-            ${Array.from({length:6}).map((_, i) => {
-                const t = i / 5;
-                const x = 100 + t * 20;
-                const y = 42 + t * 14;
-                return `<g class="scorp-tail" style="--tx:${x.toFixed(1)}px; --ty:${y.toFixed(1)}px; --tr:${i%2===0?6:-6}deg">
-                    <ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="6" ry="5"
-                             style="fill:url(#scGrad); stroke:${clt}; stroke-width:1.2;"
-                             transform="rotate(${-20 + t*40} ${x.toFixed(1)} ${y.toFixed(1)})"/>
+            <!-- Хвост (сегменты спускаются внутрь) -->
+            ${Array.from({length: 5}).map((_, i) => {
+                const t = i / 4;
+                const x = 100 + t * 18;
+                const y = 44 + t * 12;
+                return `<g class="fr-scorp-tail" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="5.5" ry="4.5"
+                             fill="url(#scGrad${uid})" stroke="${clt}" stroke-width="1"
+                             transform="rotate(${-20 + t * 40} ${x.toFixed(1)} ${y.toFixed(1)})"/>
                 </g>`;
             }).join('')}
 
             <!-- Жало -->
-            <path d="M 120 60 L 130 48 L 134 56 L 124 62 Z" style="fill:url(#scGrad); stroke:${clt}; stroke-width:1;"/>
-            <circle cx="130" cy="48" r="3" style="fill:${clt};"/>
+            <path class="fr-sting" d="M 118 56 L 128 44 L 132 52 L 122 58 Z"
+                  fill="url(#scGrad${uid})" stroke="${clt}" stroke-width="0.8"/>
+            <circle cx="128" cy="44" r="2.5" fill="${clt}"
+                    style="filter:drop-shadow(0 0 5px ${cl});"/>
 
-            <g class="fs-orbs">${orbs(72, 8, 2)}</g>
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🎭 МАСКА                                                       */
-    /* ============================================================ */
+    // ============================================================
+    // 🎭 МАСКА — стилизованная маска
+    // ============================================================
     case 'mask':
-        return `
-        <svg class="fs-mask" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-mask')}
             <defs>
-                <linearGradient id="maskGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="maskGrad${uid}" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="${clt}"/>
                     <stop offset="100%" stop-color="${cd}"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            <circle class="fs-ring-1" cx="100" cy="100" r="78" fill="none" stroke="${clt}" stroke-width="0.8" opacity="0.4" stroke-dasharray="2 6"/>
-            <circle class="fs-ring-2" cx="100" cy="100" r="72" fill="none" stroke="${cl}" stroke-width="2.2" opacity="0.85"/>
+            ${baseDefs}
+            ${glow}
+            ${midRing('3 5')}
+            ${outerRing(2.5)}
 
-            <!-- Маска по центру (заходит внутрь) -->
-            <g class="mask-shape">
-                <path d="M 68 58 Q 100 38 132 58 Q 138 88 126 118 Q 113 140 100 152 Q 87 140 74 118 Q 62 88 68 58 Z"
-                      style="fill:url(#maskGrad); stroke:${clt}; stroke-width:1.6; opacity:0.9;"/>
-                <path d="M 76 66 Q 100 52 124 66 Q 128 88 120 112 Q 111 130 100 140 Q 89 130 80 112 Q 72 88 76 66 Z"
-                      style="fill:${cd}; opacity:0.35;"/>
-                <ellipse cx="85" cy="86" rx="8" ry="5" style="fill:${clt};"/>
-                <ellipse cx="115" cy="86" rx="8" ry="5" style="fill:${clt};"/>
-                <ellipse cx="85" cy="86" rx="3" ry="2.3" style="fill:#0a0a0a;"/>
-                <ellipse cx="115" cy="86" rx="3" ry="2.3" style="fill:#0a0a0a;"/>
-                <path d="M 85 118 Q 100 132 115 118" fill="none" stroke="${clt}" stroke-width="2" stroke-linecap="round"/>
+            <!-- Маска (заходит внутрь, но не сильно) -->
+            <g class="fr-mask-shape">
+                <path d="M 72 62 Q 100 44 128 62 Q 134 90 124 116 Q 112 134 100 144 Q 88 134 76 116 Q 66 90 72 62 Z"
+                      fill="url(#maskGrad${uid})" stroke="${clt}" stroke-width="1.4" opacity="0.9"/>
+                <path d="M 80 70 Q 100 58 120 70 Q 124 90 118 108 Q 110 122 100 130 Q 90 122 82 108 Q 76 90 80 70 Z"
+                      fill="${cd}" opacity="0.4"/>
+                <ellipse cx="86" cy="86" rx="7" ry="4.5" fill="${clt}"/>
+                <ellipse cx="114" cy="86" rx="7" ry="4.5" fill="${clt}"/>
+                <ellipse cx="86" cy="86" rx="2.6" ry="2" fill="#0a0a0a"/>
+                <ellipse cx="114" cy="86" rx="2.6" ry="2" fill="#0a0a0a"/>
+                <path d="M 88 112 Q 100 124 112 112"
+                      fill="none" stroke="${clt}" stroke-width="1.8" stroke-linecap="round"/>
             </g>
 
-            <g class="fs-orbs">${orbs(80, 12, 2)}</g>
-
-            <!-- Плюмаж сверху -->
-            <g class="fs-float" style="transform-origin:100px 48px;">
-                <path d="M 100 48 L 100 32" stroke="${clt}" stroke-width="2.2" stroke-linecap="round"/>
-                <circle cx="100" cy="32" r="3" style="fill:#ffe066;"/>
+            <!-- Плюмаж сверху (касание) -->
+            <g class="fr-mask-plume">
+                <path d="M 100 46 L 100 32"
+                      stroke="${clt}" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="100" cy="30" r="2.8" fill="#ffd700"
+                        style="filter:drop-shadow(0 0 5px #ffd700);"/>
             </g>
+
+            <g class="fr-orbs-rotate">${orbs(86, 10, 2)}</g>
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🔱 ТРЕЗУБЕЦ                                                    */
-    /* ============================================================ */
+    // ============================================================
+    // 🔱 ТРЕЗУБЕЦ — ствол + 3 зубца + орбы
+    // ============================================================
     case 'trident':
-        return `
-        <svg class="fs-trident" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-trident')}
             <defs>
-                <linearGradient id="trGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="trGrad${uid}" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="#e0f8ff"/>
                     <stop offset="50%" stop-color="${clt}"/>
                     <stop offset="100%" stop-color="${cd}"/>
                 </linearGradient>
             </defs>
-            ${glowDef}
-            ${halo}
-            ${ring(78, 1.8, 0.75, null, 'fs-ring-1')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 7')}
+            ${outerRing(2.5)}
 
-            <!-- Ствол внутрь -->
-            <g class="tri-staff">
-                <line x1="100" y1="72" x2="100" y2="152" stroke="url(#trGrad)" stroke-width="5" stroke-linecap="round"/>
-                <line x1="100" y1="72" x2="100" y2="152" stroke="#fff" stroke-width="1" opacity="0.4"/>
+            <!-- Ствол — заходит внутрь -->
+            <g class="fr-tri-staff">
+                <line x1="100" y1="72" x2="100" y2="150"
+                      stroke="url(#trGrad${uid})" stroke-width="4.5" stroke-linecap="round"/>
+                <line x1="100" y1="72" x2="100" y2="150"
+                      stroke="#fff" stroke-width="0.9" opacity="0.4"/>
             </g>
 
             <!-- 3 зубца -->
-            <g class="fs-float" style="transform-origin:100px 60px;">
-                <path d="M 100 60 L 92 34 L 100 46 L 108 34 Z" style="fill:url(#trGrad); stroke:${clt}; stroke-width:1.2;"/>
-                <circle class="tri-orb" cx="100" cy="34" r="3" style="fill:${clt};"/>
-            </g>
-            <g class="fs-float" style="transform-origin:80px 68px; animation-delay:.6s;">
-                <path d="M 80 68 L 72 42 L 80 54 L 88 44 Z" style="fill:url(#trGrad); stroke:${clt}; stroke-width:1.2;"/>
-                <line x1="80" y1="58" x2="80" y2="80" stroke="url(#trGrad)" stroke-width="3" stroke-linecap="round"/>
-            </g>
-            <g class="fs-float" style="transform-origin:120px 68px; animation-delay:1.2s;">
-                <path d="M 120 68 L 112 42 L 120 54 L 128 44 Z" style="fill:url(#trGrad); stroke:${clt}; stroke-width:1.2;"/>
-                <line x1="120" y1="58" x2="120" y2="80" stroke="url(#trGrad)" stroke-width="3" stroke-linecap="round"/>
+            <g class="fr-tri-prongs">
+                <path d="M 100 64 L 92 38 L 100 50 L 108 38 Z"
+                      fill="url(#trGrad${uid})" stroke="${clt}" stroke-width="1"/>
+                <circle cx="100" cy="38" r="2.8" fill="${clt}"
+                        style="filter:drop-shadow(0 0 5px ${cl});"/>
+
+                <path d="M 80 70 L 72 44 L 80 56 L 88 46 Z"
+                      fill="url(#trGrad${uid})" stroke="${clt}" stroke-width="1"/>
+                <line x1="80" y1="60" x2="80" y2="80"
+                      stroke="url(#trGrad${uid})" stroke-width="3" stroke-linecap="round"/>
+
+                <path d="M 120 70 L 112 44 L 120 56 L 128 46 Z"
+                      fill="url(#trGrad${uid})" stroke="${clt}" stroke-width="1"/>
+                <line x1="120" y1="60" x2="120" y2="80"
+                      stroke="url(#trGrad${uid})" stroke-width="3" stroke-linecap="round"/>
             </g>
 
-            <g class="fs-orbs">${orbs(78, 10, 2.2)}</g>
+            <!-- Наконечник внизу -->
+            <circle class="fr-tri-tip" cx="100" cy="150" r="4"
+                    fill="${clt}" style="filter:drop-shadow(0 0 6px ${cl});"/>
 
-            <!-- Наконечник -->
-            <circle class="fs-pulse" cx="100" cy="152" r="5" style="fill:${clt};"/>
+            <g class="fr-orbs-rotate">${orbs(86, 10, 2.2)}</g>
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 🌊 ВОЛНЫ — качание воды, пульсация кругов                     */
-    /* ============================================================ */
+    // ============================================================
+    // 🌊 ВОЛНЫ — 3 волны + пузыри
+    // ============================================================
     case 'waves':
-        return `
-        <svg class="fs-waves" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-waves')}
             <defs>
-                <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="1">
+                <linearGradient id="waveGrad${uid}" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stop-color="${clt}"/>
                     <stop offset="100%" stop-color="${cd}"/>
                 </linearGradient>
             </defs>
-            <circle cx="100" cy="100" r="88" fill="none" stroke="${cl}" stroke-width="1" opacity="0.4"
-                    stroke-dasharray="2 6" class="waves-mist"/>
-            <circle cx="100" cy="100" r="78" fill="none" stroke="${clt}" stroke-width="1.8" opacity="0.75"/>
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 8')}
+            ${outerRing(2.2, 0.85)}
 
-            <!-- 4 волны разной амплитуды, все "плывут" в сторону -->
-            ${[0, 1, 2, 3].map(k => `
-                <path class="wave-flow" style="--delay:${k * 0.4}s; --yoff:${k * 22 - 33};"
-                      d="M 22 100 Q 50 ${70 + k * 20}, 80 100 T 140 100 T 178 100"
-                      fill="none" stroke="url(#waveGrad)" stroke-width="${3 - k * 0.4}"
-                      stroke-linecap="round" opacity="${0.9 - k * 0.15}"
-                      transform="translate(0, ${k * 22 - 33})"/>
+            <!-- 3 волны внутри -->
+            ${[0, 1, 2].map(k => `
+                <path class="fr-wave-flow" data-i="${k}"
+                      style="animation-delay:${k * 0.4}s;"
+                      d="M 40 ${90 + k * 14} Q 62 ${80 + k * 14}, 88 ${90 + k * 14}
+                         T 136 ${90 + k * 14} T 160 ${90 + k * 14}"
+                      fill="none" stroke="url(#waveGrad${uid})"
+                      stroke-width="${2.4 - k * 0.4}"
+                      stroke-linecap="round" opacity="${0.85 - k * 0.15}"/>
             `).join('')}
 
-            <!-- Пузыри, всплывающие вверх -->
-            ${Array.from({length:7}).map((_, i) => {
-                const a = i * 51;
-                const x = 100 + Math.cos(a * Math.PI/180) * 70;
-                const y = 100 + Math.sin(a * Math.PI/180) * 70;
-                return `<circle class="wave-bubble" style="--bx:${x.toFixed(1)}px; --by:${y.toFixed(1)}px; --delay:${(i*0.35).toFixed(1)}s;"
-                                cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${2 + (i%3)}"
-                                fill="${clt}" opacity="0.85"/>`;
+            <!-- Пузыри, всплывают -->
+            ${Array.from({length: 8}).map((_, i) => {
+                const a = i * 45 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 86;
+                const y = 100 + Math.sin(rad) * 86;
+                const size = 2 + (i % 3);
+                return `<circle class="fr-bubble" data-i="${i}"
+                               style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;
+                                      animation-delay:${(i * 0.3).toFixed(1)}s;"
+                               cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${size}"
+                               fill="${clt}" opacity="0.85"/>`;
             }).join('')}
+
+            ${innerRing(0.3)}
         </svg>`;
 
-    /* ============================================================ */
-    /* 💫 ГАЛАКТИКА — спираль из звёзд, вращение + мерцание          */
-    /* ============================================================ */
+    // ============================================================
+    // 💫 ГАЛАКТИКА — ядро + 2 спирали
+    // ============================================================
     case 'galaxy':
-        return `
-        <svg class="fs-galaxy" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-galaxy')}
             <defs>
-                <radialGradient id="galCore" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
-                    <stop offset="30%" stop-color="${clt}" stop-opacity="0.8"/>
+                <radialGradient id="galCore${uid}" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="40%" stop-color="${clt}" stop-opacity="0.7"/>
                     <stop offset="100%" stop-color="${cl}" stop-opacity="0"/>
                 </radialGradient>
             </defs>
+            ${baseDefs}
 
-            <!-- Ядро галактики (пульсирует) -->
-            <circle class="galaxy-core" cx="100" cy="100" r="30" fill="url(#galCore)"/>
+            <!-- Ядро -->
+            <circle class="fr-gal-core" cx="100" cy="100" r="28" fill="url(#galCore${uid})"/>
 
-            <!-- 2 вращающихся спиральных рукава -->
-            <g class="galaxy-spiral">
-                ${Array.from({length:24}).map((_, i) => {
-                    const t = i / 23;
-                    const a = t * 720; // 2 полных оборота
-                    const r = 15 + t * 70;
-                    const x = 100 + Math.cos(a * Math.PI/180) * r;
-                    const y = 100 + Math.sin(a * Math.PI/180) * r;
-                    const s = 0.6 + (1 - t) * 1.6;
-                    return `<circle class="gal-star" style="--delay:${(i*0.12).toFixed(2)}s;"
-                                    cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s.toFixed(1)}"
-                                    fill="#ffffff" opacity="${(1 - t * 0.7).toFixed(2)}"/>`;
-                }).join('')}
-            </g>
-            <g class="galaxy-spiral-rev">
-                ${Array.from({length:24}).map((_, i) => {
-                    const t = i / 23;
-                    const a = t * 720 + 180;
-                    const r = 15 + t * 70;
-                    const x = 100 + Math.cos(a * Math.PI/180) * r;
-                    const y = 100 + Math.sin(a * Math.PI/180) * r;
-                    const s = 0.5 + (1 - t) * 1.4;
-                    return `<circle class="gal-star" style="--delay:${(i*0.15).toFixed(2)}s;"
-                                    cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s.toFixed(1)}"
-                                    fill="${clt}" opacity="${(0.9 - t * 0.6).toFixed(2)}"/>`;
+            <!-- Спираль 1 -->
+            <g class="fr-gal-spin">
+                ${Array.from({length: 22}).map((_, i) => {
+                    const t = i / 21;
+                    const a = t * 720 - 90;
+                    const r = 14 + t * 72;
+                    const x = 100 + Math.cos(a * Math.PI / 180) * r;
+                    const y = 100 + Math.sin(a * Math.PI / 180) * r;
+                    const s = 0.5 + (1 - t) * 1.5;
+                    return `<circle class="fr-gal-star" data-i="${i}"
+                                   style="animation-delay:${(i * 0.1).toFixed(2)}s;"
+                                   cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s.toFixed(1)}"
+                                   fill="#fff" opacity="${(1 - t * 0.7).toFixed(2)}"/>`;
                 }).join('')}
             </g>
 
-            <!-- Внешнее кольцо, медленно вращается -->
-            <circle class="galaxy-ring" cx="100" cy="100" r="80"
-                    fill="none" stroke="${clt}" stroke-width="0.8"
-                    stroke-dasharray="1 8" opacity="0.6"/>
+            <!-- Спираль 2 (реверс) -->
+            <g class="fr-gal-spin-rev">
+                ${Array.from({length: 22}).map((_, i) => {
+                    const t = i / 21;
+                    const a = t * 720 + 90;
+                    const r = 14 + t * 72;
+                    const x = 100 + Math.cos(a * Math.PI / 180) * r;
+                    const y = 100 + Math.sin(a * Math.PI / 180) * r;
+                    const s = 0.4 + (1 - t) * 1.3;
+                    return `<circle class="fr-gal-star" data-i="${i + 22}"
+                                   style="animation-delay:${(i * 0.12).toFixed(2)}s;"
+                                   cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s.toFixed(1)}"
+                                   fill="${clt}" opacity="${(0.85 - t * 0.55).toFixed(2)}"/>`;
+                }).join('')}
+            </g>
+
+            <!-- Внешнее кольцо -->
+            <circle class="fr-gal-ring" cx="100" cy="100" r="86"
+                    fill="none" stroke="${clt}" stroke-width="0.9"
+                    stroke-dasharray="1 8" opacity="0.55"/>
         </svg>`;
 
-    /* ============================================================ */
-    /* ☠️ ЯД — пузыри всплывают вверх, свечение пульсирует           */
-    /* ============================================================ */
+    // ============================================================
+    // ☠️ ЯД — пузыри + черепок
+    // ============================================================
     case 'poison':
-        return `
-        <svg class="fs-poison" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-poison')}
             <defs>
-                <radialGradient id="poisonGrad" cx="50%" cy="50%" r="50%">
+                <radialGradient id="poiGrad${uid}" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
                     <stop offset="40%" stop-color="${clt}" stop-opacity="0.85"/>
                     <stop offset="100%" stop-color="${cd}" stop-opacity="0.3"/>
                 </radialGradient>
-                <radialGradient id="poisonAura" cx="50%" cy="50%" r="50%">
+                <radialGradient id="poiAura${uid}" cx="50%" cy="50%" r="50%">
                     <stop offset="60%" stop-color="${cl}" stop-opacity="0"/>
                     <stop offset="100%" stop-color="${clt}" stop-opacity="0.4"/>
                 </radialGradient>
             </defs>
 
-            <!-- Мутная аура (пульсирует) -->
-            <circle class="poison-aura" cx="100" cy="100" r="85" fill="url(#poisonAura)"/>
+            <circle class="fr-poi-aura" cx="100" cy="100" r="95" fill="url(#poiAura${uid})"/>
+            ${midRing('3 6')}
 
-            <!-- Основное кольцо, деформируется -->
-            <circle class="poison-ring" cx="100" cy="100" r="78"
-                    fill="none" stroke="${clt}" stroke-width="2" opacity="0.8"/>
+            <circle class="fr-poi-ring" cx="100" cy="100" r="86"
+                    fill="none" stroke="${clt}" stroke-width="2.5" opacity="0.85"/>
 
-            <!-- 8 пузырей, всплывают вверх -->
-            ${Array.from({length:8}).map((_, i) => {
-                const a = i * 45;
-                const x = 100 + Math.cos(a * Math.PI/180) * 74;
-                const y = 100 + Math.sin(a * Math.PI/180) * 74;
-                const size = 4 + (i % 3) * 2;
-                return `<g class="poison-bubble-rise" style="--bx:${x.toFixed(1)}px; --by:${y.toFixed(1)}px; --delay:${(i*0.5).toFixed(2)}s;">
-                    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${size}" fill="url(#poisonGrad)"/>
-                    <ellipse cx="${(x - size*0.3).toFixed(1)}" cy="${(y - size*0.3).toFixed(1)}"
-                             rx="${(size*0.25).toFixed(1)}" ry="${(size*0.15).toFixed(1)}"
-                             fill="#fff" opacity="0.5"/>
+            <!-- 8 всплывающих пузырей -->
+            ${Array.from({length: 8}).map((_, i) => {
+                const a = i * 45 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 80;
+                const y = 100 + Math.sin(rad) * 80;
+                const size = 3.5 + (i % 3) * 1.8;
+                return `<g class="fr-poi-bubble" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;
+                                  animation-delay:${(i * 0.4).toFixed(1)}s;">
+                    <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${size}"
+                            fill="url(#poiGrad${uid})"/>
+                    <ellipse cx="${(x - size * 0.3).toFixed(1)}" cy="${(y - size * 0.3).toFixed(1)}"
+                             rx="${(size * 0.25).toFixed(1)}" ry="${(size * 0.15).toFixed(1)}"
+                             fill="#fff" opacity="0.55"/>
                 </g>`;
             }).join('')}
 
-            <!-- Череп, мерцает -->
-            <g class="poison-skull" style="transform-origin:100px 100px;">
-                <ellipse cx="100" cy="98" rx="12" ry="14" fill="${cd}" opacity="0.7"/>
-                <circle cx="95" cy="96" r="2.5" fill="#a0ff60"/>
-                <circle cx="105" cy="96" r="2.5" fill="#a0ff60"/>
-                <path d="M 95 107 L 105 107 L 102 113 L 98 113 Z" fill="#a0ff60" opacity="0.6"/>
+            <!-- Черепок внутри -->
+            <g class="fr-poi-skull">
+                <ellipse cx="100" cy="98" rx="11" ry="13" fill="${cd}" opacity="0.65"/>
+                <circle cx="95" cy="96" r="2.2" fill="#a0ff60"
+                        style="filter:drop-shadow(0 0 4px #a0ff60);"/>
+                <circle cx="105" cy="96" r="2.2" fill="#a0ff60"
+                        style="filter:drop-shadow(0 0 4px #a0ff60);"/>
+                <path d="M 96 108 L 104 108 L 102 113 L 98 113 Z"
+                      fill="#a0ff60" opacity="0.6"/>
             </g>
         </svg>`;
 
-    /* ============================================================ */
-    /* 🦁 ЛЕВ — грива "дышит", глаза светятся, рык               */
-    /* ============================================================ */
+    // ============================================================
+    // 🦁 ЛЕВ — грива + глаза
+    // ============================================================
     case 'lion':
-        return `
-        <svg class="fs-lion" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-lion')}
             <defs>
-                <radialGradient id="lionAura" cx="50%" cy="50%" r="50%">
-                    <stop offset="50%" stop-color="${cl}" stop-opacity="0"/>
-                    <stop offset="90%" stop-color="${clt}" stop-opacity="0.5"/>
-                    <stop offset="100%" stop-color="${cl}" stop-opacity="0"/>
-                </radialGradient>
-                <linearGradient id="maneGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="lionMane${uid}" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="#ffe066"/>
                     <stop offset="50%" stop-color="${clt}"/>
                     <stop offset="100%" stop-color="${cd}"/>
                 </linearGradient>
             </defs>
+            ${baseDefs}
+            ${midRing('2 7')}
+            ${outerRing(2.5)}
 
-            <!-- Аура, пульсирует как дыхание -->
-            <circle class="lion-aura" cx="100" cy="100" r="90" fill="url(#lionAura)"/>
-
-            <!-- 24 волоска гривы, каждый "дышит" -->
-            ${Array.from({length:24}).map((_, i) => {
-                const a = i * 15;
+            <!-- 20 волосков гривы -->
+            ${Array.from({length: 20}).map((_, i) => {
+                const a = i * 18 - 90;
                 const rad = a * Math.PI / 180;
-                const r1 = 82;
-                const r2 = 82 + 12 * (i % 2 === 0 ? 1 : 1.4);
+                const r1 = 86;
+                const r2 = 86 + 10 * (i % 2 === 0 ? 1 : 1.5);
                 const x1 = 100 + Math.cos(rad) * r1;
                 const y1 = 100 + Math.sin(rad) * r1;
                 const x2 = 100 + Math.cos(rad) * r2;
                 const y2 = 100 + Math.sin(rad) * r2;
-                return `<g class="lion-hair" style="--hx:${x1.toFixed(1)}px; --hy:${y1.toFixed(1)}px; --delay:${(i*0.08).toFixed(2)}s;">
-                    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
-                          stroke="url(#maneGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                return `<g class="fr-mane-hair" data-i="${i}"
+                           style="transform-origin:${x1.toFixed(1)}px ${y1.toFixed(1)}px;
+                                  animation-delay:${(i * 0.07).toFixed(2)}s;">
+                    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}"
+                          x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+                          stroke="url(#lionMane${uid})" stroke-width="2.4"
+                          stroke-linecap="round"/>
                 </g>`;
             }).join('')}
 
-            <!-- Внутреннее кольцо гривы, крутится -->
-            <circle class="lion-mane-ring" cx="100" cy="100" r="72"
-                    fill="none" stroke="${clt}" stroke-width="1.5"
-                    stroke-dasharray="3 5" opacity="0.7"/>
-
-            <!-- Морда (глаза светятся) -->
-            <g class="lion-face">
-                <ellipse cx="82" cy="98" rx="4.5" ry="5.5" fill="${clt}"/>
-                <ellipse cx="118" cy="98" rx="4.5" ry="5.5" fill="${clt}"/>
-                <circle cx="82" cy="98" r="1.8" fill="#000"/>
-                <circle cx="118" cy="98" r="1.8" fill="#000"/>
-                <!-- Усы -->
-                <line x1="70" y1="108" x2="60" y2="106" stroke="${clt}" stroke-width="1" opacity="0.6"/>
-                <line x1="70" y1="112" x2="60" y2="114" stroke="${clt}" stroke-width="1" opacity="0.6"/>
-                <line x1="130" y1="108" x2="140" y2="106" stroke="${clt}" stroke-width="1" opacity="0.6"/>
-                <line x1="130" y1="112" x2="140" y2="114" stroke="${clt}" stroke-width="1" opacity="0.6"/>
+            <!-- Морда (лёгкое касание) -->
+            <g class="fr-lion-face">
+                <circle cx="84" cy="100" r="4" fill="${clt}"
+                        style="filter:drop-shadow(0 0 4px ${cl});"/>
+                <circle cx="116" cy="100" r="4" fill="${clt}"
+                        style="filter:drop-shadow(0 0 4px ${cl});"/>
+                <circle cx="84" cy="100" r="1.6" fill="#000"/>
+                <circle cx="116" cy="100" r="1.6" fill="#000"/>
+                <path d="M 95 112 L 105 112 L 100 118 Z"
+                      fill="${cd}" opacity="0.7"/>
             </g>
+
+            <g class="fr-orbs-rotate">${orbs(74, 8, 1.6)}</g>
         </svg>`;
 
-    /* ============================================================ */
-    /* 🕸️ ПАУК — паутина дрожит, паук ползёт по кругу               */
-    /* ============================================================ */
+    // ============================================================
+    // 🕸️ ПАУК — паутина + паук-бегунок
+    // ============================================================
     case 'spider':
-        return `
-        <svg class="fs-spider" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        return `${svgOpen('fr-spider')}
             <defs>
-                <radialGradient id="webFade" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="${cl}" stop-opacity="0.9"/>
-                    <stop offset="100%" stop-color="${cd}" stop-opacity="0.2"/>
+                <radialGradient id="webFade${uid}" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="${cl}" stop-opacity="0.5"/>
+                    <stop offset="100%" stop-color="${cd}" stop-opacity="0.15"/>
                 </radialGradient>
             </defs>
+            ${baseDefs}
 
             <!-- Внешнее кольцо паутины -->
-            <circle cx="100" cy="100" r="82" fill="none" stroke="${clt}" stroke-width="1.5" opacity="0.75"/>
-            <circle cx="100" cy="100" r="82" fill="none" stroke="${clt}" stroke-width="0.8" opacity="0.4"
-                    class="spider-outer-pulse"/>
+            <circle class="fr-web-outer" cx="100" cy="100" r="86"
+                    fill="none" stroke="${clt}" stroke-width="1.8" opacity="0.9"/>
 
-            <!-- Промежуточные круги -->
-            ${[62, 42, 22].map((r, i) => `
-                <circle class="spider-inner-ring" style="--delay:${i*0.4}s;"
-                        cx="100" cy="100" r="${r}" fill="none"
-                        stroke="${clt}" stroke-width="0.8" opacity="0.55"/>
+            <!-- Промежуточные кольца -->
+            ${[68, 48].map((r, i) => `
+                <circle class="fr-web-ring" data-i="${i}"
+                        style="animation-delay:${i * 0.4}s;"
+                        cx="100" cy="100" r="${r}"
+                        fill="none" stroke="${clt}" stroke-width="0.9"
+                        opacity="${0.6 - i * 0.1}"/>
             `).join('')}
 
             <!-- 12 радиальных лучей -->
-            ${Array.from({length:12}).map((_, i) => {
+            ${Array.from({length: 12}).map((_, i) => {
                 const a = i * 30;
-                const x = 100 + Math.cos(a * Math.PI/180) * 82;
-                const y = 100 + Math.sin(a * Math.PI/180) * 82;
-                return `<line class="spider-ray" style="--delay:${(i*0.15).toFixed(2)}s;"
-                              x1="100" y1="100" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"
-                              stroke="${cl}" stroke-width="0.9" opacity="0.6"/>`;
+                const x = 100 + Math.cos(a * Math.PI / 180) * 86;
+                const y = 100 + Math.sin(a * Math.PI / 180) * 86;
+                return `<line class="fr-web-ray" data-i="${i}"
+                              x1="100" y1="100"
+                              x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"
+                              stroke="${cl}" stroke-width="0.7"
+                              opacity="0.5"/>`;
             }).join('')}
 
-            <!-- Паук, ползёт по восьмёрке -->
-            <g class="spider-crawler">
-                <g class="spider-legs">
-                    ${Array.from({length:8}).map((_, i) => {
+            <!-- Паук, ползёт по кругу -->
+            <g class="fr-spider-crawler">
+                <g class="fr-spider-legs">
+                    ${Array.from({length: 8}).map((_, i) => {
                         const side = i < 4 ? -1 : 1;
                         const idx = i % 4;
-                        const x1 = side * (4 + idx * 1.5);
+                        const x1 = side * (4 + idx * 1.3);
                         const y1 = -3 + idx * 3;
-                        const x2 = side * (10 + idx * 2);
-                        const y2 = -8 + idx * 3;
+                        const x2 = side * (10 + idx * 1.8);
+                        const y2 = -7 + idx * 3;
                         const x3 = side * (12 + idx * 2);
-                        const y3 = 2 + idx * 3;
-                        return `<path class="spider-leg" style="--delay:${(i*0.1).toFixed(2)}s;"
+                        const y3 = 3 + idx * 3;
+                        return `<path class="fr-spider-leg" data-i="${i}"
+                                      style="animation-delay:${(i * 0.1).toFixed(2)}s;"
                                       d="M ${x1} ${y1} Q ${x2} ${y2} ${x3} ${y3}"
-                                      fill="none" stroke="${cd}" stroke-width="1.4"
-                                      stroke-linecap="round"/>`;
+                                      fill="none" stroke="${cd}"
+                                      stroke-width="1.3" stroke-linecap="round"/>`;
                     }).join('')}
                 </g>
-                <ellipse cx="0" cy="0" rx="9" ry="11" fill="${cd}"/>
-                <ellipse cx="0" cy="0" rx="6" ry="7" fill="${cl}"/>
-                <ellipse cx="0" cy="-8" rx="5" ry="5" fill="${cd}"/>
-                <circle cx="-2" cy="-9" r="1.2" fill="#ff2020"/>
-                <circle cx="2" cy="-9" r="1.2" fill="#ff2020"/>
-                <circle class="spider-eye-glow" cx="-2" cy="-9" r="3" fill="#ff2020" opacity="0.4"/>
-                <circle class="spider-eye-glow" cx="2" cy="-9" r="3" fill="#ff2020" opacity="0.4"/>
+                <ellipse cx="0" cy="0" rx="8" ry="10" fill="${cd}"/>
+                <ellipse cx="0" cy="0" rx="5" ry="6" fill="${cl}"/>
+                <ellipse cx="0" cy="-7" rx="4.5" ry="4.5" fill="${cd}"/>
+                <circle cx="-1.5" cy="-8" r="1.1" fill="#ff2020"
+                        style="filter:drop-shadow(0 0 3px #ff2020);"/>
+                <circle cx="1.5" cy="-8" r="1.1" fill="#ff2020"
+                        style="filter:drop-shadow(0 0 3px #ff2020);"/>
             </g>
         </svg>`;
 
+    // ============================================================
+    // 💎 АЛМАЗ (без special_type, но на всякий случай)
+    // ============================================================
+    case 'diamond':
+        return `${svgOpen('fr-diamond')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('2 6')}
+            ${outerRing(2.5)}
+
+            <!-- 6 ромбов-граней -->
+            ${Array.from({length: 6}).map((_, i) => {
+                const a = i * 60 - 90;
+                const rad = a * Math.PI / 180;
+                const x = 100 + Math.cos(rad) * 76;
+                const y = 100 + Math.sin(rad) * 76;
+                return `<g class="fr-diamond-facet" data-i="${i}"
+                           style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;">
+                    <polygon points="0,-10 6,0 0,10 -6,0"
+                             fill="${clt}" opacity="0.35"
+                             stroke="${clt}" stroke-width="1.2"
+                             transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"/>
+                </g>`;
+            }).join('')}
+
+            <!-- Центральный ромб -->
+            <path d="M 100 70 L 118 100 L 100 130 L 82 100 Z"
+                  fill="${cl}" opacity="0.2"
+                  stroke="${clt}" stroke-width="1.5"/>
+
+            <g class="fr-orbs-rotate">${orbs(86, 12, 2)}</g>
+
+            ${innerRing(0.3)}
+        </svg>`;
+
+    // ============================================================
+    // DEFAULT — запасной вариант (простое кольцо)
+    // ============================================================
     default:
-        return '';
+        return `${svgOpen('fr-default')}
+            ${baseDefs}
+            ${glow}
+            ${midRing('3 7')}
+            ${outerRing(2.5)}
+            <g class="fr-orbs-rotate">${orbs(86, 12, 2.5)}</g>
+            ${innerRing(0.35)}
+        </svg>`;
     }
 }
 
