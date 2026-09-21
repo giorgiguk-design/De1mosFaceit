@@ -14140,6 +14140,51 @@ html.lite-mode .list-frame-overlay svg * {
 .elo-chart-card.has-dxp-bg {
     background-blend-mode: overlay;
 }
+
+    /* Затемнение фона на шапке профиля */
+.profile-hero-compact.has-custom-bg {
+    position: relative;
+    overflow: hidden;
+}
+.profile-hero-compact.has-custom-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.55) 50%,
+        rgba(0, 0, 0, 0.75) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+.profile-hero-compact.has-custom-bg > * {
+    position: relative;
+    z-index: 2;
+}
+
+    .pm2-hero.has-custom-bg {
+    position: relative;
+    overflow: hidden;
+}
+.pm2-hero.has-custom-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.55) 50%,
+        rgba(0, 0, 0, 0.75) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+}
+.pm2-hero.has-custom-bg > * {
+    position: relative;
+    z-index: 2;
+}
     
 </style>
 </head>
@@ -17255,7 +17300,6 @@ async function renderProfileView(user, options = {}) {
         </div>
 
         <!-- График DXP -->
-        <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
         <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
@@ -31938,7 +31982,7 @@ wrap.appendChild(overlay);
     }
 
 // ============================================================
-// 3. ФОН ПРОФИЛЯ
+// 3. ФОН ПРОФИЛЯ — ТОЛЬКО ШАПКА
 // ============================================================
 const bgId = eq.profile_bg;
 const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
@@ -31946,6 +31990,12 @@ if (bgId && SHOP_ITEMS_CACHE[bgId]) {
     const val = SHOP_ITEMS_CACHE[bgId].value || {};
     if (val.url) {
         bgEls.forEach(el => {
+            // 🔥 применяем только к шапке профиля
+            if (!el.classList.contains('profile-hero-compact') &&
+                !el.classList.contains('profile-hero') &&
+                !el.classList.contains('pm2-hero')) {
+                return;
+            }
             el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url('${val.url}')`;
             el.style.backgroundSize = 'cover';
             el.style.backgroundPosition = 'center';
@@ -32129,28 +32179,14 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
     // ============================================================
     // 🌄 ФОН ПРОФИЛЯ — на всю плашку
     // ============================================================
-    const bgId = eq.profile_bg;
-    const itemEl = scopeEl;
+const bgId = eq.profile_bg;
+const itemEl = scopeEl;
 
-    // Убираем старый фон, если был
-    itemEl.classList.remove('has-list-bg');
-    const oldBg = itemEl.querySelector('.list-item-bg');
-    if (oldBg) oldBg.remove();
-    itemEl.style.backgroundImage = '';
-
-    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
-        const val = SHOP_ITEMS_CACHE[bgId].value || {};
-        if (val.url) {
-            // Добавляем класс
-            itemEl.classList.add('has-list-bg');
-
-            // Создаём слой с фоном
-            const bgLayer = document.createElement('div');
-            bgLayer.className = 'list-item-bg';
-            bgLayer.style.backgroundImage = `url('${val.url}')`;
-            itemEl.insertBefore(bgLayer, itemEl.firstChild);
-        }
-    }
+// 🔥 НЕ применяем фон в списках — только ник, рамка, значок
+// Фон профиля — только на шапке профиля
+itemEl.classList.remove('has-list-bg');
+const oldBg = itemEl.querySelector('.list-item-bg');
+if (oldBg) oldBg.remove();
 }
 
 function getSpecialFrameHTML(type, color) {
