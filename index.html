@@ -14144,7 +14144,15 @@ html.lite-mode .special-frame-overlay svg * {
     overflow: visible;
 }
 
-    
+    /* Фон шапки — только на .profile-hero-compact */
+.profile-hero-compact.has-custom-bg {
+    background-blend-mode: overlay;
+}
+
+/* Фон графика DXP — отдельный */
+.elo-chart-card.has-dxp-bg {
+    background-blend-mode: overlay;
+}
     
 </style>
 </head>
@@ -15724,6 +15732,12 @@ async function renderModeratorPanel() {
                     <button class="club-full-btn club-btn-danger" onclick="openModBanPlayerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
                         🚫 Забанить игрока
                     </button>
+                    <button class="club-full-btn club-btn-edit" onclick="openAddCustomBackgroundSheet()" ...>
+                        🌄 Добавить фон профиля
+                    </button>
+                    <button class="club-full-btn club-btn-edit" onclick="openAddDxpChartBackgroundSheet()" ...>
+                        📈 Добавить фон графика DXP
+                    </button>
                 </div>
             ` : ''}
         </div>
@@ -17255,6 +17269,7 @@ async function renderProfileView(user, options = {}) {
 
         <!-- График DXP -->
         <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
+        <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}" data-dxp-chart-bg>
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
             <span class="ech-corner ech-bl"></span>
@@ -31224,6 +31239,7 @@ async function openShop() {
             profile_bg:     { label: 'Фоны профиля', icon: 'bg',       desc: 'Атмосфера профиля' },
             badge:          { label: 'Значки',       icon: 'badge',    desc: 'Особые отметки' },
             title:          { label: 'Титулы',       icon: 'title',    desc: 'Покажи свой статус' },
+            dxp_chart_bg:   { label: 'Фоны графика', icon: 'bg',       desc: 'Укрась график DXP' },
         };
 
         const grouped = {};
@@ -31447,6 +31463,15 @@ function renderShopItem(item, isOwned, isEquipped) {
             previewHTML = '🌄';
         }
     }
+
+        else if (item.category === 'dxp_chart_bg') {
+    if (val.url) {
+        previewStyle = `background: url('${val.url}') center/cover;`;
+        previewCls = 'preview-bg';
+    } else {
+        previewHTML = '📈';
+    }
+}
 
     // ============================================================
     // 🏅 ЗНАЧОК
@@ -31928,27 +31953,49 @@ wrap.appendChild(overlay);
         }
     }
 
-    // ============================================================
-    // 3. ФОН ПРОФИЛЯ
-    // ============================================================
-    const bgId = eq.profile_bg;
-    const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
-    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
-        const val = SHOP_ITEMS_CACHE[bgId].value || {};
-        if (val.url) {
-            bgEls.forEach(el => {
-                el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url('${val.url}')`;
-                el.style.backgroundSize = 'cover';
-                el.style.backgroundPosition = 'center';
-                el.classList.add('has-custom-bg');
-            });
-        }
-    } else {
+// ============================================================
+// 3a. ФОН ШАПКИ ПРОФИЛЯ
+// ============================================================
+const bgId = eq.profile_bg;
+const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
+if (bgId && SHOP_ITEMS_CACHE[bgId]) {
+    const val = SHOP_ITEMS_CACHE[bgId].value || {};
+    if (val.url) {
         bgEls.forEach(el => {
-            el.style.backgroundImage = '';
-            el.classList.remove('has-custom-bg');
+            el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url('${val.url}')`;
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+            el.classList.add('has-custom-bg');
         });
     }
+} else {
+    bgEls.forEach(el => {
+        el.style.backgroundImage = '';
+        el.classList.remove('has-custom-bg');
+    });
+}
+
+// ============================================================
+// 3b. ФОН ГРАФИКА DXP — отдельная категория
+// ============================================================
+const chartBgId = eq.dxp_chart_bg;
+const chartBgEls = scopeEl.querySelectorAll('[data-dxp-chart-bg]');
+if (chartBgId && SHOP_ITEMS_CACHE[chartBgId]) {
+    const val = SHOP_ITEMS_CACHE[chartBgId].value || {};
+    if (val.url) {
+        chartBgEls.forEach(el => {
+            el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.75), rgba(0,0,0,0.92)), url('${val.url}')`;
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+            el.classList.add('has-dxp-bg');
+        });
+    }
+} else {
+    chartBgEls.forEach(el => {
+        el.style.backgroundImage = '';
+        el.classList.remove('has-dxp-bg');
+    });
+}
 
     // ============================================================
     // 4. ЗНАЧОК
