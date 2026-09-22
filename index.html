@@ -16286,7 +16286,7 @@ html.lite-mode .list-frame-overlay svg * {
 }
 
 /* ============================================================
-   🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg) — ИСПРАВЛЕНО v2
+   🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg) — FINAL
    ============================================================ */
 
 #page-profile {
@@ -16294,28 +16294,37 @@ html.lite-mode .list-frame-overlay svg * {
     min-height: calc(100vh - 120px);
 }
 
-/* Фон вешается прямо на контейнер */
 #page-profile.has-page-bg {
     background-size: cover;
     background-position: center top;
     background-repeat: no-repeat;
     background-attachment: fixed;
     position: relative;
-    isolation: isolate;   /* создаёт stacking context */
+    isolation: isolate;
 }
 
-/* Тёмная подложка — absolute, ровно по размеру #page-profile,
-   z-index: -1 внутри изолированного контекста */
+/* Оверлей — строго внутри #page-profile */
 #page-profile.has-page-bg::before {
     content: '';
     position: absolute;
-    inset: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: linear-gradient(180deg,
         rgba(0, 0, 0, 0.35) 0%,
         rgba(0, 0, 0, 0.55) 40%,
         rgba(0, 0, 0, 0.75) 100%);
     pointer-events: none;
-    z-index: -1;
+    z-index: 0;
+}
+
+/* Всё содержимое — поверх оверлея */
+#page-profile.has-page-bg > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Шапка профиля — свой фон, поверх оверлея */
+#page-profile.has-page-bg .profile-hero-v3 {
+    z-index: 3;
 }
 
 /* ============================================================
@@ -16384,18 +16393,27 @@ html.lite-mode .list-frame-overlay svg * {
     }
 }
 
-    /* Рамка поверх шапки на телефоне */
 @media (max-width: 480px) {
     .phc-avatar-wrap {
-        z-index: 10 !important;
-        overflow: visible !important;
+        position: relative;
+        z-index: 2;
+        overflow: visible;
     }
-
     .phc-avatar-wrap .special-frame-overlay {
-        z-index: 15 !important;
+        width: 110px;
+        height: 110px;
+        z-index: 3;
         pointer-events: none;
     }
-
+    .phc-info-v3 > * {
+        position: relative;
+        z-index: 2;
+    }
+    .pm2-hero-v3 .phc-avatar-wrap .special-frame-overlay {
+        width: 100px;
+        height: 100px;
+    }
+}
     /* Ник и чипы — правее рамки */
     .phc-info-v3 > * {
         position: relative;
@@ -16416,21 +16434,22 @@ html.lite-mode .list-frame-overlay svg * {
 }
 
 /* ============================================================
-   🔥 ШАПКА ПРОФИЛЯ — компактная, во всю ширину
+   🔥 ШАПКА ПРОФИЛЯ — FINAL
    ============================================================ */
 
 .profile-hero-v3,
 .pm2-hero-v3 {
+    display: block;
+    position: relative;
+    width: 100%;
     height: auto;
     min-height: 170px;
-    width: 100%;
     box-sizing: border-box;
-    position: relative;
     overflow: hidden;
-    display: block;
+    border-radius: 18px;
+    isolation: isolate;
 }
 
-/* Внутренняя раскладка — flex по горизонтали */
 .profile-hero-v3 .phc-hero-inner,
 .pm2-hero-v3 .phc-hero-inner {
     display: flex;
@@ -16439,16 +16458,12 @@ html.lite-mode .list-frame-overlay svg * {
     height: auto;
 }
 
-#page-profile {
-    height: auto;
-}
-
-/* Мобильный вариант */
+/* На телефоне — компактнее */
 @media (max-width: 480px) {
     .profile-hero-v3,
     .pm2-hero-v3 {
-        max-height: 200px !important;
-        min-height: 150px !important;
+        min-height: 150px;
+        max-height: none;
     }
 }
     
