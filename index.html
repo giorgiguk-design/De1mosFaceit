@@ -16286,7 +16286,7 @@ html.lite-mode .list-frame-overlay svg * {
 }
 
 /* ============================================================
-   🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg) — ИСПРАВЛЕНО
+   🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg) — ИСПРАВЛЕНО v2
    ============================================================ */
 
 #page-profile {
@@ -16294,18 +16294,18 @@ html.lite-mode .list-frame-overlay svg * {
     min-height: calc(100vh - 120px);
 }
 
-/* Фон вешается прямо на элемент, без ::before-перекрытия */
+/* Фон вешается прямо на контейнер */
 #page-profile.has-page-bg {
     background-size: cover;
     background-position: center top;
     background-repeat: no-repeat;
     background-attachment: fixed;
     position: relative;
-    isolation: isolate; /* изолируем контекст, чтобы фон не лез на другие страницы */
+    isolation: isolate;   /* создаёт stacking context */
 }
 
-/* Тёмная подложка ПОД контентом, но НЕ перекрывающая его.
-   Используем inset: 0 и z-index: -1 внутри изолированного контекста. */
+/* Тёмная подложка — absolute, ровно по размеру #page-profile,
+   z-index: -1 внутри изолированного контекста */
 #page-profile.has-page-bg::before {
     content: '';
     position: absolute;
@@ -16315,8 +16315,7 @@ html.lite-mode .list-frame-overlay svg * {
         rgba(0, 0, 0, 0.55) 40%,
         rgba(0, 0, 0, 0.75) 100%);
     pointer-events: none;
-    z-index: -1;   /* ← ключевой момент: под контентом, но над фоном */
-    border-radius: inherit;
+    z-index: -1;
 }
 
 /* ============================================================
@@ -16417,40 +16416,31 @@ html.lite-mode .list-frame-overlay svg * {
 }
 
 /* ============================================================
-   🔥 ШАПКА ПРОФИЛЯ
+   🔥 ШАПКА ПРОФИЛЯ — компактная, во всю ширину
    ============================================================ */
 
 .profile-hero-v3,
 .pm2-hero-v3 {
-    height: auto !important;
-    min-height: 160px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    position: relative !important;
-    overflow: hidden !important;
-    /* Убрали display: block !important — пусть остаётся block по умолчанию,
-       но без !important, чтобы flex-обёртки не ломались */
+    height: auto;
+    min-height: 170px;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    display: block;
 }
 
 /* Внутренняя раскладка — flex по горизонтали */
 .profile-hero-v3 .phc-hero-inner,
 .pm2-hero-v3 .phc-hero-inner {
-    display: flex !important;
-    align-items: flex-start !important;
-    width: 100% !important;
-    height: auto !important;
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    height: auto;
 }
 
-/* Родитель страницы — не должен растягивать детей */
 #page-profile {
-    display: block !important;
-    height: auto !important;
-    min-height: calc(100vh - 120px) !important;
-}
-
-/* Шапка — поверх фона страницы, но с собственным фоном */
-#page-profile.has-page-bg .profile-hero-v3 {
-    z-index: 2;
+    height: auto;
 }
 
 /* Мобильный вариант */
