@@ -16286,7 +16286,7 @@ html.lite-mode .list-frame-overlay svg * {
 }
 
 /* ============================================================
-   🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg)
+   🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg) — ИСПРАВЛЕНО
    ============================================================ */
 
 #page-profile {
@@ -16294,38 +16294,29 @@ html.lite-mode .list-frame-overlay svg * {
     min-height: calc(100vh - 120px);
 }
 
+/* Фон вешается прямо на элемент, без ::before-перекрытия */
 #page-profile.has-page-bg {
-    /* Тёмный градиент-оверлей поверх картинки,
-       чтобы текст и карточки читались */
-    background-blend-mode: multiply;
-    /* Общая прозрачность — фон виден, но не слепит */
-    opacity: 1;
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    position: relative;
+    isolation: isolate; /* изолируем контекст, чтобы фон не лез на другие страницы */
 }
 
-/* Тёмный оверлей поверх фона (псевдоэлемент) */
+/* Тёмная подложка ПОД контентом, но НЕ перекрывающая его.
+   Используем inset: 0 и z-index: -1 внутри изолированного контекста. */
 #page-profile.has-page-bg::before {
     content: '';
-    position: fixed;
+    position: absolute;
     inset: 0;
     background: linear-gradient(180deg,
         rgba(0, 0, 0, 0.35) 0%,
         rgba(0, 0, 0, 0.55) 40%,
         rgba(0, 0, 0, 0.75) 100%);
     pointer-events: none;
-    z-index: 0;
-    /* Фон виден сквозь оверлей */
-    mix-blend-mode: multiply;
-}
-
-/* Контент поверх фона */
-#page-profile.has-page-bg > * {
-    position: relative;
-    z-index: 1;
-}
-
-/* Убираем старый слой (если где-то остался) */
-.page-profile-bg-layer {
-    display: none !important;
+    z-index: -1;   /* ← ключевой момент: под контентом, но над фоном */
+    border-radius: inherit;
 }
 
 /* ============================================================
@@ -16425,26 +16416,20 @@ html.lite-mode .list-frame-overlay svg * {
     }
 }
 
-    /* ============================================================
-   🔥 ФИКС: ШАПКА ПРОФИЛЯ ФИКСИРОВАННОЙ ВЫСОТЫ
+/* ============================================================
+   🔥 ШАПКА ПРОФИЛЯ
    ============================================================ */
 
 .profile-hero-v3,
 .pm2-hero-v3 {
-    /* Высота только по содержимому — не растягивается */
     height: auto !important;
-    max-height: 240px !important;
     min-height: 160px !important;
-    flex: 0 0 auto !important;
-    align-self: flex-start !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    /* Убеждаемся, что это отдельный блок */
-    display: block !important;
     position: relative !important;
-    /* Обрезаем фоновую картинку внутри шапки */
     overflow: hidden !important;
-    isolation: isolate !important;
+    /* Убрали display: block !important — пусть остаётся block по умолчанию,
+       но без !important, чтобы flex-обёртки не ломались */
 }
 
 /* Внутренняя раскладка — flex по горизонтали */
@@ -16463,13 +16448,6 @@ html.lite-mode .list-frame-overlay svg * {
     min-height: calc(100vh - 120px) !important;
 }
 
-/* Если фон страницы применяется — он НЕ влияет на шапку */
-#page-profile.has-page-bg > *:not(.profile-hero-v3) {
-    /* Стата, графики, миникарты — всё ниже шапки */
-    position: relative;
-    z-index: 1;
-}
-
 /* Шапка — поверх фона страницы, но с собственным фоном */
 #page-profile.has-page-bg .profile-hero-v3 {
     z-index: 2;
@@ -16482,24 +16460,6 @@ html.lite-mode .list-frame-overlay svg * {
         max-height: 200px !important;
         min-height: 150px !important;
     }
-}
-
-    /* Общая прозрачность контента над фоном */
-#page-profile.has-page-bg::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: linear-gradient(180deg,
-        rgba(0, 0, 0, 0.30) 0%,
-        rgba(0, 0, 0, 0.55) 50%,
-        rgba(0, 0, 0, 0.75) 100%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-#page-profile.has-page-bg > * {
-    position: relative;
-    z-index: 1;
 }
     
 </style>
