@@ -16111,6 +16111,95 @@ html.lite-mode .list-frame-overlay svg * {
         font-size: 16px !important;
     }
 }
+
+    /* ============================================================
+   👤 КНОПКИ ПРОФИЛЯ С ТУЛТИПАМИ
+   ============================================================ */
+
+.phc-act-btn {
+    position: relative;
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+/* Подсказка (tooltip) */
+.phc-act-btn::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    right: calc(100% + 10px);
+    transform: translateY(-50%) translateX(6px);
+    background: rgba(10, 20, 16, 0.96);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    z-index: 10;
+    letter-spacing: 0.3px;
+}
+
+.phc-act-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: calc(100% + 6px);
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 5px solid rgba(10, 20, 16, 0.96);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+
+.phc-act-btn:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+}
+.phc-act-btn:hover::before { opacity: 1; }
+
+/* На мобиле тултипы не нужны */
+@media (max-width: 768px) {
+    .phc-act-btn::after,
+    .phc-act-btn::before {
+        display: none !important;
+    }
+}
+
+/* Кнопка «Добавить в друзья» */
+.phc-act-friend {
+    color: #4fc3f7 !important;
+    background: rgba(79, 195, 247, 0.10) !important;
+    border-color: rgba(79, 195, 247, 0.40) !important;
+}
+.phc-act-friend:hover {
+    background: rgba(79, 195, 247, 0.22) !important;
+    border-color: #4fc3f7 !important;
+    transform: scale(1.08);
+    box-shadow: 0 0 16px rgba(79, 195, 247, 0.4);
+}
+
+/* Кнопка «Написать сообщение» */
+.phc-act-msg {
+    color: var(--purple) !important;
+    background: rgba(167, 139, 250, 0.10) !important;
+    border-color: rgba(167, 139, 250, 0.40) !important;
+}
+.phc-act-msg:hover {
+    background: rgba(167, 139, 250, 0.22) !important;
+    border-color: var(--purple) !important;
+    transform: scale(1.08);
+    box-shadow: 0 0 16px rgba(167, 139, 250, 0.4);
+}
     
 </style>
 </head>
@@ -19172,17 +19261,34 @@ async function renderProfileView(user, options = {}) {
 
                 <!-- Кнопки -->
                 <div class="phc-actions-v3">
-                    <button class="phc-act-btn" onclick="shareProfile(${user.telegram_id}); return false;" title="Поделиться">
+                    <button class="phc-act-btn" onclick="shareProfile(${user.telegram_id}); return false;" title="Поделиться профилем" data-tooltip="Поделиться">
                         <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
                             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
                             <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
                         </svg>
                     </button>
+
+                    ${!isMe ? `
+                        <button class="phc-act-btn phc-act-friend" onclick="addFriendFromProfile(${user.telegram_id}, this)" title="Добавить в друзья" data-tooltip="Добавить в друзья">
+                            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                                <circle cx="9" cy="8" r="4"/>
+                                <path d="M3 21a6 6 0 0 1 12 0"/>
+                                <path d="M19 8v6M16 11h6"/>
+                            </svg>
+                        </button>
+                        <button class="phc-act-btn phc-act-msg" onclick="closePlayerModal(); openChatWithUser(${user.telegram_id})" title="Написать сообщение" data-tooltip="Написать сообщение">
+                            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
+                                <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/>
+                                <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>
+                            </svg>
+                        </button>
+                    ` : ''}
+
                     ${isMe ? `
-                        <button class="phc-act-btn" onclick="enterProfileEditMode()" title="Редактировать">
+                        <button class="phc-act-btn" onclick="enterProfileEditMode()" title="Редактировать" data-tooltip="Редактировать">
                             <svg class="cy-icon cy-sm" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/></svg>
                         </button>
-                        <button class="phc-act-btn phc-act-gold" onclick="openCustomizationSheet()" title="Кастомизация">
+                        <button class="phc-act-btn phc-act-gold" onclick="openCustomizationSheet()" title="Кастомизация" data-tooltip="Кастомизация">
                             <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
                                 <path d="M12 2v6l3-2M12 2v6l-3-2M12 22v-6l3 2M12 22v-6l-3 2M2 12h6l-2-3M2 12h6l-2 3M22 12h-6l2-3M22 12h-6l2 3"/>
                                 <circle cx="12" cy="12" r="4" fill="none"/>
@@ -19190,7 +19296,6 @@ async function renderProfileView(user, options = {}) {
                         </button>
                     ` : ''}
                 </div>
-            </div>
 
             <!-- Полоса прогресса DXP -->
             <div class="phc-progress-bar">
@@ -19318,14 +19423,7 @@ async function renderProfileView(user, options = {}) {
             <div class="heatmap-days" id="heatmapDays_${user.telegram_id}"></div>
         </div>
 
-        <!-- Друзья / действия (только для чужого профиля) -->
-        ${friendBtn}
-
-        ${!isMe ? `
-            <button class="pm2-action-btn secondary" onclick="${inModal ? 'closePlayerModal(); ' : ''}openChatWithUser(${user.telegram_id})">
-                💬 НАПИСАТЬ СООБЩЕНИЕ
-            </button>
-        ` : ''}
+        <!-- Кнопки друзей/сообщений вынесены в шапку -->
 
         <div class="section-title" style="margin-top: 20px;">История матчей</div>
         <div id="profileMatchHistory_${user.telegram_id}"><div class="empty">Загрузка...</div></div>
@@ -32002,84 +32100,341 @@ function devTagHTML(telegramId) {
 
 async function shareProfile(userId) {
     if (!currentUser) return;
-    
-    // Загружаем данные профиля
-    const { data: u, error } = await sb.from('users')
-        .select('display_name, elo, standoff_id')
-        .eq('telegram_id', userId)
-        .single();
-    
-    if (error || !u) { showToast('Профиль не найден'); return; }
-    
-    const text = `🎮 ${u.display_name || 'Игрок'}\n` +
-                 `⚡ Уровень ${eloToLevel(u.elo)}\n` +
-                 `🎯 ${u.elo ?? 1000} DXP\n` +
-                 `🆔 Standoff ID: ${u.standoff_id || '—'}\n\n` +
-                 `Играй на De1mos Faceit!`;
-    
-    // 1. Пытаемся через нативный Share (iOS/Android браузер)
-    if (navigator.share && !window.Telegram?.WebApp?.initData) {
-        try {
-            await navigator.share({ title: 'De1mos Faceit', text });
-            haptic('light');
-            return;
-        } catch (e) {
-            if (e.name === 'AbortError') return;
+    showToast('⏳ Готовим картинку...');
+
+    try {
+        // 1. Загружаем данные игрока
+        const { data: u, error } = await sb.from('users')
+            .select('display_name, elo, standoff_id, matches_played, wins, custom_avatar, photo_url, equipped_items, is_admin, username')
+            .eq('telegram_id', userId)
+            .single();
+
+        if (error || !u) { showToast('❌ Профиль не найден'); return; }
+
+        // 2. Считаем статистику
+        const level = eloToLevel(u.elo);
+        const matches = u.matches_played || 0;
+        const wins = u.wins || 0;
+        const losses = Math.max(0, matches - wins);
+        const winrate = matches > 0 ? Math.round((wins / matches) * 100) : 0;
+
+        // 3. Рисуем картинку
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1080;
+        const ctx = canvas.getContext('2d');
+
+        // --- Фон ---
+        const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
+        grad.addColorStop(0, '#0a1612');
+        grad.addColorStop(0.5, '#050807');
+        grad.addColorStop(1, '#0d1f17');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1080, 1080);
+
+        // --- Декоративные линии сверху ---
+        ctx.strokeStyle = 'rgba(0, 224, 138, 0.35)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(80, 80);
+        ctx.lineTo(1000, 80);
+        ctx.stroke();
+
+        // --- Заголовок "DE1MOS FACEIT" ---
+        ctx.font = '900 42px -apple-system, sans-serif';
+        ctx.fillStyle = '#00e08a';
+        ctx.textAlign = 'left';
+        ctx.fillText('DE1MOS', 80, 60);
+        ctx.fillStyle = '#e6f5ee';
+        ctx.fillText(' FACEIT', 260, 60);
+
+        // --- Аватар ---
+        const avatarSrc = u.custom_avatar || u.photo_url;
+        const avatarSize = 260;
+        const avatarX = 540 - avatarSize / 2;
+        const avatarY = 160;
+
+        // Круглая маска
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(540, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+
+        if (avatarSrc) {
+            try {
+                const img = await loadImage(avatarSrc);
+                ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+            } catch (e) {
+                drawDefaultAvatar(ctx, 540, avatarY + avatarSize / 2, avatarSize / 2, u.display_name);
+            }
+        } else {
+            drawDefaultAvatar(ctx, 540, avatarY + avatarSize / 2, avatarSize / 2, u.display_name);
         }
+        ctx.restore();
+
+        // Обводка аватара (цвет зависит от рамки)
+        ctx.strokeStyle = '#00e08a';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(540, avatarY + avatarSize / 2, avatarSize / 2 + 3, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Свечение вокруг
+        ctx.shadowColor = '#00e08a';
+        ctx.shadowBlur = 40;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // --- Ник ---
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 64px -apple-system, sans-serif';
+        ctx.fillText(u.display_name || 'Игрок', 540, 520);
+
+        // --- Титул / Уровень ---
+        ctx.font = '900 28px -apple-system, sans-serif';
+        ctx.fillStyle = '#00e08a';
+        ctx.fillText(`УРОВЕНЬ ${level} · ${u.elo ?? 1000} DXP`, 540, 570);
+
+        // --- Линия-разделитель ---
+        ctx.strokeStyle = 'rgba(0, 224, 138, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(200, 620);
+        ctx.lineTo(880, 620);
+        ctx.stroke();
+
+        // --- Статистика: 3 колонки ---
+        const statY = 700;
+        const statCols = [
+            { label: 'МАТЧЕЙ', value: matches, color: '#00e08a' },
+            { label: 'ПОБЕД',  value: wins,    color: '#ffd700' },
+            { label: 'ПОРАЖЕНИЙ', value: losses, color: '#ff5470' },
+        ];
+        statCols.forEach((s, i) => {
+            const x = 200 + i * 240 + 120;
+            // Значение
+            ctx.font = '900 72px -apple-system, sans-serif';
+            ctx.fillStyle = s.color;
+            ctx.fillText(s.value, x, statY);
+            // Подпись
+            ctx.font = '800 20px -apple-system, sans-serif';
+            ctx.fillStyle = '#6d8a80';
+            ctx.fillText(s.label, x, statY + 40);
+        });
+
+        // --- Winrate ---
+        ctx.font = '900 28px -apple-system, sans-serif';
+        ctx.fillStyle = winrate >= 50 ? '#00e08a' : '#ff5470';
+        ctx.fillText(`WINRATE ${winrate}%`, 540, 800);
+
+        // --- Standoff ID ---
+        if (u.standoff_id) {
+            ctx.font = '800 22px -apple-system, sans-serif';
+            ctx.fillStyle = '#6d8a80';
+            ctx.fillText(`Standoff ID: ${u.standoff_id}`, 540, 845);
+        }
+
+        // --- Разделитель внизу ---
+        ctx.strokeStyle = 'rgba(0, 224, 138, 0.35)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(80, 900);
+        ctx.lineTo(1000, 900);
+        ctx.stroke();
+
+        // --- Нижний текст ---
+        ctx.font = '900 38px -apple-system, sans-serif';
+        ctx.fillStyle = '#00e08a';
+        ctx.fillText('Играй со мной на De1mos Faceit', 540, 970);
+
+        ctx.font = '600 22px -apple-system, sans-serif';
+        ctx.fillStyle = '#6d8a80';
+        ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', 540, 1010);
+
+        // 4. Конвертируем в blob
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        if (!blob) { showToast('❌ Не удалось создать картинку'); return; }
+
+        // 5. Формируем текст
+        const shareText = `🎮 ${u.display_name || 'Игрок'}\n` +
+                          `⚡ Уровень ${level} · ${u.elo ?? 1000} DXP\n` +
+                          `📊 Матчей: ${matches} · Побед: ${wins} · Поражений: ${losses} (WR ${winrate}%)\n\n` +
+                          `🎯 Играй со мной на De1mos Faceit:\n` +
+                          `https://t.me/De1mosFaceit_bot/De1mosFaceit`;
+
+        // 6. Открываем sheet
+        openShareProfileSheet(blob, shareText, u);
+
+    } catch (e) {
+        console.error('shareProfile:', e);
+        showToast('❌ Ошибка: ' + e.message);
     }
-    
-    // 2. В Telegram — копируем в буфер и показываем меню
-    //    с быстрыми действиями
-    openShareSheet(text, u);
 }
 
-            function openShareSheet(text, user) {
-    // Убираем старый
-    const old = document.getElementById('shareSheet');
-    if (old) old.remove();
-    
+// ============================================================
+// Хелперы для рисования
+// ============================================================
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+function drawDefaultAvatar(ctx, cx, cy, r, name) {
+    const grad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    grad.addColorStop(0, '#00e08a');
+    grad.addColorStop(1, '#00b874');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#04140e';
+    ctx.font = `900 ${Math.round(r)}px -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText((name || 'U')[0].toUpperCase(), cx, cy);
+    ctx.textBaseline = 'alphabetic';
+}
+
+// ============================================================
+// Sheet с превью и кнопками
+// ============================================================
+function openShareProfileSheet(blob, text, user) {
+    document.getElementById('shareOverlay')?.remove();
+    document.getElementById('shareSheet')?.remove();
+
+    const imageUrl = URL.createObjectURL(blob);
+
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay active';
     overlay.id = 'shareOverlay';
     overlay.onclick = (e) => { if (e.target === overlay) closeShareSheet(); };
-    
+
     const sheet = document.createElement('div');
     sheet.className = 'sheet active';
     sheet.id = 'shareSheet';
     sheet.style.zIndex = '802';
-    
+    sheet.style.maxHeight = '92vh';
+    sheet.style.overflowY = 'auto';
+
     sheet.innerHTML = `
         <div class="sheet-title">📤 Поделиться профилем</div>
-        <div style="
-            padding: 14px;
-            background: rgba(var(--emerald-rgb), 0.06);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 12.5px;
-            color: var(--text);
-            line-height: 1.5;
-            white-space: pre-wrap;
-            margin-bottom: 14px;
-            font-family: 'Courier New', monospace;
-        " id="shareTextPreview">${escapeHtml(text)}</div>
-        
-        <button class="sheet-option" onclick="copyShareText()">
-            <span style="font-size: 18px;">📋</span> Скопировать текст
-        </button>
-        <button class="sheet-option" onclick="shareToTelegram()">
+
+        <div style="text-align: center; margin-bottom: 14px;">
+            <img src="${imageUrl}" alt="Превью"
+                 style="max-width: 100%; border-radius: 14px; border: 1px solid var(--border-strong); box-shadow: 0 8px 32px rgba(0,0,0,0.6);">
+        </div>
+
+        <button class="sheet-option" onclick="shareToTelegramImage()">
             <span style="font-size: 18px;">✈️</span> Отправить в Telegram
         </button>
-        <button class="sheet-option" onclick="shareToFriendsInApp()">
-            <span style="font-size: 18px;">👥</span> Отправить другу в приложении
+
+        <button class="sheet-option" onclick="downloadShareImage()">
+            <span style="font-size: 18px;">💾</span> Скачать картинку
         </button>
+
+        <button class="sheet-option" onclick="copyShareTextOnly()">
+            <span style="font-size: 18px;">📋</span> Скопировать текст
+        </button>
+
         <button class="sheet-cancel" onclick="closeShareSheet()">ОТМЕНА</button>
     `;
-    
+
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
+
+    // Сохраняем для кнопок
+    window._shareBlob = blob;
     window._shareText = text;
-    window._shareUser = user;
-    haptic('medium');
+    window._shareImageUrl = imageUrl;
+    window._shareFileName = `profile_${user.telegram_id}.jpg`;
+}
+
+function closeShareSheet() {
+    document.getElementById('shareOverlay')?.remove();
+    document.getElementById('shareSheet')?.remove();
+    if (window._shareImageUrl) {
+        URL.revokeObjectURL(window._shareImageUrl);
+        window._shareImageUrl = null;
+    }
+}
+
+// Отправить картинку в Telegram
+async function shareToTelegramImage() {
+    const blob = window._shareBlob;
+    const text = window._shareText;
+    if (!blob || !text) return;
+
+    try {
+        // Пробуем нативный Web Share API (iOS/Android)
+        if (navigator.share && navigator.canShare) {
+            const file = new File([blob], window._shareFileName || 'profile.jpg', { type: 'image/jpeg' });
+            if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'De1mos Faceit',
+                    text: text
+                });
+                haptic('medium');
+                closeShareSheet();
+                return;
+            }
+        }
+
+        // Fallback — скачиваем + копируем текст + открываем share URL
+        downloadShareImage();
+        fallbackCopySilent(text);
+        showToast('📥 Картинка сохранена. Вставь её в чат Telegram.');
+        setTimeout(() => {
+            const url = `https://t.me/share/url?url=${encodeURIComponent('https://t.me/De1mosFaceit_bot/De1mosFaceit')}&text=${encodeURIComponent(text)}`;
+            if (tg?.openTelegramLink) tg.openTelegramLink(url);
+            else window.open(url, '_blank');
+        }, 1500);
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            showToast('Ошибка: ' + e.message);
+        }
+    }
+}
+
+function downloadShareImage() {
+    const blob = window._shareBlob;
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = window._shareFileName || 'de1mos_profile.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('💾 Картинка сохранена');
+}
+
+async function copyShareTextOnly() {
+    const text = window._shareText;
+    if (!text) return;
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            fallbackCopySilent(text);
+        }
+        showToast('📋 Текст скопирован');
+        haptic('medium');
+        closeShareSheet();
+    } catch (e) {
+        fallbackCopySilent(text);
+        showToast('📋 Текст скопирован');
+        closeShareSheet();
+    }
 }
 
 function closeShareSheet() {
@@ -32087,34 +32442,6 @@ function closeShareSheet() {
     if (ov) ov.remove();
     const sh = document.getElementById('shareSheet');
     if (sh) sh.remove();
-}
-
-async function copyShareText() {
-    const text = window._shareText || '';
-    if (!text) return;
-    
-    try {
-        // Современный API
-        if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(text);
-        } else {
-            // Fallback для WebView
-            fallbackCopySilent(text);
-        }
-        showToast('📋 Скопировано');
-        haptic('medium');
-        closeShareSheet();
-    } catch (e) {
-        // Пробуем fallback в любом случае
-        try {
-            fallbackCopySilent(text);
-            showToast('📋 Скопировано');
-            haptic('medium');
-            closeShareSheet();
-        } catch (e2) {
-            showToast('❌ Не удалось скопировать');
-        }
-    }
 }
 
 // Тихий fallback без тоста (для использования в составе других функций)
@@ -32129,34 +32456,6 @@ function fallbackCopySilent(text) {
     const ok = document.execCommand('copy');
     document.body.removeChild(ta);
     if (!ok) throw new Error('execCommand failed');
-}
-
-function shareToTelegram() {
-    const text = window._shareText || '';
-    if (!text) return;
-    const encoded = encodeURIComponent(text);
-    const url = `https://t.me/share/url?url=${encodeURIComponent('De1mos Faceit')}&text=${encoded}`;
-    
-    try {
-        if (tg?.openTelegramLink) {
-            tg.openTelegramLink(url);
-        } else if (tg?.openLink) {
-            tg.openLink(url);
-        } else {
-            window.open(url, '_blank');
-        }
-        closeShareSheet();
-    } catch (e) {
-        showToast('Ошибка: ' + e.message);
-    }
-}
-
-function shareToFriendsInApp() {
-    closeShareSheet();
-    // Открываем список друзей для отправки
-    switchPage('friends');
-    loadFriends();
-    showToast('💬 Выбери друга для отправки');
 }
 
             // Обновляем подпись кнопки Играть при загрузке dashboard
