@@ -16284,6 +16284,77 @@ html.lite-mode .list-frame-overlay svg * {
     transform: scale(1.08);
     box-shadow: 0 0 16px rgba(167, 139, 250, 0.4);
 }
+
+    /* ============================================================
+   🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg)
+   ============================================================ */
+
+#page-profile {
+    position: relative;
+}
+
+/* Слой с картинкой — фиксированный, за контентом */
+.page-profile-bg-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+    /* Плавное появление */
+    animation: pageBgFadeIn 0.6s ease;
+}
+
+/* Затемнение поверх картинки, чтобы контент читался */
+.page-profile-bg-layer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.45) 0%,
+        rgba(0, 0, 0, 0.65) 50%,
+        rgba(0, 0, 0, 0.85) 100%);
+    pointer-events: none;
+}
+
+@keyframes pageBgFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 0.35; }
+}
+
+/* Контент поверх фона */
+#page-profile.has-page-bg > *:not(.page-profile-bg-layer) {
+    position: relative;
+    z-index: 1;
+}
+
+/* Шапка профиля — свой фон по теме, не зависит от page_bg */
+.profile-hero-v3[data-profile-bg] {
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.08) 0%,
+        rgba(0, 0, 0, 0.55) 45%,
+        rgba(0, 0, 0, 0.85) 100%);
+}
+
+/* На десктопе fixed-фон красивее */
+@media (min-width: 1024px) {
+    .page-profile-bg-layer {
+        opacity: 0.40;
+        background-attachment: fixed;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-profile-bg-layer {
+        opacity: 0.30;
+    }
+}
     
 </style>
 </head>
@@ -33712,12 +33783,12 @@ async function openShop() {
         items.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
 
         const categories = {
-            nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
-            avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
-            profile_bg:     { label: 'Фоны профиля', icon: 'bg',       desc: 'Атмосфера профиля' },
-            badge:          { label: 'Значки',       icon: 'badge',    desc: 'Особые отметки' },
-            title:          { label: 'Титулы',       icon: 'title',    desc: 'Покажи свой статус' },
-            dxp_chart_bg:   { label: 'Фоны графика', icon: 'bg',       desc: 'Укрась график DXP' },
+            nickname_color: { label: 'Цвет ника',     icon: 'nickname', desc: 'Покажи свой стиль' },
+            avatar_frame:   { label: 'Рамки',         icon: 'frame',    desc: 'Выделись среди других' },
+            profile_bg:     { label: 'Фоны шапки',    icon: 'bg',       desc: 'Атмосфера шапки профиля' },
+            page_bg:        { label: 'Фоны страницы', icon: 'bg',       desc: 'Атмосфера всей страницы' },
+            badge:          { label: 'Значки',        icon: 'badge',    desc: 'Особые отметки' },
+            title:          { label: 'Титулы',        icon: 'title',    desc: 'Покажи свой статус' },
         };
 
         const grouped = {};
@@ -33807,11 +33878,12 @@ async function openShop() {
 async function openShopCategory(category) {
      window._shopActiveCategory = category;
     const categories = {
-        nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
-        avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
-        profile_bg:     { label: 'Фоны профиля', icon: 'bg',       desc: 'Атмосфера профиля' },
-        badge:          { label: 'Значки',       icon: 'badge',    desc: 'Особые отметки' },
-        title:          { label: 'Титулы',       icon: 'title',    desc: 'Покажи свой статус' },
+        nickname_color: { label: 'Цвет ника',     icon: 'nickname', desc: 'Покажи свой стиль' },
+        avatar_frame:   { label: 'Рамки',         icon: 'frame',    desc: 'Выделись среди других' },
+        profile_bg:     { label: 'Фоны шапки',    icon: 'bg',       desc: 'Атмосфера шапки профиля' },
+        page_bg:        { label: 'Фоны страницы', icon: 'bg',       desc: 'Атмосфера всей страницы' },
+        badge:          { label: 'Значки',        icon: 'badge',    desc: 'Особые отметки' },
+        title:          { label: 'Титулы',        icon: 'title',    desc: 'Покажи свой статус' },
     };
     const meta = categories[category] || { label: category, icon: 'badge', desc: '' };
 
@@ -33882,7 +33954,6 @@ function closeShopCategory() {
 }
 
 // ============================================================
-// ============================================================
 // 🎴 РЕНДЕР КАРТОЧКИ ТОВАРА
 // ============================================================
 function renderShopItem(item, isOwned, isEquipped) {
@@ -33917,7 +33988,7 @@ function renderShopItem(item, isOwned, isEquipped) {
                 <div class="frame-preview-special">
                     <div class="frame-preview-avatar">A</div>
                     <div class="frame-preview-overlay">
-                        ${getSpecialFrameHTML(val.special_type || 'default', color)}
+                        ${uniquifySvgIds(getSpecialFrameHTML(val.special_type || 'default', color))}
                     </div>
                 </div>
             `;
@@ -33932,7 +34003,7 @@ function renderShopItem(item, isOwned, isEquipped) {
     }
 
     // ============================================================
-    // 🌄 ФОН ПРОФИЛЯ
+    // 🌄 ФОН ШАПКИ ПРОФИЛЯ
     // ============================================================
     else if (item.category === 'profile_bg') {
         if (val.url) {
@@ -33944,14 +34015,14 @@ function renderShopItem(item, isOwned, isEquipped) {
     }
 
     // ============================================================
-    // 📈 ФОН ГРАФИКА DXP
+    // 🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ
     // ============================================================
-    else if (item.category === 'dxp_chart_bg') {
+    else if (item.category === 'page_bg') {
         if (val.url) {
             previewStyle = `background: url('${val.url}') center/cover;`;
             previewCls = 'preview-bg';
         } else {
-            previewHTML = '📈';
+            previewHTML = '🖼️';
         }
     }
 
@@ -33962,7 +34033,7 @@ function renderShopItem(item, isOwned, isEquipped) {
         if (val.url) {
             previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
         } else if (val.svg) {
-            previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${val.svg}</div>`;
+            previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${uniquifySvgIds(val.svg)}</div>`;
         } else if (val.emoji) {
             previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
         } else {
@@ -34346,7 +34417,7 @@ function applyCustomization() {
     }
 }
 
-          // ============================================================
+// ============================================================
 // 🎨 ПРИМЕНЕНИЕ КАСТОМИЗАЦИИ К КОНКРЕТНОМУ ЭЛЕМЕНТУ
 // (работает для любого игрока, не только для себя)
 // ============================================================
@@ -34391,12 +34462,12 @@ function applyCustomizationToElement(scopeEl, user) {
     }
 
     // ============================================================
-    // 2. РАМКА АВАТАРА — с поддержкой длинных спец-рамок
+    // 2. РАМКА АВАТАРА
     // ============================================================
     const frameId = eq.avatar_frame;
     const avEls = scopeEl.querySelectorAll('[data-avatar-frame]');
 
-    // Убираем старую спец-рамку (если была)
+    // Убираем старую спец-рамку
     scopeEl.querySelectorAll('.special-frame-overlay').forEach(el => el.remove());
     avEls.forEach(el => {
         el.style.boxShadow = '';
@@ -34410,24 +34481,23 @@ function applyCustomizationToElement(scopeEl, user) {
         const color = val.color || '#fff';
 
         if (val.special === true) {
-            // 🔥 СПЕЦИАЛЬНАЯ РАМКА (осьминог, дракон, император и т.д.)
+            // СПЕЦИАЛЬНАЯ РАМКА
             avEls.forEach(el => {
                 el.classList.add('has-frame', `frame-special-${val.special_type || 'default'}`);
                 el.style.boxShadow = `0 0 0 2px ${color}, 0 0 24px ${color}`;
             });
 
-            // Добавляем декоративный слой — ПОД аватаром (эффекты видны по краям)
-            const wrap = scopeEl.querySelector('.phc-avatar-wrap, .profile-avatar-wrap, .pm2-avatar-wrap');
+            // Добавляем декоративный слой вокруг аватара
+            const wrap = scopeEl.querySelector(
+                '.phc-avatar-wrap, .profile-avatar-wrap, .pm2-avatar-wrap'
+            );
             if (wrap) {
-                // Убираем старый
                 wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
 
                 const overlay = document.createElement('div');
                 overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
                 overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
                 syncFrameAnimation(overlay);
-
-                // 🔥 Вставляем ПОСЛЕ аватара — рамка сверху
                 wrap.appendChild(overlay);
             }
         } else if (frameStyle === 'ring') {
@@ -34445,54 +34515,80 @@ function applyCustomizationToElement(scopeEl, user) {
         }
     }
 
-// ============================================================
-// 3. ФОН ПРОФИЛЯ — ТОЛЬКО ШАПКА
-// ============================================================
-const bgId = eq.profile_bg;
-const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
-if (bgId && SHOP_ITEMS_CACHE[bgId]) {
-    const val = SHOP_ITEMS_CACHE[bgId].value || {};
-    if (val.url) {
+    // ============================================================
+    // 3a. ФОН ШАПКИ ПРОФИЛЯ (profile_bg)
+    // ============================================================
+    const bgId = eq.profile_bg;
+    const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
+
+    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
+        const val = SHOP_ITEMS_CACHE[bgId].value || {};
+        if (val.url) {
+            bgEls.forEach(el => {
+                // Только шапка профиля
+                if (!el.classList.contains('profile-hero-v3') &&
+                    !el.classList.contains('profile-hero-compact') &&
+                    !el.classList.contains('profile-hero') &&
+                    !el.classList.contains('pm2-hero-v3') &&
+                    !el.classList.contains('pm2-hero')) {
+                    return;
+                }
+                el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url('${val.url}')`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+                el.classList.add('has-custom-bg');
+            });
+        }
+    } else {
         bgEls.forEach(el => {
-            // 🔥 применяем только к шапке профиля
-if (!el.classList.contains('profile-hero-v3') &&
-    !el.classList.contains('pm2-hero') &&
-    !el.classList.contains('profile-hero-compact')) {
-    return;
-}
-            el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url('${val.url}')`;
-            el.style.backgroundSize = 'cover';
-            el.style.backgroundPosition = 'center';
-            el.classList.add('has-custom-bg');
+            el.style.backgroundImage = '';
+            el.classList.remove('has-custom-bg');
         });
     }
-} else {
-    bgEls.forEach(el => {
-        el.style.backgroundImage = '';
-        el.classList.remove('has-custom-bg');
-    });
-}
+
+    // ============================================================
+    // 3b. ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg)
+    //    Накладывается на весь #page-profile
+    // ============================================================
+    const pageBgId = eq.page_bg;
+    const pageProfileEl = document.getElementById('page-profile');
+
+    if (pageProfileEl && scopeEl.contains(pageProfileEl) || pageProfileEl) {
+        pageProfileEl.querySelectorAll('.page-profile-bg-layer').forEach(el => el.remove());
+        pageProfileEl.classList.remove('has-page-bg');
+
+        if (pageBgId && SHOP_ITEMS_CACHE[pageBgId]) {
+            const val = SHOP_ITEMS_CACHE[pageBgId].value || {};
+            if (val.url) {
+                const layer = document.createElement('div');
+                layer.className = 'page-profile-bg-layer';
+                layer.style.backgroundImage = `url('${val.url}')`;
+                pageProfileEl.insertBefore(layer, pageProfileEl.firstChild);
+                pageProfileEl.classList.add('has-page-bg');
+            }
+        }
+    }
 
     // ============================================================
     // 4. ЗНАЧОК
     // ============================================================
-const badgeId = eq.badge;
-const badgeEls = scopeEl.querySelectorAll('[data-equipped-badge]');
-if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
-    const val = SHOP_ITEMS_CACHE[badgeId].value || {};
-    badgeEls.forEach(el => {
-        if (val.url) {
-            el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
-        } else if (val.svg) {
-            el.innerHTML = `<div class="badge-svg-wrap" style="width:100%;height:100%;">${uniquifySvgIds(val.svg)}</div>`;
-        } else {
-            el.innerHTML = val.emoji || '🏅';
-        }
-        el.style.display = 'inline-flex';
-    });
-} else {
-    badgeEls.forEach(el => { el.style.display = 'none'; el.innerHTML = ''; });
-}
+    const badgeId = eq.badge;
+    const badgeEls = scopeEl.querySelectorAll('[data-equipped-badge]');
+    if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
+        const val = SHOP_ITEMS_CACHE[badgeId].value || {};
+        badgeEls.forEach(el => {
+            if (val.url) {
+                el.innerHTML = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;">`;
+            } else if (val.svg) {
+                el.innerHTML = `<div class="badge-svg-wrap" style="width:100%;height:100%;">${uniquifySvgIds(val.svg)}</div>`;
+            } else {
+                el.innerHTML = val.emoji || '🏅';
+            }
+            el.style.display = 'inline-flex';
+        });
+    } else {
+        badgeEls.forEach(el => { el.style.display = 'none'; el.innerHTML = ''; });
+    }
 
     // ============================================================
     // 5. ТИТУЛ
@@ -36899,6 +36995,9 @@ async function loadShopItemsCache() {
     } catch (e) { console.warn('loadShopItemsCache:', e); }
 } 
 
+// ============================================================
+// ✨ МОДАЛКА КАСТОМИЗАЦИИ — список категорий
+// ============================================================
 async function openCustomizationSheet() {
     if (!currentUser) return;
 
@@ -36942,7 +37041,8 @@ async function openCustomizationSheet() {
     const catMeta = {
         nickname_color: { icon: '🎨', name: 'Цвет ника',    desc: 'Стиль имени в списках' },
         avatar_frame:   { icon: '🖼', name: 'Рамка',        desc: 'Обводка аватара' },
-        profile_bg:     { icon: '🌄', name: 'Фон профиля',  desc: 'Задний план' },
+        profile_bg:     { icon: '🌄', name: 'Фон шапки',    desc: 'Атмосфера шапки профиля' },
+        page_bg:        { icon: '🖼️', name: 'Фон страницы', desc: 'Атмосфера всей страницы' },
         badge:          { icon: '🏅', name: 'Значок',       desc: 'Метка у ника' },
         title:          { icon: '👑', name: 'Титул',        desc: 'Статус под ником' },
     };
@@ -36996,6 +37096,9 @@ async function openCustomizationSheet() {
 }
 
 // Открыть конкретную категорию
+// ============================================================
+// ✨ МОДАЛКА КАСТОМИЗАЦИИ — предметы категории
+// ============================================================
 async function openCustomizeCategory(cat) {
     const { data: inv } = await sb.from('user_inventory')
         .select('item_id, is_equipped')
@@ -37019,7 +37122,8 @@ async function openCustomizeCategory(cat) {
     const catMeta = {
         nickname_color: { icon: '🎨', name: 'Цвет ника' },
         avatar_frame:   { icon: '🖼', name: 'Рамка' },
-        profile_bg:     { icon: '🌄', name: 'Фон профиля' },
+        profile_bg:     { icon: '🌄', name: 'Фон шапки' },
+        page_bg:        { icon: '🖼️', name: 'Фон страницы' },
         badge:          { icon: '🏅', name: 'Значок' },
         title:          { icon: '👑', name: 'Титул' },
     };
@@ -37047,14 +37151,15 @@ async function openCustomizeCategory(cat) {
     haptic('light');
 }
 
+// ============================================================
+// 🎴 КАРТОЧКА ПРЕДМЕТА В КАСТОМИЗАЦИИ
+// ============================================================
 function renderCustomizeCard(item, isEquipped) {
     const val = item.value || {};
     let previewHTML = '';
     let previewStyle = '';
 
-    // ============================================================
-    // 🎨 ЦВЕТ НИКА
-    // ============================================================
+    // Ник
     if (item.category === 'nickname_color') {
         if (val.gradient) {
             previewStyle = `background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;`;
@@ -37064,14 +37169,10 @@ function renderCustomizeCard(item, isEquipped) {
             previewHTML = 'De1mos';
         }
     }
-
-    // ============================================================
-    // 🖼️ РАМКА АВАТАРА
-    // ============================================================
+    // Рамка
     else if (item.category === 'avatar_frame') {
         const color = val.color || '#fff';
         const isSpecial = val.special === true;
-
         if (isSpecial) {
             previewHTML = `
                 <div style="position:relative; width:100%; height:100%;">
@@ -37082,7 +37183,7 @@ function renderCustomizeCard(item, isEquipped) {
                                 font-weight:900;color:#fff;font-size:13px;z-index:2;">A</div>
                     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
                                 width:64px;height:64px;z-index:1;overflow:visible;">
-                        ${getSpecialFrameHTML(val.special_type || 'default', color)}
+                        ${uniquifySvgIds(getSpecialFrameHTML(val.special_type || 'default', color))}
                     </div>
                 </div>
             `;
@@ -37094,36 +37195,29 @@ function renderCustomizeCard(item, isEquipped) {
                 font-weight:900;color:#fff;font-size:13px;">A</div>`;
         }
     }
-
-    // ============================================================
-    // 🌄 ФОН ПРОФИЛЯ
-    // ============================================================
+    // Фон шапки
     else if (item.category === 'profile_bg') {
-        if (val.url) {
-            previewStyle = `background: url('${val.url}') center/cover;`;
-        } else {
-            previewHTML = '🌄';
-        }
+        if (val.url) previewStyle = `background: url('${val.url}') center/cover;`;
+        else previewHTML = '🌄';
     }
-
-    // ============================================================
-    // 🏅 ЗНАЧОК
-    // ============================================================
+    // Фон страницы
+    else if (item.category === 'page_bg') {
+        if (val.url) previewStyle = `background: url('${val.url}') center/cover;`;
+        else previewHTML = '🖼️';
+    }
+    // Значок
     else if (item.category === 'badge') {
         if (val.url) {
             previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
         } else if (val.svg) {
-            previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${val.svg}</div>`;
+            previewHTML = `<div class="badge-svg-wrap" style="width:48px;height:48px;">${uniquifySvgIds(val.svg)}</div>`;
         } else if (val.emoji) {
             previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
         } else {
             previewHTML = `<span style="font-size: 38px;">🏅</span>`;
         }
     }
-
-    // ============================================================
-    // 👑 ТИТУЛ
-    // ============================================================
+    // Титул
     else if (item.category === 'title') {
         previewStyle = `font-size:11px;font-weight:900;color:${val.color || 'var(--gold)'};
             text-shadow:0 0 12px ${val.color || 'var(--gold)'};letter-spacing:1px;`;
