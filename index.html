@@ -5238,14 +5238,25 @@ body::after {
 .club-member-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .club-member-info { flex: 1; min-width: 0; }
 .club-member-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 5px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    line-height: 1.2 !important;
+    min-width: 0 !important;
 }
-.club-member-sub { font-size: 10px; color: var(--hint); margin-top: 2px; font-weight: 600; }
+
+.club-member-sub {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 11px !important;
+    color: var(--hint) !important;
+    font-weight: 600 !important;
+}
 .club-mini-dots {
     width: 26px;
     height: 26px;
@@ -12643,10 +12654,11 @@ html.lite-mode .has-list-bg {
         height: 120px !important;
         font-size: 48px !important;
     }
-        .phc-avatar .special-frame-overlay {
-        width: 160px !important;
-        height: 160px !important;
-    }
+.phc-avatar-wrap .special-frame-overlay,
+.phc-avatar .special-frame-overlay {
+    width: 160px;
+    height: 160px;
+}
     
     .phc-name { font-size: 26px !important; }
     .phc-username { font-size: 14px; }
@@ -13648,9 +13660,10 @@ button[disabled] {
     height: 160px;
 }
 
-.pm2-avatar-wrap .special-frame-overlay {
-    width: 140px;
-    height: 140px;
+.pm2-avatar-wrap .special-frame-overlay,
+.pm2-avatar .special-frame-overlay {
+    width: 130px;
+    height: 130px;
 }
 
 .special-frame-overlay svg,
@@ -15807,20 +15820,16 @@ html.lite-mode .list-frame-overlay svg * {
 }
 
 /* ============================================================
-   🛡️ КЛУБ — GRID-СЕТКА как в лидерборде
+   🛡️ КЛУБ v2 — чистая сетка
    ============================================================ */
 
 .club-member-row {
     display: grid !important;
     grid-template-columns: 66px 1fr auto auto !important;
-    grid-template-rows: auto auto !important;
-    grid-template-areas:
-        "avatar name dxp dots"
-        "avatar lvl  dxp dots" !important;
+    grid-template-areas: "avatar info dxp dots" !important;
     align-items: center !important;
     column-gap: 10px !important;
-    row-gap: 2px !important;
-    padding: 10px 14px !important;
+    padding: 12px 14px !important;
     min-height: 68px !important;
     background: linear-gradient(180deg,
         rgba(var(--emerald-rgb), 0.04) 0%,
@@ -15842,14 +15851,18 @@ html.lite-mode .list-frame-overlay svg * {
     position: relative !important;
     z-index: 2 !important;
     overflow: visible !important;
+    flex-shrink: 0 !important;
 }
 
 .club-member-info {
-    display: contents !important;   /* разбивает детей прямо в grid */
+    grid-area: info !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    min-width: 0 !important;
 }
 
 .club-member-name {
-    grid-area: name !important;
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
@@ -15874,9 +15887,9 @@ html.lite-mode .list-frame-overlay svg * {
 }
 
 .club-member-sub {
-    grid-area: lvl !important;
     display: flex !important;
     align-items: center !important;
+    gap: 6px !important;
     font-size: 11px !important;
     color: var(--hint) !important;
     font-weight: 600 !important;
@@ -15891,11 +15904,13 @@ html.lite-mode .list-frame-overlay svg * {
     white-space: nowrap !important;
     padding-left: 8px !important;
     text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5) !important;
+    align-self: center !important;
 }
 
 .club-mini-dots {
     grid-area: dots !important;
     flex-shrink: 0 !important;
+    align-self: center !important;
 }
 
 @media (max-width: 480px) {
@@ -18937,7 +18952,7 @@ async function renderProfileView(user, options = {}) {
         <div class="profile-hero-compact" data-profile-bg>
             <div class="phc-row-v2">
                 <!-- Аватар с рамкой -->
-                <div class="phc-avatar-wrap">
+               <div class="profile-avatar-wrap phc-avatar-wrap">
                     <div class="profile-avatar" data-avatar-frame>${avatarHTML}</div>
                     ${isMe ? `<button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>` : ''}
                 </div>
@@ -33786,7 +33801,7 @@ function applyCustomizationToElement(scopeEl, user) {
             });
 
             // Добавляем декоративный слой — ПОД аватаром (эффекты видны по краям)
-            const wrap = scopeEl.querySelector('.profile-avatar-wrap, .pm2-avatar-wrap');
+            const wrap = scopeEl.querySelector('.phc-avatar-wrap, .profile-avatar-wrap, .pm2-avatar-wrap');
             if (wrap) {
                 // Убираем старый
                 wrap.querySelectorAll('.special-frame-overlay').forEach(o => o.remove());
