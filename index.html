@@ -16323,6 +16323,17 @@ html.lite-mode .list-frame-overlay svg * {
     pointer-events: none;
 }
 
+/* Для градиентных фонов — не затемняем */
+.page-profile-bg-layer.is-gradient {
+    opacity: 0.85;
+}
+.page-profile-bg-layer.is-gradient::after {
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.15) 0%,
+        rgba(0, 0, 0, 0.35) 50%,
+        rgba(0, 0, 0, 0.55) 100%);
+}
+
 @keyframes pageBgFadeIn {
     from { opacity: 0; }
     to   { opacity: 0.35; }
@@ -34021,6 +34032,9 @@ function renderShopItem(item, isOwned, isEquipped) {
         if (val.url) {
             previewStyle = `background: url('${val.url}') center/cover;`;
             previewCls = 'preview-bg';
+        } else if (val.gradient) {
+            previewStyle = `background: ${val.gradient};`;
+            previewCls = 'preview-bg';
         } else {
             previewHTML = '🖼️';
         }
@@ -34559,10 +34573,19 @@ function applyCustomizationToElement(scopeEl, user) {
 
         if (pageBgId && SHOP_ITEMS_CACHE[pageBgId]) {
             const val = SHOP_ITEMS_CACHE[pageBgId].value || {};
-            if (val.url) {
+            // Поддержка и url, и градиента
+            const bgValue = val.url
+                ? `url('${val.url}')`
+                : (val.gradient || null);
+
+            if (bgValue) {
                 const layer = document.createElement('div');
                 layer.className = 'page-profile-bg-layer';
-                layer.style.backgroundImage = `url('${val.url}')`;
+                layer.style.backgroundImage = bgValue;
+                if (val.gradient && !val.url) {
+                    // Для градиента — без overlay, он и так тёмный
+                    layer.classList.add('is-gradient');
+                }
                 pageProfileEl.insertBefore(layer, pageProfileEl.firstChild);
                 pageProfileEl.classList.add('has-page-bg');
             }
@@ -37202,8 +37225,15 @@ function renderCustomizeCard(item, isEquipped) {
     }
     // Фон страницы
     else if (item.category === 'page_bg') {
-        if (val.url) previewStyle = `background: url('${val.url}') center/cover;`;
-        else previewHTML = '🖼️';
+        if (val.url) {
+            previewStyle = `background: url('${val.url}') center/cover;`;
+            previewCls = 'preview-bg';
+        } else if (val.gradient) {
+            previewStyle = `background: ${val.gradient};`;
+            previewCls = 'preview-bg';
+        } else {
+            previewHTML = '🖼️';
+        }
     }
     // Значок
     else if (item.category === 'badge') {
