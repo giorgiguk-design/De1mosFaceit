@@ -16285,86 +16285,221 @@ html.lite-mode .list-frame-overlay svg * {
     box-shadow: 0 0 16px rgba(167, 139, 250, 0.4);
 }
 
-    /* ============================================================
+/* ============================================================
    🖼️ ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg)
    ============================================================ */
 
 #page-profile {
     position: relative;
+    min-height: calc(100vh - 120px);
 }
 
-/* Слой с картинкой — фиксированный, за контентом */
-.page-profile-bg-layer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    opacity: 0.35;
-    pointer-events: none;
-    z-index: 0;
-    /* Плавное появление */
-    animation: pageBgFadeIn 0.6s ease;
+#page-profile.has-page-bg {
+    /* Тёмный градиент-оверлей поверх картинки,
+       чтобы текст и карточки читались */
+    background-blend-mode: multiply;
+    /* Общая прозрачность — фон виден, но не слепит */
+    opacity: 1;
 }
 
-/* Затемнение поверх картинки, чтобы контент читался */
-.page-profile-bg-layer::after {
+/* Тёмный оверлей поверх фона (псевдоэлемент) */
+#page-profile.has-page-bg::before {
     content: '';
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: linear-gradient(180deg,
-        rgba(0, 0, 0, 0.45) 0%,
-        rgba(0, 0, 0, 0.65) 50%,
-        rgba(0, 0, 0, 0.85) 100%);
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.55) 40%,
+        rgba(0, 0, 0, 0.75) 100%);
     pointer-events: none;
-}
-
-/* Для градиентных фонов — не затемняем */
-.page-profile-bg-layer.is-gradient {
-    opacity: 0.85;
-}
-.page-profile-bg-layer.is-gradient::after {
-    background: linear-gradient(180deg,
-        rgba(0, 0, 0, 0.15) 0%,
-        rgba(0, 0, 0, 0.35) 50%,
-        rgba(0, 0, 0, 0.55) 100%);
-}
-
-@keyframes pageBgFadeIn {
-    from { opacity: 0; }
-    to   { opacity: 0.35; }
+    z-index: 0;
+    /* Фон виден сквозь оверлей */
+    mix-blend-mode: multiply;
 }
 
 /* Контент поверх фона */
-#page-profile.has-page-bg > *:not(.page-profile-bg-layer) {
+#page-profile.has-page-bg > * {
     position: relative;
     z-index: 1;
 }
 
-/* Шапка профиля — свой фон по теме, не зависит от page_bg */
-.profile-hero-v3[data-profile-bg] {
-    background: linear-gradient(160deg,
-        rgba(var(--emerald-rgb), 0.08) 0%,
-        rgba(0, 0, 0, 0.55) 45%,
-        rgba(0, 0, 0, 0.85) 100%);
+/* Убираем старый слой (если где-то остался) */
+.page-profile-bg-layer {
+    display: none !important;
 }
 
-/* На десктопе fixed-фон красивее */
+/* ============================================================
+   📱 ТЕЛЕФОН — сдвиг инфо от аватара
+   ============================================================ */
+@media (max-width: 480px) {
+    /* Расстояние между аватаром и ником больше */
+    .phc-hero-inner {
+        gap: 20px !important;
+    }
+
+    /* Инфо-блок сдвинут правее */
+    .phc-info-v3 {
+        padding-left: 10px !important;
+    }
+
+    /* Шапка чуть выше, чтобы рамка не упиралась в границы */
+    .profile-hero-v3 {
+        padding: 18px 14px 0 !important;
+        min-height: 160px !important;
+        overflow: visible !important;
+    }
+
+    /* Отключаем обрезку содержимого на телефоне —
+       рамка сможет немного выйти за края */
+    .profile-hero-v3.has-custom-bg {
+        overflow: visible !important;
+    }
+
+    /* Модалка чужого профиля — то же самое */
+    .pm2-hero-v3 {
+        padding: 16px 14px 0 !important;
+    }
+    .pm2-hero-v3 .phc-hero-inner {
+        gap: 20px !important;
+    }
+    .pm2-hero-v3 .phc-info-v3 {
+        padding-left: 10px !important;
+    }
+}
+
+/* Очень узкие экраны — ещё больше сдвиг */
+@media (max-width: 380px) {
+    .phc-hero-inner {
+        gap: 22px !important;
+    }
+    .phc-info-v3 {
+        padding-left: 12px !important;
+    }
+    .phc-name {
+        font-size: 15px !important;
+    }
+}
+
+/* ПК — оставляем просторным */
 @media (min-width: 1024px) {
-    .page-profile-bg-layer {
-        opacity: 0.40;
+    #page-profile.has-page-bg {
         background-attachment: fixed;
     }
+
+    .phc-hero-inner {
+        gap: 28px !important;
+    }
+    .phc-info-v3 {
+        padding-left: 14px !important;
+    }
 }
 
+    /* Рамка поверх шапки на телефоне */
 @media (max-width: 480px) {
-    .page-profile-bg-layer {
-        opacity: 0.30;
+    .phc-avatar-wrap {
+        z-index: 10 !important;
+        overflow: visible !important;
     }
+
+    .phc-avatar-wrap .special-frame-overlay {
+        z-index: 15 !important;
+        pointer-events: none;
+    }
+
+    /* Ник и чипы — правее рамки */
+    .phc-info-v3 > * {
+        position: relative;
+        z-index: 5;
+    }
+
+    /* Уменьшаем размер рамки, чтобы не задевала ник */
+    .phc-avatar-wrap .special-frame-overlay {
+        width: 130px !important;
+        height: 130px !important;
+    }
+
+    /* Модальный вариант */
+    .pm2-hero-v3 .phc-avatar-wrap .special-frame-overlay {
+        width: 120px !important;
+        height: 120px !important;
+    }
+}
+
+    /* ============================================================
+   🔥 ФИКС: ШАПКА ПРОФИЛЯ ФИКСИРОВАННОЙ ВЫСОТЫ
+   ============================================================ */
+
+.profile-hero-v3,
+.pm2-hero-v3 {
+    /* Высота только по содержимому — не растягивается */
+    height: auto !important;
+    max-height: 240px !important;
+    min-height: 160px !important;
+    flex: 0 0 auto !important;
+    align-self: flex-start !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    /* Убеждаемся, что это отдельный блок */
+    display: block !important;
+    position: relative !important;
+    /* Обрезаем фоновую картинку внутри шапки */
+    overflow: hidden !important;
+    isolation: isolate !important;
+}
+
+/* Внутренняя раскладка — flex по горизонтали */
+.profile-hero-v3 .phc-hero-inner,
+.pm2-hero-v3 .phc-hero-inner {
+    display: flex !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* Родитель страницы — не должен растягивать детей */
+#page-profile {
+    display: block !important;
+    height: auto !important;
+    min-height: calc(100vh - 120px) !important;
+}
+
+/* Если фон страницы применяется — он НЕ влияет на шапку */
+#page-profile.has-page-bg > *:not(.profile-hero-v3) {
+    /* Стата, графики, миникарты — всё ниже шапки */
+    position: relative;
+    z-index: 1;
+}
+
+/* Шапка — поверх фона страницы, но с собственным фоном */
+#page-profile.has-page-bg .profile-hero-v3 {
+    z-index: 2;
+}
+
+/* Мобильный вариант */
+@media (max-width: 480px) {
+    .profile-hero-v3,
+    .pm2-hero-v3 {
+        max-height: 200px !important;
+        min-height: 150px !important;
+    }
+}
+
+    /* Общая прозрачность контента над фоном */
+#page-profile.has-page-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.30) 0%,
+        rgba(0, 0, 0, 0.55) 50%,
+        rgba(0, 0, 0, 0.75) 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+#page-profile.has-page-bg > * {
+    position: relative;
+    z-index: 1;
 }
     
 </style>
@@ -34562,31 +34697,36 @@ function applyCustomizationToElement(scopeEl, user) {
 
     // ============================================================
     // 3b. ФОН СТРАНИЦЫ ПРОФИЛЯ (page_bg)
-    //    Накладывается на весь #page-profile
+    //    Вешаем НА САМ #page-profile, без слоя-обёртки
     // ============================================================
     const pageBgId = eq.page_bg;
     const pageProfileEl = document.getElementById('page-profile');
 
-    if (pageProfileEl && scopeEl.contains(pageProfileEl) || pageProfileEl) {
-        pageProfileEl.querySelectorAll('.page-profile-bg-layer').forEach(el => el.remove());
+    if (pageProfileEl) {
+        // Сброс старых стилей
+        pageProfileEl.style.backgroundImage = '';
+        pageProfileEl.style.backgroundSize = '';
+        pageProfileEl.style.backgroundPosition = '';
+        pageProfileEl.style.backgroundRepeat = '';
+        pageProfileEl.style.backgroundAttachment = '';
         pageProfileEl.classList.remove('has-page-bg');
+
+        // На всякий случай удаляем старый слой, если он где-то остался
+        document.querySelectorAll('.page-profile-bg-layer').forEach(el => el.remove());
 
         if (pageBgId && SHOP_ITEMS_CACHE[pageBgId]) {
             const val = SHOP_ITEMS_CACHE[pageBgId].value || {};
-            // Поддержка и url, и градиента
-            const bgValue = val.url
-                ? `url('${val.url}')`
-                : (val.gradient || null);
+
+            let bgValue = null;
+            if (val.url) bgValue = `url('${val.url}')`;
+            else if (val.gradient) bgValue = val.gradient;
 
             if (bgValue) {
-                const layer = document.createElement('div');
-                layer.className = 'page-profile-bg-layer';
-                layer.style.backgroundImage = bgValue;
-                if (val.gradient && !val.url) {
-                    // Для градиента — без overlay, он и так тёмный
-                    layer.classList.add('is-gradient');
-                }
-                pageProfileEl.insertBefore(layer, pageProfileEl.firstChild);
+                pageProfileEl.style.backgroundImage = bgValue;
+                pageProfileEl.style.backgroundSize = 'cover';
+                pageProfileEl.style.backgroundPosition = 'center top';
+                pageProfileEl.style.backgroundRepeat = 'no-repeat';
+                pageProfileEl.style.backgroundAttachment = 'fixed';
                 pageProfileEl.classList.add('has-page-bg');
             }
         }
