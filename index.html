@@ -14949,12 +14949,7 @@ html.lite-mode .list-frame-overlay svg * {
 .elo-chart-card.has-dxp-bg {
     background-blend-mode: overlay;
 }
-
-    /* Закругление шапки профиля */
-.profile-hero-compact {
-    border-radius: 22px !important;
-    overflow: visible !important;
-}
+    
 .profile-hero-compact[style*="background"] {
     /* Фон обрезаем через clip-path, если он кастомный */
     clip-path: none !important;
@@ -14980,28 +14975,7 @@ html.lite-mode .list-frame-overlay svg * {
     background-repeat: no-repeat !important;
     min-height: 200px;
 }
-.profile-hero-compact.has-custom-bg::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        180deg,
-        rgba(0, 0, 0, 0.35) 0%,
-        rgba(0, 0, 0, 0.55) 50%,
-        rgba(0, 0, 0, 0.75) 100%
-    );
-    pointer-events: none;
-    z-index: 1;
-}
-.profile-hero-compact.has-custom-bg > * {
-    position: relative;
-    z-index: 2;
-}
-
-    .pm2-hero.has-custom-bg {
-    position: relative;
-    overflow: hidden;
-}
+    
 .pm2-hero.has-custom-bg::after {
     content: '';
     position: absolute;
@@ -15329,207 +15303,386 @@ html.lite-mode .list-frame-overlay svg * {
     height: inherit;
 }
 
-    /* ============================================================
-   👤 ПРОФИЛЬ v2 — КОМПАКТНЫЙ И ЭСТЕТИЧНЫЙ
+/* ============================================================
+   👤 ПРОФИЛЬ v3 — КИБЕРСПОРТИВНЫЙ
    ============================================================ */
 
-.phc-row-v2 {
-    display: flex !important;
-    align-items: flex-start !important;
-    gap: 18px !important;
-    padding: 4px !important;
+.profile-hero-v3 {
+    position: relative;
+    padding: 20px 18px 0;
+    margin-bottom: 14px;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.08) 0%,
+        rgba(0, 0, 0, 0.55) 45%,
+        rgba(0, 0, 0, 0.85) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 18px;
+    overflow: hidden;
+    isolation: isolate;
+    min-height: 170px;
 }
 
-/* Аватар — фиксированный, не сжимается */
+/* Кастомный фон — обрезаем внутри, рамка снаружи видна */
+.profile-hero-v3.has-custom-bg {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+.profile-hero-v3.has-custom-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.55) 50%,
+        rgba(0, 0, 0, 0.80) 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+.profile-hero-v3.has-custom-bg > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Углы-скобки */
+.phc-corner {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: var(--emerald);
+    border-style: solid;
+    border-width: 0;
+    opacity: 0.75;
+    z-index: 3;
+    pointer-events: none;
+}
+.phc-tl { top: 6px; left: 6px; border-top-width: 2px; border-left-width: 2px; }
+.phc-tr { top: 6px; right: 6px; border-top-width: 2px; border-right-width: 2px; }
+.phc-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
+.phc-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Верхняя неоновая линия */
+.profile-hero-v3::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.8;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Внутренняя раскладка */
+.phc-hero-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    z-index: 2;
+    padding-bottom: 20px;
+}
+
+/* Аватар */
 .phc-avatar-wrap {
-    position: relative !important;
-    flex-shrink: 0 !important;
-    width: 80px !important;
-    height: 80px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    position: relative;
+    flex-shrink: 0;
+    width: 78px;
+    height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .phc-avatar-wrap .profile-avatar {
-    width: 72px !important;
-    height: 72px !important;
-    font-size: 30px !important;
+    width: 70px;
+    height: 70px;
+    font-size: 28px;
 }
 
-/* Инфо — растягивается, сдвинут от аватара */
-.phc-info-v2 {
-    flex: 1 !important;
-    min-width: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 5px !important;
-    padding-top: 4px !important;
-    padding-left: 6px !important;
+/* Инфо-блок */
+.phc-info-v3 {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 2px;
 }
 
-/* Ник — крупный, переносится */
+/* Админ-бейдж */
+.phc-admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: linear-gradient(135deg, rgba(217, 171, 90, 0.28), rgba(217, 171, 90, 0.08));
+    border: 1px solid rgba(217, 171, 90, 0.55);
+    border-radius: 6px;
+    color: var(--gold);
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(217, 171, 90, 0.5);
+    width: fit-content;
+    margin-bottom: 2px;
+}
+
+/* Ник */
 .phc-name-row {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-    min-width: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .phc-name {
-    font-size: 20px !important;
-    font-weight: 800 !important;
-    color: var(--text) !important;
-    line-height: 1.15 !important;
-    word-break: break-word !important;
-    overflow-wrap: anywhere !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1.15;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Титул */
 .phc-title {
-    font-size: 11px !important;
-    font-weight: 900 !important;
-    letter-spacing: 1.2px !important;
-    text-transform: uppercase !important;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     display: none;
-    line-height: 1.1 !important;
-    max-width: 100% !important;
+    line-height: 1.1;
+    max-width: 100%;
 }
 
 /* Username */
 .phc-username {
-    font-size: 12px !important;
-    color: var(--hint) !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    max-width: 100% !important;
+    font-size: 12px;
+    color: var(--hint);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
-
 .phc-username a {
-    color: var(--emerald) !important;
-    text-decoration: none !important;
+    color: var(--emerald);
+    text-decoration: none;
 }
 
-/* Бейджи — flex-wrap */
-.phc-badges {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 5px !important;
-    align-items: center !important;
-    margin-top: 2px !important;
+/* Чипы-бейджи */
+.phc-badges-v3 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 3px;
 }
 
-.phc-badge {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 3px !important;
-    padding: 3px 8px !important;
-    font-size: 10px !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.3px !important;
-    border-radius: 6px !important;
-    background: rgba(var(--emerald-rgb), 0.12) !important;
-    border: 1px solid var(--border-strong) !important;
-    color: var(--emerald) !important;
-    line-height: 1.3 !important;
-    white-space: nowrap !important;
+.phc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 9px;
+    border-radius: 7px;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
-.phc-badge-dxp {
-    background: linear-gradient(135deg, rgba(var(--emerald-rgb), 0.18), rgba(var(--emerald-rgb), 0.05)) !important;
-    color: var(--emerald-3) !important;
-    text-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.5) !important;
+.phc-chip-dxp {
+    background: linear-gradient(135deg, rgba(var(--emerald-rgb), 0.20), rgba(var(--emerald-rgb), 0.05));
+    color: var(--emerald-3);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
 }
 
-/* Кнопки — вертикально справа */
-.phc-actions-v2 {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 6px !important;
-    flex-shrink: 0 !important;
-    padding-top: 4px !important;
+/* Кнопки справа */
+.phc-actions-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
-.phc-icon-btn {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 50% !important;
-    background: rgba(var(--emerald-rgb), 0.08) !important;
-    border: 1px solid var(--border-strong) !important;
-    color: var(--emerald) !important;
-    font-size: 14px !important;
-    cursor: pointer !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-family: inherit !important;
-    transition: transform 0.2s ease, background 0.2s ease !important;
+.phc-act-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.phc-act-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.18);
+    border-color: var(--emerald);
+    transform: scale(1.08);
+}
+.phc-act-btn:active { transform: scale(0.9); }
+
+.phc-act-gold {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(217, 171, 90, 0.10));
+    border-color: rgba(167, 139, 250, 0.45);
+    color: var(--purple);
+}
+.phc-act-gold:hover {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.28), rgba(217, 171, 90, 0.22));
+    border-color: var(--purple);
 }
 
-.phc-icon-btn:hover {
-    background: rgba(var(--emerald-rgb), 0.18) !important;
-    transform: scale(1.08) !important;
+/* Прогресс-полоса DXP внизу шапки */
+.phc-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(var(--emerald-rgb), 0.08);
+    z-index: 3;
 }
 
-.phc-icon-btn:active {
-    transform: scale(0.92) !important;
+.phc-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--emerald-2), var(--emerald), var(--emerald-3));
+    border-radius: 0 3px 3px 0;
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.7);
+    transition: width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.phc-icon-btn-gold {
-    background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(217, 171, 90, 0.10)) !important;
-    border-color: rgba(167, 139, 250, 0.4) !important;
-    color: var(--purple) !important;
-}
+/* ============================================================ */
+/* 📱 ТЕЛЕФОН — компактнее                                       */
+/* ============================================================ */
 
-.phc-icon-btn-gold:hover {
-    background: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(217, 171, 90, 0.20)) !important;
-    border-color: var(--purple) !important;
-}
-
-/* На телефоне */
 @media (max-width: 480px) {
-    .phc-row-v2 {
-        gap: 14px !important;
+    .profile-hero-v3 {
+        padding: 16px 14px 0;
+        border-radius: 16px;
+        min-height: 150px;
+    }
+    .phc-hero-inner {
+        gap: 12px;
+        padding-bottom: 16px;
     }
     .phc-avatar-wrap {
-        width: 68px !important;
-        height: 68px !important;
+        width: 68px;
+        height: 68px;
     }
     .phc-avatar-wrap .profile-avatar {
-        width: 62px !important;
-        height: 62px !important;
-        font-size: 26px !important;
+        width: 62px;
+        height: 62px;
+        font-size: 24px;
     }
-    .phc-info-v2 {
-        padding-left: 8px !important;
-        gap: 4px !important;
+    .phc-info-v3 {
+        gap: 3px;
     }
     .phc-name {
-        font-size: 17px !important;
+        font-size: 16px;
     }
-    .phc-badge {
-        font-size: 9px !important;
-        padding: 2px 7px !important;
+    .phc-username {
+        font-size: 11px;
     }
-    .phc-icon-btn {
-        width: 32px !important;
-        height: 32px !important;
+    .phc-chip {
+        font-size: 9.5px;
+        padding: 2px 7px;
+    }
+    .phc-admin-badge {
+        font-size: 8.5px;
+        padding: 2px 8px;
+    }
+    .phc-act-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+    .phc-actions-v3 {
+        gap: 5px;
     }
 }
 
-/* Убираем старые стили, которые могут мешать */
-.profile-hero-compact {
-    padding: 16px !important;
+/* ============================================================ */
+/* 🖥️ ПК — больше воздуха                                        */
+/* ============================================================ */
+
+@media (min-width: 1024px) {
+    .profile-hero-v3 {
+        padding: 28px 28px 0;
+        min-height: 220px;
+        border-radius: 22px;
+    }
+    .phc-hero-inner {
+        gap: 24px;
+        padding-bottom: 28px;
+        align-items: center;
+    }
+    .phc-avatar-wrap {
+        width: 130px;
+        height: 130px;
+    }
+    .phc-avatar-wrap .profile-avatar {
+        width: 120px;
+        height: 120px;
+        font-size: 48px;
+    }
+    .phc-info-v3 {
+        gap: 7px;
+    }
+    .phc-name {
+        font-size: 28px;
+    }
+    .phc-username {
+        font-size: 14px;
+    }
+    .phc-chip {
+        font-size: 12px;
+        padding: 4px 12px;
+    }
+    .phc-admin-badge {
+        font-size: 11px;
+        padding: 4px 12px;
+    }
+    .phc-act-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 16px;
+    }
+    .phc-actions-v3 {
+        gap: 8px;
+    }
 }
 
+/* Модальный вариант — чуть меньше */
+.pm2-hero-v3 {
+    padding: 18px 16px 0;
+}
 @media (max-width: 480px) {
-    .profile-hero-compact {
-        padding: 14px !important;
+    .pm2-hero-v3 {
+        padding: 14px 12px 0;
+    }
+    .pm2-hero-v3 .phc-avatar-wrap {
+        width: 62px;
+        height: 62px;
+    }
+    .pm2-hero-v3 .profile-avatar {
+        width: 56px !important;
+        height: 56px !important;
+        font-size: 22px !important;
+    }
+    .pm2-hero-v3 .phc-name {
+        font-size: 15px;
     }
 }
 
@@ -15925,6 +16078,37 @@ html.lite-mode .list-frame-overlay svg * {
     }
     .club-member-dxp {
         font-size: 13px !important;
+    }
+}
+
+    .profile-mini-row {
+    display: grid !important;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr !important;
+    gap: 6px !important;
+    margin-bottom: 10px !important;
+}
+
+@media (max-width: 480px) {
+    .profile-mini-row {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+    }
+    /* Last Match — на всю ширину */
+    .profile-mini-row .pmr-lastmatch {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .profile-mini-row {
+        grid-template-columns: 1.5fr 1fr 1fr 1.2fr !important;
+        gap: 12px !important;
+    }
+    .pmr-item {
+        padding: 16px 18px !important;
+    }
+    .pmr-value {
+        font-size: 16px !important;
     }
 }
     
@@ -18948,18 +19132,23 @@ async function renderProfileView(user, options = {}) {
 
     // 🔥 ЕДИНЫЙ HTML (используется и в своём, и в чужом профиле)
     const html = `
-        <!-- HERO v2 -->
-        <div class="profile-hero-compact" data-profile-bg>
-            <div class="phc-row-v2">
-                <!-- Аватар с рамкой -->
-               <div class="profile-avatar-wrap phc-avatar-wrap">
+        <!-- ============ HERO V3 ============ -->
+        <div class="profile-hero-v3" data-profile-bg>
+            <span class="phc-corner phc-tl"></span>
+            <span class="phc-corner phc-tr"></span>
+            <span class="phc-corner phc-bl"></span>
+            <span class="phc-corner phc-br"></span>
+
+            <div class="phc-hero-inner">
+                <!-- Аватар -->
+                <div class="phc-avatar-wrap">
                     <div class="profile-avatar" data-avatar-frame>${avatarHTML}</div>
                     ${isMe ? `<button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>` : ''}
                 </div>
 
-                <!-- Информация -->
-                <div class="phc-info-v2">
-                    ${user.is_admin ? `<div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+                <!-- Инфо -->
+                <div class="phc-info-v3">
+                    ${user.is_admin ? `<div class="phc-admin-badge">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
 
                     <div class="phc-name-row">
                         <span class="phc-name" data-nickname>${escapeHtml(user.display_name || 'Без имени')}</span>
@@ -18974,30 +19163,26 @@ async function renderProfileView(user, options = {}) {
                             : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')}
                     </div>
 
-                    <div class="phc-badges">
+                    <div class="phc-badges-v3">
                         ${isDev ? `<span class="dev-tag" onclick="showDevTagInfo()">DEV</span>` : ''}
-                        <span class="phc-badge">⚡ Ур. ${level}</span>
-                        <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
+                        <span class="phc-chip">⚡ Ур. ${level}</span>
+                        <span class="phc-chip phc-chip-dxp">🎯 ${user.elo ?? 1000} DXP</span>
                     </div>
                 </div>
 
-                <!-- Кнопки — вертикально справа -->
-                <div class="phc-actions-v2">
-                    <button type="button" class="phc-icon-btn" onclick="shareProfile(${user.telegram_id}); return false;" title="Поделиться">
+                <!-- Кнопки -->
+                <div class="phc-actions-v3">
+                    <button class="phc-act-btn" onclick="shareProfile(${user.telegram_id}); return false;" title="Поделиться">
                         <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
-                            <circle cx="18" cy="5" r="3"/>
-                            <circle cx="6" cy="12" r="3"/>
-                            <circle cx="18" cy="19" r="3"/>
+                            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
                             <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
                         </svg>
                     </button>
                     ${isMe ? `
-                        <button class="phc-icon-btn" onclick="enterProfileEditMode()" title="Редактировать">
-                            <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
-                                <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/>
-                            </svg>
+                        <button class="phc-act-btn" onclick="enterProfileEditMode()" title="Редактировать">
+                            <svg class="cy-icon cy-sm" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/></svg>
                         </button>
-                        <button class="phc-icon-btn phc-icon-btn-gold" onclick="openCustomizationSheet()" title="Кастомизация">
+                        <button class="phc-act-btn phc-act-gold" onclick="openCustomizationSheet()" title="Кастомизация">
                             <svg class="cy-icon cy-sm" viewBox="0 0 24 24">
                                 <path d="M12 2v6l3-2M12 2v6l-3-2M12 22v-6l3 2M12 22v-6l-3 2M2 12h6l-2-3M2 12h6l-2 3M22 12h-6l2-3M22 12h-6l2 3"/>
                                 <circle cx="12" cy="12" r="4" fill="none"/>
@@ -19005,6 +19190,11 @@ async function renderProfileView(user, options = {}) {
                         </button>
                     ` : ''}
                 </div>
+            </div>
+
+            <!-- Полоса прогресса DXP -->
+            <div class="phc-progress-bar">
+                <div class="phc-progress-fill" style="width: ${Math.min(100, ((user.elo ?? 1000) % 250) / 2.5)}%;"></div>
             </div>
         </div>
 
@@ -19141,9 +19331,13 @@ async function renderProfileView(user, options = {}) {
         <div id="profileMatchHistory_${user.telegram_id}"><div class="empty">Загрузка...</div></div>
     `;
 
-    // Если в модалке — рендерим в модалку, иначе — на страницу
+    // Если в модалке — рендерим в модалку с адаптивными классами
     if (inModal) {
-        return html; // вызовется из openPlayerProfile
+        // Меняем hero-класс на модальный
+        return html.replace(
+            /class="profile-hero-v3"/g,
+            'class="profile-hero-v3 pm2-hero-v3"'
+        );
     }
 
     container.innerHTML = html;
@@ -33839,11 +34033,11 @@ if (bgId && SHOP_ITEMS_CACHE[bgId]) {
     if (val.url) {
         bgEls.forEach(el => {
             // 🔥 применяем только к шапке профиля
-            if (!el.classList.contains('profile-hero-compact') &&
-                !el.classList.contains('profile-hero') &&
-                !el.classList.contains('pm2-hero')) {
-                return;
-            }
+if (!el.classList.contains('profile-hero-v3') &&
+    !el.classList.contains('pm2-hero') &&
+    !el.classList.contains('profile-hero-compact')) {
+    return;
+}
             el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url('${val.url}')`;
             el.style.backgroundSize = 'cover';
             el.style.backgroundPosition = 'center';
