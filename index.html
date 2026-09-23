@@ -10784,17 +10784,20 @@ html.lite-mode .pm2-badge { animation: none; }
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    /* Чуть больше аватара, чтобы щупальца выходили за края */
-    width: calc(100% + 32px);
-    height: calc(100% + 32px);
-    min-width: 90px;
-    min-height: 90px;
-    max-width: 160px;
-    max-height: 160px;
+    transform: translate(-50%, -50%) translateZ(0);
+    width: 110px;
+    height: 110px;
     pointer-events: none;
-    z-index: 3;
-    animation: frameFloatIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 4;
+    animation: frameFloatIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+    
+    /* 🔥 ОБРЕЗАЕМ всё, что вылезает за пределы оверлея */
+    overflow: hidden !important;
+    border-radius: 50%;            /* мягкая маска */
+    
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 @keyframes frameFloatIn {
     from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
@@ -12563,10 +12566,12 @@ html.lite-mode .has-list-bg {
         height: 120px !important;
         font-size: 48px !important;
     }
-        .phc-avatar .special-frame-overlay {
-        width: 160px !important;
-        height: 160px !important;
-    }
+.phc-avatar .special-frame-overlay {
+    width: 100px !important;
+    height: 100px !important;
+    max-width: 100px !important;
+    max-height: 100px !important;
+}
     
     .phc-name { font-size: 26px !important; }
     .phc-username { font-size: 14px; }
@@ -13569,8 +13574,10 @@ button[disabled] {
 }
 
 .pm2-avatar-wrap .special-frame-overlay {
-    width: 140px;
-    height: 140px;
+    width: 90px !important;
+    height: 90px !important;
+    max-width: 90px !important;
+    max-height: 90px !important;
 }
 
 .special-frame-overlay svg,
@@ -15055,6 +15062,56 @@ html.lite-mode .list-frame-overlay svg * {
     flex-shrink: 0;
     overflow: visible;
 }
+
+        /* 🔥🔥🔥 ФИНАЛЬНЫЙ ФИКС: рамки не перекрывают ник в шапке профиля */
+    
+    /* Свой профиль — аватар 64px, рамка максимум 90px */
+    .phc-avatar .special-frame-overlay {
+        width: 90px !important;
+        height: 90px !important;
+        max-width: 90px !important;
+        max-height: 90px !important;
+        min-width: 90px !important;
+        min-height: 90px !important;
+    }
+    
+    /* Чужой профиль */
+    .pm2-avatar-wrap .special-frame-overlay {
+        width: 85px !important;
+        height: 85px !important;
+        max-width: 85px !important;
+        max-height: 85px !important;
+        min-width: 85px !important;
+        min-height: 85px !important;
+    }
+    
+    /* В списках (лидерборд, клан) */
+    .list-frame-overlay {
+        width: 42px !important;
+        height: 42px !important;
+        max-width: 42px !important;
+        max-height: 42px !important;
+        min-width: 42px !important;
+        min-height: 42px !important;
+    }
+    
+    /* 🔥 Ник в шапке профиля — сдвигаем правее от рамки */
+    .phc-info {
+        padding-left: 20px !important;
+    }
+    
+    .pm2-info {
+        padding-left: 20px !important;
+    }
+    
+    /* 🔥 И в списках — ник правее аватара */
+    .leaderboard-item .leaderboard-name {
+        padding-left: 10px !important;
+    }
+    
+    .club-member-row .club-member-info {
+        padding-left: 10px !important;
+    }
     
 </style>
 </head>
@@ -34853,20 +34910,19 @@ function _getSpecialFrameHTMLRaw(type, color) {
             <!-- ============================================== -->
             <!-- ЛЕВОЕ КРЫЛО ДРАКОНА (перепончатое) -->
             <!-- ============================================== -->
-            <g class="fr-emperor-wing" data-i="0">
-                <!-- Основная перепонка — большая дуга -->
-                <path d="M 45 100
-                         C 10 60, -30 40, -55 30
-                         C -40 55, -20 80, 5 95
-                         C -25 85, -50 75, -70 75
-                         C -45 90, -15 100, 15 102
-                         C -25 105, -55 110, -75 120
-                         C -45 122, -10 118, 20 110
-                         C -15 125, -40 140, -55 160
-                         C -25 150, 5 130, 40 105 Z"
-                      fill="url(#empBlack${uid})"
-                      stroke="#ffd700" stroke-width="1.4"
-                      style="filter:drop-shadow(0 0 8px #ffd700);"/>
+<g class="fr-emperor-wing" data-i="0">
+    <path d="M 55 100
+             C 30 70, 10 55, -5 45
+             C 5 70, 20 88, 35 98
+             C 10 95, 0 90, -10 88
+             C 5 100, 25 105, 45 105
+             C 15 110, 0 115, -10 122
+             C 10 122, 30 118, 50 110
+             C 25 125, 10 138, 0 150
+             C 20 145, 40 130, 55 108 Z"
+          fill="url(#empBlack${uid})"
+          stroke="#ffd700" stroke-width="1.4"
+          style="filter:drop-shadow(0 0 8px #ffd700);"/>
                 <!-- Прожилки-«пальцы» крыла -->
                 <path d="M 45 100 C 15 75, -25 50, -50 35"
                       fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
@@ -34897,19 +34953,19 @@ function _getSpecialFrameHTMLRaw(type, color) {
             <!-- ============================================== -->
             <!-- ПРАВОЕ КРЫЛО ДРАКОНА (зеркально) -->
             <!-- ============================================== -->
-            <g class="fr-emperor-wing" data-i="1">
-                <path d="M 155 100
-                         C 190 60, 230 40, 255 30
-                         C 240 55, 220 80, 195 95
-                         C 225 85, 250 75, 270 75
-                         C 245 90, 215 100, 185 102
-                         C 225 105, 255 110, 275 120
-                         C 245 122, 210 118, 180 110
-                         C 215 125, 240 140, 255 160
-                         C 225 150, 195 130, 160 105 Z"
-                      fill="url(#empBlack${uid})"
-                      stroke="#ffd700" stroke-width="1.4"
-                      style="filter:drop-shadow(0 0 8px #ffd700);"/>
+<g class="fr-emperor-wing" data-i="1">
+    <path d="M 145 100
+             C 170 70, 190 55, 205 45
+             C 195 70, 180 88, 165 98
+             C 190 95, 200 90, 210 88
+             C 195 100, 175 105, 155 105
+             C 185 110, 200 115, 210 122
+             C 190 122, 170 118, 150 110
+             C 175 125, 190 138, 200 150
+             C 180 145, 160 130, 145 108 Z"
+          fill="url(#empBlack${uid})"
+          stroke="#ffd700" stroke-width="1.4"
+          style="filter:drop-shadow(0 0 8px #ffd700);"/>
                 <path d="M 155 100 C 185 75, 225 50, 250 35"
                       fill="none" stroke="#ffd700" stroke-width="1.2" opacity="0.85"/>
                 <path d="M 155 100 C 185 90, 220 82, 260 80"
