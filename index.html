@@ -39244,7 +39244,7 @@ async function doShareToTelegram() {
         formData.append('url', 'https://t.me/De1mosFaceit_bot/De1mosFaceit');
         formData.append('photo', blob, `de1mos_${user.telegram_id}.png`);
 
-        const res = await fetch(SEND_PROFILE_URL, {
+        const res = await fetch(SAVE_PREPARED_URL, {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
@@ -39255,13 +39255,19 @@ async function doShareToTelegram() {
 
         const data = await res.json();
 
-        // Успех — даже если prepared_message_id не пришёл,
-        // главное что бот отправил в ЛС
-        if (!res.ok) throw new Error(data?.error || 'Ошибка');
+        if (!res.ok) throw new Error(data?.error || 'Ошибка сервера');
+
+        // ============================================================
+        // Проверяем — отправилось ли в ЛС
+        // ============================================================
+        if (!data.sent_to_chat) {
+            // sendPhoto не сработал — возможно, пользователь не нажал /start
+            throw new Error('Бот не смог написать тебе в ЛС. Открой @De1mosFaceit_bot и нажми /start');
+        }
 
         haptic('medium');
         closeSharePreview();
-        showMessageSentHint(); // ← плашка из моего предыдущего сообщения
+        showMessageSentHint();
 
     } catch (e) {
         console.error('doShareToTelegram:', e);
