@@ -37,6 +37,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
         /* ============================================================
    ТЕМЫ
@@ -215,6 +218,7 @@ body::after {
         }
         .elo-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--emerald); opacity: 0.65; margin-bottom: 6px; font-weight: 600; }
 .elo-value {
+    font-family: var(--font-display);
     font-size: 54px; font-weight: 900; line-height: 1;
     background: linear-gradient(180deg, #ffffff 0%, #ffffff 40%, var(--emerald-3) 100%);
     -webkit-background-clip: text; background-clip: text;
@@ -227,7 +231,7 @@ body::after {
         .elo-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--emerald-2), var(--emerald), var(--emerald-3)); border-radius: 3px; transition: width 1s cubic-bezier(0.2,0.8,0.2,1); }
         .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
         .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px 8px; text-align: center; }
-        .stat-value { font-size: 22px; font-weight: 800; color: var(--emerald); }
+        .stat-value { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--emerald); }
         .stat-label { font-size: 10px; color: var(--hint); margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 
         /* ============ PLAY BTN ============ */
@@ -3259,6 +3263,7 @@ body::after {
     margin-bottom: 8px;
 }
 .mh-score {
+    font-family: var(--font-mono);
     font-size: 22px;
     font-weight: 900;
     color: var(--emerald);
@@ -15614,6 +15619,432 @@ html.lite-mode .list-frame-overlay svg * {
         background: rgba(255, 84, 112, 0.18);
         border-color: var(--red);
     }
+
+    /* ============================================================ */
+/* 🎮 КИБЕРСПОРТИВНЫЙ ПРОФИЛЬ                                    */
+/* ============================================================ */
+
+/* --- ТЕГ КЛАНА В ПРОФИЛЕ --- */
+.club-tag-badge {
+    display: none;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.20),
+        rgba(var(--emerald-rgb), 0.06));
+    border: 1px solid rgba(var(--emerald-rgb), 0.45);
+    color: var(--emerald-3);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+    margin-right: 6px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+.club-tag-badge.visible {
+    display: inline-flex;
+}
+
+/* --- КРУПНЫЙ НИК --- */
+.phc-name {
+    font-family: 'Orbitron', -apple-system, sans-serif !important;
+    font-size: 22px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
+    line-height: 1.05 !important;
+    text-shadow:
+        0 0 20px rgba(var(--emerald-rgb), 0.35),
+        0 2px 4px rgba(0, 0, 0, 0.6);
+    transition: color 0.3s ease, background 0.3s ease, text-shadow 0.3s ease;
+}
+
+@media (min-width: 1024px) {
+    .phc-name {
+        font-size: 34px !important;
+        letter-spacing: 1.2px !important;
+    }
+}
+
+/* --- DEV-ТЕГ ИНЛАЙН --- */
+.dev-tag-inline {
+    display: inline-block !important;
+    margin-left: 8px !important;
+    vertical-align: middle !important;
+}
+
+/* --- РАНГ-БЕЙДЖ --- */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-family: 'Rajdhani', -apple-system, sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.20),
+        rgba(var(--emerald-rgb), 0.05));
+    border: 1.5px solid rgba(var(--emerald-rgb), 0.5);
+    color: var(--emerald-3);
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.6);
+    box-shadow:
+        0 0 20px rgba(var(--emerald-rgb), 0.20),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    margin-top: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.rank-badge::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg,
+        transparent, rgba(255,255,255,0.20), transparent);
+    animation: rankShine 3.5s ease-in-out infinite;
+}
+
+@keyframes rankShine {
+    0%   { left: -100%; }
+    50%  { left: 100%; }
+    100% { left: 100%; }
+}
+
+.rank-badge-icon { font-size: 15px; }
+.rank-badge-name { font-weight: 900; }
+.rank-badge-level {
+    padding: 2px 8px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.35);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+/* Спец-цвета для высоких рангов */
+.rank-badge.rank-7,
+.rank-badge.rank-8 {
+    background: linear-gradient(135deg,
+        rgba(255, 46, 109, 0.25),
+        rgba(255, 122, 46, 0.10));
+    border-color: rgba(255, 46, 109, 0.6);
+    color: #ff7a8f;
+    text-shadow: 0 0 12px rgba(255, 46, 109, 0.7);
+    box-shadow: 0 0 25px rgba(255, 46, 109, 0.35);
+}
+
+.rank-badge.rank-9,
+.rank-badge.rank-10 {
+    background: linear-gradient(135deg,
+        rgba(255, 204, 46, 0.30),
+        rgba(255, 122, 46, 0.12));
+    border-color: rgba(255, 204, 46, 0.7);
+    color: #ffcc2e;
+    text-shadow: 0 0 15px rgba(255, 204, 46, 0.8);
+    box-shadow: 0 0 30px rgba(255, 204, 46, 0.4);
+}
+
+.rank-badge.rank-10 {
+    animation: rankPulse 2s ease-in-out infinite;
+}
+
+@keyframes rankPulse {
+    0%, 100% {
+        box-shadow: 0 0 30px rgba(255, 204, 46, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 45px rgba(255, 204, 46, 0.7);
+    }
+}
+
+/* --- DXP РЯДОМ С РАНГОМ --- */
+.phc-dxp-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.phc-dxp-value {
+    font-family: 'Orbitron', -apple-system, sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--emerald);
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.5);
+    letter-spacing: 0.5px;
+}
+
+.phc-dxp-label {
+    font-size: 10px;
+    color: var(--hint);
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.phc-dxp-next {
+    font-size: 11px;
+    color: var(--hint);
+    font-weight: 700;
+    margin-left: auto;
+}
+
+/* --- ОНЛАЙН-ИНДИКАТОР --- */
+.online-dot {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 10px #22c55e;
+    z-index: 5;
+    animation: onlinePulse 2s ease-in-out infinite;
+}
+
+@keyframes onlinePulse {
+    0%, 100% { box-shadow: 0 0 10px #22c55e; }
+    50%      { box-shadow: 0 0 18px #22c55e; }
+}
+
+/* --- ПОСЛЕДНИЕ 3 МАТЧА --- */
+.recent-matches-block {
+    margin-bottom: 12px;
+    padding: 14px;
+    background: #03060a;
+    background-image: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.85) 55%,
+        #000000 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.recent-matches-block::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.7;
+}
+
+.rm-title {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--emerald);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.4);
+}
+
+.recent-matches-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.rm-card {
+    position: relative;
+    padding: 10px 8px;
+    border-radius: 10px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1.5px solid transparent;
+}
+
+.rm-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0,0,0,0.30) 0%,
+        rgba(0,0,0,0.85) 100%);
+    z-index: 0;
+}
+
+.rm-card.win {
+    border-color: rgba(140, 230, 90, 0.5);
+    box-shadow: 0 0 15px rgba(140, 230, 90, 0.25);
+}
+
+.rm-card.loss {
+    border-color: rgba(255, 84, 112, 0.5);
+    box-shadow: 0 0 15px rgba(255, 84, 112, 0.25);
+}
+
+.rm-card:hover {
+    transform: translateY(-3px);
+}
+
+.rm-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.rm-map {
+    font-size: 11px;
+    font-weight: 900;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rm-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 900;
+    text-align: right;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px currentColor;
+}
+
+.rm-card.win .rm-score  { color: #8ce65a; }
+.rm-card.loss .rm-score { color: #ff5470; }
+
+.rm-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 14px;
+    font-size: 12px;
+    color: var(--hint);
+    font-style: italic;
+}
+
+/* --- ДОСТИЖЕНИЯ --- */
+.achievements-card {
+    margin-bottom: 12px;
+    padding: 14px;
+    background: #03060a;
+    background-image: linear-gradient(180deg,
+        rgba(217, 171, 90, 0.08) 0%,
+        rgba(0, 0, 0, 0.85) 55%,
+        #000000 100%);
+    border: 1px solid rgba(217, 171, 90, 0.35);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.achievements-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.7;
+}
+
+.achv-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.achv-title {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: 0 0 8px rgba(217, 171, 90, 0.4);
+}
+
+.achv-count {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--hint);
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: rgba(217, 171, 90, 0.10);
+}
+
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+}
+
+@media (max-width: 480px) {
+    .achievements-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.achv {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.achv.locked {
+    opacity: 0.30;
+    filter: grayscale(100%);
+}
+
+.achv.unlocked {
+    border-color: rgba(217, 171, 90, 0.5);
+    background: linear-gradient(180deg,
+        rgba(217, 171, 90, 0.15),
+        rgba(0, 0, 0, 0.5));
+    box-shadow: 0 0 12px rgba(217, 171, 90, 0.25);
+}
+
+.achv.unlocked:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(217, 171, 90, 0.5);
+}
+
+/* --- АДАПТИВ --- */
+@media (max-width: 480px) {
+    .phc-name { font-size: 20px !important; }
+    .rank-badge { font-size: 10px; padding: 4px 10px; }
+    .rank-badge-icon { font-size: 13px; }
+    .phc-dxp-value { font-size: 15px; }
+}
+
+@media (min-width: 1024px) {
+    .rank-badge { font-size: 13px; padding: 8px 18px; }
+    .rank-badge-icon { font-size: 17px; }
+    .phc-dxp-value { font-size: 22px; }
+}
     
 </style>
 </head>
@@ -16706,6 +17137,44 @@ function checkIcon(status, size = 14) {
         };
 
         const MAP_POOL = ["Sandstone", "Province", "Breeze", "Dune", "Rust", "Hanami", "Prison"];
+
+// ============================================================
+// 🎯 ИГРОВЫЕ КОНСТАНТЫ
+// ============================================================
+const RANK_CONFIG = {
+    START_DXP: 1000,
+    TARGET_DXP: 2300,
+    LEVEL_9_START: 2100,
+    WIN_DELTA: 25,
+    LOSE_DELTA: -25,
+    LEVELS: [
+        { min: 1000, max: 1100, name: 'Новичок',   color: '#a0a0a0', icon: '🥉' },
+        { min: 1100, max: 1200, name: 'Любитель',  color: '#7d8a99', icon: '🥈' },
+        { min: 1200, max: 1350, name: 'Боец',      color: '#c9a961', icon: '🥇' },
+        { min: 1350, max: 1500, name: 'Ветеран',   color: '#d4af37', icon: '⭐' },
+        { min: 1500, max: 1650, name: 'Мастер',    color: '#e0e0e0', icon: '💠' },
+        { min: 1650, max: 1800, name: 'Элита',     color: '#4fc3f7', icon: '💎' },
+        { min: 1800, max: 1950, name: 'Про',       color: '#a78bfa', icon: '🔮' },
+        { min: 1950, max: 2100, name: 'Легенда',   color: '#ff2e6d', icon: '🔥' },
+        { min: 2100, max: 2300, name: 'Грандмастер', color: '#ffd700', icon: '👑' },
+        { min: 2300, max: Infinity, name: 'БОГ',   color: '#ffcc2e', icon: '🏆' },
+    ],
+};
+
+// ============================================================
+// 🧠 ГЛОБАЛЬНОЕ СОСТОЯНИЕ (вместо window._xxx)
+// ============================================================
+const AppState = {
+    draftScore: { a: null, b: null, matchId: null },
+    friendRelations: {},
+    ovWinner: null,
+    reportSelectedReason: null,
+    submitVoteLock: false,
+    buyInProgress: new Set(),
+    equipInProgress: new Set(),
+    clubShopActiveCategory: null,
+    shopActiveCategory: null,
+};
 
         // ============================================================
         // 🔥 ГЛОБАЛЬНЫЙ КЭШ ТОВАРОВ МАГАЗИНА (объявлен в самом начале)
@@ -17972,9 +18441,14 @@ function maxPlayers(mode)  { return getModeConfig(mode).maxPlayers; }
         }
     } catch (e) {}
 }
-        function escapeHtml(str) {
-            return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
         let toastTimer;
         function showToast(msg, type = 'info') {
     const toast = document.getElementById('toast');
@@ -18221,6 +18695,7 @@ async function init() {
         if (error) throw error;
 
         currentUser = data;
+        startOnlineHeartbeat();
         applyHeaderAvatar(currentUser);
         renderDashboard(currentUser);
         loadProfile(currentUser);
@@ -18602,7 +19077,7 @@ function renderFriendBtnInner(user) {
     `;
 
     // Читаем статус из глобального кэша
-    const rel = window._friendRelations?.[other];
+    const rel = AppState.friendRelations?.[other];
 
     if (rel === 'accepted') {
         // Уже друзья → показываем "Удалить" (красная)
@@ -18655,7 +19130,7 @@ async function handleFriendButtonClick(userId, btn) {
     btn.classList.add('tip-show');
     setTimeout(() => btn.classList.remove('tip-show'), 1200);
 
-    const rel = window._friendRelations?.[userId];
+    const rel = AppState.friendRelations?.[userId];
 
     // ==== УЖЕ В ДРУЗЬЯХ → удалить ====
     if (rel === 'accepted') {
@@ -18667,7 +19142,7 @@ async function handleFriendButtonClick(userId, btn) {
                 .delete()
                 .or(`and(requester_id.eq.${currentUser.telegram_id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUser.telegram_id})`);
 
-            window._friendRelations[userId] = null;
+            AppState.friendRelations[userId] = null;
 
             showToast('Удалён из друзей');
             haptic('medium');
@@ -18701,7 +19176,7 @@ async function handleFriendButtonClick(userId, btn) {
                 .update({ status: 'accepted' })
                 .or(`and(requester_id.eq.${userId},addressee_id.eq.${currentUser.telegram_id})`);
 
-            window._friendRelations[userId] = 'accepted';
+            AppState.friendRelations[userId] = 'accepted';
 
             await notify(userId,
                 `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял твой запрос в друзья.`,
@@ -18748,8 +19223,8 @@ async function handleFriendButtonClick(userId, btn) {
             status: 'pending'
         });
 
-        window._friendRelations = window._friendRelations || {};
-        window._friendRelations[userId] = 'pending';
+        AppState.friendRelations = AppState.friendRelations || {};
+        AppState.friendRelations[userId] = 'pending';
 
         await notify(userId,
             `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`,
@@ -18830,41 +19305,60 @@ async function renderProfileView(user, options = {}) {
     } catch (e) {}
 
     // 🔥 ЕДИНЫЙ HTML (используется и в своём, и в чужом профиле)
-    const html = `
-        <!-- HERO -->
-        <div class="profile-hero-compact" data-profile-bg>
-            <div class="phc-row">
-                <div class="profile-avatar-wrap phc-avatar">
-                    <div class="profile-avatar" data-avatar-frame>${avatarHTML}</div>
-                    ${isMe ? `<button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>` : ''}
+// Получаем информацию о ранге
+const levelInfo = RANK_CONFIG.LEVELS[Math.min(level - 1, 9)];
+
+const html = `
+    <!-- HERO -->
+    <div class="profile-hero-compact" data-profile-bg>
+        <div class="phc-row">
+            <div class="profile-avatar-wrap phc-avatar">
+                <div class="profile-avatar" data-avatar-frame>${avatarHTML}</div>
+                ${isMe ? `<button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>` : ''}
+                <div class="online-dot" id="onlineDot_${user.telegram_id}" style="display:none;"></div>
+            </div>
+
+            <div class="phc-info">
+                ${user.is_admin ? `<div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+
+                <!-- Строка 1: тег клана + ник + значок -->
+                <div class="phc-name-row">
+                    <span class="club-tag-badge" data-club-tag></span>
+                    <div class="phc-name" data-nickname>${escapeHtml(user.display_name || 'Без имени')}</div>
+                    <span class="profile-equipped-badge" data-equipped-badge></span>
                 </div>
 
-                <div class="phc-info">
-                    ${user.is_admin ? `<div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>` : ''}
+                <!-- Строка 2: титул -->
+                <div class="phc-title" data-title></div>
 
-                    <div class="phc-name-row">
-                        <div class="phc-name" data-nickname>${escapeHtml(user.display_name || 'Без имени')}</div>
-                        <span class="profile-equipped-badge" data-equipped-badge></span>
-                    </div>
-
-                    <div class="phc-title" data-title></div>
-
-                    <div class="phc-username">${
+                <!-- Строка 3: username + DEV -->
+                <div class="phc-username">
+                    ${
                         user.username && !user.hide_telegram_tag
                             ? `<a href="https://t.me/${escapeHtml(user.username)}" onclick="event.preventDefault();openTelegramUser('${escapeHtml(user.username)}')">@${escapeHtml(user.username)}</a>`
                             : (user.hide_telegram_tag ? '🔒 скрыто' : '@—')
-                    }</div>
-
-                    <div class="phc-badges">
-                        ${isDev ? `<span class="dev-tag" onclick="showDevTagInfo()">DEV</span>` : ''}
-                        <span class="phc-badge">⚡ Ур. ${level}</span>
-                        <span class="phc-badge phc-badge-dxp">🎯 ${user.elo ?? 1000} DXP</span>
-                    </div>
+                    }
+                    ${isDev ? `<span class="dev-tag dev-tag-inline" onclick="showDevTagInfo()">DEV</span>` : ''}
                 </div>
 
-                 <div class="phc-actions">
-                    <button type="button" class="phc-icon-btn share-btn"
-                            data-tip="Поделиться"
+                <!-- Строка 4: РАНГ-БЕЙДЖ -->
+                <div class="rank-badge rank-${level}" data-rank-badge>
+                    <span class="rank-badge-icon">${levelInfo.icon}</span>
+                    <span class="rank-badge-name">${levelInfo.name}</span>
+                    <span class="rank-badge-level">УР. ${level}</span>
+                </div>
+
+                <!-- Строка 5: DXP + прогресс до следующего -->
+                <div class="phc-dxp-row">
+                    <span class="phc-dxp-value">🎯 ${user.elo ?? 1000}</span>
+                    <span class="phc-dxp-label">DXP</span>
+                    <span class="phc-dxp-next" data-dxp-next></span>
+                </div>
+            </div>
+
+            <div class="phc-actions">
+                ${isMe ? `
+                    <button class="phc-icon-btn share-btn" data-tip="Поделиться"
                             onclick="openSharePreview(${user.telegram_id}); return false;">
                         <svg viewBox="0 0 24 24">
                             <circle cx="18" cy="5" r="3"/>
@@ -18873,65 +19367,83 @@ async function renderProfileView(user, options = {}) {
                             <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
                         </svg>
                     </button>
-                    
-                    ${isMe ? `
-                        <button class="phc-icon-btn"
-                                data-tip="Редактировать"
-                                onclick="enterProfileEditMode()">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/>
-                            </svg>
-                        </button>
-                        <button class="phc-icon-btn phc-settings-customize"
-                                data-tip="Кастомизация"
-                                onclick="openCustomizationSheet()">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M12 2v6l3-2M12 2v6l-3-2M12 22v-6l3 2M12 22v-6l-3 2M2 12h6l-2-3M2 12h6l-2 3M22 12h-6l2-3M22 12h-6l2 3"/>
-                                <circle cx="12" cy="12" r="4" fill="none"/>
-                            </svg>
-                        </button>
-                    ` : `
-                        ${renderFriendActionButton(user, options)}
-                    `}
-                </div>
+                    <button class="phc-icon-btn" data-tip="Редактировать" onclick="enterProfileEditMode()">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/>
+                        </svg>
+                    </button>
+                    <button class="phc-icon-btn phc-settings-customize" data-tip="Кастомизация" onclick="openCustomizationSheet()">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2v6l3-2M12 2v6l-3-2M12 22v-6l3 2M12 22v-6l-3 2M2 12h6l-2-3M2 12h6l-2 3M22 12h-6l2-3M22 12h-6l2 3"/>
+                            <circle cx="12" cy="12" r="4" fill="none"/>
+                        </svg>
+                    </button>
+                ` : `
+                    ${renderFriendActionButton(user, options)}
+                `}
             </div>
         </div>
+    </div>
 
-        <!-- МИНИ-СТАТЫ В РЯД (4 блока) -->
-        <div class="profile-mini-row">
-            <button class="pmr-item pmr-id" onclick="copyStandoffId('${inModal ? 'playerStandoffId' : 'myStandoffId'}');">
-                <span class="pmr-icon">🆔</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">Standoff ID</span>
-                    <span class="pmr-value" id="${inModal ? 'playerStandoffId' : 'myStandoffId'}">${escapeHtml(user.standoff_id || '—')}</span>
-                </span>
-                ${user.standoff_id ? `<span class="pmr-copy">📋</span>` : ''}
-            </button>
-
-            <div class="pmr-item">
-                <span class="pmr-icon">🎯</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">Матчей</span>
-                    <span class="pmr-value">${user.hide_matches ? '—' : (user.matches_played ?? 0)}</span>
-                </span>
-            </div>
-
-            <div class="pmr-item">
-                <span class="pmr-icon">🏆</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">Побед</span>
-                    <span class="pmr-value">${user.hide_matches ? '—' : (user.wins ?? 0)}</span>
-                </span>
-            </div>
-
-            <div class="pmr-item pmr-lastmatch">
-                <span class="pmr-icon">⚔️</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">Last</span>
-                    <span class="pmr-value" id="lmbKDInline_${user.telegram_id}">— / —</span>
-                </span>
-            </div>
+    <!-- 🔥 ПОСЛЕДНИЕ 3 МАТЧА -->
+    <div class="recent-matches-block" id="recentMatchesBlock_${user.telegram_id}">
+        <div class="rm-title">
+            <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="12" r="5"/>
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
+            Последние матчи
         </div>
+        <div class="recent-matches-row" id="recentMatchesRow_${user.telegram_id}">
+            <div class="rm-empty">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- МИНИ-СТАТЫ В РЯД -->
+    <div class="profile-mini-row">
+        <button class="pmr-item pmr-id" onclick="copyStandoffId('${inModal ? 'playerStandoffId' : 'myStandoffId'}');">
+            <span class="pmr-icon">🆔</span>
+            <span class="pmr-content">
+                <span class="pmr-label">Standoff ID</span>
+                <span class="pmr-value" id="${inModal ? 'playerStandoffId' : 'myStandoffId'}">${escapeHtml(user.standoff_id || '—')}</span>
+            </span>
+            ${user.standoff_id ? `<span class="pmr-copy">📋</span>` : ''}
+        </button>
+
+        <div class="pmr-item">
+            <span class="pmr-icon">🎯</span>
+            <span class="pmr-content">
+                <span class="pmr-label">Матчей</span>
+                <span class="pmr-value">${user.hide_matches ? '—' : (user.matches_played ?? 0)}</span>
+            </span>
+        </div>
+
+        <div class="pmr-item">
+            <span class="pmr-icon">🏆</span>
+            <span class="pmr-content">
+                <span class="pmr-label">Побед</span>
+                <span class="pmr-value">${user.hide_matches ? '—' : (user.wins ?? 0)}</span>
+            </span>
+        </div>
+
+        <div class="pmr-item pmr-lastmatch">
+            <span class="pmr-icon">⚔️</span>
+            <span class="pmr-content">
+                <span class="pmr-label">K/D</span>
+                <span class="pmr-value" id="lmbKDInline_${user.telegram_id}">— / —</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- ДОСТИЖЕНИЯ -->
+    <div class="achievements-card" id="achievementsCard_${user.telegram_id}">
+        <div class="achv-header">
+            <span class="achv-title">🏅 Достижения</span>
+            <span class="achv-count" data-achv-count>0 / 8</span>
+        </div>
+        <div class="achievements-grid" data-achievements></div>
+    </div>
 
         <!-- График DXP -->
         <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
@@ -19023,45 +19535,43 @@ async function renderProfileView(user, options = {}) {
         <div id="profileMatchHistory_${user.telegram_id}"><div class="empty">Загрузка...</div></div>
     `;
 
-    // Если в модалке — рендерим в модалку, иначе — на страницу
-    if (inModal) {
-        return html; // вызовется из openPlayerProfile
-    }
+// 🔥 СНАЧАЛА загружаем отношения с друзьями (до рендера!)
+if (!isMe) {
+    try {
+        const me = String(currentUser.telegram_id);
+        const other = String(user.telegram_id);
 
-    // 🔥 Загружаем отношения с друзьями
-    if (!isMe) {
-        try {
-            const me = String(currentUser.telegram_id);
-            const other = String(user.telegram_id);
+        const { data: rels } = await sb.from('friendships')
+            .select('id, requester_id, addressee_id, status')
+            .or(`and(requester_id.eq.${me},addressee_id.eq.${other}),and(requester_id.eq.${other},addressee_id.eq.${me})`)
+            .limit(1);
 
-            const { data: rels } = await sb.from('friendships')
-                .select('id, requester_id, addressee_id, status')
-                .or(`and(requester_id.eq.${me},addressee_id.eq.${other}),and(requester_id.eq.${other},addressee_id.eq.${me})`)
-                .limit(1);
+        if (rels && rels.length > 0) {
+            const rel = rels[0];
+            const isIncoming = String(rel.requester_id) === other
+                            && String(rel.addressee_id) === me;
 
-            window._friendRelations = window._friendRelations || {};
-
-            if (rels && rels.length > 0) {
-                const rel = rels[0];
-                const isIncoming = String(rel.requester_id) === other
-                                && String(rel.addressee_id) === me;
-
-                if (rel.status === 'accepted') {
-                    window._friendRelations[user.telegram_id] = 'accepted';
-                } else if (rel.status === 'pending' && isIncoming) {
-                    window._friendRelations[user.telegram_id] = 'incoming';
-                } else {
-                    window._friendRelations[user.telegram_id] = 'pending';
-                }
+            if (rel.status === 'accepted') {
+                AppState.friendRelations[user.telegram_id] = 'accepted';
+            } else if (rel.status === 'pending' && isIncoming) {
+                AppState.friendRelations[user.telegram_id] = 'incoming';
             } else {
-                window._friendRelations[user.telegram_id] = null;
+                AppState.friendRelations[user.telegram_id] = 'pending';
             }
-        } catch (e) {
-            console.warn('friend relations:', e);
+        } else {
+            AppState.friendRelations[user.telegram_id] = null;
         }
+    } catch (e) {
+        console.warn('friend relations:', e);
     }
+}
 
-    container.innerHTML = html;
+// Если в модалке — рендерим в модалку, иначе — на страницу
+if (inModal) {
+    return html;
+}
+
+container.innerHTML = html;
 
     // 🔥 Применяем кастомизацию
     setTimeout(() => applyCustomizationToElement(container, user), 60);
@@ -24141,10 +24651,12 @@ function copyToClipboard(text) {
         function syncScores() {}
 
 async function submitWinner() {
+    if (AppState.submitVoteLock) return;
     if (!currentMatch) {
         showToast('⚠️ Матч не активен');
         return;
     }
+    AppState.submitVoteLock = true;
 
     if (currentMatch.status === 'finished' || currentMatch.result_status === 'disputed' || currentMatch.result_status === 'confirmed') {
         showToast('⚠️ Результат уже объявлен');
@@ -24229,13 +24741,16 @@ async function submitWinner() {
         renderResultScreen();
         selectedWinner = null;
 
-    } catch (e) {
-        console.error('submitWinner:', e);
-        showToast('Ошибка: ' + (e?.message || e));
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = '📤 ОТПРАВИТЬ РЕЗУЛЬТАТ';
-        }
+} catch (e) {
+    console.error('submitWinner:', e);
+    showToast('Ошибка: ' + (e?.message || e));
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = '📤 ОТПРАВИТЬ РЕЗУЛЬТАТ';
+    }
+} finally {
+    AppState.submitVoteLock = false;
+}
     }
 }
 
@@ -32208,9 +32723,61 @@ async function initProfileExtrasUnified(user) {
     const uid = user.telegram_id;
     await Promise.all([
         loadLastMatchInlineUnified(uid),
-        renderHeatmapUnified(uid)
+        renderHeatmapUnified(uid),
+        renderRecentMatches(uid)  // ← добавили
     ]);
     updateGoalsUnified(user);
+    renderAchievements(uid);       // ← добавили
+}
+
+// ============================================================
+// 🎮 ПОСЛЕДНИЕ 3 МАТЧА В ПРОФИЛЕ
+// ============================================================
+async function renderRecentMatches(userId) {
+    const row = document.getElementById(`recentMatchesRow_${userId}`);
+    if (!row) return;
+
+    try {
+        const { data: matches } = await sb.from('game_matches')
+            .select('id, final_map, score_a, score_b, winner_team, team_a_players, team_b_players, finished_at')
+            .eq('status', 'finished')
+            .order('finished_at', { ascending: false })
+            .limit(15);
+
+        const myMatches = (matches || []).filter(m => {
+            const ids = [
+                ...(m.team_a_players || []),
+                ...(m.team_b_players || [])
+            ].map(p => Number(p.telegram_id));
+            return ids.includes(Number(userId));
+        }).slice(0, 3);
+
+        if (!myMatches.length) {
+            row.innerHTML = `<div class="rm-empty">Нет завершённых матчей</div>`;
+            return;
+        }
+
+        row.innerHTML = myMatches.map(m => {
+            const myTeam = (m.team_a_players || [])
+                .some(p => Number(p.telegram_id) === Number(userId)) ? 'A' : 'B';
+            const isWin = m.winner_team === myTeam;
+            const bg = mapBgUrl(m.final_map);
+            const myScore = myTeam === 'A' ? m.score_a : m.score_b;
+            const enemyScore = myTeam === 'A' ? m.score_b : m.score_a;
+
+            return `
+                <div class="rm-card ${isWin ? 'win' : 'loss'}"
+                     style="background-image: url('${bg}');"
+                     onclick="openMatchDetails(${m.id})">
+                    <div class="rm-map">${escapeHtml(m.final_map || '—')}</div>
+                    <div class="rm-score">${myScore ?? '?'}:${enemyScore ?? '?'}</div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.warn('renderRecentMatches:', e);
+        row.innerHTML = `<div class="rm-empty">Ошибка загрузки</div>`;
+    }
 }
 
 async function loadLastMatchInlineUnified(userId) {
@@ -32554,18 +33121,21 @@ let voiceWidgetExpanded = false;
 // ОПРЕДЕЛЕНИЕ ДЕСКТОПНОГО TELEGRAM / AYUGRAM
 // ============================================================
 function isDesktopTelegram() {
+    const tg = window.Telegram?.WebApp;
+    const platform = tg?.platform || '';
+
+    // Надёжные платформы
+    if (['tdesktop', 'macos', 'web', 'weba'].includes(platform)) return true;
+
+    // Fallback: webview2/electron только на больших экранах
+    if (window.innerWidth < 1024) return false;
+
     const ua = navigator.userAgent.toLowerCase();
-    
-    // Electron / WebView2 / AyuGram desktop
     if (ua.includes('electron')) return true;
     if (ua.includes('telegramdesktop')) return true;
-    if (ua.includes('webview2')) return true;
-    
-    // Telegram Desktop инжектит свой API
     if (window.TelegramWebviewProxy) return true;
     if (window.external?.notify) return true;
-    if (window.external?.receiveEvent) return true;
-    
+
     return false;
 }
 
@@ -33632,6 +34202,58 @@ function applyCustomizationToElement(scopeEl, user) {
     if (!scopeEl || !user) return;
 
     const eq = user.equipped_items || {};
+    // ============================================================
+// 🟢 Онлайн-точка
+// ============================================================
+const dot = scopeEl.querySelector(`.online-dot`);
+if (dot) {
+    const lastSeen = user.last_seen ? new Date(user.last_seen).getTime() : 0;
+    const isOnline = Date.now() - lastSeen < 2 * 60 * 1000; // 2 минуты
+    dot.style.display = isOnline ? 'block' : 'none';
+}
+
+    // ============================================================
+// 0. ТЕГ КЛАНА (всегда, вне зависимости от кастомизации)
+// ============================================================
+const clubTagEl = scopeEl.querySelector('[data-club-tag]');
+if (clubTagEl) {
+    const club = clubTagCache[user.telegram_id];
+    if (club) {
+        clubTagEl.textContent = `[${club.tag}]`;
+        clubTagEl.classList.add('visible');
+        // Стилизация от equipped_items клана
+        applyClanTagCustomization(clubTagEl, club);
+    } else {
+        clubTagEl.textContent = '';
+        clubTagEl.classList.remove('visible');
+    }
+}
+
+// ============================================================
+// 0.5. РАНГ-БЕЙДЖ + прогресс до следующего ранга
+// ============================================================
+const rankEl = scopeEl.querySelector('[data-rank-badge]');
+const dxpNextEl = scopeEl.querySelector('[data-dxp-next]');
+if (rankEl) {
+    const lvl = eloToLevel(user.elo);
+    const info = RANK_CONFIG.LEVELS[Math.min(lvl - 1, 9)];
+    rankEl.className = `rank-badge rank-${lvl}`;
+    rankEl.querySelector('.rank-badge-icon').textContent = info.icon;
+    rankEl.querySelector('.rank-badge-name').textContent = info.name;
+    rankEl.querySelector('.rank-badge-level').textContent = `УР. ${lvl}`;
+}
+
+if (dxpNextEl) {
+    const cur = user.elo ?? 1000;
+    const lvl = eloToLevel(cur);
+    const nextInfo = RANK_CONFIG.LEVELS[Math.min(lvl, 9)];
+    const need = Math.max(0, nextInfo.min - cur);
+    if (need > 0) {
+        dxpNextEl.textContent = `до ${nextInfo.name}: ${need} DXP`;
+    } else {
+        dxpNextEl.textContent = '🏆 Максимум!';
+    }
+}
 
     // ============================================================
     // 1. ЦВЕТ НИКА
@@ -39613,6 +40235,82 @@ function closeSharePreview() {
     window._shareBlob = null;
     window._shareUserData = null;
     window._manualShareText = null;
+}
+
+            // ============================================================
+// 🏅 ДОСТИЖЕНИЯ
+// ============================================================
+const ACHIEVEMENTS = [
+    { id: 'first_win',    icon: '🥇', name: 'Первая победа',       check: (u) => (u.wins ?? 0) >= 1 },
+    { id: 'ten_matches',  icon: '🎯', name: '10 матчей',            check: (u) => (u.matches_played ?? 0) >= 10 },
+    { id: 'fifty_matches',icon: '⚔️', name: '50 матчей',            check: (u) => (u.matches_played ?? 0) >= 50 },
+    { id: 'hundred',      icon: '💯', name: '100 матчей',           check: (u) => (u.matches_played ?? 0) >= 100 },
+    { id: 'lvl5',         icon: '⭐', name: 'Уровень 5',            check: (u) => eloToLevel(u.elo) >= 5 },
+    { id: 'lvl8',         icon: '🔥', name: 'Уровень 8',            check: (u) => eloToLevel(u.elo) >= 8 },
+    { id: 'lvl10',        icon: '👑', name: 'Уровень 10',           check: (u) => eloToLevel(u.elo) >= 10 },
+    { id: 'winrate60',    icon: '📈', name: 'Winrate 60%+',         check: (u) => (u.matches_played ?? 0) >= 10 && ((u.wins ?? 0) / u.matches_played) >= 0.6 },
+];
+
+function renderAchievements(userId) {
+    const grid = document.querySelector(`#achievementsCard_${userId} [data-achievements]`);
+    const countEl = document.querySelector(`#achievementsCard_${userId} [data-achv-count]`);
+    if (!grid) return;
+
+    // Для чужого профиля нужны данные игрока
+    const loadAndRender = async () => {
+        let u;
+        if (Number(userId) === Number(currentUser?.telegram_id)) {
+            u = currentUser;
+        } else {
+            const { data } = await sb.from('users')
+                .select('matches_played, wins, elo')
+                .eq('telegram_id', userId)
+                .single();
+            u = data || {};
+        }
+
+        const unlocked = ACHIEVEMENTS.filter(a => a.check(u));
+        if (countEl) countEl.textContent = `${unlocked.length} / ${ACHIEVEMENTS.length}`;
+
+        grid.innerHTML = ACHIEVEMENTS.map(a => {
+            const isUnlocked = a.check(u);
+            return `
+                <div class="achv ${isUnlocked ? 'unlocked' : 'locked'}"
+                     title="${escapeHtml(a.name)}${isUnlocked ? '' : ' (не получено)'}"
+                     onclick="showAchievementInfo('${a.id}')">
+                    ${a.icon}
+                </div>
+            `;
+        }).join('');
+    };
+
+    loadAndRender();
+}
+
+function showAchievementInfo(achvId) {
+    const a = ACHIEVEMENTS.find(x => x.id === achvId);
+    if (!a) return;
+    haptic('light');
+    showToast(`🏅 ${a.name}`);
+}
+
+            // ============================================================
+// 🟢 ОНЛАЙН-СТАТУС — обновляем last_seen
+// ============================================================
+function startOnlineHeartbeat() {
+    if (!currentUser) return;
+
+    const tick = async () => {
+        if (document.hidden) return; // не тратим запросы, когда скрыто
+        try {
+            await sb.from('users')
+                .update({ last_seen: new Date().toISOString() })
+                .eq('telegram_id', currentUser.telegram_id);
+        } catch (e) {}
+    };
+
+    tick(); // сразу
+    setInterval(tick, 30000);
 }
             
     </script>
