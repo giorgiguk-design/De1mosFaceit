@@ -38515,10 +38515,10 @@ function drawLogo(ctx, W, colors) {
 // ============================================================
 async function drawProfileCard(ctx, W, data, colors) {
     const user = data.user;
-    const cardX = 60;                 // 🔥 чуть меньше отступ — больше места
+    const cardX = 60;
     const cardY = 170;
     const cardW = W - 120;
-    const cardH = 540;                // 🔥 выше — место для рамки
+    const cardH = 560;              // 🔥 было 540 — ещё выше под большой аватар
     const cardR = 32;
 
     // ---- Фон карточки (беловатая плашка) ----
@@ -38529,13 +38529,12 @@ async function drawProfileCard(ctx, W, data, colors) {
     roundRect(ctx, cardX, cardY, cardW, cardH, cardR);
     ctx.fill();
 
-    // ---- ФОН ПРОФИЛЯ — рисуем ВНУТРИ плашки, обрезая по радиусу ----
+    // ---- ФОН ПРОФИЛЯ — внутри плашки ----
     if (data.bgImg) {
         ctx.save();
         roundRect(ctx, cardX, cardY, cardW, cardH, cardR);
         ctx.clip();
 
-        // Cover-fit для bgImg
         const imgRatio = data.bgImg.width / data.bgImg.height;
         const cardRatio = cardW / cardH;
         let drawW, drawH, dx, dy;
@@ -38554,10 +38553,9 @@ async function drawProfileCard(ctx, W, data, colors) {
 
         ctx.drawImage(data.bgImg, dx, dy, drawW, drawH);
 
-        // Затемнение поверх bgImg, чтобы текст читался
         const darkGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
         darkGrad.addColorStop(0, 'rgba(0,0,0,0.35)');
-        darkGrad.addColorStop(1, 'rgba(0,0,0,0.75)');
+        darkGrad.addColorStop(1, 'rgba(0,0,0,0.78)');
         ctx.fillStyle = darkGrad;
         ctx.fillRect(cardX, cardY, cardW, cardH);
 
@@ -38565,12 +38563,12 @@ async function drawProfileCard(ctx, W, data, colors) {
     }
 
     // ---- Обводка карточки ----
-    ctx.strokeStyle = 'rgba(167, 139, 250, 0.45)';   // фиолетовая
+    ctx.strokeStyle = 'rgba(167, 139, 250, 0.45)';
     ctx.lineWidth = 2;
     roundRect(ctx, cardX, cardY, cardW, cardH, cardR);
     ctx.stroke();
 
-    // ---- Верхняя неоновая полоска (фиолетовая) ----
+    // ---- Верхняя неоновая полоска ----
     const topLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
     topLine.addColorStop(0, 'rgba(0,0,0,0)');
     topLine.addColorStop(0.5, '#a78bfa');
@@ -38579,11 +38577,11 @@ async function drawProfileCard(ctx, W, data, colors) {
     ctx.fillRect(cardX + 40, cardY, cardW - 80, 2);
 
     // ============================================================
-    // АВАТАР — сдвигаем левее и оставляем место под рамку
+    // АВАТАР — увеличен и сдвинут правее, чтобы рамка дышала
     // ============================================================
-    const avCx = cardX + 200;          // 🔥 сдвинули правее, чтобы рамка не лезла на текст
-    const avCy = cardY + 220;          // 🔥 опустили чуть ниже
-    const avR = 95;                    // 🔥 чуть меньше — влезает рамка
+    const avCx = cardX + 210;         // 🔥 сдвинули вправо (было 200)
+    const avCy = cardY + 230;         // 🔥 центр по вертикали (было 220)
+    const avR  = 115;                 // 🔥 больше радиус (было 95) — крупнее аватар
 
     // Чёрный круг под аватаром
     ctx.beginPath();
@@ -38607,7 +38605,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         avGrad.addColorStop(1, colors.secondary);
         ctx.fillStyle = avGrad;
         ctx.fill();
-        ctx.font = '900 90px -apple-system, sans-serif';
+        ctx.font = '900 100px -apple-system, sans-serif';
         ctx.fillStyle = '#04140e';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -38615,13 +38613,13 @@ async function drawProfileCard(ctx, W, data, colors) {
     }
 
     // ============================================================
-    // SVG-рамка — БОЛЬШЕ размера, чтобы влезла целиком
+    // SVG-рамка — пропорционально больше аватара
     // ============================================================
     if (data.frameSvg) {
         try {
             const frameImg = await loadImageAsPromise(data.frameSvg);
-            // 🔥 Рамка должна быть ~2.6× от радиуса — чтобы осьминог был виден целиком
-            const frameSize = avR * 2.6;
+            // 🔥 2.5× от радиуса — рамка видна полностью, не лезет в текст
+            const frameSize = avR * 2.5;
             ctx.drawImage(
                 frameImg,
                 avCx - frameSize / 2,
@@ -38652,12 +38650,14 @@ async function drawProfileCard(ctx, W, data, colors) {
     }
 
     // ============================================================
-    // ИНФО СПРАВА
+    // ИНФО СПРАВА — сдвинуто вправо, чтобы не пересекаться с рамкой
     // ============================================================
-    const textX = cardX + 380;         // 🔥 сдвинули правее — рамка не пересекается
+    const textX = cardX + 470;        // 🔥 было 380/420 — теперь 470
     const textMaxW = cardX + cardW - 40 - textX;
 
     let curY = cardY + 55;
+
+    // ---- ГЛАВА ФЕЙСИТА ----
     if (user.is_admin) {
         const label = '👑 ГЛАВА ФЕЙСИТА';
         ctx.font = '900 18px -apple-system, sans-serif';
@@ -38681,7 +38681,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 55;
     }
 
-    // Клуб-тег + ник
+    // ---- Клуб-тег + ник ----
     const club = (typeof clubTagCache !== 'undefined') ? clubTagCache[user.telegram_id] : null;
     const clubTag = club ? `[${club.tag}] ` : '';
 
@@ -38708,6 +38708,7 @@ async function drawProfileCard(ctx, W, data, colors) {
 
     curY += 60;
 
+    // ---- @username ----
     if (user.username && !user.hide_telegram_tag) {
         ctx.font = '700 22px -apple-system, sans-serif';
         ctx.fillStyle = colors.primary;
@@ -38717,7 +38718,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 10;
     }
 
-    // Титул
+    // ---- Титул ----
     const eq = user.equipped_items || {};
     const titleId = eq.title;
     if (titleId && SHOP_ITEMS_CACHE[titleId]) {
@@ -38734,7 +38735,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 42;
     }
 
-    // DEV-тег
+    // ---- DEV-тег ----
     const isDev = (typeof isDevClubMember === 'function') ? isDevClubMember(user.telegram_id) : false;
     if (isDev) {
         const devText = 'DEV';
@@ -38758,7 +38759,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 45;
     }
 
-    // Уровень + DXP
+    // ---- Уровень ----
     const lvl = eloToLevel(user.elo);
     const dxp = user.elo ?? 1000;
 
@@ -38780,18 +38781,18 @@ async function drawProfileCard(ctx, W, data, colors) {
     ctx.fillText(lvlText, textX + lvlW / 2, curY + lvlH / 2 + 2);
     ctx.textAlign = 'left';
 
-    // DXP — большая цифра справа внизу карточки
-    ctx.font = '900 64px -apple-system, sans-serif';
+    // ---- DXP — крупная цифра справа внизу карточки ----
+    ctx.font = '900 70px -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = colors.primary;
     ctx.shadowBlur = 25;
     ctx.textAlign = 'right';
-    ctx.fillText(String(dxp), cardX + cardW - 40, cardY + cardH - 70);
+    ctx.fillText(String(dxp), cardX + cardW - 40, cardY + cardH - 75);
     ctx.shadowBlur = 0;
 
     ctx.font = '900 18px -apple-system, sans-serif';
     ctx.fillStyle = colors.primary;
-    ctx.fillText('D X P', cardX + cardW - 40, cardY + cardH - 32);
+    ctx.fillText('D X P', cardX + cardW - 40, cardY + cardH - 35);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
 }
@@ -38801,7 +38802,7 @@ async function drawProfileCard(ctx, W, data, colors) {
 // ============================================================
 function drawStatsRow(ctx, W, data, colors) {
     const user = data.user;
-    const y = 750;
+    const y = 770;
     const padX = 70;
     const gap = 16;
     const totalW = W - padX * 2;
@@ -38880,7 +38881,7 @@ function drawStatsRow(ctx, W, data, colors) {
 function drawDxpChart(ctx, W, data, colors) {
     const history = data.history;
     const cardX = 70;
-    const cardY = 900;
+    const cardY = 920;
     const cardW = W - 140;
     const cardH = 360;
 
