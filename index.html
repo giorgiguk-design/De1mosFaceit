@@ -6945,16 +6945,28 @@ html.lite-mode {
 }
 
 /* Убираем ТОЛЬКО тяжёлые бесконечные анимации */
-html.lite-mode *,
-html.lite-mode *::before,
-html.lite-mode *::after {
-    animation-duration: 0ms !important;
-    animation-iteration-count: 1 !important;
-    animation-delay: 0ms !important;
-    filter: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
+    /* 🔥 ШАРИНГ: клон шапки без анимаций для html2canvas */
+    .share-clone-no-anim,
+    .share-clone-no-anim *,
+    .share-clone-no-anim *::before,
+    .share-clone-no-anim *::after {
+        animation: none !important;
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition: none !important;
+        will-change: auto !important;
+        filter: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    /* Отключаем "выезды" и трансформы, которые мешают снимку */
+    .share-clone-no-anim [class*="animated"],
+    .share-clone-no-anim [class*="pulse"] {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
 
 /* Оставляем короткие transition — UI остаётся отзывчивым, но не плавным */
 html.lite-mode .play-room-card,
@@ -38342,10 +38354,10 @@ function roundRect(ctx, x, y, w, h, r) {
 // ============================================================
 async function generateProfileShareImage(user) {
     // ============================================================
-    // ТАЙМАУТ НА ВСЮ ФУНКЦИЮ — 15 секунд
+    // ТАЙМАУТ НА ВСЮ ФУНКЦИЮ — 10 секунд
     // ============================================================
     const timeoutPromise = new Promise((_, rej) =>
-        setTimeout(() => rej(new Error('Превышено время генерации (5 сек)')), 5000)
+        setTimeout(() => rej(new Error('Превышено время генерации (10 сек)')), 10000)
     );
 
     const workPromise = (async () => {
@@ -38363,40 +38375,122 @@ async function generateProfileShareImage(user) {
         }
 
         // ============================================================
-        // 1. Создаём СКРЫТУЮ копию шапки профиля
+        // 1. Ищем живую шапку
+        // ============================================================
+        const realHero = document.querySelector('.profile-hero-compact[data-profile-bg]');
+        if (!realHero) throw new Error('Шапка профиля не найдена');
+
+        // ============================================================
+        // 2. Создаём СКРЫТУЮ сцену
         // ============================================================
         const stage = document.createElement('div');
         stage.style.cssText = `
             position: fixed;
             top: -99999px;
             left: -99999px;
-            width: 900px;
+            width: ${Math.max(realHero.offsetWidth, 900)}px;
             padding: 0;
             margin: 0;
-            background: #000;
+            background: #050807;
             z-index: 99999;
+            pointer-events: none;
         `;
 
-        const realHero = document.querySelector('.profile-hero-compact[data-profile-bg]');
-        if (!realHero) throw new Error('Шапка профиля не найдена');
-
+        // Клонируем шапку
         const clone = realHero.cloneNode(true);
+
+        // Убираем всё интерактивное
         clone.querySelectorAll('.avatar-edit-btn, .phc-actions, .phc-settings, .phc-icon-btn, button').forEach(el => el.remove());
+
+        // 🔥 Ставим класс "без анимаций"
+        clone.classList.add('share-clone-no-anim');
+
+        // 🔥 Отключаем анимации на всех потомках
+        clone.querySelectorAll('*').forEach(el => {
+            el.style.animation = 'none';
+            el.style.animationDuration = '0s';
+            el.style.animationDelay = '0s';
+            el.style.transition = 'none';
+            el.style.willChange = 'auto';
+        });
 
         stage.appendChild(clone);
         document.body.appendChild(stage);
 
         try {
-            await copyComputedStylesRecursive(realHero, clone);
+            // ============================================================
+            // 3. Копируем computed-стили (кроме анимаций)
+            // ============================================================
+            await copyComputedStylesRecursive(realHero, clone, {
+                skipAnimation: true,
+                skipTransition: true
+            });
 
+            // ============================================================
+            // 4. Восстанавливаем фон профиля вручную
+            // ============================================================
+            const bgImg = realHero.style.backgroundImage ||
+                          window.getComputedStyle(realHero).backgroundImage;
+
+            if (bgImg && bgImg !== 'none') {
+                clone.style.backgroundImage = bgImg;
+                clone.style.backgroundSize = 'cover';
+                clone.style.backgroundPosition = 'center';
+                clone.style.backgroundRepeat = 'no-repeat';
+            }
+
+            // ============================================================
+            // 5. Фиксируем позицию SVG-рамки аватара
+            // ============================================================
+            const realFrame = realHero.querySelector('.special-frame-overlay');
+            const cloneFrame = clone.querySelector('.special-frame-overlay');
+
+            if (realFrame && cloneFrame) {
+                const realStyle = window.getComputedStyle(realFrame);
+                cloneFrame.style.position = 'absolute';
+                cloneFrame.style.top = '50%';
+                cloneFrame.style.left = '50%';
+                cloneFrame.style.transform = 'translate(-50%, -50%)';
+                cloneFrame.style.width = realStyle.width;
+                cloneFrame.style.height = realStyle.height;
+                cloneFrame.style.zIndex = '10';
+                cloneFrame.style.pointerEvents = 'none';
+                cloneFrame.style.overflow = 'visible';
+            }
+
+            // Также фиксируем позицию .list-frame-overlay, если есть
+            const realListFrame = realHero.querySelector('.list-frame-overlay');
+            const cloneListFrame = clone.querySelector('.list-frame-overlay');
+            if (realListFrame && cloneListFrame) {
+                cloneListFrame.style.animation = 'none';
+                cloneListFrame.style.opacity = '1';
+            }
+
+            // ============================================================
+            // 6. Увеличиваем масштаб (для качества)
+            // ============================================================
             clone.style.width = (realHero.offsetWidth * 2) + 'px';
             clone.style.transform = 'scale(2)';
             clone.style.transformOrigin = 'top left';
 
-            await new Promise(r => setTimeout(r, 300));
+            // ============================================================
+            // 7. Ждём загрузки ВСЕХ картинок в клоне
+            // ============================================================
+            const cloneImages = clone.querySelectorAll('img');
+            await Promise.all(Array.from(cloneImages).map(img => {
+                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                return new Promise(res => {
+                    img.onload = () => res();
+                    img.onerror = () => res();
+                    setTimeout(res, 3000);
+                });
+            }));
+
+            // Даём браузеру перерисовать
+            await new Promise(r => setTimeout(r, 500));
 
             // ============================================================
-            // 2. РЕНДЕР
+            // 8. РЕНДЕР через html2canvas
             // ============================================================
             let canvas;
             try {
@@ -38406,6 +38500,8 @@ async function generateProfileShareImage(user) {
                     useCORS: true,
                     allowTaint: true,
                     logging: false,
+                    imageTimeout: 5000,
+                    removeContainer: true,
                 });
             } catch (e) {
                 console.error('html2canvas fail:', e);
@@ -38413,7 +38509,7 @@ async function generateProfileShareImage(user) {
             }
 
             // ============================================================
-            // 3. Дорисовываем график и CTA снизу
+            // 9. Дорисовываем график и CTA снизу
             // ============================================================
             const W = canvas.width;
             const heroH = canvas.height;
@@ -38466,12 +38562,20 @@ async function generateProfileShareImage(user) {
 }
 
 // ============================================================
-// Копирование ВСЕХ computed стилей на клон
+// Копирование ВСЕХ computed стилей на клон (кроме анимаций)
 // ============================================================
-async function copyComputedStylesRecursive(src, dst) {
+async function copyComputedStylesRecursive(src, dst, opts = {}) {
+    const { skipAnimation = false, skipTransition = false } = opts;
     const srcStyles = window.getComputedStyle(src);
+
     for (let i = 0; i < srcStyles.length; i++) {
         const prop = srcStyles[i];
+
+        // Пропускаем анимации
+        if (skipAnimation && (prop.startsWith('animation') || prop.startsWith('-webkit-animation'))) continue;
+        if (skipTransition && (prop.startsWith('transition') || prop.startsWith('-webkit-transition'))) continue;
+        if (prop === 'will-change') continue;
+
         dst.style.setProperty(prop, srcStyles.getPropertyValue(prop), srcStyles.getPropertyPriority(prop));
     }
 
@@ -38479,7 +38583,7 @@ async function copyComputedStylesRecursive(src, dst) {
     const dstChildren = dst.children;
     for (let i = 0; i < srcChildren.length; i++) {
         if (dstChildren[i]) {
-            await copyComputedStylesRecursive(srcChildren[i], dstChildren[i]);
+            await copyComputedStylesRecursive(srcChildren[i], dstChildren[i], opts);
         }
     }
 }
