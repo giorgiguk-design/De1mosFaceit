@@ -15401,12 +15401,16 @@ html.lite-mode .list-frame-overlay svg * {
         rgba(0, 0, 0, 0.85) 100%);
     border: 1px solid var(--border-strong);
     border-radius: 18px;
-    overflow: hidden; /* Обрезает фон, но не контент */
+    overflow: hidden;
     isolation: isolate;
+    height: 170px;
     min-height: 170px;
     max-height: 170px;
     box-sizing: border-box;
     display: block;
+    /* 🔥 КЛЮЧЕВОЕ: шапка не растягивается, брат-блоки идут под ней */
+    flex-shrink: 0;
+    flex-grow: 0;
 }
 
 /* Кастомный фон — обрезаем внутри, рамка снаружи видна */
@@ -16298,10 +16302,16 @@ html.lite-mode .list-frame-overlay svg * {
 #page-profile {
     position: relative;
     min-height: calc(100vh - 120px);
-    /* ФИКС: страница не должна наследовать ограничения шапки */
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
+    /* 🔥 КЛЮЧЕВОЕ: страница профиля — НЕ флекс-контейнер */
+    display: block !important;
+    flex-direction: unset !important;
+}
+
+#page-profile > * {
+    flex-shrink: 0;
 }
 
 #page-profile.has-page-bg {
