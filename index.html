@@ -38350,111 +38350,114 @@ async function generateProfileShareImage(user) {
     const colors = getThemeColors();
 
     // ============================================================
-    // 1. ФОН — градиент + сетка
+    // 1. ФОН
     // ============================================================
-    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
     bgGrad.addColorStop(0, colors.bg1);
-    bgGrad.addColorStop(0.55, colors.bg2);
+    bgGrad.addColorStop(0.5, colors.bg2);
     bgGrad.addColorStop(1, '#000000');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // Радиальное свечение сверху
-    const glow = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, W * 1.2);
+    // Большое свечение сверху
+    const glow = ctx.createRadialGradient(W / 2, 250, 0, W / 2, 250, W * 0.9);
     glow.addColorStop(0, colors.glow);
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
 
     // Сетка
-    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
     ctx.lineWidth = 1;
-    const gridSize = 60;
-    for (let x = 0; x < W; x += gridSize) {
+    for (let x = 0; x < W; x += 60) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
     }
-    for (let y = 0; y < H; y += gridSize) {
+    for (let y = 0; y < H; y += 60) {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
 
     // ============================================================
-    // 2. ВЕРХНИЙ БЛОК — ЛОГОТИП DE1MOS FACEIT
+    // 2. ЛОГОТИП DE1MOS FACEIT
     // ============================================================
-    ctx.font = '900 56px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Свечение под лого
+    // "De1mos"
+    ctx.font = '900 64px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.shadowColor = colors.primary;
     ctx.shadowBlur = 40;
+    const de1mosWidth = ctx.measureText('De1mos').width;
+    const faceitWidth = ctx.measureText('Faceit').width;
+    const totalWidth = de1mosWidth + faceitWidth + 10;
+    const startX = W / 2 - totalWidth / 2;
+
+    ctx.textAlign = 'left';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('De1mos', W / 2 - 90, 90);
+    ctx.fillText('De1mos', startX, 100);
     ctx.fillStyle = colors.primary;
-    ctx.fillText(' Faceit', W / 2 + 90, 90);
+    ctx.fillText('Faceit', startX + de1mosWidth + 10, 100);
     ctx.shadowBlur = 0;
 
     // Подпись
-    ctx.font = '700 20px -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText('P R O   P L A Y E R   P R O F I L E', W / 2, 145);
+    ctx.textAlign = 'center';
+    ctx.font = '800 18px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText('P R O   P L A Y E R   P R O F I L E', W / 2, 160);
 
     // ============================================================
     // 3. КАРТОЧКА ПРОФИЛЯ
     // ============================================================
-    const cardX = 60;
-    const cardY = 200;
-    const cardW = W - 120;
-    const cardH = 460;
+    const cardX = 70;
+    const cardY = 210;
+    const cardW = W - 140;
+    const cardH = 400;
 
-    // Фон карточки
     const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-    cardGrad.addColorStop(0, 'rgba(255,255,255,0.04)');
-    cardGrad.addColorStop(1, 'rgba(0,0,0,0.6)');
+    cardGrad.addColorStop(0, 'rgba(255,255,255,0.05)');
+    cardGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
     ctx.fillStyle = cardGrad;
-
-    roundRect(ctx, cardX, cardY, cardW, cardH, 36);
+    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
     ctx.fill();
 
-    // Обводка карточки
-    ctx.strokeStyle = colors.primary + '55';
+    ctx.strokeStyle = colors.primary + '66';
     ctx.lineWidth = 2;
-    roundRect(ctx, cardX, cardY, cardW, cardH, 36);
+    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
     ctx.stroke();
 
-    // Верхняя неоновая полоска
+    // Неоновая полоска сверху
     const topLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
     topLine.addColorStop(0, 'rgba(0,0,0,0)');
     topLine.addColorStop(0.5, colors.primary);
     topLine.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = topLine;
-    ctx.fillRect(cardX + 30, cardY, cardW - 60, 2);
+    ctx.fillRect(cardX + 40, cardY, cardW - 80, 2);
 
     // ============================================================
     // 4. АВАТАР
     // ============================================================
-    const avCx = cardX + 180;
-    const avCy = cardY + 200;
-    const avR = 110;
+    const avCx = cardX + 145;
+    const avCy = cardY + cardH / 2;
+    const avR = 105;
 
-    // Кольца вокруг аватара
-    for (let i = 3; i >= 1; i--) {
+    // Кольца
+    for (let i = 2; i >= 1; i--) {
         ctx.beginPath();
-        ctx.arc(avCx, avCy, avR + 10 + i * 8, 0, Math.PI * 2);
-        ctx.strokeStyle = colors.primary + (i === 1 ? 'aa' : '44');
+        ctx.arc(avCx, avCy, avR + 8 + i * 8, 0, Math.PI * 2);
+        ctx.strokeStyle = colors.primary + (i === 1 ? 'aa' : '33');
         ctx.lineWidth = i === 1 ? 4 : 1.5;
         ctx.shadowColor = colors.primary;
-        ctx.shadowBlur = i === 1 ? 40 : 15;
+        ctx.shadowBlur = i === 1 ? 40 : 12;
         ctx.stroke();
     }
     ctx.shadowBlur = 0;
 
-    // Внутренний чёрный круг
+    // Чёрный круг
     ctx.beginPath();
-    ctx.arc(avCx, avCy, avR + 6, 0, Math.PI * 2);
+    ctx.arc(avCx, avCy, avR + 4, 0, Math.PI * 2);
     ctx.fillStyle = '#000';
     ctx.fill();
 
-    // Сам аватар
+    // Аватар
     const avatarSrc = user.custom_avatar || user.photo_url;
     let avatarDrawn = false;
     if (avatarSrc) {
@@ -38467,76 +38470,108 @@ async function generateProfileShareImage(user) {
     if (!avatarDrawn) {
         ctx.beginPath();
         ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
-        ctx.fillStyle = colors.primary;
+        const avGrad = ctx.createLinearGradient(avCx - avR, avCy - avR, avCx + avR, avCy + avR);
+        avGrad.addColorStop(0, colors.primary);
+        avGrad.addColorStop(1, colors.secondary);
+        ctx.fillStyle = avGrad;
         ctx.fill();
-        ctx.font = '900 100px -apple-system, sans-serif';
+        ctx.font = '900 90px -apple-system, sans-serif';
         ctx.fillStyle = '#04140e';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText((user.display_name || 'U')[0].toUpperCase(), avCx, avCy + 6);
+        ctx.fillText((user.display_name || 'U')[0].toUpperCase(), avCx, avCy + 4);
     }
 
     // ============================================================
-    // 5. НИК + ЮЗЕРНЕЙМ + УРОВЕНЬ
+    // 5. ТЕКСТ СПРАВА ОТ АВАТАРА
     // ============================================================
-    const textX = cardX + 340;
+    const textX = cardX + 290;
+    const textMaxW = cardX + cardW - 40 - textX;
 
-    // Ник
+    // --- Ник ---
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.font = '900 52px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = colors.primary;
-    ctx.shadowBlur = 20;
-    ctx.fillText(user.display_name || 'Игрок', textX, cardY + 110);
-    ctx.shadowBlur = 0;
-
-    // Юзернейм
-    if (user.username) {
-        ctx.font = '700 24px -apple-system, sans-serif';
-        ctx.fillStyle = colors.primary;
-        ctx.fillText('@' + user.username, textX, cardY + 165);
+    let nick = user.display_name || 'Игрок';
+    ctx.font = '900 56px -apple-system, BlinkMacSystemFont, sans-serif';
+    // Обрезаем ник если слишком длинный
+    while (ctx.measureText(nick).width > textMaxW && nick.length > 3) {
+        nick = nick.slice(0, -1);
     }
+    if (nick !== user.display_name) nick += '…';
 
-    // Уровень + DXP
-    const lvl = eloToLevel(user.elo);
-    const dxp = user.elo ?? 1000;
-    ctx.font = '900 30px -apple-system, sans-serif';
-    ctx.fillStyle = colors.light;
-    ctx.shadowColor = colors.primary;
-    ctx.shadowBlur = 15;
-    ctx.fillText(`⚡ УРОВЕНЬ ${lvl}`, textX, cardY + 240);
-    ctx.shadowBlur = 0;
-
-    // DXP большая цифра
-    ctx.font = '900 84px -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = colors.primary;
     ctx.shadowBlur = 25;
-    ctx.fillText(String(dxp), textX, cardY + 340);
+    ctx.fillText(nick, textX, cardY + 95);
     ctx.shadowBlur = 0;
 
-    // Подпись "DXP"
+    // --- Юзернейм ---
+    if (user.username) {
+        ctx.font = '700 24px -apple-system, sans-serif';
+        ctx.fillStyle = colors.primary;
+        let uname = '@' + user.username;
+        while (ctx.measureText(uname).width > textMaxW && uname.length > 3) {
+            uname = uname.slice(0, -1);
+        }
+        ctx.fillText(uname, textX, cardY + 150);
+    }
+
+    // --- Уровень (чип) ---
+    const lvl = eloToLevel(user.elo);
+    const lvlText = `⚡ УРОВЕНЬ ${lvl}`;
     ctx.font = '900 22px -apple-system, sans-serif';
-    ctx.fillStyle = colors.primary;
-    ctx.fillText('D X P', textX + ctx.measureText(String(dxp)).width + 20, cardY + 350);
+    const lvlW = ctx.measureText(lvlText).width + 32;
+    const lvlH = 42;
+    const lvlY = cardY + 205;
+
+    // Фон чипа
+    ctx.fillStyle = colors.primary + '22';
+    roundRect(ctx, textX, lvlY, lvlW, lvlH, lvlH / 2);
+    ctx.fill();
+    ctx.strokeStyle = colors.primary + '88';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, textX, lvlY, lvlW, lvlH, lvlH / 2);
+    ctx.stroke();
+
+    // Текст чипа
+    ctx.fillStyle = colors.light;
+    ctx.textAlign = 'center';
+    ctx.fillText(lvlText, textX + lvlW / 2, lvlY + lvlH / 2 + 2);
+
+    // --- Большая цифра DXP ---
+    const dxp = user.elo ?? 1000;
+    ctx.textAlign = 'left';
+
+    // "DXP" подпись
+    ctx.font = '900 20px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('D X P', textX, cardY + 300);
+
+    // Сама цифра
+    ctx.font = '900 82px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 30;
+    ctx.fillText(String(dxp), textX, cardY + 355);
+    ctx.shadowBlur = 0;
 
     // ============================================================
     // 6. ГРАФИК DXP
     // ============================================================
-    const chartX = cardX + 40;
-    const chartY = cardY + cardH + 40;
-    const chartW = cardW - 80;
-    const chartH = 340;
+    const chartX = cardX;
+    const chartY = cardY + cardH + 50;
+    const chartW = cardW;
+    const chartH = 280;
 
-    // Заголовок графика
+    // Заголовок
     ctx.textAlign = 'left';
-    ctx.font = '900 26px -apple-system, sans-serif';
+    ctx.font = '900 24px -apple-system, sans-serif';
     ctx.fillStyle = colors.primary;
-    ctx.fillText('📈 ДИНАМИКА DXP', chartX, chartY);
-    ctx.font = '700 16px -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.fillText('P R E M I U M   I N S I G H T', chartX, chartY + 30);
+    ctx.fillText('📈 ДИНАМИКА DXP', chartX + 20, chartY);
+
+    ctx.font = '700 14px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText('P R E M I U M   I N S I G H T', chartX + 20, chartY + 26);
 
     // Загружаем историю
     let history = [];
@@ -38549,17 +38584,19 @@ async function generateProfileShareImage(user) {
         history = (data || []).slice().reverse();
     } catch (e) { console.warn('history:', e); }
 
-    const chartTop = chartY + 70;
+    const chartTop = chartY + 60;
     const chartBottom = chartTop + chartH;
+    const chartLeft = chartX + 70;
+    const chartRight = chartX + chartW - 30;
 
-    // Рамка графика
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
+    // Горизонтальная сетка
     for (let i = 0; i <= 4; i++) {
         const y = chartTop + (chartH / 4) * i;
         ctx.beginPath();
-        ctx.moveTo(chartX, y);
-        ctx.lineTo(chartX + chartW, y);
+        ctx.moveTo(chartLeft, y);
+        ctx.lineTo(chartRight, y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
         ctx.stroke();
     }
 
@@ -38568,19 +38605,20 @@ async function generateProfileShareImage(user) {
         const min = Math.min(...elos);
         const max = Math.max(...elos);
         const range = Math.max(50, max - min);
-        const pad = Math.round(range * 0.15);
+        const pad = Math.round(range * 0.1);
         const yMin = min - pad;
         const yMax = max + pad;
 
-        const stepX = chartW / (history.length - 1);
+        const innerW = chartRight - chartLeft;
+        const stepX = innerW / (history.length - 1);
         const points = history.map((h, i) => {
             const elo = h.elo_after ?? h.elo_before ?? 1000;
-            const x = chartX + i * stepX;
+            const x = chartLeft + i * stepX;
             const y = chartTop + chartH - ((elo - yMin) / (yMax - yMin)) * chartH;
             return { x, y, elo };
         });
 
-        // Заливка под графиком
+        // Заливка
         ctx.beginPath();
         ctx.moveTo(points[0].x, chartBottom);
         points.forEach(p => ctx.lineTo(p.x, p.y));
@@ -38588,7 +38626,7 @@ async function generateProfileShareImage(user) {
         ctx.closePath();
 
         const areaGrad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
-        areaGrad.addColorStop(0, colors.primary + '77');
+        areaGrad.addColorStop(0, colors.primary + '88');
         areaGrad.addColorStop(1, colors.primary + '00');
         ctx.fillStyle = areaGrad;
         ctx.fill();
@@ -38605,107 +38643,105 @@ async function generateProfileShareImage(user) {
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Точки
+        // Точки (последняя — большая)
         points.forEach((p, i) => {
             const isLast = i === points.length - 1;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, isLast ? 8 : 4, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, isLast ? 8 : 3, 0, Math.PI * 2);
             ctx.fillStyle = isLast ? '#ffffff' : colors.primary;
             ctx.shadowColor = colors.primary;
-            ctx.shadowBlur = isLast ? 25 : 10;
+            ctx.shadowBlur = isLast ? 25 : 8;
             ctx.fill();
             ctx.shadowBlur = 0;
         });
 
         // Y-метки
-        ctx.font = '700 16px -apple-system, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.font = '700 15px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
         ctx.textAlign = 'right';
-        ctx.fillText(String(Math.round(yMax)), chartX - 10, chartTop + 6);
-        ctx.fillText(String(Math.round(yMin)), chartX - 10, chartBottom - 6);
+        ctx.fillText(String(Math.round(yMax)), chartLeft - 12, chartTop + 6);
+        ctx.fillText(String(Math.round((yMax + yMin) / 2)), chartLeft - 12, chartTop + chartH / 2 + 6);
+        ctx.fillText(String(Math.round(yMin)), chartLeft - 12, chartBottom - 6);
 
-        // W/L-плашки под графиком
+        // W/L/WR
         const wins = history.filter(h => h.won).length;
         const losses = history.length - wins;
-        const wlY = chartBottom + 35;
+        const wr = Math.round((wins / history.length) * 100);
+
+        const wlY = chartBottom + 50;
 
         // W
         ctx.fillStyle = 'rgba(140, 230, 90, 0.15)';
-        roundRect(ctx, chartX, wlY - 18, 90, 36, 18);
+        roundRect(ctx, chartLeft, wlY - 20, 100, 40, 20);
         ctx.fill();
         ctx.strokeStyle = 'rgba(140, 230, 90, 0.5)';
         ctx.lineWidth = 1.5;
-        roundRect(ctx, chartX, wlY - 18, 90, 36, 18);
+        roundRect(ctx, chartLeft, wlY - 20, 100, 40, 20);
         ctx.stroke();
         ctx.fillStyle = '#8ce65a';
-        ctx.font = '900 18px -apple-system, sans-serif';
+        ctx.font = '900 20px -apple-system, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`W ${wins}`, chartX + 45, wlY + 2);
+        ctx.fillText(`W ${wins}`, chartLeft + 50, wlY + 2);
 
         // L
         ctx.fillStyle = 'rgba(255, 84, 112, 0.15)';
-        roundRect(ctx, chartX + 105, wlY - 18, 90, 36, 18);
+        roundRect(ctx, chartLeft + 115, wlY - 20, 100, 40, 20);
         ctx.fill();
         ctx.strokeStyle = 'rgba(255, 84, 112, 0.5)';
-        roundRect(ctx, chartX + 105, wlY - 18, 90, 36, 18);
+        roundRect(ctx, chartLeft + 115, wlY - 20, 100, 40, 20);
         ctx.stroke();
         ctx.fillStyle = '#ff5470';
         ctx.textAlign = 'center';
-        ctx.fillText(`L ${losses}`, chartX + 150, wlY + 2);
+        ctx.fillText(`L ${losses}`, chartLeft + 165, wlY + 2);
 
         // WR справа
-        const wr = Math.round((wins / history.length) * 100);
         ctx.textAlign = 'right';
-        ctx.font = '900 22px -apple-system, sans-serif';
+        ctx.font = '900 26px -apple-system, sans-serif';
         ctx.fillStyle = colors.light;
-        ctx.fillText(`${wr}% WR`, chartX + chartW, wlY + 2);
+        ctx.fillText(`${wr}% WR`, chartRight, wlY + 4);
     } else {
-        // Нет данных
         ctx.font = '700 22px -apple-system, sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.35)';
         ctx.textAlign = 'center';
-        ctx.fillText('Нет данных о матчах', chartX + chartW / 2, chartTop + chartH / 2);
+        ctx.fillText('Нет данных о матчах', chartLeft + (chartRight - chartLeft) / 2, chartTop + chartH / 2);
     }
 
     // ============================================================
-    // 7. НИЖНИЙ БЛОК — CTA
+    // 7. CTA — ИГРАЙ СО МНОЙ
     // ============================================================
-    const ctaY = H - 190;
+    const ctaY = H - 170;
 
-    // Полоска
+    // Разделитель
     const ctaLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
     ctaLine.addColorStop(0, 'rgba(0,0,0,0)');
     ctaLine.addColorStop(0.5, colors.primary);
     ctaLine.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = ctaLine;
-    ctx.fillRect(cardX + 30, ctaY - 30, cardW - 60, 2);
+    ctx.fillRect(cardX + 60, ctaY - 30, cardW - 120, 2);
 
-    // Заголовок CTA
+    // "Играй со мной на"
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '900 40px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = colors.primary;
-    ctx.shadowBlur = 25;
-    ctx.fillText('🎮 Играй со мной на', W / 2, ctaY + 20);
-    ctx.shadowBlur = 0;
+    ctx.font = '800 26px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('Играй со мной на', W / 2, ctaY + 10);
 
-    // De1mos Faceit
-    ctx.font = '900 52px -apple-system, sans-serif';
-    const g2 = ctx.createLinearGradient(W / 2 - 200, 0, W / 2 + 200, 0);
-    g2.addColorStop(0, colors.primary);
-    g2.addColorStop(0.5, colors.light);
-    g2.addColorStop(1, colors.primary);
-    ctx.fillStyle = g2;
+    // "De1mos Faceit" — крупно, с градиентом
+    ctx.font = '900 48px -apple-system, sans-serif';
+    const nameGrad = ctx.createLinearGradient(W / 2 - 300, 0, W / 2 + 300, 0);
+    nameGrad.addColorStop(0, colors.primary);
+    nameGrad.addColorStop(0.5, colors.light);
+    nameGrad.addColorStop(1, colors.primary);
+    ctx.fillStyle = nameGrad;
     ctx.shadowColor = colors.primary;
     ctx.shadowBlur = 30;
-    ctx.fillText('De1mos Faceit', W / 2, ctaY + 80);
+    ctx.fillText('De1mos Faceit', W / 2, ctaY + 65);
     ctx.shadowBlur = 0;
 
     // Ссылка
-    ctx.font = '700 22px -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', W / 2, ctaY + 135);
+    ctx.font = '700 20px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', W / 2, ctaY + 120);
 
     return canvas;
 }
