@@ -39152,23 +39152,25 @@ function closeSharePreview() {
 }
 
 // ============================================================
-// ОТПРАВКА В TELEGRAM — определяем платформу
+// ОТПРАВКА В TELEGRAM — используем shareMessage только если он точно работает
 // ============================================================
 async function doShareToTelegram() {
     const blob = window._shareBlob;
     const user = window._shareUserData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
-    // 🔥 Определяем платформу: только iOS/Android поддерживают shareMessage
     const platform = tg?.platform || '';
     const isMobile = platform === 'ios' || platform === 'android' || platform === 'android_x';
-    const canUseShareMessage = isMobile && typeof tg?.shareMessage === 'function';
+
+    // 🔥 Используем shareMessage ТОЛЬКО на Android, где он более-менее стабилен
+    //    На iOS он часто падает с MESSAGE_EXPIRED
+    const canUseShareMessage = (platform === 'android' || platform === 'android_x')
+                            && typeof tg?.shareMessage === 'function';
 
     if (canUseShareMessage) {
-        // На мобиле — нативный шер с фото и текстом
         await shareViaPreparedMessage(blob, user);
     } else {
-        // На ПК/в вебе — скачать + скопировать текст
+        // iOS, Desktop, Web — используем фолбэк
         await shareViaDesktopFallback(blob, user);
     }
 }
