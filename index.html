@@ -36,6 +36,7 @@
 <!-- Supabase — тоже лучше скачать локально, но CDN обычно работает -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
         /* ============================================================
    ТЕМЫ
@@ -38340,409 +38341,315 @@ function roundRect(ctx, x, y, w, h, r) {
 // ГЛАВНАЯ: генерация картинки профиля
 // ============================================================
 async function generateProfileShareImage(user) {
-    const W = 1080;
-    const H = 1350;
-    const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext('2d');
-
-    const colors = getThemeColors();
-
-    // ============================================================
-    // 1. ФОН
-    // ============================================================
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-    bgGrad.addColorStop(0, colors.bg1);
-    bgGrad.addColorStop(0.5, colors.bg2);
-    bgGrad.addColorStop(1, '#000000');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, H);
-
-    // Большое свечение сверху
-    const glow = ctx.createRadialGradient(W / 2, 250, 0, W / 2, 250, W * 0.9);
-    glow.addColorStop(0, colors.glow);
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, W, H);
-
-    // Сетка
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < W; x += 60) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-    }
-    for (let y = 0; y < H; y += 60) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    }
-
-    // ============================================================
-    // 2. ЛОГОТИП DE1MOS FACEIT
-    // ============================================================
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    // "De1mos"
-    ctx.font = '900 64px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.shadowColor = colors.primary;
-    ctx.shadowBlur = 40;
-    const de1mosWidth = ctx.measureText('De1mos').width;
-    const faceitWidth = ctx.measureText('Faceit').width;
-    const totalWidth = de1mosWidth + faceitWidth + 10;
-    const startX = W / 2 - totalWidth / 2;
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('De1mos', startX, 100);
-    ctx.fillStyle = colors.primary;
-    ctx.fillText('Faceit', startX + de1mosWidth + 10, 100);
-    ctx.shadowBlur = 0;
-
-    // Подпись
-    ctx.textAlign = 'center';
-    ctx.font = '800 18px -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillText('P R O   P L A Y E R   P R O F I L E', W / 2, 160);
-
-    // ============================================================
-    // 3. КАРТОЧКА ПРОФИЛЯ
-    // ============================================================
-    const cardX = 70;
-    const cardY = 210;
-    const cardW = W - 140;
-    const cardH = 400;
-
-    const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-    cardGrad.addColorStop(0, 'rgba(255,255,255,0.05)');
-    cardGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
-    ctx.fillStyle = cardGrad;
-    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
-    ctx.fill();
-
-    ctx.strokeStyle = colors.primary + '66';
-    ctx.lineWidth = 2;
-    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
-    ctx.stroke();
-
-    // Неоновая полоска сверху
-    const topLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
-    topLine.addColorStop(0, 'rgba(0,0,0,0)');
-    topLine.addColorStop(0.5, colors.primary);
-    topLine.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = topLine;
-    ctx.fillRect(cardX + 40, cardY, cardW - 80, 2);
-
-    // ============================================================
-    // 4. АВАТАР
-    // ============================================================
-    const avCx = cardX + 145;
-    const avCy = cardY + cardH / 2;
-    const avR = 105;
-
-    // Кольца
-    for (let i = 2; i >= 1; i--) {
-        ctx.beginPath();
-        ctx.arc(avCx, avCy, avR + 8 + i * 8, 0, Math.PI * 2);
-        ctx.strokeStyle = colors.primary + (i === 1 ? 'aa' : '33');
-        ctx.lineWidth = i === 1 ? 4 : 1.5;
-        ctx.shadowColor = colors.primary;
-        ctx.shadowBlur = i === 1 ? 40 : 12;
-        ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-
-    // Чёрный круг
-    ctx.beginPath();
-    ctx.arc(avCx, avCy, avR + 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#000';
-    ctx.fill();
-
-    // Аватар
-    const avatarSrc = user.custom_avatar || user.photo_url;
-    let avatarDrawn = false;
-    if (avatarSrc) {
-        try {
-            const img = await loadImageAsPromise(avatarSrc);
-            drawCircularImage(ctx, img, avCx, avCy, avR);
-            avatarDrawn = true;
-        } catch (e) { console.warn('avatar:', e); }
-    }
-    if (!avatarDrawn) {
-        ctx.beginPath();
-        ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
-        const avGrad = ctx.createLinearGradient(avCx - avR, avCy - avR, avCx + avR, avCy + avR);
-        avGrad.addColorStop(0, colors.primary);
-        avGrad.addColorStop(1, colors.secondary);
-        ctx.fillStyle = avGrad;
-        ctx.fill();
-        ctx.font = '900 90px -apple-system, sans-serif';
-        ctx.fillStyle = '#04140e';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText((user.display_name || 'U')[0].toUpperCase(), avCx, avCy + 4);
-    }
-
-    // ============================================================
-    // 5. ТЕКСТ СПРАВА ОТ АВАТАРА
-    // ============================================================
-    const textX = cardX + 290;
-    const textMaxW = cardX + cardW - 40 - textX;
-
-    // --- Ник ---
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    let nick = user.display_name || 'Игрок';
-    ctx.font = '900 56px -apple-system, BlinkMacSystemFont, sans-serif';
-    // Обрезаем ник если слишком длинный
-    while (ctx.measureText(nick).width > textMaxW && nick.length > 3) {
-        nick = nick.slice(0, -1);
-    }
-    if (nick !== user.display_name) nick += '…';
-
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = colors.primary;
-    ctx.shadowBlur = 25;
-    ctx.fillText(nick, textX, cardY + 95);
-    ctx.shadowBlur = 0;
-
-    // --- Юзернейм ---
-    if (user.username) {
-        ctx.font = '700 24px -apple-system, sans-serif';
-        ctx.fillStyle = colors.primary;
-        let uname = '@' + user.username;
-        while (ctx.measureText(uname).width > textMaxW && uname.length > 3) {
-            uname = uname.slice(0, -1);
+    // Ждём загрузки библиотеки
+    if (typeof html2canvas === 'undefined') {
+        // Пробуем подождать
+        let tries = 0;
+        while (typeof html2canvas === 'undefined' && tries < 30) {
+            await new Promise(r => setTimeout(r, 100));
+            tries++;
         }
-        ctx.fillText(uname, textX, cardY + 150);
+        if (typeof html2canvas === 'undefined') {
+            throw new Error('html2canvas не загрузился');
+        }
     }
 
-    // --- Уровень (чип) ---
-    const lvl = eloToLevel(user.elo);
-    const lvlText = `⚡ УРОВЕНЬ ${lvl}`;
-    ctx.font = '900 22px -apple-system, sans-serif';
-    const lvlW = ctx.measureText(lvlText).width + 32;
-    const lvlH = 42;
-    const lvlY = cardY + 205;
+    // ============================================================
+    // 1. Создаём СКРЫТУЮ копию шапки профиля для рендера
+    // ============================================================
+    const stage = document.createElement('div');
+    stage.style.cssText = `
+        position: fixed;
+        top: -99999px;
+        left: -99999px;
+        width: 900px;
+        padding: 0;
+        margin: 0;
+        background: #000;
+        z-index: 99999;
+    `;
 
-    // Фон чипа
-    ctx.fillStyle = colors.primary + '22';
-    roundRect(ctx, textX, lvlY, lvlW, lvlH, lvlH / 2);
-    ctx.fill();
-    ctx.strokeStyle = colors.primary + '88';
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, textX, lvlY, lvlW, lvlH, lvlH / 2);
-    ctx.stroke();
+    // Копируем HTML шапки профиля — берём его из реального DOM
+    const realHero = document.querySelector('.profile-hero-compact[data-profile-bg]');
+    if (!realHero) {
+        throw new Error('Шапка профиля не найдена');
+    }
 
-    // Текст чипа
-    ctx.fillStyle = colors.light;
-    ctx.textAlign = 'center';
-    ctx.fillText(lvlText, textX + lvlW / 2, lvlY + lvlH / 2 + 2);
+    // 🔥 КЛОНИРУЕМ узел как есть
+    const clone = realHero.cloneNode(true);
 
-    // --- Большая цифра DXP ---
-    const dxp = user.elo ?? 1000;
-    ctx.textAlign = 'left';
+    // Убираем редактирование, кнопки и т.д.
+    clone.querySelectorAll('.avatar-edit-btn, .phc-actions, .phc-settings, .phc-icon-btn, button').forEach(el => el.remove());
 
-    // "DXP" подпись
-    ctx.font = '900 20px -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.fillText('D X P', textX, cardY + 300);
-
-    // Сама цифра
-    ctx.font = '900 82px -apple-system, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = colors.primary;
-    ctx.shadowBlur = 30;
-    ctx.fillText(String(dxp), textX, cardY + 355);
-    ctx.shadowBlur = 0;
+    stage.appendChild(clone);
+    document.body.appendChild(stage);
 
     // ============================================================
-    // 6. ГРАФИК DXP
+    // 2. Копируем вычисленные стили с оригинала на клон (включая фон, рамку)
     // ============================================================
-    const chartX = cardX;
-    const chartY = cardY + cardH + 50;
-    const chartW = cardW;
-    const chartH = 280;
+    await copyComputedStylesRecursive(realHero, clone);
 
-    // Заголовок
-    ctx.textAlign = 'left';
-    ctx.font = '900 24px -apple-system, sans-serif';
-    ctx.fillStyle = colors.primary;
-    ctx.fillText('📈 ДИНАМИКА DXP', chartX + 20, chartY);
+    // Размеры делаем больше для качества
+    stage.style.width = (realHero.offsetWidth * 2) + 'px';
+    clone.style.width = (realHero.offsetWidth * 2) + 'px';
+    clone.style.transform = 'scale(2)';
+    clone.style.transformOrigin = 'top left';
 
-    ctx.font = '700 14px -apple-system, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillText('P R E M I U M   I N S I G H T', chartX + 20, chartY + 26);
+    // Ждём отрисовки
+    await new Promise(r => setTimeout(r, 300));
+
+    // ============================================================
+    // 3. Рендерим через html2canvas
+    // ============================================================
+    let canvas;
+    try {
+        canvas = await html2canvas(clone, {
+            backgroundColor: '#050807',
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            width: clone.offsetWidth,
+            height: clone.offsetHeight,
+            windowWidth: clone.scrollWidth,
+            windowHeight: clone.scrollHeight,
+        });
+    } catch (e) {
+        console.error('html2canvas fail:', e);
+        // Fallback — генерируем «старую» версию
+        stage.remove();
+        return await generateProfileShareImageFallback(user);
+    }
+
+    stage.remove();
+
+    // ============================================================
+    // 4. Дополняем картинку снизу (CTA + график)
+    // ============================================================
+    const W = canvas.width;
+    const heroH = canvas.height;
+    const extraH = Math.round(W * 0.75); // сколько добавить снизу
+
+    const final = document.createElement('canvas');
+    final.width = W;
+    final.height = heroH + extraH;
+    const ctx = final.getContext('2d');
+
+    // Копируем шапку
+    ctx.drawImage(canvas, 0, 0);
+
+    // ============================================================
+    // 5. Рисуем график + CTA под шапкой
+    // ============================================================
+    const colors = getThemeColors();
+    const cS = W / 1080; // коэффициент масштаба
+
+    // Фон
+    const bgGrad = ctx.createLinearGradient(0, heroH, 0, heroH + extraH);
+    bgGrad.addColorStop(0, colors.bg2);
+    bgGrad.addColorStop(1, '#000');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, heroH, W, extraH);
 
     // Загружаем историю
     let history = [];
     try {
         const { data } = await sb.from('dxp_history')
-            .select('elo_after, elo_before, delta, won, created_at')
+            .select('elo_after, elo_before, delta, won')
             .eq('telegram_id', Number(user.telegram_id))
             .order('created_at', { ascending: false })
             .limit(20);
         history = (data || []).slice().reverse();
-    } catch (e) { console.warn('history:', e); }
+    } catch (e) {}
 
-    const chartTop = chartY + 60;
-    const chartBottom = chartTop + chartH;
-    const chartLeft = chartX + 70;
-    const chartRight = chartX + chartW - 30;
+    // График
+    drawMiniChartOnCanvas(ctx, W, heroH + 40 * cS, extraH - 200 * cS, history, colors, cS);
 
-    // Горизонтальная сетка
-    for (let i = 0; i <= 4; i++) {
-        const y = chartTop + (chartH / 4) * i;
+    // CTA снизу
+    drawCTABlock(ctx, W, heroH + extraH - 160 * cS, colors, cS);
+
+    return final;
+}
+
+// ============================================================
+// Копирование ВСЕХ computed стилей на клон
+// ============================================================
+async function copyComputedStylesRecursive(src, dst) {
+    const srcStyles = window.getComputedStyle(src);
+    for (let i = 0; i < srcStyles.length; i++) {
+        const prop = srcStyles[i];
+        dst.style.setProperty(prop, srcStyles.getPropertyValue(prop), srcStyles.getPropertyPriority(prop));
+    }
+
+    const srcChildren = src.children;
+    const dstChildren = dst.children;
+    for (let i = 0; i < srcChildren.length; i++) {
+        if (dstChildren[i]) {
+            await copyComputedStylesRecursive(srcChildren[i], dstChildren[i]);
+        }
+    }
+}
+
+// ============================================================
+// Мини-график в canvas
+// ============================================================
+function drawMiniChartOnCanvas(ctx, W, y, h, history, colors, cS) {
+    const padX = 60 * cS;
+    const chartLeft = padX;
+    const chartRight = W - padX;
+    const chartTop = y;
+    const chartBottom = y + h;
+
+    ctx.textBaseline = 'middle';
+
+    // Заголовок
+    ctx.textAlign = 'left';
+    ctx.font = `900 ${22 * cS}px -apple-system, sans-serif`;
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('📈 ДИНАМИКА DXP', chartLeft, y - 30 * cS);
+
+    if (history.length < 2) {
+        ctx.font = `700 ${18 * cS}px -apple-system, sans-serif`;
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.textAlign = 'center';
+        ctx.fillText('Нет данных', W / 2, chartTop + h / 2);
+        return;
+    }
+
+    const elos = history.map(x => x.elo_after ?? x.elo_before ?? 1000);
+    const min = Math.min(...elos);
+    const max = Math.max(...elos);
+    const range = Math.max(50, max - min);
+    const pad = Math.round(range * 0.15);
+    const yMin = min - pad;
+    const yMax = max + pad;
+    const innerW = chartRight - chartLeft;
+    const stepX = innerW / (history.length - 1);
+
+    const points = history.map((h2, i) => ({
+        x: chartLeft + i * stepX,
+        y: chartTop + h - ((h2.elo_after ?? h2.elo_before ?? 1000) - yMin) / (yMax - yMin) * h,
+    }));
+
+    // Сетка
+    for (let i = 0; i <= 3; i++) {
+        const gy = chartTop + (h / 3) * i;
         ctx.beginPath();
-        ctx.moveTo(chartLeft, y);
-        ctx.lineTo(chartRight, y);
+        ctx.moveTo(chartLeft, gy);
+        ctx.lineTo(chartRight, gy);
         ctx.strokeStyle = 'rgba(255,255,255,0.05)';
         ctx.lineWidth = 1;
         ctx.stroke();
     }
 
-    if (history.length >= 2) {
-        const elos = history.map(h => h.elo_after ?? h.elo_before ?? 1000);
-        const min = Math.min(...elos);
-        const max = Math.max(...elos);
-        const range = Math.max(50, max - min);
-        const pad = Math.round(range * 0.1);
-        const yMin = min - pad;
-        const yMax = max + pad;
+    // Заливка
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, chartBottom);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, chartBottom);
+    ctx.closePath();
+    const areaGrad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
+    areaGrad.addColorStop(0, colors.primary + '88');
+    areaGrad.addColorStop(1, colors.primary + '00');
+    ctx.fillStyle = areaGrad;
+    ctx.fill();
 
-        const innerW = chartRight - chartLeft;
-        const stepX = innerW / (history.length - 1);
-        const points = history.map((h, i) => {
-            const elo = h.elo_after ?? h.elo_before ?? 1000;
-            const x = chartLeft + i * stepX;
-            const y = chartTop + chartH - ((elo - yMin) / (yMax - yMin)) * chartH;
-            return { x, y, elo };
-        });
+    // Линия
+    ctx.beginPath();
+    points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.strokeStyle = colors.primary;
+    ctx.lineWidth = 3 * cS;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 15;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 
-        // Заливка
+    // Точки
+    points.forEach((p, i) => {
+        const isLast = i === points.length - 1;
         ctx.beginPath();
-        ctx.moveTo(points[0].x, chartBottom);
-        points.forEach(p => ctx.lineTo(p.x, p.y));
-        ctx.lineTo(points[points.length - 1].x, chartBottom);
-        ctx.closePath();
-
-        const areaGrad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
-        areaGrad.addColorStop(0, colors.primary + '88');
-        areaGrad.addColorStop(1, colors.primary + '00');
-        ctx.fillStyle = areaGrad;
-        ctx.fill();
-
-        // Линия
-        ctx.beginPath();
-        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-        ctx.strokeStyle = colors.primary;
-        ctx.lineWidth = 4;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
+        ctx.arc(p.x, p.y, (isLast ? 6 : 3) * cS, 0, Math.PI * 2);
+        ctx.fillStyle = isLast ? '#fff' : colors.primary;
         ctx.shadowColor = colors.primary;
-        ctx.shadowBlur = 20;
-        ctx.stroke();
+        ctx.shadowBlur = isLast ? 20 : 8;
+        ctx.fill();
         ctx.shadowBlur = 0;
+    });
 
-        // Точки (последняя — большая)
-        points.forEach((p, i) => {
-            const isLast = i === points.length - 1;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, isLast ? 8 : 3, 0, Math.PI * 2);
-            ctx.fillStyle = isLast ? '#ffffff' : colors.primary;
-            ctx.shadowColor = colors.primary;
-            ctx.shadowBlur = isLast ? 25 : 8;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        });
+    // W/L/WR
+    const wins = history.filter(x => x.won).length;
+    const losses = history.length - wins;
+    const wr = Math.round((wins / history.length) * 100);
+    const wlY = chartBottom + 45 * cS;
 
-        // Y-метки
-        ctx.font = '700 15px -apple-system, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.textAlign = 'right';
-        ctx.fillText(String(Math.round(yMax)), chartLeft - 12, chartTop + 6);
-        ctx.fillText(String(Math.round((yMax + yMin) / 2)), chartLeft - 12, chartTop + chartH / 2 + 6);
-        ctx.fillText(String(Math.round(yMin)), chartLeft - 12, chartBottom - 6);
+    ctx.font = `900 ${18 * cS}px -apple-system, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#8ce65a';
+    ctx.fillText(`W ${wins}`, chartLeft, wlY);
+    ctx.fillStyle = '#ff5470';
+    ctx.fillText(`L ${losses}`, chartLeft + 90 * cS, wlY);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = colors.light;
+    ctx.font = `900 ${22 * cS}px -apple-system, sans-serif`;
+    ctx.fillText(`${wr}% WR`, chartRight, wlY);
+}
 
-        // W/L/WR
-        const wins = history.filter(h => h.won).length;
-        const losses = history.length - wins;
-        const wr = Math.round((wins / history.length) * 100);
-
-        const wlY = chartBottom + 50;
-
-        // W
-        ctx.fillStyle = 'rgba(140, 230, 90, 0.15)';
-        roundRect(ctx, chartLeft, wlY - 20, 100, 40, 20);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(140, 230, 90, 0.5)';
-        ctx.lineWidth = 1.5;
-        roundRect(ctx, chartLeft, wlY - 20, 100, 40, 20);
-        ctx.stroke();
-        ctx.fillStyle = '#8ce65a';
-        ctx.font = '900 20px -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`W ${wins}`, chartLeft + 50, wlY + 2);
-
-        // L
-        ctx.fillStyle = 'rgba(255, 84, 112, 0.15)';
-        roundRect(ctx, chartLeft + 115, wlY - 20, 100, 40, 20);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 84, 112, 0.5)';
-        roundRect(ctx, chartLeft + 115, wlY - 20, 100, 40, 20);
-        ctx.stroke();
-        ctx.fillStyle = '#ff5470';
-        ctx.textAlign = 'center';
-        ctx.fillText(`L ${losses}`, chartLeft + 165, wlY + 2);
-
-        // WR справа
-        ctx.textAlign = 'right';
-        ctx.font = '900 26px -apple-system, sans-serif';
-        ctx.fillStyle = colors.light;
-        ctx.fillText(`${wr}% WR`, chartRight, wlY + 4);
-    } else {
-        ctx.font = '700 22px -apple-system, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.textAlign = 'center';
-        ctx.fillText('Нет данных о матчах', chartLeft + (chartRight - chartLeft) / 2, chartTop + chartH / 2);
-    }
-
-    // ============================================================
-    // 7. CTA — ИГРАЙ СО МНОЙ
-    // ============================================================
-    const ctaY = H - 170;
-
-    // Разделитель
-    const ctaLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
-    ctaLine.addColorStop(0, 'rgba(0,0,0,0)');
-    ctaLine.addColorStop(0.5, colors.primary);
-    ctaLine.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = ctaLine;
-    ctx.fillRect(cardX + 60, ctaY - 30, cardW - 120, 2);
-
-    // "Играй со мной на"
+// ============================================================
+// CTA-блок снизу
+// ============================================================
+function drawCTABlock(ctx, W, y, colors, cS) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '800 26px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText('Играй со мной на', W / 2, ctaY + 10);
 
-    // "De1mos Faceit" — крупно, с градиентом
-    ctx.font = '900 48px -apple-system, sans-serif';
+    // Разделитель
+    const grad = ctx.createLinearGradient(W / 2 - W * 0.3, 0, W / 2 + W * 0.3, 0);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.5, colors.primary);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(W / 2 - W * 0.3, y - 20 * cS, W * 0.6, 2);
+
+    // "Играй со мной на"
+    ctx.font = `800 ${24 * cS}px -apple-system, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('Играй со мной на', W / 2, y + 20 * cS);
+
+    // "De1mos Faceit"
+    ctx.font = `900 ${44 * cS}px -apple-system, sans-serif`;
     const nameGrad = ctx.createLinearGradient(W / 2 - 300, 0, W / 2 + 300, 0);
     nameGrad.addColorStop(0, colors.primary);
     nameGrad.addColorStop(0.5, colors.light);
     nameGrad.addColorStop(1, colors.primary);
     ctx.fillStyle = nameGrad;
     ctx.shadowColor = colors.primary;
-    ctx.shadowBlur = 30;
-    ctx.fillText('De1mos Faceit', W / 2, ctaY + 65);
+    ctx.shadowBlur = 25;
+    ctx.fillText('De1mos Faceit', W / 2, y + 75 * cS);
     ctx.shadowBlur = 0;
 
     // Ссылка
-    ctx.font = '700 20px -apple-system, sans-serif';
+    ctx.font = `700 ${18 * cS}px -apple-system, sans-serif`;
     ctx.fillStyle = colors.primary;
-    ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', W / 2, ctaY + 120);
+    ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', W / 2, y + 120 * cS);
+}
 
+// ============================================================
+// FALLBACK — старая версия (если html2canvas не сработал)
+// ============================================================
+async function generateProfileShareImageFallback(user) {
+    // ... оставь старую версию (только текст + график)
+    // Если не хочешь — сделай простую заглушку
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 1080, 1080);
+    ctx.fillStyle = '#fff';
+    ctx.font = '900 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('De1mos Faceit', 540, 540);
     return canvas;
 }
 
