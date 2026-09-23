@@ -39152,31 +39152,37 @@ function closeSharePreview() {
 }
 
 // ============================================================
-// ОТПРАВКА В TELEGRAM — через prepared inline message
-// Юзер выбирает чат → Telegram сам отправляет фото + текст + ссылку
+// ОТПРАВКА В TELEGRAM — определяем платформу
 // ============================================================
 async function doShareToTelegram() {
     const blob = window._shareBlob;
     const user = window._shareUserData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
-    // Проверяем, что API доступно
-    if (!tg?.shareMessage) {
-        // Фолбэк — старый способ
-        console.warn('tg.shareMessage недоступен, использую фолбэк');
-        await doShareToTelegramFallback(blob, user);
-        return;
-    }
+    // 🔥 Определяем платформу: только iOS/Android поддерживают shareMessage
+    const platform = tg?.platform || '';
+    const isMobile = platform === 'ios' || platform === 'android' || platform === 'android_x';
+    const canUseShareMessage = isMobile && typeof tg?.shareMessage === 'function';
 
+    if (canUseShareMessage) {
+        // На мобиле — нативный шер с фото и текстом
+        await shareViaPreparedMessage(blob, user);
+    } else {
+        // На ПК/в вебе — скачать + скопировать текст
+        await shareViaDesktopFallback(blob, user);
+    }
+}
+
+// ============================================================
+// Мобильный путь: prepared message через Edge Function
+// ============================================================
+async function shareViaPreparedMessage(blob, user) {
     const btn = document.querySelector('.share-preview-btn.primary');
     if (btn) { btn.disabled = true; btn.textContent = 'ПОДГОТОВКА...'; }
 
     try {
         showToast('⏳ Готовлю картинку...');
 
-        // ============================================================
-        // 1. Загружаем blob в Edge Function → получаем prepared_message_id
-        // ============================================================
         const formData = new FormData();
         formData.append('userId', String(user.telegram_id));
         formData.append('text', 'Играй со мной на De1mos Faceit');
@@ -39197,14 +39203,12 @@ async function doShareToTelegram() {
         if (!res.ok || !data?.prepared_message_id) {
             console.error('save-prepared-message error:', data);
             showToast('❌ ' + (data?.error || 'Ошибка подготовки'));
-            // Фолбэк — скачать и открыть шер
-            await doShareToTelegramFallback(blob, user);
+            // Фолбэк на всякий случай
+            await shareViaDesktopFallback(blob, user);
             return;
         }
 
-        // ============================================================
-        // 2. Вызываем нативный шер
-        // ============================================================
+        // Вызов нативного шера
         tg.shareMessage(data.prepared_message_id, (sent) => {
             if (sent) {
                 haptic('medium');
@@ -39220,18 +39224,144 @@ async function doShareToTelegram() {
         });
 
     } catch (e) {
-        console.error('doShareToTelegram error:', e);
+        console.error('shareViaPreparedMessage error:', e);
         showToast('Ошибка: ' + e.message);
-        await doShareToTelegramFallback(blob, user);
-    } finally {
-        if (btn && btn.disabled) {
-            // На случай, если юзер отменил — вернём кнопку
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.textContent = 'Отправить';
-            }, 3000);
-        }
+        await shareViaDesktopFallback(blob, user);
     }
+}
+
+// ============================================================
+// Десктопный путь: скачать + скопировать текст + инструкция
+// ============================================================
+async function shareViaDesktopFallback(blob, user) {
+    const shareUrl = 'http://t.me/De1mosFaceit_bot/De1mosFaceit';
+    const shareText = `Играй со мной на De1mos Faceit\n${shareUrl}`;
+
+    // 1. Скачиваем картинку
+    try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `de1mos_${user.telegram_id}.png`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) {
+        console.warn('download fail:', e);
+    }
+
+    // 2. Копируем текст в буфер
+    try {
+        await navigator.clipboard.writeText(shareText);
+    } catch (e) {
+        try { fallbackCopySilent(shareText); } catch (e2) {}
+    }
+
+    // 3. Показываем инструкцию вместо шера
+    closeSharePreview();
+    showDesktopShareHint(user, shareUrl, shareText);
+    haptic('medium');
+}
+
+// ============================================================
+// Инструкция для ПК
+// ============================================================
+function showDesktopShareHint(user, shareUrl, shareText) {
+    document.getElementById('desktopShareHint')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'share-preview-overlay active';
+    overlay.id = 'desktopShareHint';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="share-preview-modal" style="max-width: 420px;">
+            <div class="share-preview-header">
+                <div class="share-preview-title">📤 Как отправить</div>
+                <button class="share-preview-close" onclick="document.getElementById('desktopShareHint').remove()">✕</button>
+            </div>
+            <div class="share-preview-body">
+                <div style="font-size: 13px; color: var(--text); line-height: 1.6; text-align: left;">
+                    <b style="color: var(--emerald);">На ПК нативный шер недоступен.</b><br><br>
+                    Сделай вручную:
+                </div>
+
+                <div style="
+                    padding: 12px 14px;
+                    background: rgba(var(--emerald-rgb), 0.06);
+                    border: 1px solid var(--border-strong);
+                    border-radius: 12px;
+                    font-size: 12.5px;
+                    color: var(--text);
+                    line-height: 1.6;
+                    text-align: left;
+                ">
+                    1️⃣ Картинка <b>уже скачана</b> в папку «Загрузки»<br>
+                    2️⃣ Текст <b>уже скопирован</b> в буфер<br>
+                    3️⃣ Открой нужный чат в Telegram<br>
+                    4️⃣ Вставь текст (<b>Ctrl+V</b>)<br>
+                    5️⃣ Прикрепи фото из «Загрузок»
+                </div>
+
+                <div style="
+                    padding: 10px 14px;
+                    background: rgba(0,0,0,0.3);
+                    border: 1px dashed var(--border);
+                    border-radius: 10px;
+                    font-size: 11px;
+                    color: var(--hint);
+                    font-family: 'Courier New', monospace;
+                    line-height: 1.5;
+                    white-space: pre-wrap;
+                    text-align: left;
+                    margin-top: 10px;
+                ">${escapeHtml(shareText)}</div>
+
+                <button class="share-preview-btn primary" style="grid-column: 1 / -1;"
+                        onclick="copyShareTextForDesktop('${escapeHtml(shareText)}', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Скопировать текст ещё раз
+                </button>
+
+                <button class="share-preview-btn secondary" style="grid-column: 1 / -1;"
+                        onclick="openTelegramLinkAndClose('${escapeHtml(shareUrl)}')">
+                    ✈️ Открыть Telegram
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+function copyShareTextForDesktop(text, btn) {
+    try {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => showToast('📋 Текст скопирован'));
+        } else {
+            fallbackCopySilent(text);
+            showToast('📋 Текст скопирован');
+        }
+    } catch (e) {
+        fallbackCopySilent(text);
+        showToast('📋 Текст скопирован');
+    }
+}
+
+function openTelegramLinkAndClose(url) {
+    try {
+        if (tg?.openTelegramLink) tg.openTelegramLink(url);
+        else if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank');
+    } catch (e) {
+        window.open(url, '_blank');
+    }
+    document.getElementById('desktopShareHint')?.remove();
 }
 
 // ============================================================
