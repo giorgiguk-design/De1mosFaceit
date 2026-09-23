@@ -24651,34 +24651,51 @@ function copyToClipboard(text) {
         function syncScores() {}
 
 async function submitWinner() {
-    if (AppState.submitVoteLock) return;
     if (!currentMatch) {
         showToast('⚠️ Матч не активен');
         return;
     }
-    AppState.submitVoteLock = true;
 
-    if (currentMatch.status === 'finished' || currentMatch.result_status === 'disputed' || currentMatch.result_status === 'confirmed') {
+    // 🔥 Защита от двойного клика (ставим лок ПОСЛЕ проверки currentMatch)
+    if (AppState.submitVoteLock) return;
+
+    if (currentMatch.status === 'finished'
+        || currentMatch.result_status === 'disputed'
+        || currentMatch.result_status === 'confirmed') {
         showToast('⚠️ Результат уже объявлен');
         return;
     }
 
     const scoreAEl = document.getElementById('scoreA');
     const scoreBEl = document.getElementById('scoreB');
-    if (!scoreAEl || !scoreBEl) { showToast('⚠️ Ошибка: поля счёта не найдены'); return; }
+    if (!scoreAEl || !scoreBEl) {
+        showToast('⚠️ Ошибка: поля счёта не найдены');
+        return;
+    }
 
     const rawA = scoreAEl.value.trim();
     const rawB = scoreBEl.value.trim();
 
-    if (rawA === '' || rawB === '') { showToast('⚠️ Введи счёт обеих команд'); haptic('heavy'); return; }
+    if (rawA === '' || rawB === '') {
+        showToast('⚠️ Введи счёт обеих команд');
+        haptic('heavy');
+        return;
+    }
 
-    const scoreA = parseInt(rawA);
-    const scoreB = parseInt(rawB);
+    const scoreA = parseInt(rawA, 10);
+    const scoreB = parseInt(rawB, 10);
 
-    if (isNaN(scoreA) || isNaN(scoreB)) { showToast('⚠️ Счёт должен быть числом'); haptic('heavy'); return; }
-    if (scoreA === scoreB) { showToast('⚠️ Счёт не может быть равным'); haptic('heavy'); return; }
+    if (isNaN(scoreA) || isNaN(scoreB)) {
+        showToast('⚠️ Счёт должен быть числом');
+        haptic('heavy');
+        return;
+    }
+    if (scoreA === scoreB) {
+        showToast('⚠️ Счёт не может быть равным');
+        haptic('heavy');
+        return;
+    }
 
-    // 🎯 АВТО-ВЫБОР ПОБЕДИТЕЛЯ ПО СЧЁТУ
     const winnerTeam = scoreA > scoreB ? 'A' : 'B';
     selectedWinner = winnerTeam;
 
@@ -24699,8 +24716,14 @@ async function submitWinner() {
         }
     }
 
+    // 🔥 ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ — теперь ставим лок
+    AppState.submitVoteLock = true;
+
     const btn = document.getElementById('submitResultBtn');
-    if (btn) { btn.disabled = true; btn.textContent = 'ОТПРАВКА...'; }
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'ОТПРАВКА...';
+    }
 
     try {
         const teamA = currentMatch.team_a_players || [];
@@ -24737,20 +24760,20 @@ async function submitWinner() {
             return;
         }
 
-        clearDraftScore();   // 🔥 очищаем черновик
+        clearDraftScore();
         renderResultScreen();
         selectedWinner = null;
 
-} catch (e) {
-    console.error('submitWinner:', e);
-    showToast('Ошибка: ' + (e?.message || e));
-    if (btn) {
-        btn.disabled = false;
-        btn.textContent = '📤 ОТПРАВИТЬ РЕЗУЛЬТАТ';
-    }
-} finally {
-    AppState.submitVoteLock = false;
-}
+    } catch (e) {
+        console.error('submitWinner:', e);
+        showToast('Ошибка: ' + (e?.message || e));
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📤 ОТПРАВИТЬ РЕЗУЛЬТАТ';
+        }
+    } finally {
+        // 🔥 Гарантированный сброс лока
+        AppState.submitVoteLock = false;
     }
 }
 
