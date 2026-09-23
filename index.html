@@ -39002,6 +39002,859 @@ async function doShareToTelegram() {
     try {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
+// ============================================================
+// 📸 ГЕНЕРАЦИЯ КАРТИНКИ ПРОФИЛЯ (полностью в canvas)
+// ============================================================
+async function generateProfileShareImage(user) {
+    const W = 1080;
+    const H = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const colors = getThemeColors();
+
+    // ============================================================
+    // 1. ЗАГРУЖАЕМ ВСЕ ДАННЫЕ ЗАРАНЕЕ
+    // ============================================================
+    const data = await loadShareData(user);
+
+    // ============================================================
+    // 2. ФОН ПРОФИЛЯ (обязательно)
+    // ============================================================
+    await drawProfileBackground(ctx, W, H, data, colors);
+
+    // ============================================================
+    // 3. ЛОГОТИП СВЕРХУ
+    // ============================================================
+    drawLogo(ctx, W, colors);
+
+    // ============================================================
+    // 4. ГЛАВНАЯ КАРТОЧКА — аватар + инфо
+    // ============================================================
+    await drawProfileCard(ctx, W, data, colors);
+
+    // ============================================================
+    // 5. ПЛАШКИ: Standoff ID / Матчи / Победы
+    // ============================================================
+    drawStatsRow(ctx, W, data, colors);
+
+    // ============================================================
+    // 6. ГРАФИК DXP + W/L/WR
+    // ============================================================
+    drawDxpChart(ctx, W, data, colors);
+
+    // ============================================================
+    // 7. CTA снизу
+    // ============================================================
+    drawCTA(ctx, W, H, colors);
+
+    return canvas;
+}
+
+// ============================================================
+// Загрузка всех данных
+// ============================================================
+async function loadShareData(user) {
+    const data = {
+        user,
+        avatarImg: null,
+        bgImg: null,
+        frameSvg: null,
+        history: [],
+    };
+
+    // ---- Аватар ----
+    const avSrc = user.custom_avatar || user.photo_url;
+    if (avSrc) {
+        try {
+            data.avatarImg = await loadImageAsPromise(avSrc);
+        } catch (e) { console.warn('avatar:', e); }
+    }
+
+    // ---- Фон профиля ----
+    const eq = user.equipped_items || {};
+    const bgId = eq.profile_bg;
+    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
+        const val = SHOP_ITEMS_CACHE[bgId].value || {};
+        if (val.url) {
+            try {
+                data.bgImg = await loadImageAsPromise(val.url);
+            } catch (e) { console.warn('bg:', e); }
+        }
+    }
+
+    // ---- SVG-рамка ----
+    const frameId = eq.avatar_frame;
+    if (frameId && SHOP_ITEMS_CACHE[frameId]) {
+        const item = SHOP_ITEMS_CACHE[frameId];
+        const val = item.value || {};
+        if (val.special === true && typeof getSpecialFrameHTML === 'function') {
+            const rawSvg = getSpecialFrameHTML(val.special_type || 'default', val.color || '#fff');
+            // Преобразуем SVG-строку в data URI
+            data.frameSvg = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rawSvg);
+        }
+    }
+
+    // ---- История DXP ----
+    try {
+        const { data: hist } = await sb.from('dxp_history')
+            .select('elo_after, elo_before, delta, won')
+            .eq('telegram_id', Number(user.telegram_id))
+            .order('created_at', { ascending: false })
+            .limit(20);
+        data.history = (hist || []).slice().reverse();
+    } catch (e) {}
+
+    return data;
+}
+
+// ============================================================
+// Фон профиля
+// ============================================================
+async function drawProfileBackground(ctx, W, H, data, colors) {
+    // Если есть фон профиля — рисуем его
+    if (data.bgImg) {
+        ctx.save();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+
+        // Cover-fit
+        const imgRatio = data.bgImg.width / data.bgImg.height;
+        const canvasRatio = W / H;
+        let drawW, drawH, dx, dy;
+
+        if (imgRatio > canvasRatio) {
+            drawH = H;
+            drawW = H * imgRatio;
+            dx = (W - drawW) / 2;
+            dy = 0;
+        } else {
+            drawW = W;
+            drawH = W / imgRatio;
+            dx = 0;
+            dy = (H - drawH) / 2;
+        }
+
+        ctx.drawImage(data.bgImg, dx, dy, drawW, drawH);
+        ctx.restore();
+
+        // Затемнение градиентом (чтобы текст читался)
+        const dark = ctx.createLinearGradient(0, 0, 0, H);
+        dark.addColorStop(0, 'rgba(0,0,0,0.55)');
+        dark.addColorStop(0.4, 'rgba(0,0,0,0.65)');
+        dark.addColorStop(1, 'rgba(0,0,0,0.95)');
+        ctx.fillStyle = dark;
+        ctx.fillRect(0, 0, W, H);
+    } else {
+        // Нет фона — градиент
+        const bg = ctx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, colors.bg1);
+        bg.addColorStop(0.5, colors.bg2);
+        bg.addColorStop(1, '#000');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        // Свечение сверху
+        const glow = ctx.createRadialGradient(W / 2, 200, 0, W / 2, 200, W * 0.9);
+        glow.addColorStop(0, colors.glow);
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, W, H);
+    }
+
+    // Лёгкая сетка сверху
+    ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 60) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 60) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+}
+
+// ============================================================
+// Логотип сверху
+// ============================================================
+function drawLogo(ctx, W, colors) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.font = '900 56px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 30;
+
+    const de1mosW = ctx.measureText('De1mos').width;
+    const faceitW = ctx.measureText('Faceit').width;
+    const totalW = de1mosW + faceitW + 12;
+    const startX = W / 2 - totalW / 2;
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('De1mos', startX, 75);
+
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('Faceit', startX + de1mosW + 12, 75);
+    ctx.shadowBlur = 0;
+
+    // Подпись
+    ctx.textAlign = 'center';
+    ctx.font = '700 15px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('P R O   P L A Y E R   P R O F I L E', W / 2, 120);
+}
+
+// ============================================================
+// Главная карточка: аватар + вся инфа
+// ============================================================
+async function drawProfileCard(ctx, W, data, colors) {
+    const user = data.user;
+    const cardX = 70;
+    const cardY = 180;
+    const cardW = W - 140;
+    const cardH = 480;
+
+    // ---- Фон карточки ----
+    const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+    cardGrad.addColorStop(0, 'rgba(255,255,255,0.06)');
+    cardGrad.addColorStop(1, 'rgba(0,0,0,0.75)');
+    ctx.fillStyle = cardGrad;
+    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
+    ctx.fill();
+
+    // Обводка
+    ctx.strokeStyle = colors.primary + '55';
+    ctx.lineWidth = 2;
+    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
+    ctx.stroke();
+
+    // Верхняя неоновая полоска
+    const topLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
+    topLine.addColorStop(0, 'rgba(0,0,0,0)');
+    topLine.addColorStop(0.5, colors.primary);
+    topLine.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = topLine;
+    ctx.fillRect(cardX + 40, cardY, cardW - 80, 2);
+
+    // ============================================================
+    // АВАТАР
+    // ============================================================
+    const avCx = cardX + 165;
+    const avCy = cardY + 200;
+    const avR = 110;
+
+    // Чёрный круг под аватаром
+    ctx.beginPath();
+    ctx.arc(avCx, avCy, avR + 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+
+    // Сам аватар
+    if (data.avatarImg) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(data.avatarImg, avCx - avR, avCy - avR, avR * 2, avR * 2);
+        ctx.restore();
+    } else {
+        // Заглушка — буква
+        ctx.beginPath();
+        ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
+        const avGrad = ctx.createLinearGradient(avCx - avR, avCy - avR, avCx + avR, avCy + avR);
+        avGrad.addColorStop(0, colors.primary);
+        avGrad.addColorStop(1, colors.secondary);
+        ctx.fillStyle = avGrad;
+        ctx.fill();
+        ctx.font = '900 100px -apple-system, sans-serif';
+        ctx.fillStyle = '#04140e';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((user.display_name || 'U')[0].toUpperCase(), avCx, avCy + 5);
+    }
+
+    // ============================================================
+    // SVG-рамка аватара (статичная)
+    // ============================================================
+    if (data.frameSvg) {
+        try {
+            const frameImg = await loadImageAsPromise(data.frameSvg);
+            const frameSize = avR * 2.4;
+            ctx.drawImage(
+                frameImg,
+                avCx - frameSize / 2,
+                avCy - frameSize / 2,
+                frameSize,
+                frameSize
+            );
+        } catch (e) {
+            console.warn('frame render fail:', e);
+            // Fallback — просто кольцо
+            ctx.beginPath();
+            ctx.arc(avCx, avCy, avR + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = colors.primary;
+            ctx.lineWidth = 4;
+            ctx.shadowColor = colors.primary;
+            ctx.shadowBlur = 30;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+    } else {
+        // Обычное кольцо
+        ctx.beginPath();
+        ctx.arc(avCx, avCy, avR + 8, 0, Math.PI * 2);
+        ctx.strokeStyle = colors.primary;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = colors.primary;
+        ctx.shadowBlur = 30;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    // ============================================================
+    // ИНФО СПРАВА
+    // ============================================================
+    const textX = cardX + 330;
+    const textMaxW = cardX + cardW - 40 - textX;
+
+    // ---- ГЛАВА ФЕЙСИТА (если админ) ----
+    let curY = cardY + 55;
+    if (user.is_admin) {
+        const label = '👑 ГЛАВА ФЕЙСИТА';
+        ctx.font = '900 18px -apple-system, sans-serif';
+        const labelW = ctx.measureText(label).width + 32;
+        const labelH = 34;
+
+        ctx.fillStyle = 'rgba(217, 171, 90, 0.20)';
+        roundRect(ctx, textX, curY, labelW, labelH, 10);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(217, 171, 90, 0.6)';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, textX, curY, labelW, labelH, 10);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffd700';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, textX + labelW / 2, curY + labelH / 2 + 2);
+        ctx.textAlign = 'left';
+
+        curY += 55;
+    }
+
+    // ---- Клуб-тег + НИК ----
+    const club = (typeof clubTagCache !== 'undefined') ? clubTagCache[user.telegram_id] : null;
+    const clubTag = club ? `[${club.tag}] ` : '';
+
+    ctx.font = '900 48px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textBaseline = 'middle';
+
+    // Считаем ширину клуб-тега
+    ctx.font = '900 28px -apple-system, sans-serif';
+    const clubW = clubTag ? ctx.measureText(clubTag).width : 0;
+
+    // Клуб-тег
+    if (clubTag) {
+        ctx.fillStyle = colors.primary;
+        ctx.fillText(clubTag, textX, curY + 8);
+    }
+
+    // Ник
+    ctx.font = '900 48px -apple-system, BlinkMacSystemFont, sans-serif';
+    let nick = user.display_name || 'Игрок';
+    while (ctx.measureText(nick).width > textMaxW - clubW - 10 && nick.length > 3) {
+        nick = nick.slice(0, -1);
+    }
+    if (nick !== user.display_name) nick += '…';
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 20;
+    ctx.fillText(nick, textX + clubW, curY + 5);
+    ctx.shadowBlur = 0;
+
+    curY += 60;
+
+    // ---- @username ----
+    if (user.username && !user.hide_telegram_tag) {
+        ctx.font = '700 22px -apple-system, sans-serif';
+        ctx.fillStyle = colors.primary;
+        ctx.fillText('@' + user.username, textX, curY);
+        curY += 42;
+    } else {
+        curY += 10;
+    }
+
+    // ---- Титул ----
+    const eq = user.equipped_items || {};
+    const titleId = eq.title;
+    if (titleId && SHOP_ITEMS_CACHE[titleId]) {
+        const val = SHOP_ITEMS_CACHE[titleId].value || {};
+        const titleText = val.text || '';
+        const titleColor = val.color || '#ffd700';
+
+        ctx.font = '900 22px -apple-system, sans-serif';
+        ctx.fillStyle = titleColor;
+        ctx.shadowColor = titleColor;
+        ctx.shadowBlur = 15;
+        ctx.fillText(titleText.toUpperCase(), textX, curY);
+        ctx.shadowBlur = 0;
+        curY += 42;
+    }
+
+    // ---- DEV-тег (если в DEV-клубе) ----
+    const isDev = (typeof isDevClubMember === 'function') ? isDevClubMember(user.telegram_id) : false;
+    if (isDev) {
+        const devText = 'DEV';
+        ctx.font = '900 20px -apple-system, sans-serif';
+        const devW = ctx.measureText(devText).width + 26;
+
+        // Градиент
+        const devGrad = ctx.createLinearGradient(textX, 0, textX + devW, 0);
+        devGrad.addColorStop(0, '#ff2e6e');
+        devGrad.addColorStop(0.5, '#ff7a2e');
+        devGrad.addColorStop(1, '#ffcc2e');
+        ctx.fillStyle = devGrad;
+
+        roundRect(ctx, textX, curY - 14, devW, 28, 8);
+        ctx.fill();
+
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.fillText(devText, textX + devW / 2, curY + 1);
+        ctx.textAlign = 'left';
+
+        curY += 45;
+    }
+
+    // ---- Уровень + DXP ----
+    const lvl = eloToLevel(user.elo);
+    const dxp = user.elo ?? 1000;
+
+    // Уровень (чип)
+    const lvlText = `⚡ УРОВЕНЬ ${lvl}`;
+    ctx.font = '900 20px -apple-system, sans-serif';
+    const lvlW = ctx.measureText(lvlText).width + 28;
+    const lvlH = 36;
+
+    ctx.fillStyle = colors.primary + '22';
+    roundRect(ctx, textX, curY, lvlW, lvlH, lvlH / 2);
+    ctx.fill();
+    ctx.strokeStyle = colors.primary + '88';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, textX, curY, lvlW, lvlH, lvlH / 2);
+    ctx.stroke();
+
+    ctx.fillStyle = colors.light;
+    ctx.textAlign = 'center';
+    ctx.fillText(lvlText, textX + lvlW / 2, curY + lvlH / 2 + 2);
+    ctx.textAlign = 'left';
+
+    // DXP — большая цифра справа
+    ctx.font = '900 64px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 25;
+    ctx.textAlign = 'right';
+    ctx.fillText(String(dxp), cardX + cardW - 40, cardY + cardH - 70);
+    ctx.shadowBlur = 0;
+
+    ctx.font = '900 18px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('D X P', cardX + cardW - 40, cardY + cardH - 32);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+}
+
+// ============================================================
+// Плашки: Standoff ID / Матчи / Победы
+// ============================================================
+function drawStatsRow(ctx, W, data, colors) {
+    const user = data.user;
+    const y = 700;
+    const padX = 70;
+    const gap = 16;
+    const totalW = W - padX * 2;
+    const cardW = (totalW - gap * 2) / 3;
+    const cardH = 110;
+
+    const stats = [
+        {
+            icon: '🆔',
+            label: 'STANDOFF ID',
+            value: user.standoff_id || '—',
+            mono: true,
+        },
+        {
+            icon: '🎯',
+            label: 'МАТЧЕЙ',
+            value: user.hide_matches ? '—' : (user.matches_played ?? 0),
+        },
+        {
+            icon: '🏆',
+            label: 'ПОБЕД',
+            value: user.hide_matches ? '—' : (user.wins ?? 0),
+        },
+    ];
+
+    stats.forEach((stat, i) => {
+        const x = padX + i * (cardW + gap);
+
+        // Фон
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        roundRect(ctx, x, y, cardW, cardH, 18);
+        ctx.fill();
+
+        // Обводка
+        ctx.strokeStyle = colors.primary + '44';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, x, y, cardW, cardH, 18);
+        ctx.stroke();
+
+        // Верхняя линия
+        ctx.fillStyle = colors.primary;
+        ctx.fillRect(x + 20, y, cardW - 40, 2);
+
+        // Иконка
+        ctx.font = '700 18px -apple-system, sans-serif';
+        ctx.fillStyle = colors.primary;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(stat.icon, x + 18, y + 38);
+
+        // Label
+        ctx.font = '800 12px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillText(stat.label, x + 46, y + 38);
+
+        // Value
+        const fontSize = stat.mono ? 24 : 34;
+        ctx.font = `900 ${fontSize}px ${stat.mono ? '"Courier New", monospace' : '-apple-system, sans-serif'}`;
+        ctx.fillStyle = '#ffffff';
+
+        let valueText = String(stat.value);
+        while (ctx.measureText(valueText).width > cardW - 30 && valueText.length > 3) {
+            valueText = valueText.slice(0, -1);
+        }
+        if (valueText !== String(stat.value)) valueText += '…';
+
+        ctx.fillText(valueText, x + 18, y + 80);
+    });
+
+    ctx.textBaseline = 'alphabetic';
+}
+
+// ============================================================
+// График DXP + W/L/WR
+// ============================================================
+function drawDxpChart(ctx, W, data, colors) {
+    const history = data.history;
+    const cardX = 70;
+    const cardY = 850;
+    const cardW = W - 140;
+    const cardH = 360;
+
+    // Фон карточки
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    roundRect(ctx, cardX, cardY, cardW, cardH, 22);
+    ctx.fill();
+    ctx.strokeStyle = colors.primary + '44';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, cardX, cardY, cardW, cardH, 22);
+    ctx.stroke();
+
+    // Заголовок
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 22px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('📈 ДИНАМИКА DXP', cardX + 25, cardY + 35);
+
+    ctx.font = '700 12px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText('P R E M I U M   I N S I G H T', cardX + 25, cardY + 60);
+
+    // График
+    const chartLeft = cardX + 80;
+    const chartRight = cardX + cardW - 30;
+    const chartTop = cardY + 90;
+    const chartBottom = cardY + cardH - 90;
+
+    // Сетка
+    for (let i = 0; i <= 3; i++) {
+        const gy = chartTop + ((chartBottom - chartTop) / 3) * i;
+        ctx.beginPath();
+        ctx.moveTo(chartLeft, gy);
+        ctx.lineTo(chartRight, gy);
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    if (history.length >= 2) {
+        const elos = history.map(h => h.elo_after ?? h.elo_before ?? 1000);
+        const min = Math.min(...elos);
+        const max = Math.max(...elos);
+        const range = Math.max(50, max - min);
+        const pad = Math.round(range * 0.15);
+        const yMin = min - pad;
+        const yMax = max + pad;
+
+        const innerW = chartRight - chartLeft;
+        const innerH = chartBottom - chartTop;
+        const stepX = innerW / (history.length - 1);
+
+        const points = history.map((h, i) => ({
+            x: chartLeft + i * stepX,
+            y: chartTop + innerH - ((h.elo_after ?? h.elo_before ?? 1000) - yMin) / (yMax - yMin) * innerH,
+        }));
+
+        // Заливка
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, chartBottom);
+        points.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineTo(points[points.length - 1].x, chartBottom);
+        ctx.closePath();
+        const areaGrad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
+        areaGrad.addColorStop(0, colors.primary + '77');
+        areaGrad.addColorStop(1, colors.primary + '00');
+        ctx.fillStyle = areaGrad;
+        ctx.fill();
+
+        // Линия
+        ctx.beginPath();
+        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.strokeStyle = colors.primary;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.shadowColor = colors.primary;
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Точки
+        points.forEach((p, i) => {
+            const isLast = i === points.length - 1;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, isLast ? 6 : 3, 0, Math.PI * 2);
+            ctx.fillStyle = isLast ? '#fff' : colors.primary;
+            ctx.shadowColor = colors.primary;
+            ctx.shadowBlur = isLast ? 20 : 8;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+
+        // Y-метки
+        ctx.font = '700 13px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(Math.round(yMax)), chartLeft - 12, chartTop + 4);
+        ctx.fillText(String(Math.round((yMax + yMin) / 2)), chartLeft - 12, (chartTop + chartBottom) / 2 + 4);
+        ctx.fillText(String(Math.round(yMin)), chartLeft - 12, chartBottom - 4);
+
+        // W/L/WR
+        const wins = history.filter(h => h.won).length;
+        const losses = history.length - wins;
+        const wr = Math.round((wins / history.length) * 100);
+
+        ctx.textAlign = 'left';
+        ctx.font = '900 16px -apple-system, sans-serif';
+        ctx.fillStyle = '#8ce65a';
+        ctx.fillText(`W ${wins}`, chartLeft, chartBottom + 40);
+
+        ctx.fillStyle = '#ff5470';
+        ctx.fillText(`L ${losses}`, chartLeft + 80, chartBottom + 40);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = colors.light;
+        ctx.font = '900 22px -apple-system, sans-serif';
+        ctx.fillText(`${wr}% WR`, chartRight, chartBottom + 40);
+    } else {
+        ctx.textAlign = 'center';
+        ctx.font = '700 18px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillText('Нет данных о матчах', (chartLeft + chartRight) / 2, (chartTop + chartBottom) / 2);
+    }
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+}
+
+// ============================================================
+// CTA снизу
+// ============================================================
+function drawCTA(ctx, W, H, colors) {
+    const y = H - 110;
+
+    // Разделитель
+    const grad = ctx.createLinearGradient(W / 2 - W * 0.3, 0, W / 2 + W * 0.3, 0);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.5, colors.primary);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(W / 2 - W * 0.3, y - 20, W * 0.6, 2);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // "Играй со мной на"
+    ctx.font = '700 20px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('Играй со мной на', W / 2, y + 10);
+
+    // "De1mos Faceit"
+    ctx.font = '900 42px -apple-system, sans-serif';
+    const nameGrad = ctx.createLinearGradient(W / 2 - 300, 0, W / 2 + 300, 0);
+    nameGrad.addColorStop(0, colors.primary);
+    nameGrad.addColorStop(0.5, colors.light);
+    nameGrad.addColorStop(1, colors.primary);
+    ctx.fillStyle = nameGrad;
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 25;
+    ctx.fillText('De1mos Faceit', W / 2, y + 55);
+    ctx.shadowBlur = 0;
+
+    // Ссылка
+    ctx.font = '700 16px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', W / 2, y + 95);
+
+    ctx.textBaseline = 'alphabetic';
+}
+
+// ============================================================
+// ОТКРЫТИЕ МОДАЛКИ ПРЕВЬЮ
+// ============================================================
+async function openSharePreview(userId) {
+    document.getElementById('sharePreviewOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'share-preview-overlay active';
+    overlay.id = 'sharePreviewOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeSharePreview(); };
+
+    const modal = document.createElement('div');
+    modal.className = 'share-preview-modal';
+
+    modal.innerHTML = `
+        <div class="share-preview-header">
+            <div class="share-preview-title">📸 Поделиться профилем</div>
+            <button class="share-preview-close" onclick="closeSharePreview()">✕</button>
+        </div>
+        <div class="share-preview-body">
+            <div class="share-preview-canvas-wrap">
+                <canvas id="sharePreviewCanvas" style="width:100%;height:auto;display:block;"></canvas>
+            </div>
+            <div class="share-preview-info" id="sharePreviewInfo">
+                Генерирую картинку...
+            </div>
+            <div class="share-preview-actions" id="sharePreviewActions" style="display:none;">
+                <button class="share-preview-btn primary" onclick="doShareToTelegram()">
+                    <svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+                    Отправить
+                </button>
+                <button class="share-preview-btn secondary" onclick="doDownloadImage()">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                    Скачать
+                </button>
+            </div>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const info = document.getElementById('sharePreviewInfo');
+
+    try {
+        const { data: user } = await sb.from('users')
+            .select('*').eq('telegram_id', userId).single();
+        if (!user) throw new Error('Профиль не найден');
+
+        // Догружаем shop_items, если надо
+        if (user.equipped_items && Object.keys(user.equipped_items).length) {
+            const ids = Object.values(user.equipped_items);
+            const missing = ids.filter(id => !SHOP_ITEMS_CACHE[id]);
+            if (missing.length) {
+                const { data: items } = await sb.from('shop_items')
+                    .select('id, category, value').in('id', missing);
+                (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+            }
+        }
+
+        // Догружаем клуб-тег
+        if (typeof clubTagCache !== 'undefined' && !clubTagCache[user.telegram_id]) {
+            if (typeof loadClubTagsForUsers === 'function') {
+                await loadClubTagsForUsers([user.telegram_id]);
+            }
+        }
+
+        window._shareUserData = user;
+
+        const canvas = await generateProfileShareImage(user);
+        const wrap = document.getElementById('sharePreviewCanvas');
+        if (wrap && wrap.parentNode) {
+            wrap.parentNode.replaceChild(canvas, wrap);
+            canvas.id = 'sharePreviewCanvas';
+            canvas.style.cssText = 'width:100%;height:auto;display:block;';
+        }
+
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+        if (!blob) throw new Error('Не удалось создать картинку');
+        window._shareBlob = blob;
+
+        if (info) info.textContent = 'Готово! Нажми «Отправить» чтобы поделиться';
+
+        const actions = document.getElementById('sharePreviewActions');
+        if (actions) actions.style.display = 'grid';
+
+    } catch (e) {
+        console.error('openSharePreview:', e);
+        if (info) info.textContent = '❌ Ошибка: ' + e.message;
+    }
+}
+
+function closeSharePreview() {
+    document.getElementById('sharePreviewOverlay')?.remove();
+    window._shareBlob = null;
+    window._shareUserData = null;
+}
+
+// ============================================================
+// ОТПРАВКА В TELEGRAM
+// ============================================================
+async function doShareToTelegram() {
+    const blob = window._shareBlob;
+    const user = window._shareUserData;
+    if (!blob || !user) { showToast('Картинка не готова'); return; }
+
+    const shareUrl = 'http://t.me/De1mosFaceit_bot/De1mosFaceit';
+    const shareText = `🎮 Играй со мной на De1mos Faceit!\n\n👤 ${user.display_name || 'Игрок'}\n🎯 ${user.elo ?? 1000} DXP\n\n${shareUrl}`;
+
+    const file = new File([blob], `de1mos_${user.telegram_id}.png`, { type: 'image/png' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({
+                files: [file],
+                text: shareText,
+                title: 'De1mos Faceit',
+            });
+            haptic('medium');
+            showToast('✅ Отправлено');
+            closeSharePreview();
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            console.warn('navigator.share fail:', e);
+        }
+    }
+
+    try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
         a.href = url;
         a.download = `de1mos_${user.telegram_id}.png`;
         document.body.appendChild(a);
