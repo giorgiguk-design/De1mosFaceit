@@ -39146,11 +39146,7 @@ async function openSharePreview(userId) {
     }
 }
 
-function closeSharePreview() {
-    document.getElementById('sharePreviewOverlay')?.remove();
-    window._shareBlob = null;
-    window._shareUserData = null;
-}
+const SEND_PROFILE_URL = SUPABASE_URL + '/functions/v1/send-profile-message';
 
 // ============================================================
 // ОТПРАВКА В TELEGRAM — универсальная
@@ -39159,29 +39155,119 @@ function closeSharePreview() {
 // Android: shareMessage работает через prepared_message
 // Desktop/Web: ручная отправка
 // ============================================================
+// ============================================================
+// Плашка "Сообщение отправлено в ЛС"
+// ============================================================
+function showMessageSentHint() {
+    document.getElementById('msgSentHint')?.remove();
 
+    const overlay = document.createElement('div');
+    overlay.className = 'share-preview-overlay active';
+    overlay.id = 'msgSentHint';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="share-preview-modal" style="max-width: 420px;">
+            <div class="share-preview-body" style="text-align: center; padding: 28px 20px;">
+
+                <div style="font-size: 64px; margin-bottom: 14px;">📬</div>
+
+                <div style="font-size: 20px; font-weight: 900; color: var(--emerald); margin-bottom: 8px;">
+                    Сообщение у тебя в ЛС!
+                </div>
+
+                <div style="font-size: 13px; color: var(--hint); line-height: 1.6; margin-bottom: 20px;">
+                    Открой чат с <b style="color: var(--emerald);">De1mos Faceit</b> ботом<br>
+                    и нажми <b>«Переслать»</b> на сообщении
+                </div>
+
+                <div style="
+                    padding: 14px 16px;
+                    background: rgba(var(--emerald-rgb), 0.06);
+                    border: 1px solid var(--border-strong);
+                    border-radius: 12px;
+                    font-size: 12px;
+                    color: var(--text);
+                    line-height: 1.7;
+                    text-align: left;
+                    margin-bottom: 16px;
+                ">
+                    1️⃣ Открой Telegram<br>
+                    2️⃣ Найди бота <b>@De1mosFaceit_bot</b><br>
+                    3️⃣ Нажми на сообщение с картинкой<br>
+                    4️⃣ Выбери <b>«Переслать»</b> → нужный чат
+                </div>
+
+                <button class="share-preview-btn primary"
+                        style="width: 100%;"
+                        onclick="openBotChat()">
+                    ✈️ Открыть чат с ботом
+                </button>
+
+                <button class="share-preview-btn secondary"
+                        style="width: 100%; margin-top: 8px;"
+                        onclick="document.getElementById('msgSentHint').remove()">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+function openBotChat() {
+    const url = 'https://t.me/De1mosFaceit_bot';
+    try {
+        if (tg?.openTelegramLink) tg.openTelegramLink(url);
+        else if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank');
+    } catch (e) {
+        window.open(url, '_blank');
+    }
+    document.getElementById('msgSentHint')?.remove();
+}
+            
 async function doShareToTelegram() {
     const blob = window._shareBlob;
     const user = window._shareUserData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
-    const platform = tg?.platform || '';
-    const isAndroid = platform === 'android' || platform === 'android_x';
+    const btn = document.querySelector('.share-preview-btn.primary');
+    const originalHTML = btn?.innerHTML;
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ОТПРАВКА...'; }
 
-    // ============================================================
-    // 1. ANDROID — пробуем нативный shareMessage
-    // ============================================================
-    if (isAndroid && typeof tg?.shareMessage === 'function') {
-        const success = await shareViaPreparedMessage(blob, user);
-        if (success) return;
-        // если не сработало — идём в универсальный фолбэк
-        console.warn('shareMessage не сработал → фолбэк');
+    try {
+        const formData = new FormData();
+        formData.append('userId', String(user.telegram_id));
+        formData.append('text', `🎮 Мой профиль на De1mos Faceit`);
+        formData.append('url', 'https://t.me/De1mosFaceit_bot/De1mosFaceit');
+        formData.append('photo', blob, `de1mos_${user.telegram_id}.png`);
+
+        const res = await fetch(SAVE_PREPARED_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'apikey': SUPABASE_ANON_KEY,
+            },
+            body: formData,
+        });
+
+        const data = await res.json();
+
+        // Успех — даже если prepared_message_id не пришёл,
+        // главное что бот отправил в ЛС
+        if (!res.ok) throw new Error(data?.error || 'Ошибка');
+
+        haptic('medium');
+        closeSharePreview();
+        showMessageSentHint(); // ← плашка из моего предыдущего сообщения
+
+    } catch (e) {
+        console.error('doShareToTelegram:', e);
+        showToast('❌ ' + e.message);
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
     }
-
-    // ============================================================
-    // 2. ВСЕ ОСТАЛЬНЫЕ (или неудавшийся Android) — Web Share API
-    // ============================================================
-    await shareViaWebShare(blob, user);
 }
 
 // ============================================================
@@ -39517,11 +39603,10 @@ function doDownloadImage() {
 function closeSharePreview() {
     document.getElementById('sharePreviewOverlay')?.remove();
     document.getElementById('manualShareHint')?.remove();
-    document.getElementById('desktopShareHint')?.remove();
+    document.getElementById('msgSentHint')?.remove();
     window._shareBlob = null;
     window._shareUserData = null;
     window._manualShareText = null;
-    window._desktopShareText = null;
 }
             
     </script>
