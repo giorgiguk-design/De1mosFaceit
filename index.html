@@ -10351,6 +10351,94 @@ html.lite-mode .pm2-badge { animation: none; }
 /* 👤 ПРОФИЛЬ — КОМПАКТНЫЙ И АККУРАТНЫЙ                          */
 /* ============================================================ */
 
+/* ============================================================ */
+/* 🎨 ФОН ВСЕЙ СТРАНИЦЫ ПРОФИЛЯ (page_bg)                       */
+/* ============================================================ */
+.page.has-page-bg {
+    position: relative;
+    isolation: isolate;
+}
+
+.page.has-page-bg::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: var(--page-bg-url);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.28;
+    filter: saturate(0.85) brightness(0.7);
+    animation: pageBgFadeIn 0.6s ease;
+}
+
+/* Затемнение поверх фона — чтобы текст читался */
+.page.has-page-bg::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(5, 8, 7, 0.55) 0%,
+        rgba(5, 8, 7, 0.75) 50%,
+        rgba(5, 8, 7, 0.9) 100%
+    );
+    z-index: -1;
+    pointer-events: none;
+}
+
+@keyframes pageBgFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 0.28; }
+}
+
+/* Модалка чужого профиля */
+#playerModalContent.has-page-bg {
+    position: relative;
+    isolation: isolate;
+}
+
+#playerModalContent.has-page-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--page-bg-url);
+    background-size: cover;
+    background-position: center;
+    opacity: 0.22;
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 22px;
+}
+
+#playerModalContent.has-page-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(5, 8, 7, 0.6) 0%,
+        rgba(5, 8, 7, 0.85) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 22px;
+}
+
+#playerModalContent.has-page-bg > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Lite-режим — без свечения */
+html.lite-mode .page.has-page-bg::before {
+    opacity: 0.15;
+    filter: none;
+    animation: none;
+}
+    
 /* --- HERO --- */
 .profile-hero-compact {
     padding: 14px !important;
@@ -32993,14 +33081,15 @@ async function openShop() {
 
         items.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
 
-        const categories = {
-            nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
-            avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
-            profile_bg:     { label: 'Фоны профиля', icon: 'bg',       desc: 'Атмосфера профиля' },
-            badge:          { label: 'Значки',       icon: 'badge',    desc: 'Особые отметки' },
-            title:          { label: 'Титулы',       icon: 'title',    desc: 'Покажи свой статус' },
-            dxp_chart_bg:   { label: 'Фоны графика', icon: 'bg',       desc: 'Укрась график DXP' },
-        };
+const categories = {
+    nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
+    avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
+    profile_bg:     { label: 'Фоны шапки',   icon: 'bg',       desc: 'Атмосфера шапки профиля' },
+    page_bg:        { label: 'Фоны страницы', icon: 'bg',      desc: 'Фон всей страницы профиля' },
+    badge:          { label: 'Значки',       icon: 'badge',    desc: 'Особые отметки' },
+    title:          { label: 'Титулы',       icon: 'title',    desc: 'Покажи свой статус' },
+    dxp_chart_bg:   { label: 'Фоны графика', icon: 'bg',       desc: 'Укрась график DXP' },
+};
 
         const grouped = {};
         items.forEach(i => { (grouped[i.category] ||= []).push(i); });
@@ -33749,9 +33838,49 @@ if (bgId && SHOP_ITEMS_CACHE[bgId]) {
     });
 }
 
-    // ============================================================
-    // 4. ЗНАЧОК
-    // ============================================================
+// ============================================================
+// 4. ФОН ВСЕЙ СТРАНИЦЫ ПРОФИЛЯ — page_bg
+// ============================================================
+const pageBgId = eq.page_bg;
+const pageBgRoot = document.getElementById('page-profile');
+
+if (pageBgRoot) {
+    if (pageBgId && SHOP_ITEMS_CACHE[pageBgId]) {
+        const val = SHOP_ITEMS_CACHE[pageBgId].value || {};
+        if (val.url) {
+            pageBgRoot.classList.add('has-page-bg');
+            pageBgRoot.style.setProperty('--page-bg-url', `url('${val.url}')`);
+        } else {
+            pageBgRoot.classList.remove('has-page-bg');
+            pageBgRoot.style.removeProperty('--page-bg-url');
+        }
+    } else {
+        pageBgRoot.classList.remove('has-page-bg');
+        pageBgRoot.style.removeProperty('--page-bg-url');
+    }
+}
+
+// Также применяем к модалке чужого профиля
+const playerModal = document.getElementById('playerModalContent');
+if (playerModal) {
+    if (pageBgId && SHOP_ITEMS_CACHE[pageBgId]) {
+        const val = SHOP_ITEMS_CACHE[pageBgId].value || {};
+        if (val.url) {
+            playerModal.classList.add('has-page-bg');
+            playerModal.style.setProperty('--page-bg-url', `url('${val.url}')`);
+        } else {
+            playerModal.classList.remove('has-page-bg');
+            playerModal.style.removeProperty('--page-bg-url');
+        }
+    } else {
+        playerModal.classList.remove('has-page-bg');
+        playerModal.style.removeProperty('--page-bg-url');
+    }
+}
+
+// ============================================================
+// 5. ЗНАЧОК
+// ============================================================
 const badgeId = eq.badge;
 const badgeEls = scopeEl.querySelectorAll('[data-equipped-badge]');
 if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
@@ -33771,7 +33900,7 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
 }
 
     // ============================================================
-    // 5. ТИТУЛ
+    // 6. ТИТУЛ
     // ============================================================
     const titleId = eq.title;
     const titleEls = scopeEl.querySelectorAll('[data-title]');
@@ -36219,13 +36348,14 @@ async function openCustomizationSheet() {
     }
 
     // Категории — порядок и описания
-    const catMeta = {
-        nickname_color: { icon: '🎨', name: 'Цвет ника',    desc: 'Стиль имени в списках' },
-        avatar_frame:   { icon: '🖼', name: 'Рамка',        desc: 'Обводка аватара' },
-        profile_bg:     { icon: '🌄', name: 'Фон профиля',  desc: 'Задний план' },
-        badge:          { icon: '🏅', name: 'Значок',       desc: 'Метка у ника' },
-        title:          { icon: '👑', name: 'Титул',        desc: 'Статус под ником' },
-    };
+const catMeta = {
+    nickname_color: { icon: '🎨', name: 'Цвет ника',    desc: 'Стиль имени в списках' },
+    avatar_frame:   { icon: '🖼', name: 'Рамка',        desc: 'Обводка аватара' },
+    profile_bg:     { icon: '🌄', name: 'Фон шапки',    desc: 'Задний план шапки' },
+    page_bg:        { icon: '🖼️', name: 'Фон страницы', desc: 'Фон всей страницы' },
+    badge:          { icon: '🏅', name: 'Значок',       desc: 'Метка у ника' },
+    title:          { icon: '👑', name: 'Титул',        desc: 'Статус под ником' },
+};
 
     // Убираем старое
     document.getElementById('customizeModal')?.remove();
@@ -36296,13 +36426,14 @@ async function openCustomizeCategory(cat) {
         }
     });
 
-    const catMeta = {
-        nickname_color: { icon: '🎨', name: 'Цвет ника' },
-        avatar_frame:   { icon: '🖼', name: 'Рамка' },
-        profile_bg:     { icon: '🌄', name: 'Фон профиля' },
-        badge:          { icon: '🏅', name: 'Значок' },
-        title:          { icon: '👑', name: 'Титул' },
-    };
+const catMeta = {
+    nickname_color: { icon: '🎨', name: 'Цвет ника' },
+    avatar_frame:   { icon: '🖼', name: 'Рамка' },
+    profile_bg:     { icon: '🌄', name: 'Фон шапки' },
+    page_bg:        { icon: '🖼️', name: 'Фон страницы' },  // ← добавил
+    badge:          { icon: '🏅', name: 'Значок' },
+    title:          { icon: '👑', name: 'Титул' },
+};
     const meta = catMeta[cat] || { icon: '📦', name: cat };
 
     // Сортируем: надетые сверху
