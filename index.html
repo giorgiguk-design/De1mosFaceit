@@ -15590,6 +15590,17 @@ html.lite-mode .list-frame-overlay svg * {
         line-height: 1.5;
         padding: 0 4px;
     }
+
+        /* Кнопка "Удалить из друзей" — красная */
+    .phc-icon-btn.friend-remove {
+        color: var(--red);
+        background: rgba(255, 84, 112, 0.08);
+        border-color: rgba(255, 84, 112, 0.35);
+    }
+    .phc-icon-btn.friend-remove:hover {
+        background: rgba(255, 84, 112, 0.18);
+        border-color: var(--red);
+    }
     
 </style>
 </head>
@@ -18562,9 +18573,8 @@ function renderFriendActionButton(user, options = {}) {
 
 // Иконка + состояние кнопки друга
 function renderFriendBtnInner(user) {
-    // Если данных нет — показываем нейтрально
     const me = currentUser?.telegram_id;
-    const other = user.telegram_id;
+    const other = Number(user.telegram_id);
 
     // По умолчанию — "Добавить"
     let cls = 'friend-add';
@@ -18577,26 +18587,40 @@ function renderFriendBtnInner(user) {
         </svg>
     `;
 
-    // Проверяем статус связи (синхронно из кэша, если загружен)
+    // Читаем статус из глобального кэша
     const rel = window._friendRelations?.[other];
+
     if (rel === 'accepted') {
-        cls = 'friend-accept';
-        tip = 'В друзьях';
-        icon = `
-            <svg viewBox="0 0 24 24">
-                <circle cx="9" cy="8" r="3.5"/>
-                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
-                <path d="M16 11l2 2 4-4"/>
-            </svg>
-        `;
-    } else if (rel === 'pending') {
-        cls = 'friend-pending';
-        tip = 'Запрос отправлен';
+        // Уже друзья → показываем "Удалить" (красная)
+        cls = 'friend-remove';
+        tip = 'Удалить из друзей';
         icon = `
             <svg viewBox="0 0 24 24">
                 <circle cx="9" cy="8" r="3.5"/>
                 <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
                 <path d="M16 11h6"/>
+            </svg>
+        `;
+    } else if (rel === 'pending') {
+        // Есть запрос (неважно от кого)
+        cls = 'friend-pending';
+        tip = 'Запрос уже отправлен';
+        icon = `
+            <svg viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5"/>
+                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+                <path d="M16 11h6"/>
+            </svg>
+        `;
+    } else if (rel === 'incoming') {
+        // Входящий запрос → показать "Принять"
+        cls = 'friend-accept';
+        tip = 'Принять запрос';
+        icon = `
+            <svg viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5"/>
+                <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+                <path d="M16 11l2 2 4-4"/>
             </svg>
         `;
     }
@@ -18613,23 +18637,96 @@ function renderFriendBtnInner(user) {
 
 // Клик по кнопке друга
 async function handleFriendButtonClick(userId, btn) {
-    // Показать тултип
+    // Тултип
     btn.classList.add('tip-show');
     setTimeout(() => btn.classList.remove('tip-show'), 1200);
 
     const rel = window._friendRelations?.[userId];
+
+    // ==== УЖЕ В ДРУЗЬЯХ → удалить ====
     if (rel === 'accepted') {
-        // Уже друзья — просто открываем профиль (или можно удалить, но не будем)
-        openPlayerProfile(userId);
+        if (!confirm('Удалить из друзей?')) return;
+
+        try {
+            // Удаляем связь
+            await sb.from('friendships')
+                .delete()
+                .or(`and(requester_id.eq.${currentUser.telegram_id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUser.telegram_id})`);
+
+            window._friendRelations[userId] = null;
+
+            showToast('Удалён из друзей');
+            haptic('medium');
+
+            // Перерисовываем кнопку → станет "Добавить"
+            btn.className = 'phc-icon-btn friend-add';
+            btn.setAttribute('data-tip', 'В друзья');
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24">
+                    <circle cx="9" cy="8" r="3.5"/>
+                    <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+                    <path d="M19 8v6M16 11h6"/>
+                </svg>
+            `;
+
+            // Обновляем список друзей, если открыт
+            if (document.getElementById('page-friends')?.classList.contains('active')) {
+                loadFriends();
+            }
+        } catch (e) {
+            console.error('removeFriend:', e);
+            showToast('Ошибка: ' + e.message);
+        }
         return;
     }
+
+    // ==== ВХОДЯЩИЙ ЗАПРОС → принять ====
+    if (rel === 'incoming') {
+        try {
+            await sb.from('friendships')
+                .update({ status: 'accepted' })
+                .or(`and(requester_id.eq.${userId},addressee_id.eq.${currentUser.telegram_id})`);
+
+            window._friendRelations[userId] = 'accepted';
+
+            await notify(userId,
+                `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял твой запрос в друзья.`,
+                'friend'
+            );
+
+            showToast('✅ Теперь вы друзья');
+            haptic('medium');
+
+            // Перерисовываем кнопку → станет "Удалить"
+            btn.className = 'phc-icon-btn friend-remove';
+            btn.setAttribute('data-tip', 'Удалить из друзей');
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24">
+                    <circle cx="9" cy="8" r="3.5"/>
+                    <path d="M2.5 20a6.5 6.5 0 0 1 13 0"/>
+                    <path d="M16 11h6"/>
+                </svg>
+            `;
+
+            if (document.getElementById('page-friends')?.classList.contains('active')) {
+                loadFriends();
+            }
+        } catch (e) {
+            console.error('acceptFriend:', e);
+            showToast('Ошибка: ' + e.message);
+        }
+        return;
+    }
+
+    // ==== УЖЕ ОТПРАВЛЕН ЗАПРОС → ничего ====
     if (rel === 'pending') {
         showToast('⏳ Запрос уже отправлен');
         return;
     }
 
-    // Отправляем запрос
+    // ==== ОТПРАВИТЬ ЗАПРОС ====
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
     try {
         await sb.from('friendships').insert({
             requester_id: currentUser.telegram_id,
@@ -18637,7 +18734,6 @@ async function handleFriendButtonClick(userId, btn) {
             status: 'pending'
         });
 
-        // Обновляем кэш
         window._friendRelations = window._friendRelations || {};
         window._friendRelations[userId] = 'pending';
 
@@ -18647,8 +18743,8 @@ async function handleFriendButtonClick(userId, btn) {
         );
 
         showToast('✅ Запрос отправлен');
+        haptic('medium');
 
-        // Меняем кнопку
         if (btn) {
             btn.className = 'phc-icon-btn friend-pending';
             btn.disabled = false;
