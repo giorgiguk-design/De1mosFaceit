@@ -16426,17 +16426,24 @@ html.lite-mode .list-frame-overlay svg * {
    🔥 ШАПКА ПРОФИЛЯ — ФИНАЛЬНЫЙ ФИКС
    ============================================================ */
 
-/* Шапка фиксированной высоты, но НЕ влияет на контент ниже */
+/* Шапка фиксированной высоты */
 .profile-hero-v3,
 .pm2-hero-v3 {
+    position: relative;
     height: 170px;
     min-height: 170px;
     max-height: 170px;
     padding: 18px 16px 0;
+    margin-bottom: 14px;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.08) 0%,
+        rgba(0, 0, 0, 0.55) 45%,
+        rgba(0, 0, 0, 0.85) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 18px;
     overflow: hidden;
     box-sizing: border-box;
-    /* КЛЮЧЕВОЕ: шапка не растягивает родителя */
-    flex-shrink: 0;
+    isolation: isolate;
 }
 
 /* Внутренний контейнер */
@@ -16444,9 +16451,12 @@ html.lite-mode .list-frame-overlay svg * {
     display: flex;
     align-items: center;
     gap: 14px;
-    height: calc(100% - 3px);
+    height: 100%;
     box-sizing: border-box;
+    padding-bottom: 6px;
     overflow: visible;
+    position: relative;
+    z-index: 2;
 }
 
 /* Аватар */
@@ -16475,11 +16485,12 @@ html.lite-mode .list-frame-overlay svg * {
     flex-direction: column;
     gap: 4px;
     padding-left: 8px;
+    padding-right: 4px;
     overflow: visible;
     z-index: 6;
 }
 
-/* Ник — максимум 2 строки */
+/* Ник */
 .phc-name {
     font-size: 17px;
     font-weight: 900;
@@ -16500,7 +16511,7 @@ html.lite-mode .list-frame-overlay svg * {
     z-index: 7;
 }
 
-/* Рамка аватара — выходит за края, но не ломает верстку */
+/* Рамка аватара */
 .phc-avatar-wrap .special-frame-overlay {
     position: absolute;
     top: 50%;
@@ -16513,7 +16524,7 @@ html.lite-mode .list-frame-overlay svg * {
     overflow: visible;
 }
 
-/* Прогресс-бар */
+/* Прогресс-бар внизу */
 .phc-progress-bar {
     position: absolute;
     bottom: 0;
@@ -16524,30 +16535,7 @@ html.lite-mode .list-frame-overlay svg * {
     z-index: 8;
 }
 
-/* Кастомный фон */
-.profile-hero-v3.has-custom-bg {
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-}
-.profile-hero-v3.has-custom-bg::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg,
-        rgba(0, 0, 0, 0.35) 0%,
-        rgba(0, 0, 0, 0.55) 50%,
-        rgba(0, 0, 0, 0.80) 100%);
-    pointer-events: none;
-    z-index: 0;
-    border-radius: inherit;
-}
-.profile-hero-v3.has-custom-bg > * {
-    position: relative;
-    z-index: 1;
-}
-
-/* Углы-скобки */
+/* Углы */
 .phc-corner {
     position: absolute;
     width: 10px;
@@ -16576,6 +16564,29 @@ html.lite-mode .list-frame-overlay svg * {
     pointer-events: none;
 }
 
+/* Кастомный фон */
+.profile-hero-v3.has-custom-bg {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+.profile-hero-v3.has-custom-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.55) 50%,
+        rgba(0, 0, 0, 0.80) 100%);
+    pointer-events: none;
+    z-index: 0;
+    border-radius: inherit;
+}
+.profile-hero-v3.has-custom-bg > * {
+    position: relative;
+    z-index: 1;
+}
+
 /* ============================================================
    📱 ТЕЛЕФОН
    ============================================================ */
@@ -16587,14 +16598,37 @@ html.lite-mode .list-frame-overlay svg * {
         max-height: 160px;
         padding: 16px 14px 0;
     }
-    .phc-hero-inner { gap: 12px; }
-    .phc-avatar-wrap { width: 64px; height: 64px; }
-    .phc-avatar-wrap .profile-avatar { width: 58px; height: 58px; font-size: 22px; }
-    .phc-info-v3 { padding-left: 6px; }
-    .phc-name { font-size: 15px; -webkit-line-clamp: 1; }
-    .phc-act-btn { width: 30px; height: 30px; font-size: 12px; }
-    .phc-actions-v3 { gap: 5px; }
-    .phc-avatar-wrap .special-frame-overlay { width: 96px; height: 96px; }
+    .phc-hero-inner {
+        gap: 12px;
+    }
+    .phc-avatar-wrap {
+        width: 64px;
+        height: 64px;
+    }
+    .phc-avatar-wrap .profile-avatar {
+        width: 58px;
+        height: 58px;
+        font-size: 22px;
+    }
+    .phc-info-v3 {
+        padding-left: 6px;
+    }
+    .phc-name {
+        font-size: 15px;
+        -webkit-line-clamp: 1;
+    }
+    .phc-act-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+    .phc-actions-v3 {
+        gap: 5px;
+    }
+    .phc-avatar-wrap .special-frame-overlay {
+        width: 96px;
+        height: 96px;
+    }
 }
 
 /* ============================================================
@@ -16608,13 +16642,34 @@ html.lite-mode .list-frame-overlay svg * {
         max-height: 240px;
         padding: 28px 28px 0;
     }
-    .phc-hero-inner { gap: 24px; }
-    .phc-avatar-wrap { width: 120px; height: 120px; }
-    .phc-avatar-wrap .profile-avatar { width: 110px; height: 110px; font-size: 44px; }
-    .phc-info-v3 { padding-left: 14px; }
-    .phc-name { font-size: 26px; -webkit-line-clamp: 1; }
-    .phc-act-btn { width: 42px; height: 42px; font-size: 16px; }
-    .phc-avatar-wrap .special-frame-overlay { width: 160px; height: 160px; }
+    .phc-hero-inner {
+        gap: 24px;
+    }
+    .phc-avatar-wrap {
+        width: 120px;
+        height: 120px;
+    }
+    .phc-avatar-wrap .profile-avatar {
+        width: 110px;
+        height: 110px;
+        font-size: 44px;
+    }
+    .phc-info-v3 {
+        padding-left: 14px;
+    }
+    .phc-name {
+        font-size: 26px;
+        -webkit-line-clamp: 1;
+    }
+    .phc-act-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 16px;
+    }
+    .phc-avatar-wrap .special-frame-overlay {
+        width: 160px;
+        height: 160px;
+    }
 }
     
 </style>
