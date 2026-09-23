@@ -19014,20 +19014,37 @@ async function renderProfileView(user, options = {}) {
         return html; // вызовется из openPlayerProfile
     }
 
-        // 🔥 Загружаем отношения с друзьями, чтобы кнопка показывала правильное состояние
+    // 🔥 Загружаем отношения с друзьями
     if (!isMe) {
         try {
+            const me = String(currentUser.telegram_id);
+            const other = String(user.telegram_id);
+
             const { data: rels } = await sb.from('friendships')
-                .select('requester_id, addressee_id, status')
-                .or(`and(requester_id.eq.${currentUser.telegram_id},addressee_id.eq.${user.telegram_id}),and(requester_id.eq.${user.telegram_id},addressee_id.eq.${currentUser.telegram_id})`)
+                .select('id, requester_id, addressee_id, status')
+                .or(`and(requester_id.eq.${me},addressee_id.eq.${other}),and(requester_id.eq.${other},addressee_id.eq.${me})`)
                 .limit(1);
+
             window._friendRelations = window._friendRelations || {};
+
             if (rels && rels.length > 0) {
-                window._friendRelations[user.telegram_id] = rels[0].status;
+                const rel = rels[0];
+                const isIncoming = String(rel.requester_id) === other
+                                && String(rel.addressee_id) === me;
+
+                if (rel.status === 'accepted') {
+                    window._friendRelations[user.telegram_id] = 'accepted';
+                } else if (rel.status === 'pending' && isIncoming) {
+                    window._friendRelations[user.telegram_id] = 'incoming';
+                } else {
+                    window._friendRelations[user.telegram_id] = 'pending';
+                }
             } else {
                 window._friendRelations[user.telegram_id] = null;
             }
-        } catch (e) { console.warn('friend relations:', e); }
+        } catch (e) {
+            console.warn('friend relations:', e);
+        }
     }
 
     container.innerHTML = html;
