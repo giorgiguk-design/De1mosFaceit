@@ -12659,35 +12659,155 @@ html.lite-mode .has-list-bg {
         }
     }
 
-    /* -------- ПРОФИЛЬ -------- */
-    #page-profile.active { max-width: 1100px; }
+/* -------- ПРОФИЛЬ -------- */
+#page-profile.active { max-width: 1200px; }
 
-    .profile-hero-compact {
-        padding: 40px 32px 34px !important;
-        min-height: 200px;
-        border-radius: 22px !important;
-        overflow: hidden !important;
-    }
-    .profile-hero-compact.has-custom-bg {
-        background-size: cover !important;
-        background-position: center !important;
-        background-repeat: no-repeat !important;
-    }
-    .phc-avatar .profile-avatar {
-        width: 120px !important;
-        height: 120px !important;
-        font-size: 48px !important;
-    }
-.phc-avatar .special-frame-overlay {
-    width: 100px !important;
-    height: 100px !important;
-    max-width: 100px !important;
-    max-height: 100px !important;
+.profile-hero-compact {
+    padding: 48px 40px 42px !important;
+    min-height: 260px;
+    border-radius: 24px !important;
+    overflow: hidden !important;
 }
-    
-    .phc-name { font-size: 26px !important; }
-    .phc-username { font-size: 14px; }
-    .phc-badge { font-size: 11px; padding: 4px 12px; }
+
+.phc-row {
+    gap: 28px !important;
+    align-items: center;
+}
+
+.phc-avatar .profile-avatar {
+    width: 160px !important;
+    height: 160px !important;
+    font-size: 64px !important;
+}
+.phc-avatar .special-frame-overlay {
+    width: 200px !important;
+    height: 200px !important;
+    max-width: 200px !important;
+    max-height: 200px !important;
+}
+
+/* ============================================================ */
+/* НИК — крупный и заметный                                      */
+/* ============================================================ */
+.phc-name {
+    font-size: 42px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.5px !important;
+    line-height: 1.15 !important;
+    text-shadow: 0 0 24px rgba(var(--emerald-rgb), 0.35) !important;
+}
+
+.phc-name-row {
+    gap: 12px !important;
+    margin-bottom: 6px !important;
+}
+
+.phc-username {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    margin-bottom: 8px !important;
+}
+
+/* Клуб-тег перед ником — сделаем крупнее */
+.phc-name-row span[style*="font-size"] {
+    font-size: 0.6em !important;
+}
+
+/* ============================================================ */
+/* БЕЙДЖИ — крупные, читаемые                                    */
+/* ============================================================ */
+.phc-badges {
+    gap: 10px !important;
+    margin-top: 12px !important;
+}
+
+.phc-badge {
+    font-size: 14px !important;
+    padding: 8px 18px !important;
+    border-radius: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.5px !important;
+}
+
+        .phc-info {
+        padding-left: 8px !important;
+        gap: 6px !important;
+    }
+
+.phc-badge-dxp {
+    font-size: 15px !important;
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.6) !important;
+}
+
+/* DEV-тег — крупнее */
+.dev-tag {
+    font-size: 14px !important;
+    padding: 8px 18px !important;
+    letter-spacing: 3px !important;
+}
+
+/* ГЛАВА ФЕЙСИТА — крупнее */
+.profile-admin-tag {
+    font-size: 14px !important;
+    padding: 8px 20px !important;
+    letter-spacing: 2px !important;
+    margin-bottom: 10px !important;
+}
+
+/* Значок рядом с ником */
+.profile-equipped-badge,
+.phc-name-row [data-equipped-badge] {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 28px !important;
+    filter: drop-shadow(0 0 12px rgba(217, 171, 90, 0.8)) !important;
+}
+.profile-equipped-badge svg,
+.phc-name-row [data-equipped-badge] svg {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ============================================================ */
+/* КНОПКИ ДЕЙСТВИЙ — крупнее                                     */
+/* ============================================================ */
+.phc-icon-btn {
+    width: 48px !important;
+    height: 48px !important;
+}
+.phc-icon-btn svg {
+    width: 22px !important;
+    height: 22px !important;
+}
+
+/* ============================================================ */
+/* МИНИ-СТАТЫ В РЯД — крупнее цифры                              */
+/* ============================================================ */
+.profile-mini-row {
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+}
+.pmr-item {
+    padding: 16px 20px !important;
+    border-radius: 14px !important;
+}
+.pmr-icon {
+    font-size: 22px !important;
+}
+.pmr-label {
+    font-size: 10px !important;
+    letter-spacing: 1px !important;
+}
+.pmr-value {
+    font-size: 20px !important;
+    font-weight: 900 !important;
+}
+.pmr-id .pmr-value {
+    font-size: 18px !important;
+}
+.pmr-copy {
+    font-size: 14px !important;
+}
 
     .profile-mini-row { gap: 10px; margin-bottom: 16px; }
     .pmr-item { padding: 12px 16px; }
@@ -18623,27 +18743,60 @@ async function loadClubTagsForUsers(userIds) {
     }
 }
 
-function myClubTagHTML(telegramId) {
+function myClubTagHTML(telegramId, opts = {}) {
     const club = clubTagCache[telegramId];
     if (!club) return '';
 
-    // 🔥 Применяем стиль тега из equipped_items клана
+    // Размер: наследуется от ника, но не меньше 0.65em
+    const size = opts.size || '0.68em';
+
+    // Базовый стиль
+    let style = `
+        color: var(--hint);
+        font-size: ${size};
+        opacity: 0.85;
+        font-weight: 800;
+        margin-right: 8px;
+        letter-spacing: 0.5px;
+        vertical-align: middle;
+        text-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.3);
+    `;
+
+    // 🔥 Кастомизация тега из клан-магазина
     const eq = club.equipped || {};
-    let style = 'color: var(--hint); font-size: 0.7em; opacity: 0.7; font-weight: 700; margin-right: 4px;';
 
     if (eq.tag_gradient && CLAN_SHOP_CACHE[eq.tag_gradient]) {
         const val = CLAN_SHOP_CACHE[eq.tag_gradient].value || {};
         if (val.gradient) {
-            style = `background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-size: 0.75em; font-weight: 900; margin-right: 4px; letter-spacing: 0.3px;`;
+            style = `
+                background: linear-gradient(90deg, ${val.gradient.join(',')});
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+                font-size: ${size};
+                font-weight: 900;
+                margin-right: 8px;
+                letter-spacing: 0.5px;
+                vertical-align: middle;
+            `;
         }
     } else if (eq.tag_color && CLAN_SHOP_CACHE[eq.tag_color]) {
         const val = CLAN_SHOP_CACHE[eq.tag_color].value || {};
         if (val.color) {
-            style = `color: ${val.color}; text-shadow: 0 0 8px ${val.color}; font-size: 0.75em; font-weight: 900; margin-right: 4px; letter-spacing: 0.3px;`;
+            style = `
+                color: ${val.color};
+                text-shadow: 0 0 10px ${val.color}, 0 0 20px ${val.color}80;
+                font-size: ${size};
+                font-weight: 900;
+                margin-right: 8px;
+                letter-spacing: 0.5px;
+                vertical-align: middle;
+            `;
         }
     }
 
-    return `<span style="${style}">[${escapeHtml(club.tag)}]</span>`;
+    return `<span class="club-tag-inline" style="${style}">[${escapeHtml(club.tag)}]</span>`;
 }
 
             // ============================================================
