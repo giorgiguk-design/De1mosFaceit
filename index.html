@@ -10065,6 +10065,17 @@ html.lite-mode .pm2-badge { animation: none; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    
+    /* 🔥 Фиксируем размер контейнера = размеру аватара */
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+/* Для чужого профиля — 60px */
+.pm2-avatar-wrap {
+    width: 60px;
+    height: 60px;
 }
 
     /* ============================================================ */
@@ -15136,6 +15147,82 @@ html.lite-mode .list-frame-overlay svg * {
     overflow: hidden !important;
     clip-path: circle(50%);
 }
+
+        /* ============================================================ */
+    /* 🔥 ФИКС: рамка РОВНО по центру аватара                        */
+    /* ============================================================ */
+    
+    /* 1. Обёртка аватара = точный размер аватара */
+    .phc-avatar,
+    .profile-avatar-wrap {
+        position: relative !important;
+        width: 64px !important;
+        height: 64px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .pm2-avatar-wrap {
+        position: relative !important;
+        width: 60px !important;
+        height: 60px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* 2. Аватар внутри — того же размера, без сдвигов */
+    .phc-avatar .profile-avatar,
+    .profile-avatar-wrap .profile-avatar {
+        width: 64px !important;
+        height: 64px !important;
+        margin: 0 !important;
+        position: relative !important;
+        z-index: 2 !important;
+    }
+    
+    .pm2-avatar-wrap .pm2-avatar {
+        width: 60px !important;
+        height: 60px !important;
+        margin: 0 !important;
+        position: relative !important;
+        z-index: 2 !important;
+    }
+    
+    /* 3. Рамка — точно по центру обёртки */
+    .phc-avatar .special-frame-overlay,
+    .profile-avatar-wrap .special-frame-overlay {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 78px !important;
+        height: 78px !important;
+        max-width: 78px !important;
+        max-height: 78px !important;
+        min-width: 78px !important;
+        min-height: 78px !important;
+        z-index: 3 !important;
+        pointer-events: none !important;
+        overflow: visible !important;
+    }
+    
+    .pm2-avatar-wrap .special-frame-overlay {
+        width: 74px !important;
+        height: 74px !important;
+        max-width: 74px !important;
+        max-height: 74px !important;
+        min-width: 74px !important;
+        min-height: 74px !important;
+    }
+    
+    /* 4. Кнопка ✎ поверх всего */
+    .phc-avatar .avatar-edit-btn {
+        z-index: 10 !important;
+    }
     
 </style>
 </head>
