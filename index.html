@@ -38449,61 +38449,26 @@ async function loadShareData(user) {
 }
 
 // ============================================================
-// Фон профиля
+// Фон всей картинки — фиолетовый градиент в стиле сайта
 // ============================================================
 async function drawProfileBackground(ctx, W, H, data, colors) {
-    // Если есть фон профиля — рисуем его
-    if (data.bgImg) {
-        ctx.save();
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, W, H);
+    // 🔥 НЕ рисуем bgImg на весь холст — только градиент темы
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0e0820');   // верх — тёмно-фиолетовый
+    bg.addColorStop(0.5, '#06040d'); // середина — почти чёрный
+    bg.addColorStop(1, '#000000');   // низ — чёрный
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
 
-        // Cover-fit
-        const imgRatio = data.bgImg.width / data.bgImg.height;
-        const canvasRatio = W / H;
-        let drawW, drawH, dx, dy;
+    // Фиолетовое свечение сверху
+    const glow = ctx.createRadialGradient(W / 2, 200, 0, W / 2, 200, W * 0.9);
+    glow.addColorStop(0, 'rgba(167, 139, 250, 0.35)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
 
-        if (imgRatio > canvasRatio) {
-            drawH = H;
-            drawW = H * imgRatio;
-            dx = (W - drawW) / 2;
-            dy = 0;
-        } else {
-            drawW = W;
-            drawH = W / imgRatio;
-            dx = 0;
-            dy = (H - drawH) / 2;
-        }
-
-        ctx.drawImage(data.bgImg, dx, dy, drawW, drawH);
-        ctx.restore();
-
-        // Затемнение градиентом (чтобы текст читался)
-        const dark = ctx.createLinearGradient(0, 0, 0, H);
-        dark.addColorStop(0, 'rgba(0,0,0,0.55)');
-        dark.addColorStop(0.4, 'rgba(0,0,0,0.65)');
-        dark.addColorStop(1, 'rgba(0,0,0,0.95)');
-        ctx.fillStyle = dark;
-        ctx.fillRect(0, 0, W, H);
-    } else {
-        // Нет фона — градиент
-        const bg = ctx.createLinearGradient(0, 0, 0, H);
-        bg.addColorStop(0, colors.bg1);
-        bg.addColorStop(0.5, colors.bg2);
-        bg.addColorStop(1, '#000');
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, W, H);
-
-        // Свечение сверху
-        const glow = ctx.createRadialGradient(W / 2, 200, 0, W / 2, 200, W * 0.9);
-        glow.addColorStop(0, colors.glow);
-        glow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = glow;
-        ctx.fillRect(0, 0, W, H);
-    }
-
-    // Лёгкая сетка сверху
-    ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+    // Сетка сверху (как на сайте)
+    ctx.strokeStyle = 'rgba(167, 139, 250, 0.05)';
     ctx.lineWidth = 1;
     for (let x = 0; x < W; x += 60) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
@@ -38549,39 +38514,75 @@ function drawLogo(ctx, W, colors) {
 // ============================================================
 async function drawProfileCard(ctx, W, data, colors) {
     const user = data.user;
-    const cardX = 70;
-    const cardY = 180;
-    const cardW = W - 140;
-    const cardH = 480;
+    const cardX = 60;                 // 🔥 чуть меньше отступ — больше места
+    const cardY = 170;
+    const cardW = W - 120;
+    const cardH = 540;                // 🔥 выше — место для рамки
+    const cardR = 32;
 
-    // ---- Фон карточки ----
+    // ---- Фон карточки (беловатая плашка) ----
     const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-    cardGrad.addColorStop(0, 'rgba(255,255,255,0.06)');
-    cardGrad.addColorStop(1, 'rgba(0,0,0,0.75)');
+    cardGrad.addColorStop(0, 'rgba(255,255,255,0.10)');
+    cardGrad.addColorStop(1, 'rgba(255,255,255,0.03)');
     ctx.fillStyle = cardGrad;
-    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
+    roundRect(ctx, cardX, cardY, cardW, cardH, cardR);
     ctx.fill();
 
-    // Обводка
-    ctx.strokeStyle = colors.primary + '55';
+    // ---- ФОН ПРОФИЛЯ — рисуем ВНУТРИ плашки, обрезая по радиусу ----
+    if (data.bgImg) {
+        ctx.save();
+        roundRect(ctx, cardX, cardY, cardW, cardH, cardR);
+        ctx.clip();
+
+        // Cover-fit для bgImg
+        const imgRatio = data.bgImg.width / data.bgImg.height;
+        const cardRatio = cardW / cardH;
+        let drawW, drawH, dx, dy;
+
+        if (imgRatio > cardRatio) {
+            drawH = cardH;
+            drawW = cardH * imgRatio;
+            dx = cardX + (cardW - drawW) / 2;
+            dy = cardY;
+        } else {
+            drawW = cardW;
+            drawH = cardW / imgRatio;
+            dx = cardX;
+            dy = cardY + (cardH - drawH) / 2;
+        }
+
+        ctx.drawImage(data.bgImg, dx, dy, drawW, drawH);
+
+        // Затемнение поверх bgImg, чтобы текст читался
+        const darkGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+        darkGrad.addColorStop(0, 'rgba(0,0,0,0.35)');
+        darkGrad.addColorStop(1, 'rgba(0,0,0,0.75)');
+        ctx.fillStyle = darkGrad;
+        ctx.fillRect(cardX, cardY, cardW, cardH);
+
+        ctx.restore();
+    }
+
+    // ---- Обводка карточки ----
+    ctx.strokeStyle = 'rgba(167, 139, 250, 0.45)';   // фиолетовая
     ctx.lineWidth = 2;
-    roundRect(ctx, cardX, cardY, cardW, cardH, 32);
+    roundRect(ctx, cardX, cardY, cardW, cardH, cardR);
     ctx.stroke();
 
-    // Верхняя неоновая полоска
+    // ---- Верхняя неоновая полоска (фиолетовая) ----
     const topLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
     topLine.addColorStop(0, 'rgba(0,0,0,0)');
-    topLine.addColorStop(0.5, colors.primary);
+    topLine.addColorStop(0.5, '#a78bfa');
     topLine.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = topLine;
     ctx.fillRect(cardX + 40, cardY, cardW - 80, 2);
 
     // ============================================================
-    // АВАТАР
+    // АВАТАР — сдвигаем левее и оставляем место под рамку
     // ============================================================
-    const avCx = cardX + 165;
-    const avCy = cardY + 200;
-    const avR = 110;
+    const avCx = cardX + 200;          // 🔥 сдвинули правее, чтобы рамка не лезла на текст
+    const avCy = cardY + 220;          // 🔥 опустили чуть ниже
+    const avR = 95;                    // 🔥 чуть меньше — влезает рамка
 
     // Чёрный круг под аватаром
     ctx.beginPath();
@@ -38598,7 +38599,6 @@ async function drawProfileCard(ctx, W, data, colors) {
         ctx.drawImage(data.avatarImg, avCx - avR, avCy - avR, avR * 2, avR * 2);
         ctx.restore();
     } else {
-        // Заглушка — буква
         ctx.beginPath();
         ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
         const avGrad = ctx.createLinearGradient(avCx - avR, avCy - avR, avCx + avR, avCy + avR);
@@ -38606,7 +38606,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         avGrad.addColorStop(1, colors.secondary);
         ctx.fillStyle = avGrad;
         ctx.fill();
-        ctx.font = '900 100px -apple-system, sans-serif';
+        ctx.font = '900 90px -apple-system, sans-serif';
         ctx.fillStyle = '#04140e';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -38614,12 +38614,13 @@ async function drawProfileCard(ctx, W, data, colors) {
     }
 
     // ============================================================
-    // SVG-рамка аватара (статичная)
+    // SVG-рамка — БОЛЬШЕ размера, чтобы влезла целиком
     // ============================================================
     if (data.frameSvg) {
         try {
             const frameImg = await loadImageAsPromise(data.frameSvg);
-            const frameSize = avR * 2.4;
+            // 🔥 Рамка должна быть ~2.6× от радиуса — чтобы осьминог был виден целиком
+            const frameSize = avR * 2.6;
             ctx.drawImage(
                 frameImg,
                 avCx - frameSize / 2,
@@ -38629,7 +38630,6 @@ async function drawProfileCard(ctx, W, data, colors) {
             );
         } catch (e) {
             console.warn('frame render fail:', e);
-            // Fallback — просто кольцо
             ctx.beginPath();
             ctx.arc(avCx, avCy, avR + 8, 0, Math.PI * 2);
             ctx.strokeStyle = colors.primary;
@@ -38640,7 +38640,6 @@ async function drawProfileCard(ctx, W, data, colors) {
             ctx.shadowBlur = 0;
         }
     } else {
-        // Обычное кольцо
         ctx.beginPath();
         ctx.arc(avCx, avCy, avR + 8, 0, Math.PI * 2);
         ctx.strokeStyle = colors.primary;
@@ -38654,10 +38653,9 @@ async function drawProfileCard(ctx, W, data, colors) {
     // ============================================================
     // ИНФО СПРАВА
     // ============================================================
-    const textX = cardX + 330;
+    const textX = cardX + 380;         // 🔥 сдвинули правее — рамка не пересекается
     const textMaxW = cardX + cardW - 40 - textX;
 
-    // ---- ГЛАВА ФЕЙСИТА (если админ) ----
     let curY = cardY + 55;
     if (user.is_admin) {
         const label = '👑 ГЛАВА ФЕЙСИТА';
@@ -38682,25 +38680,19 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 55;
     }
 
-    // ---- Клуб-тег + НИК ----
+    // Клуб-тег + ник
     const club = (typeof clubTagCache !== 'undefined') ? clubTagCache[user.telegram_id] : null;
     const clubTag = club ? `[${club.tag}] ` : '';
 
-    ctx.font = '900 48px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.textBaseline = 'middle';
-
-    // Считаем ширину клуб-тега
     ctx.font = '900 28px -apple-system, sans-serif';
     const clubW = clubTag ? ctx.measureText(clubTag).width : 0;
 
-    // Клуб-тег
     if (clubTag) {
         ctx.fillStyle = colors.primary;
         ctx.fillText(clubTag, textX, curY + 8);
     }
 
-    // Ник
-    ctx.font = '900 48px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.font = '900 44px -apple-system, sans-serif';
     let nick = user.display_name || 'Игрок';
     while (ctx.measureText(nick).width > textMaxW - clubW - 10 && nick.length > 3) {
         nick = nick.slice(0, -1);
@@ -38715,7 +38707,6 @@ async function drawProfileCard(ctx, W, data, colors) {
 
     curY += 60;
 
-    // ---- @username ----
     if (user.username && !user.hide_telegram_tag) {
         ctx.font = '700 22px -apple-system, sans-serif';
         ctx.fillStyle = colors.primary;
@@ -38725,7 +38716,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 10;
     }
 
-    // ---- Титул ----
+    // Титул
     const eq = user.equipped_items || {};
     const titleId = eq.title;
     if (titleId && SHOP_ITEMS_CACHE[titleId]) {
@@ -38742,14 +38733,13 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 42;
     }
 
-    // ---- DEV-тег (если в DEV-клубе) ----
+    // DEV-тег
     const isDev = (typeof isDevClubMember === 'function') ? isDevClubMember(user.telegram_id) : false;
     if (isDev) {
         const devText = 'DEV';
         ctx.font = '900 20px -apple-system, sans-serif';
         const devW = ctx.measureText(devText).width + 26;
 
-        // Градиент
         const devGrad = ctx.createLinearGradient(textX, 0, textX + devW, 0);
         devGrad.addColorStop(0, '#ff2e6e');
         devGrad.addColorStop(0.5, '#ff7a2e');
@@ -38767,11 +38757,10 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 45;
     }
 
-    // ---- Уровень + DXP ----
+    // Уровень + DXP
     const lvl = eloToLevel(user.elo);
     const dxp = user.elo ?? 1000;
 
-    // Уровень (чип)
     const lvlText = `⚡ УРОВЕНЬ ${lvl}`;
     ctx.font = '900 20px -apple-system, sans-serif';
     const lvlW = ctx.measureText(lvlText).width + 28;
@@ -38790,7 +38779,7 @@ async function drawProfileCard(ctx, W, data, colors) {
     ctx.fillText(lvlText, textX + lvlW / 2, curY + lvlH / 2 + 2);
     ctx.textAlign = 'left';
 
-    // DXP — большая цифра справа
+    // DXP — большая цифра справа внизу карточки
     ctx.font = '900 64px -apple-system, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = colors.primary;
@@ -38811,7 +38800,7 @@ async function drawProfileCard(ctx, W, data, colors) {
 // ============================================================
 function drawStatsRow(ctx, W, data, colors) {
     const user = data.user;
-    const y = 700;
+    const y = 750;
     const padX = 70;
     const gap = 16;
     const totalW = W - padX * 2;
@@ -38890,7 +38879,7 @@ function drawStatsRow(ctx, W, data, colors) {
 function drawDxpChart(ctx, W, data, colors) {
     const history = data.history;
     const cardX = 70;
-    const cardY = 850;
+    const cardY = 900;
     const cardW = W - 140;
     const cardH = 360;
 
@@ -39162,25 +39151,22 @@ function closeSharePreview() {
 }
 
 // ============================================================
-// ОТПРАВКА В TELEGRAM
+// ОТПРАВКА В TELEGRAM — нативный шер с фото
 // ============================================================
 async function doShareToTelegram() {
     const blob = window._shareBlob;
     const user = window._shareUserData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
-    const shareUrl = 'http://t.me/De1mosFaceit_bot/De1mosFaceit';
-    const shareText = `🎮 Играй со мной на De1mos Faceit!\n\n👤 ${user.display_name || 'Игрок'}\n🎯 ${user.elo ?? 1000} DXP\n\n${shareUrl}`;
-
+    const shareText = `Играй со мной на De1mos Faceit\nhttp://t.me/De1mosFaceit_bot/De1mosFaceit`;
     const file = new File([blob], `de1mos_${user.telegram_id}.png`, { type: 'image/png' });
 
-    // === СПОСОБ 1: navigator.share с файлами ===
+    // === СПОСОБ 1: navigator.share с файлами (iOS / Android TG) ===
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
             await navigator.share({
                 files: [file],
                 text: shareText,
-                title: 'De1mos Faceit',
             });
             haptic('medium');
             showToast('✅ Отправлено');
@@ -39192,7 +39178,7 @@ async function doShareToTelegram() {
         }
     }
 
-    // === СПОСОБ 2: скачиваем + открываем Telegram ===
+    // === СПОСОБ 2: скачиваем фото + открываем Telegram-шер ===
     try {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -39203,23 +39189,30 @@ async function doShareToTelegram() {
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 5000);
 
-        showToast('📥 Картинка сохранена. Открываю Telegram...');
+        showToast('📥 Фото сохранено. Открываю Telegram...');
     } catch (e) {
         console.warn('download fail:', e);
     }
 
     setTimeout(() => {
         try {
-            const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+            const tgUrl =
+                `https://t.me/share/url?` +
+                `url=${encodeURIComponent('http://t.me/De1mosFaceit_bot/De1mosFaceit')}` +
+                `&text=${encodeURIComponent('Играй со мной на De1mos Faceit')}`;
+
             if (tg?.openTelegramLink) tg.openTelegramLink(tgUrl);
             else if (tg?.openLink) tg.openLink(tgUrl);
             else window.open(tgUrl, '_blank');
         } catch (e) {
-            window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+            window.open(
+                `https://t.me/share/url?url=${encodeURIComponent('http://t.me/De1mosFaceit_bot/De1mosFaceit')}&text=${encodeURIComponent('Играй со мной на De1mos Faceit')}`,
+                '_blank'
+            );
         }
 
         haptic('medium');
-        showToast('💡 Прикрепи картинку из галереи');
+        showToast('💡 Прикрепи фото из галереи');
         closeSharePreview();
     }, 800);
 }
