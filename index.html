@@ -15449,6 +15449,147 @@ html.lite-mode .list-frame-overlay svg * {
             padding: 2px 8px;
         }
     }
+
+        /* ============================================================ */
+    /* 📸 SHARE PREVIEW — превью картинки для шаринга                 */
+    /* ============================================================ */
+    
+    .share-preview-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 900;
+        background: rgba(0, 0, 0, 0.92);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: fadeIn 0.25s ease;
+    }
+    .share-preview-overlay.active { display: flex; }
+    
+    .share-preview-modal {
+        width: 100%;
+        max-width: 460px;
+        max-height: 92vh;
+        background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+        border: 1px solid var(--border-strong);
+        border-radius: 22px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+        animation: modalSlide 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
+    }
+    
+    .share-preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.08), transparent);
+        flex-shrink: 0;
+    }
+    .share-preview-title {
+        font-size: 15px;
+        font-weight: 900;
+        color: var(--text);
+        letter-spacing: 0.3px;
+    }
+    .share-preview-close {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--border);
+        color: var(--text);
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: inherit;
+        transition: transform 0.18s ease, background 0.2s ease;
+    }
+    .share-preview-close:active { transform: scale(0.9); }
+    
+    .share-preview-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    
+    .share-preview-canvas-wrap {
+        width: 100%;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #000;
+        border: 1px solid var(--border-strong);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    }
+    .share-preview-canvas-wrap canvas {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    
+    .share-preview-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .share-preview-btn {
+        padding: 13px;
+        border-radius: 12px;
+        border: none;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+    .share-preview-btn:active { transform: scale(0.96); }
+    
+    .share-preview-btn.primary {
+        background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
+        color: #04140e;
+        box-shadow: 0 4px 14px rgba(var(--emerald-rgb), 0.35);
+    }
+    
+    .share-preview-btn.secondary {
+        background: rgba(var(--emerald-rgb), 0.10);
+        border: 1px solid var(--border-strong);
+        color: var(--emerald);
+    }
+    
+    .share-preview-btn svg {
+        width: 15px;
+        height: 15px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        pointer-events: none;
+    }
+    
+    .share-preview-info {
+        font-size: 11px;
+        color: var(--hint);
+        text-align: center;
+        line-height: 1.5;
+        padding: 0 4px;
+    }
     
 </style>
 </head>
@@ -18614,7 +18755,7 @@ async function renderProfileView(user, options = {}) {
                  <div class="phc-actions">
                     <button type="button" class="phc-icon-btn share-btn"
                             data-tip="Поделиться"
-                            onclick="shareProfile(${user.telegram_id}); return false;">
+                            onclick="openSharePreview(${user.telegram_id}); return false;">
                         <svg viewBox="0 0 24 24">
                             <circle cx="18" cy="5" r="3"/>
                             <circle cx="6" cy="12" r="3"/>
@@ -38006,6 +38147,626 @@ function subscribeUserInventoryRealtime() {
             console.log('📦 Другой игрок изменил инвентарь:', row.telegram_id, row.item_id);
         })
         .subscribe();
+}
+
+            // ============================================================
+// 📸 SHARE PREVIEW — генерация картинки профиля и шаринг
+// ============================================================
+
+// Получить текущую тему (green / purple / red)
+function getThemeColors() {
+    const theme = document.documentElement.getAttribute('data-theme') || 'green';
+    const map = {
+        green: {
+            primary:   '#00e08a',
+            secondary: '#00b874',
+            light:     '#22e8a4',
+            bg1:       '#041a12',
+            bg2:       '#050807',
+            glow:      'rgba(0, 224, 138, 0.35)',
+        },
+        purple: {
+            primary:   '#a78bfa',
+            secondary: '#8b5cf6',
+            light:     '#c4b5fd',
+            bg1:       '#0e0820',
+            bg2:       '#06040d',
+            glow:      'rgba(167, 139, 250, 0.4)',
+        },
+        red: {
+            primary:   '#ff2e4d',
+            secondary: '#cc1e38',
+            light:     '#ff5c75',
+            bg1:       '#1a0508',
+            bg2:       '#0a0505',
+            glow:      'rgba(255, 46, 77, 0.4)',
+        },
+    };
+    return map[theme] || map.green;
+}
+
+// Загрузка картинки в base64 (для canvas)
+function loadImageAsPromise(src) {
+    return new Promise((resolve, reject) => {
+        if (!src) { reject(new Error('no src')); return; }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('img load fail'));
+        img.src = src;
+    });
+}
+
+// Круглая обрезка картинки
+function drawCircularImage(ctx, img, cx, cy, radius) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(img, cx - radius, cy - radius, radius * 2, radius * 2);
+    ctx.restore();
+}
+
+// Скруглённый прямоугольник
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// ============================================================
+// ГЛАВНАЯ: генерация картинки профиля
+// ============================================================
+async function generateProfileShareImage(user) {
+    const W = 1080;
+    const H = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    const colors = getThemeColors();
+
+    // ============================================================
+    // 1. ФОН — градиент + сетка
+    // ============================================================
+    const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+    bgGrad.addColorStop(0, colors.bg1);
+    bgGrad.addColorStop(0.55, colors.bg2);
+    bgGrad.addColorStop(1, '#000000');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Радиальное свечение сверху
+    const glow = ctx.createRadialGradient(W / 2, 0, 0, W / 2, 0, W * 1.2);
+    glow.addColorStop(0, colors.glow);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // Сетка
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = 1;
+    const gridSize = 60;
+    for (let x = 0; x < W; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // ============================================================
+    // 2. ВЕРХНИЙ БЛОК — ЛОГОТИП DE1MOS FACEIT
+    // ============================================================
+    ctx.font = '900 56px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Свечение под лого
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 40;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('De1mos', W / 2 - 90, 90);
+    ctx.fillStyle = colors.primary;
+    ctx.fillText(' Faceit', W / 2 + 90, 90);
+    ctx.shadowBlur = 0;
+
+    // Подпись
+    ctx.font = '700 20px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('P R O   P L A Y E R   P R O F I L E', W / 2, 145);
+
+    // ============================================================
+    // 3. КАРТОЧКА ПРОФИЛЯ
+    // ============================================================
+    const cardX = 60;
+    const cardY = 200;
+    const cardW = W - 120;
+    const cardH = 460;
+
+    // Фон карточки
+    const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+    cardGrad.addColorStop(0, 'rgba(255,255,255,0.04)');
+    cardGrad.addColorStop(1, 'rgba(0,0,0,0.6)');
+    ctx.fillStyle = cardGrad;
+
+    roundRect(ctx, cardX, cardY, cardW, cardH, 36);
+    ctx.fill();
+
+    // Обводка карточки
+    ctx.strokeStyle = colors.primary + '55';
+    ctx.lineWidth = 2;
+    roundRect(ctx, cardX, cardY, cardW, cardH, 36);
+    ctx.stroke();
+
+    // Верхняя неоновая полоска
+    const topLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
+    topLine.addColorStop(0, 'rgba(0,0,0,0)');
+    topLine.addColorStop(0.5, colors.primary);
+    topLine.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = topLine;
+    ctx.fillRect(cardX + 30, cardY, cardW - 60, 2);
+
+    // ============================================================
+    // 4. АВАТАР
+    // ============================================================
+    const avCx = cardX + 180;
+    const avCy = cardY + 200;
+    const avR = 110;
+
+    // Кольца вокруг аватара
+    for (let i = 3; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.arc(avCx, avCy, avR + 10 + i * 8, 0, Math.PI * 2);
+        ctx.strokeStyle = colors.primary + (i === 1 ? 'aa' : '44');
+        ctx.lineWidth = i === 1 ? 4 : 1.5;
+        ctx.shadowColor = colors.primary;
+        ctx.shadowBlur = i === 1 ? 40 : 15;
+        ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+
+    // Внутренний чёрный круг
+    ctx.beginPath();
+    ctx.arc(avCx, avCy, avR + 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+
+    // Сам аватар
+    const avatarSrc = user.custom_avatar || user.photo_url;
+    let avatarDrawn = false;
+    if (avatarSrc) {
+        try {
+            const img = await loadImageAsPromise(avatarSrc);
+            drawCircularImage(ctx, img, avCx, avCy, avR);
+            avatarDrawn = true;
+        } catch (e) { console.warn('avatar:', e); }
+    }
+    if (!avatarDrawn) {
+        ctx.beginPath();
+        ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
+        ctx.fillStyle = colors.primary;
+        ctx.fill();
+        ctx.font = '900 100px -apple-system, sans-serif';
+        ctx.fillStyle = '#04140e';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((user.display_name || 'U')[0].toUpperCase(), avCx, avCy + 6);
+    }
+
+    // ============================================================
+    // 5. НИК + ЮЗЕРНЕЙМ + УРОВЕНЬ
+    // ============================================================
+    const textX = cardX + 340;
+
+    // Ник
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 52px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 20;
+    ctx.fillText(user.display_name || 'Игрок', textX, cardY + 110);
+    ctx.shadowBlur = 0;
+
+    // Юзернейм
+    if (user.username) {
+        ctx.font = '700 24px -apple-system, sans-serif';
+        ctx.fillStyle = colors.primary;
+        ctx.fillText('@' + user.username, textX, cardY + 165);
+    }
+
+    // Уровень + DXP
+    const lvl = eloToLevel(user.elo);
+    const dxp = user.elo ?? 1000;
+    ctx.font = '900 30px -apple-system, sans-serif';
+    ctx.fillStyle = colors.light;
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 15;
+    ctx.fillText(`⚡ УРОВЕНЬ ${lvl}`, textX, cardY + 240);
+    ctx.shadowBlur = 0;
+
+    // DXP большая цифра
+    ctx.font = '900 84px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 25;
+    ctx.fillText(String(dxp), textX, cardY + 340);
+    ctx.shadowBlur = 0;
+
+    // Подпись "DXP"
+    ctx.font = '900 22px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('D X P', textX + ctx.measureText(String(dxp)).width + 20, cardY + 350);
+
+    // ============================================================
+    // 6. ГРАФИК DXP
+    // ============================================================
+    const chartX = cardX + 40;
+    const chartY = cardY + cardH + 40;
+    const chartW = cardW - 80;
+    const chartH = 340;
+
+    // Заголовок графика
+    ctx.textAlign = 'left';
+    ctx.font = '900 26px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('📈 ДИНАМИКА DXP', chartX, chartY);
+    ctx.font = '700 16px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('P R E M I U M   I N S I G H T', chartX, chartY + 30);
+
+    // Загружаем историю
+    let history = [];
+    try {
+        const { data } = await sb.from('dxp_history')
+            .select('elo_after, elo_before, delta, won, created_at')
+            .eq('telegram_id', Number(user.telegram_id))
+            .order('created_at', { ascending: false })
+            .limit(20);
+        history = (data || []).slice().reverse();
+    } catch (e) { console.warn('history:', e); }
+
+    const chartTop = chartY + 70;
+    const chartBottom = chartTop + chartH;
+
+    // Рамка графика
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = chartTop + (chartH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(chartX, y);
+        ctx.lineTo(chartX + chartW, y);
+        ctx.stroke();
+    }
+
+    if (history.length >= 2) {
+        const elos = history.map(h => h.elo_after ?? h.elo_before ?? 1000);
+        const min = Math.min(...elos);
+        const max = Math.max(...elos);
+        const range = Math.max(50, max - min);
+        const pad = Math.round(range * 0.15);
+        const yMin = min - pad;
+        const yMax = max + pad;
+
+        const stepX = chartW / (history.length - 1);
+        const points = history.map((h, i) => {
+            const elo = h.elo_after ?? h.elo_before ?? 1000;
+            const x = chartX + i * stepX;
+            const y = chartTop + chartH - ((elo - yMin) / (yMax - yMin)) * chartH;
+            return { x, y, elo };
+        });
+
+        // Заливка под графиком
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, chartBottom);
+        points.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineTo(points[points.length - 1].x, chartBottom);
+        ctx.closePath();
+
+        const areaGrad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
+        areaGrad.addColorStop(0, colors.primary + '77');
+        areaGrad.addColorStop(1, colors.primary + '00');
+        ctx.fillStyle = areaGrad;
+        ctx.fill();
+
+        // Линия
+        ctx.beginPath();
+        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.strokeStyle = colors.primary;
+        ctx.lineWidth = 4;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.shadowColor = colors.primary;
+        ctx.shadowBlur = 20;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Точки
+        points.forEach((p, i) => {
+            const isLast = i === points.length - 1;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, isLast ? 8 : 4, 0, Math.PI * 2);
+            ctx.fillStyle = isLast ? '#ffffff' : colors.primary;
+            ctx.shadowColor = colors.primary;
+            ctx.shadowBlur = isLast ? 25 : 10;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+
+        // Y-метки
+        ctx.font = '700 16px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(Math.round(yMax)), chartX - 10, chartTop + 6);
+        ctx.fillText(String(Math.round(yMin)), chartX - 10, chartBottom - 6);
+
+        // W/L-плашки под графиком
+        const wins = history.filter(h => h.won).length;
+        const losses = history.length - wins;
+        const wlY = chartBottom + 35;
+
+        // W
+        ctx.fillStyle = 'rgba(140, 230, 90, 0.15)';
+        roundRect(ctx, chartX, wlY - 18, 90, 36, 18);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(140, 230, 90, 0.5)';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, chartX, wlY - 18, 90, 36, 18);
+        ctx.stroke();
+        ctx.fillStyle = '#8ce65a';
+        ctx.font = '900 18px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`W ${wins}`, chartX + 45, wlY + 2);
+
+        // L
+        ctx.fillStyle = 'rgba(255, 84, 112, 0.15)';
+        roundRect(ctx, chartX + 105, wlY - 18, 90, 36, 18);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 84, 112, 0.5)';
+        roundRect(ctx, chartX + 105, wlY - 18, 90, 36, 18);
+        ctx.stroke();
+        ctx.fillStyle = '#ff5470';
+        ctx.textAlign = 'center';
+        ctx.fillText(`L ${losses}`, chartX + 150, wlY + 2);
+
+        // WR справа
+        const wr = Math.round((wins / history.length) * 100);
+        ctx.textAlign = 'right';
+        ctx.font = '900 22px -apple-system, sans-serif';
+        ctx.fillStyle = colors.light;
+        ctx.fillText(`${wr}% WR`, chartX + chartW, wlY + 2);
+    } else {
+        // Нет данных
+        ctx.font = '700 22px -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.textAlign = 'center';
+        ctx.fillText('Нет данных о матчах', chartX + chartW / 2, chartTop + chartH / 2);
+    }
+
+    // ============================================================
+    // 7. НИЖНИЙ БЛОК — CTA
+    // ============================================================
+    const ctaY = H - 190;
+
+    // Полоска
+    const ctaLine = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
+    ctaLine.addColorStop(0, 'rgba(0,0,0,0)');
+    ctaLine.addColorStop(0.5, colors.primary);
+    ctaLine.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ctaLine;
+    ctx.fillRect(cardX + 30, ctaY - 30, cardW - 60, 2);
+
+    // Заголовок CTA
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 40px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 25;
+    ctx.fillText('🎮 Играй со мной на', W / 2, ctaY + 20);
+    ctx.shadowBlur = 0;
+
+    // De1mos Faceit
+    ctx.font = '900 52px -apple-system, sans-serif';
+    const g2 = ctx.createLinearGradient(W / 2 - 200, 0, W / 2 + 200, 0);
+    g2.addColorStop(0, colors.primary);
+    g2.addColorStop(0.5, colors.light);
+    g2.addColorStop(1, colors.primary);
+    ctx.fillStyle = g2;
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 30;
+    ctx.fillText('De1mos Faceit', W / 2, ctaY + 80);
+    ctx.shadowBlur = 0;
+
+    // Ссылка
+    ctx.font = '700 22px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', W / 2, ctaY + 135);
+
+    return canvas;
+}
+
+// ============================================================
+// ОТКРЫТИЕ МОДАЛКИ ПРЕВЬЮ
+// ============================================================
+async function openSharePreview(userId) {
+    // Убираем старую модалку
+    document.getElementById('sharePreviewOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'share-preview-overlay active';
+    overlay.id = 'sharePreviewOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeSharePreview(); };
+
+    const modal = document.createElement('div');
+    modal.className = 'share-preview-modal';
+
+    modal.innerHTML = `
+        <div class="share-preview-header">
+            <div class="share-preview-title">📸 Поделиться профилем</div>
+            <button class="share-preview-close" onclick="closeSharePreview()">✕</button>
+        </div>
+        <div class="share-preview-body">
+            <div class="share-preview-canvas-wrap">
+                <canvas id="sharePreviewCanvas" style="width:100%;height:auto;"></canvas>
+            </div>
+            <div class="share-preview-info" id="sharePreviewInfo">
+                Генерирую картинку...
+            </div>
+            <div class="share-preview-actions" id="sharePreviewActions" style="display:none;">
+                <button class="share-preview-btn primary" onclick="doShareToTelegram()">
+                    <svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7Z"/></svg>
+                    Отправить
+                </button>
+                <button class="share-preview-btn secondary" onclick="doDownloadImage()">
+                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                    Скачать
+                </button>
+            </div>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Загружаем юзера и генерируем
+    try {
+        const { data: user } = await sb.from('users')
+            .select('*').eq('telegram_id', userId).single();
+        if (!user) throw new Error('Профиль не найден');
+
+        window._shareUserData = user;
+
+        const canvas = await generateProfileShareImage(user);
+        const wrap = document.getElementById('sharePreviewCanvas');
+        if (wrap && wrap.parentNode) {
+            wrap.parentNode.replaceChild(canvas, wrap);
+            canvas.id = 'sharePreviewCanvas';
+        }
+
+        // Готовим blob
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+        window._shareBlob = blob;
+
+        const info = document.getElementById('sharePreviewInfo');
+        if (info) info.textContent = 'Готово! Нажми «Отправить» чтобы поделиться';
+
+        const actions = document.getElementById('sharePreviewActions');
+        if (actions) actions.style.display = 'grid';
+
+    } catch (e) {
+        console.error('openSharePreview:', e);
+        const info = document.getElementById('sharePreviewInfo');
+        if (info) info.textContent = '❌ Ошибка: ' + e.message;
+    }
+}
+
+function closeSharePreview() {
+    document.getElementById('sharePreviewOverlay')?.remove();
+    window._shareBlob = null;
+    window._shareUserData = null;
+}
+
+// ============================================================
+// ОТПРАВКА В TELEGRAM
+// ============================================================
+async function doShareToTelegram() {
+    const blob = window._shareBlob;
+    const user = window._shareUserData;
+    if (!blob || !user) { showToast('Картинка не готова'); return; }
+
+    const shareUrl = 'http://t.me/De1mosFaceit_bot/De1mosFaceit';
+    const shareText = `🎮 Играй со мной на De1mos Faceit!\n\n👤 ${user.display_name || 'Игрок'}\n🎯 ${user.elo ?? 1000} DXP\n\n${shareUrl}`;
+
+    const file = new File([blob], `de1mos_${user.telegram_id}.png`, { type: 'image/png' });
+
+    // === СПОСОБ 1: navigator.share с файлами (iOS / Android Chrome) ===
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({
+                files: [file],
+                text: shareText,
+                title: 'De1mos Faceit',
+            });
+            haptic('medium');
+            showToast('✅ Отправлено');
+            closeSharePreview();
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError') return; // юзер отменил
+            console.warn('navigator.share fail:', e);
+        }
+    }
+
+    // === СПОСОБ 2: открываем Telegram + скачиваем картинку ===
+    // Скачиваем в галерею
+    try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `de1mos_${user.telegram_id}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+        showToast('📥 Картинка сохранена. Открываю Telegram...');
+    } catch (e) {
+        console.warn('download fail:', e);
+    }
+
+    // Открываем Telegram с текстом
+    setTimeout(() => {
+        try {
+            const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+            if (tg?.openTelegramLink) tg.openTelegramLink(tgUrl);
+            else if (tg?.openLink) tg.openLink(tgUrl);
+            else window.open(tgUrl, '_blank');
+        } catch (e) {
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+        }
+
+        haptic('medium');
+        showToast('💡 Прикрепи картинку из галереи');
+        closeSharePreview();
+    }, 800);
+}
+
+// ============================================================
+// СКАЧАТЬ КАРТИНКУ
+// ============================================================
+function doDownloadImage() {
+    const blob = window._shareBlob;
+    const user = window._shareUserData;
+    if (!blob || !user) { showToast('Картинка не готова'); return; }
+
+    try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `de1mos_${user.telegram_id}_${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+        haptic('medium');
+        showToast('📥 Картинка скачана');
+    } catch (e) {
+        console.error('download:', e);
+        showToast('Ошибка скачивания');
+    }
 }
             
     </script>
