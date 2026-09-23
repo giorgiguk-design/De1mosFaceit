@@ -13593,6 +13593,23 @@ button[disabled] {
     animation: listFrameIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    
+    /* 🔥 ЖЁСТКИЙ РАЗМЕР — не больше аватара */
+    width: 44px !important;
+    height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+}
+
+/* 🔥 SVG внутри — тоже фиксируем */
+.list-frame-overlay svg,
+.list-frame-overlay .fr-svg {
+    width: 44px !important;
+    height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
 }
 
 .list-frame-overlay svg,
@@ -14912,11 +14929,7 @@ html.lite-mode .list-frame-overlay svg * {
     z-index: 2;
 }
 
-    /* ============================================================ */
-/* 🔥 ФИКС: РАМКИ ВЫХОДЯТ ЗА КРАЯ СПИСКОВ                        */
-/* ============================================================ */
-
-/* Разрешаем оверлеям выходить за пределы всех контейнеров */
+/* 🔥 Рамки в списках — обрезаем, чтобы не наезжали на ник */
 .leaderboard-item,
 .club-member-row,
 .chat-list-item,
@@ -14926,9 +14939,10 @@ html.lite-mode .list-frame-overlay svg * {
 .report-card-player,
 .season-hero .leaderboard-item,
 .spectator-chip {
-    overflow: visible !important;
+    overflow: hidden !important;   /* ← БЫЛО visible */
 }
 
+/* Аватары оставляем visible, но они не вылезают за карточку */
 .lb-avatar,
 .club-member-avatar,
 .chat-list-avatar,
@@ -14945,6 +14959,8 @@ html.lite-mode .list-frame-overlay svg * {
 .menu-drawer-avatar,
 .mb-avatar {
     overflow: visible !important;
+    position: relative;
+    z-index: 2;
 }
 
 /* Убираем clip-path у плашек (если есть) */
