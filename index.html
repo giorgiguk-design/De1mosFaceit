@@ -39153,34 +39153,42 @@ function closeSharePreview() {
 }
 
 // ============================================================
-// ОТПРАВКА В TELEGRAM — используем shareMessage только если он точно работает
+// ОТПРАВКА В TELEGRAM
 // ============================================================
+// iOS:    shareMessage не работает (MESSAGE_EXPIRED) → фолбэк
+// Android: пробуем shareMessage, при неудаче → фолбэк
+// Desktop/Web: фолбэк (скачать + скопировать текст)
+// ============================================================
+
 async function doShareToTelegram() {
     const blob = window._shareBlob;
     const user = window._shareUserData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
     const platform = tg?.platform || '';
-    const isMobile = platform === 'ios' || platform === 'android' || platform === 'android_x';
 
-    // 🔥 Используем shareMessage ТОЛЬКО на Android, где он более-менее стабилен
-    //    На iOS он часто падает с MESSAGE_EXPIRED
-    const canUseShareMessage = (platform === 'android' || platform === 'android_x')
-                            && typeof tg?.shareMessage === 'function';
+    // 🔥 shareMessage пробуем ТОЛЬКО на Android
+    const isAndroid = platform === 'android' || platform === 'android_x';
+    const canTryShareMessage = isAndroid && typeof tg?.shareMessage === 'function';
 
-    if (canUseShareMessage) {
-        await shareViaPreparedMessage(blob, user);
-    } else {
-        // iOS, Desktop, Web — используем фолбэк
-        await shareViaDesktopFallback(blob, user);
+    if (canTryShareMessage) {
+        const success = await shareViaPreparedMessage(blob, user);
+        if (success) return;
+        // если не сработало — идём в фолбэк
+        console.warn('shareMessage не сработал → фолбэк');
     }
+
+    // iOS, Desktop, Web или неудавшийся Android
+    await shareViaDesktopFallback(blob, user);
 }
 
 // ============================================================
-// Мобильный путь: prepared message через Edge Function
+// Android: prepared message через Edge Function
+// Возвращает true, если шер реально открылся
 // ============================================================
 async function shareViaPreparedMessage(blob, user) {
     const btn = document.querySelector('.share-preview-btn.primary');
+    const originalText = btn?.textContent || 'Отправить';
     if (btn) { btn.disabled = true; btn.textContent = 'ПОДГОТОВКА...'; }
 
     try {
@@ -39206,35 +39214,62 @@ async function shareViaPreparedMessage(blob, user) {
         if (!res.ok || !data?.prepared_message_id) {
             console.error('save-prepared-message error:', data);
             showToast('❌ ' + (data?.error || 'Ошибка подготовки'));
-            // Фолбэк на всякий случай
-            await shareViaDesktopFallback(blob, user);
-            return;
+            if (btn) { btn.disabled = false; btn.textContent = originalText; }
+            return false;
         }
 
-        // Вызов нативного шера
-        tg.shareMessage(data.prepared_message_id, (sent) => {
-            if (sent) {
-                haptic('medium');
-                showToast('✅ Отправлено');
-                closeSharePreview();
-            } else {
-                showToast('Отменено');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'Отправить';
-                }
+        // 🔥 Оборачиваем в Promise, чтобы поймать результат
+        const opened = await new Promise((resolve) => {
+            let done = false;
+
+            try {
+                tg.shareMessage(data.prepared_message_id, (sent) => {
+                    if (done) return;
+                    done = true;
+
+                    if (sent) {
+                        haptic('medium');
+                        showToast('✅ Отправлено');
+                        closeSharePreview();
+                        resolve(true);
+                    } else {
+                        showToast('Отменено');
+                        resolve(false);
+                    }
+                });
+            } catch (e) {
+                console.warn('shareMessage exception:', e);
+                done = true;
+                resolve(false);
+                return;
             }
+
+            // Таймаут 2 сек — если колбэк не вызван, считаем что не сработало
+            setTimeout(() => {
+                if (done) return;
+                done = true;
+                console.warn('shareMessage timeout');
+                resolve(false);
+            }, 2000);
         });
+
+        if (!opened && btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+
+        return opened;
 
     } catch (e) {
         console.error('shareViaPreparedMessage error:', e);
         showToast('Ошибка: ' + e.message);
-        await shareViaDesktopFallback(blob, user);
+        if (btn) { btn.disabled = false; btn.textContent = originalText; }
+        return false;
     }
 }
 
 // ============================================================
-// Десктопный путь: скачать + скопировать текст + инструкция
+// Фолбэк: скачать + скопировать текст + инструкция
 // ============================================================
 async function shareViaDesktopFallback(blob, user) {
     const shareUrl = 'http://t.me/De1mosFaceit_bot/De1mosFaceit';
@@ -39262,17 +39297,25 @@ async function shareViaDesktopFallback(blob, user) {
         try { fallbackCopySilent(shareText); } catch (e2) {}
     }
 
-    // 3. Показываем инструкцию вместо шера
+    // 3. Закрываем превью и показываем инструкцию
     closeSharePreview();
     showDesktopShareHint(user, shareUrl, shareText);
     haptic('medium');
 }
 
 // ============================================================
-// Инструкция для ПК
+// Модалка-инструкция для iOS / Desktop / Web
 // ============================================================
 function showDesktopShareHint(user, shareUrl, shareText) {
     document.getElementById('desktopShareHint')?.remove();
+
+    const platform = tg?.platform || '';
+    const isIOS = platform === 'ios';
+
+    const title = isIOS ? '📤 Отправка через Telegram' : '📤 Как отправить';
+    const subtitle = isIOS
+        ? 'На iPhone нативный шер недоступен — отправь вручную'
+        : 'На ПК нативный шер недоступен — отправь вручную';
 
     const overlay = document.createElement('div');
     overlay.className = 'share-preview-overlay active';
@@ -39280,15 +39323,14 @@ function showDesktopShareHint(user, shareUrl, shareText) {
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
     overlay.innerHTML = `
-        <div class="share-preview-modal" style="max-width: 420px;">
+        <div class="share-preview-modal" style="max-width: 440px;">
             <div class="share-preview-header">
-                <div class="share-preview-title">📤 Как отправить</div>
+                <div class="share-preview-title">${title}</div>
                 <button class="share-preview-close" onclick="document.getElementById('desktopShareHint').remove()">✕</button>
             </div>
             <div class="share-preview-body">
-                <div style="font-size: 13px; color: var(--text); line-height: 1.6; text-align: left;">
-                    <b style="color: var(--emerald);">На ПК нативный шер недоступен.</b><br><br>
-                    Сделай вручную:
+                <div style="font-size: 12px; color: var(--hint); line-height: 1.5; text-align: left; margin-bottom: 10px;">
+                    ${subtitle}
                 </div>
 
                 <div style="
@@ -39298,14 +39340,15 @@ function showDesktopShareHint(user, shareUrl, shareText) {
                     border-radius: 12px;
                     font-size: 12.5px;
                     color: var(--text);
-                    line-height: 1.6;
+                    line-height: 1.65;
                     text-align: left;
                 ">
-                    1️⃣ Картинка <b>уже скачана</b> в папку «Загрузки»<br>
+                    <div style="font-weight: 800; color: var(--emerald); margin-bottom: 6px;">Что делать:</div>
+                    1️⃣ Картинка <b>уже скачана</b> в галерею / «Загрузки»<br>
                     2️⃣ Текст <b>уже скопирован</b> в буфер<br>
                     3️⃣ Открой нужный чат в Telegram<br>
-                    4️⃣ Вставь текст (<b>Ctrl+V</b>)<br>
-                    5️⃣ Прикрепи фото из «Загрузок»
+                    4️⃣ Вставь текст (<b>Ctrl+V</b> / долгий тап → «Вставить»)<br>
+                    5️⃣ Прикрепи фото из галереи / «Загрузок»
                 </div>
 
                 <div style="
@@ -39320,10 +39363,11 @@ function showDesktopShareHint(user, shareUrl, shareText) {
                     white-space: pre-wrap;
                     text-align: left;
                     margin-top: 10px;
-                ">${escapeHtml(shareText)}</div>
+                    word-break: break-all;
+                " id="desktopShareText">${escapeHtml(shareText)}</div>
 
                 <button class="share-preview-btn primary" style="grid-column: 1 / -1;"
-                        onclick="copyShareTextForDesktop('${escapeHtml(shareText)}', this)">
+                        onclick="copyShareTextForDesktop(this)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -39339,20 +39383,32 @@ function showDesktopShareHint(user, shareUrl, shareText) {
         </div>
     `;
 
+    // Кэшируем текст в window, чтобы не тащить через HTML-атрибуты
+    window._desktopShareText = shareText;
+
     document.body.appendChild(overlay);
 }
 
-function copyShareTextForDesktop(text, btn) {
+function copyShareTextForDesktop(btn) {
+    const text = window._desktopShareText || '';
+    if (!text) return;
+
+    const onSuccess = () => showToast('📋 Текст скопирован');
+    const onFail = () => showToast('❌ Не удалось скопировать');
+
     try {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => showToast('📋 Текст скопирован'));
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+                try { fallbackCopySilent(text); onSuccess(); }
+                catch (e) { onFail(); }
+            });
         } else {
             fallbackCopySilent(text);
-            showToast('📋 Текст скопирован');
+            onSuccess();
         }
     } catch (e) {
-        fallbackCopySilent(text);
-        showToast('📋 Текст скопирован');
+        try { fallbackCopySilent(text); onSuccess(); }
+        catch (e2) { onFail(); }
     }
 }
 
@@ -39368,125 +39424,42 @@ function openTelegramLinkAndClose(url) {
 }
 
 // ============================================================
-// ФОЛБЭК: скачать + открыть шер (если shareMessage недоступен)
-// ============================================================
-async function doShareToTelegramFallback(blob, user) {
-    const shareUrl = 'http://t.me/De1mosFaceit_bot/De1mosFaceit';
-    const fileName = `de1mos_${user.telegram_id}.png`;
-
-    // Пробуем нативный share (редко работает)
-    const file = new File([blob], fileName, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-            await navigator.share({
-                files: [file],
-                text: `Играй со мной на De1mos Faceit\n${shareUrl}`,
-            });
-            haptic('medium');
-            showToast('✅ Отправлено');
-            closeSharePreview();
-            return;
-        } catch (e) {
-            if (e.name === 'AbortError') return;
-        }
-    }
-
-    // Скачиваем картинку
-    try {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        showToast('📥 Фото сохранено. Прикрепи из галереи');
-    } catch (e) {
-        console.warn('download fail:', e);
-    }
-
-    // Открываем шер
-    setTimeout(() => {
-        const tgUrl =
-            `https://t.me/share/url?` +
-            `url=${encodeURIComponent(shareUrl)}` +
-            `&text=${encodeURIComponent('Играй со мной на De1mos Faceit')}`;
-
-        try {
-            if (tg?.openTelegramLink) tg.openTelegramLink(tgUrl);
-            else if (tg?.openLink) tg.openLink(tgUrl);
-            else window.open(tgUrl, '_blank');
-        } catch (e) {
-            window.open(tgUrl, '_blank');
-        }
-
-        closeSharePreview();
-    }, 800);
-}
-
-// ============================================================
-// Скачать Blob в галерею — 3 способа с фолбэками
-// ============================================================
-async function downloadImageToGallery(blob, fileName) {
-    // ---- Способ 1: Telegram.WebApp.downloadFile (если есть) ----
-    try {
-        if (tg?.downloadFile) {
-            const reader = new FileReader();
-            const dataUrl = await new Promise(res => {
-                reader.onload = () => res(reader.result);
-                reader.readAsDataURL(blob);
-            });
-            tg.downloadFile({ url: dataUrl, file_name: fileName });
-            showToast('📥 Фото сохранено в галерею');
-            return;
-        }
-    } catch (e) {
-        console.warn('tg.downloadFile fail:', e);
-    }
-
-    // ---- Способ 2: a.download ----
-    try {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        showToast('📥 Фото сохранено в галерею');
-        return;
-    } catch (e) {
-        console.warn('a.download fail:', e);
-    }
-
-    // ---- Способ 3: открыть blob в новой вкладке (юзер сохранит сам) ----
-    try {
-        const url = URL.createObjectURL(blob);
-        if (tg?.openLink) tg.openLink(url);
-        else window.open(url, '_blank');
-        showToast('💡 Сохрани картинку из открывшейся вкладки');
-    } catch (e) {
-        showToast('❌ Не удалось сохранить фото');
-    }
-}
-
-// ============================================================
-// СКАЧАТЬ КАРТИНКУ
+// СКАЧАТЬ КАРТИНКУ (кнопка «Скачать»)
 // ============================================================
 function doDownloadImage() {
     const blob = window._shareBlob;
     const user = window._shareUserData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
+    const fileName = `de1mos_${user.telegram_id}_${Date.now()}.png`;
+
+    // Пробуем Telegram.downloadFile
+    try {
+        if (tg?.downloadFile) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    tg.downloadFile({ url: reader.result, file_name: fileName });
+                    haptic('medium');
+                    showToast('📥 Картинка скачана');
+                } catch (e) {
+                    // fallback ниже
+                }
+            };
+            reader.readAsDataURL(blob);
+            return;
+        }
+    } catch (e) {
+        console.warn('tg.downloadFile fail:', e);
+    }
+
+    // Обычное скачивание
     try {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `de1mos_${user.telegram_id}_${Date.now()}.png`;
+        a.download = fileName;
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -39496,7 +39469,7 @@ function doDownloadImage() {
         showToast('📥 Картинка скачана');
     } catch (e) {
         console.error('download:', e);
-        showToast('Ошибка скачивания');
+        showToast('❌ Ошибка скачивания');
     }
 }
             
