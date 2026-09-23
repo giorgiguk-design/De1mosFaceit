@@ -5375,15 +5375,45 @@ body::after {
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
-    width: 78px !important;
-    height: 78px !important;
-    max-width: 78px !important;
-    max-height: 78px !important;
-    min-width: 78px !important;
-    min-height: 78px !important;
+
+    /* 🔥 КЛЮЧЕВОЙ РАЗМЕР: ×2 от аватара (84 × 2 = 168) */
+    width: 168px !important;
+    height: 168px !important;
+    max-width: 168px !important;
+    max-height: 168px !important;
+    min-width: 168px !important;
+    min-height: 168px !important;
+
     z-index: 3 !important;
     pointer-events: none !important;
+
+    /* 🔥 ГЛАВНОЕ: SVG должен ВЫХОДИТЬ за пределы оверлея */
     overflow: visible !important;
+
+    /* Без обрезки, без маски */
+    clip-path: none !important;
+    mask: none !important;
+    -webkit-mask: none !important;
+
+    /* Без собственной анимации */
+    animation: none !important;
+    border-radius: 0;
+}
+
+/* 🔥 SVG внутри должен заполнять оверлей на 100% и не обрезаться */
+.phc-avatar .special-frame-overlay svg,
+.phc-avatar .special-frame-overlay .fr-svg {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    display: block !important;
+    /* Никаких stroke-обрезок */
+    shape-rendering: geometricPrecision;
+}
+
+.phc-avatar .special-frame-overlay svg * {
+    /* Ничего не обрезаем */
+    overflow: visible;
 }
 
 /* ---------- 4. ИНФО ---------- */
@@ -15598,6 +15628,820 @@ html.lite-mode .list-frame-overlay svg * {
         background: rgba(255, 84, 112, 0.18);
         border-color: var(--red);
     }
+
+    /* ============================================================ */
+/* 🎮 ПРОФИЛЬ v4 — КИБЕРСПОРТ ФИНАЛЬНЫЙ БЛОК                     */
+/* Вставил В КОНЕЦ <style> — перебивает все предыдущие правила   */
+/* ============================================================ */
+
+/* ---------- 1. HERO — шапка профиля ---------- */
+.profile-hero-compact {
+    position: relative !important;
+    overflow: visible !important;
+    padding: 16px !important;
+    margin-bottom: 8px !important;
+    border-radius: 18px !important;
+    border: 1px solid var(--border-strong) !important;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.10) 0%,
+        rgba(0, 0, 0, 0.65) 55%,
+        rgba(0, 0, 0, 0.92) 100%) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 8px 28px rgba(0, 0, 0, 0.5) !important;
+    min-height: 140px;
+    isolation: isolate;
+}
+
+/* Верхняя неоновая полоска */
+.profile-hero-compact::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.85;
+    z-index: 50;
+    pointer-events: none;
+    border: none;
+}
+
+/* Угловая скобка */
+.profile-hero-compact::after {
+    content: '';
+    position: absolute;
+    right: 8px; bottom: 8px;
+    width: 14px; height: 14px;
+    border-right: 2px solid var(--emerald);
+    border-bottom: 2px solid var(--emerald);
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 50;
+    background: none;
+    inset: auto 8px 8px auto;
+}
+
+/* 🔥 ФОН ПРОФИЛЯ + ЗАТЕМНЕНИЕ */
+.profile-hero-compact.has-custom-bg {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Затемнение фона — отдельный слой ПОД контентом */
+.profile-hero-compact.has-custom-bg > .profile-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.5) 0%,
+        rgba(0, 0, 0, 0.72) 45%,
+        rgba(0, 0, 0, 0.92) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
+}
+
+/* Весь контент — поверх затемнения */
+.profile-hero-compact > *:not(.profile-bg-overlay) {
+    position: relative;
+    z-index: 2;
+}
+
+/* ---------- 2. ROW ---------- */
+.phc-row {
+    position: relative;
+    z-index: 10 !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding-left: 20px;   /* место для рамки слева */
+    padding-right: 4px;
+}
+
+/* ---------- 3. АВАТАР — БОЛЬШОЙ, С ПОЛНОЙ РАМКОЙ ---------- */
+.phc-avatar {
+    position: relative !important;
+    flex-shrink: 0 !important;
+    width: 84px !important;
+    height: 84px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    z-index: 20 !important;
+    margin-right: 30px !important;   /* 🔥 место для рамки справа от аватара */
+}
+
+.phc-avatar .profile-avatar {
+    width: 84px !important;
+    height: 84px !important;
+    font-size: 34px !important;
+    position: relative !important;
+    z-index: 2 !important;
+    margin: 0 !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    box-shadow: 0 0 0 2px rgba(var(--emerald-rgb), 0.18);
+}
+
+/* 🔥 КЛЮЧЕВОЙ ФИКС: оверлей ×2 от аватара = ВСЯ рамка видна */
+.phc-avatar .special-frame-overlay {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+
+    /* 84 × 2 = 168 */
+    width: 168px !important;
+    height: 168px !important;
+    max-width: 168px !important;
+    max-height: 168px !important;
+    min-width: 168px !important;
+    min-height: 168px !important;
+
+    z-index: 25 !important;
+    pointer-events: none !important;
+
+    /* Разрешаем SVG выходить за границы */
+    overflow: visible !important;
+    clip-path: none !important;
+    mask: none !important;
+    -webkit-mask: none !important;
+
+    animation: none !important;
+    border-radius: 0;
+}
+
+/* SVG заполняет оверлей и не обрезается */
+.phc-avatar .special-frame-overlay svg,
+.phc-avatar .special-frame-overlay .fr-svg {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    display: block !important;
+}
+
+.phc-avatar .special-frame-overlay svg * {
+    overflow: visible !important;
+}
+
+/* ---------- 4. ИНФО-БЛОК ---------- */
+.phc-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: visible !important;
+}
+
+.profile-admin-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    margin-bottom: 2px;
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.30) 0%,
+        rgba(217, 171, 90, 0.10) 100%);
+    border: 1px solid rgba(217, 171, 90, 0.55);
+    border-radius: 6px;
+    color: var(--gold);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(217, 171, 90, 0.6);
+    width: fit-content;
+    max-width: 100%;
+}
+
+/* НИК + ТЕГ КЛАНА */
+.phc-name-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow: visible !important;
+}
+
+.phc-clan-tag {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: var(--emerald);
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.5);
+    margin-right: 2px;
+}
+
+/* Тег клана, вставленный через myClubTagHTML() — обёртка */
+.phc-name-row > span:first-child {
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.phc-name {
+    font-size: 22px !important;
+    font-weight: 900;
+    letter-spacing: 0.2px;
+    line-height: 1.1;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.3);
+    flex-shrink: 1;
+}
+
+.profile-equipped-badge {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 6px rgba(217, 171, 90, 0.7));
+    animation: badgeFloat 3s ease-in-out infinite;
+}
+
+.profile-equipped-badge svg,
+.profile-equipped-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.phc-title {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    line-height: 1;
+    display: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.phc-username {
+    font-size: 12px;
+    color: var(--hint);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.phc-username a {
+    color: var(--emerald);
+    text-decoration: none;
+}
+
+.phc-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 2px;
+    max-width: 100%;
+}
+
+.phc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 9px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.4px;
+    border-radius: 6px;
+    background: rgba(var(--emerald-rgb), 0.12);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.phc-badge-dxp {
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.20),
+        rgba(var(--emerald-rgb), 0.05));
+    color: var(--emerald-3);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+}
+
+/* ---------- 5. КНОПКИ ДЕЙСТВИЙ ---------- */
+.phc-actions {
+    position: relative;
+    z-index: 30 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+    align-self: flex-start;
+}
+
+.phc-icon-btn {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border-radius: 0;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px),
+        calc(100% - 6px) 100%, 0 100%, 0 6px);
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid var(--border-strong);
+    color: var(--emerald);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    padding: 0;
+    flex-shrink: 0;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.2s ease, border-color 0.2s ease;
+}
+
+.phc-icon-btn svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.phc-icon-btn:active { transform: scale(0.88); }
+.phc-icon-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.18);
+    border-color: var(--emerald);
+}
+
+.phc-icon-btn.friend-add { color: #4fc3f7; background: rgba(79,195,247,0.08); border-color: rgba(79,195,247,0.4); }
+.phc-icon-btn.friend-accept { color: var(--emerald); background: rgba(var(--emerald-rgb),0.15); border-color: var(--emerald); }
+.phc-icon-btn.friend-pending { color: var(--gold); background: rgba(217,171,90,0.12); border-color: rgba(217,171,90,0.4); }
+.phc-icon-btn.friend-remove { color: var(--red); background: rgba(255,84,112,0.08); border-color: rgba(255,84,112,0.4); }
+.phc-icon-btn.msg-btn { color: var(--purple); background: rgba(167,139,250,0.08); border-color: rgba(167,139,250,0.4); }
+.phc-icon-btn.share-btn { color: var(--emerald); }
+
+.phc-settings-customize {
+    background: linear-gradient(135deg,
+        rgba(167, 139, 250, 0.15),
+        rgba(217, 171, 90, 0.10)) !important;
+    border-color: rgba(167, 139, 250, 0.4) !important;
+    color: var(--purple) !important;
+}
+
+/* ---------- 6. МИНИ-РЯД: 4 ПЛИТКИ ---------- */
+.profile-mini-row {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 420px) {
+    .profile-mini-row {
+        grid-template-columns: 1.3fr 1fr 1fr;
+    }
+    .profile-mini-row .pmr-lastmatch {
+        grid-column: 1 / -1;
+    }
+}
+
+.pmr-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: #03060a !important;
+    background-image: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.85) 60%,
+        #000000 100%) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 10px;
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+    cursor: default;
+    min-width: 0;
+    transition: border-color 0.2s, background 0.2s;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 14px rgba(0, 0, 0, 0.6) !important;
+}
+
+.pmr-id { cursor: pointer; }
+.pmr-id:active {
+    transform: scale(0.98);
+    border-color: var(--emerald);
+    background: rgba(var(--emerald-rgb), 0.12);
+}
+
+.pmr-icon {
+    font-size: 15px;
+    line-height: 1;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 4px rgba(var(--emerald-rgb), 0.4));
+}
+
+.pmr-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+}
+
+.pmr-label {
+    font-size: 8px;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.pmr-value {
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.1;
+}
+
+.pmr-copy {
+    font-size: 10px;
+    color: var(--emerald);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.pmr-id .pmr-value {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+}
+
+.pmr-lastmatch {
+    background: #0a0804 !important;
+    background-image: linear-gradient(180deg,
+        rgba(217, 171, 90, 0.12) 0%,
+        rgba(0, 0, 0, 0.85) 60%,
+        #000000 100%) !important;
+    border-color: rgba(217, 171, 90, 0.5) !important;
+}
+
+.pmr-lastmatch .pmr-value {
+    color: var(--gold);
+    text-shadow: 0 0 6px rgba(217, 171, 90, 0.4);
+    font-size: 11px;
+}
+
+/* ---------- 7. ГРАФИК DXP ---------- */
+.elo-chart-card {
+    position: relative !important;
+    overflow: hidden !important;
+    padding: 14px !important;
+    margin-bottom: 8px !important;
+    background: #03060a !important;
+    background-image: linear-gradient(180deg,
+        rgba(167, 139, 250, 0.08) 0%,
+        rgba(0, 0, 0, 0.85) 50%,
+        #000000 100%) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 0;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.65) !important;
+}
+
+.elo-chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--purple), transparent);
+    opacity: 0.85;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.elo-chart-card .ech-svg-wrap,
+.elo-chart-card .ech-svg {
+    min-height: 120px !important;
+}
+
+/* ---------- 8. GOALS ---------- */
+.goals-card {
+    position: relative !important;
+    overflow: hidden !important;
+    padding: 12px !important;
+    margin-bottom: 8px !important;
+    background: #03060a !important;
+    background-image: linear-gradient(180deg,
+        rgba(167, 139, 250, 0.10) 0%,
+        rgba(0, 0, 0, 0.85) 55%,
+        #000000 100%) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 0;
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px),
+        calc(100% - 12px) 100%, 0 100%, 0 12px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.65) !important;
+}
+
+.goals-progress-bar {
+    height: 10px !important;
+    border-radius: 5px;
+}
+
+.goals-progress-fill {
+    box-shadow: 0 0 16px rgba(167, 139, 250, 0.7),
+                0 0 30px rgba(167, 139, 250, 0.3) !important;
+}
+
+/* ---------- 9. HEATMAP ---------- */
+.heatmap-card {
+    position: relative !important;
+    overflow: hidden !important;
+    padding: 12px 14px !important;
+    margin-bottom: 8px !important;
+    background: #03060a !important;
+    background-image: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.06) 0%,
+        rgba(0, 0, 0, 0.85) 55%,
+        #000000 100%) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 0;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px),
+        calc(100% - 10px) 100%, 0 100%, 0 10px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.65) !important;
+}
+
+/* ---------- 10. ПК АДАПТАЦИЯ ---------- */
+@media (min-width: 1024px) {
+    .profile-hero-compact {
+        padding: 26px 28px !important;
+        min-height: 190px;
+        border-radius: 22px !important;
+        margin-bottom: 12px !important;
+    }
+    .phc-row {
+        padding-left: 30px;
+    }
+    .phc-avatar {
+        width: 120px !important;
+        height: 120px !important;
+        margin-right: 50px !important;
+    }
+    .phc-avatar .profile-avatar {
+        width: 120px !important;
+        height: 120px !important;
+        font-size: 48px !important;
+    }
+    .phc-avatar .special-frame-overlay {
+        width: 240px !important;
+        height: 240px !important;
+        max-width: 240px !important;
+        max-height: 240px !important;
+        min-width: 240px !important;
+        min-height: 240px !important;
+    }
+    .phc-info {
+        gap: 6px;
+    }
+    .phc-clan-tag,
+    .phc-name-row > span:first-child {
+        font-size: 20px;
+    }
+    .phc-name { font-size: 32px !important; }
+    .phc-username { font-size: 14px; }
+    .phc-badge { font-size: 11px; padding: 4px 12px; }
+    .profile-admin-tag { font-size: 11px; padding: 4px 12px; }
+    .phc-icon-btn {
+        width: 40px;
+        height: 40px;
+    }
+    .phc-icon-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    .phc-actions {
+        flex-direction: row;
+        gap: 8px;
+        align-self: center;
+    }
+    .profile-mini-row {
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .pmr-item { padding: 12px 16px; }
+    .pmr-value { font-size: 14px; }
+    .pmr-label { font-size: 9px; }
+    .pmr-icon { font-size: 18px; }
+    .elo-chart-card .ech-svg-wrap,
+    .elo-chart-card .ech-svg {
+        min-height: 160px !important;
+    }
+}
+
+/* ---------- 11. ПЛАНШЕТ ---------- */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .phc-row {
+        padding-left: 24px;
+    }
+    .phc-avatar {
+        width: 100px !important;
+        height: 100px !important;
+        margin-right: 40px !important;
+    }
+    .phc-avatar .profile-avatar {
+        width: 100px !important;
+        height: 100px !important;
+        font-size: 40px !important;
+    }
+    .phc-avatar .special-frame-overlay {
+        width: 200px !important;
+        height: 200px !important;
+        max-width: 200px !important;
+        max-height: 200px !important;
+        min-width: 200px !important;
+        min-height: 200px !important;
+    }
+    .phc-name { font-size: 26px !important; }
+    .phc-clan-tag,
+    .phc-name-row > span:first-child {
+        font-size: 18px;
+    }
+}
+
+/* ---------- 12. ЧУЖОЙ ПРОФИЛЬ ---------- */
+.pm2-hero {
+    position: relative !important;
+    overflow: visible !important;
+    padding: 16px;
+    margin-bottom: 8px;
+    border-radius: 18px;
+    border: 1px solid var(--border-strong);
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.08) 0%,
+        rgba(0, 0, 0, 0.65) 55%,
+        rgba(0, 0, 0, 0.92) 100%);
+    isolation: isolate;
+}
+
+.pm2-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.85;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.pm2-hero.has-custom-bg {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
+.pm2-hero.has-custom-bg > .profile-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.5) 0%,
+        rgba(0, 0, 0, 0.72) 45%,
+        rgba(0, 0, 0, 0.92) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+    border-radius: inherit;
+}
+
+.pm2-hero > *:not(.profile-bg-overlay) {
+    position: relative;
+    z-index: 2;
+}
+
+.pm2-avatar-wrap {
+    position: relative !important;
+    width: 84px !important;
+    height: 84px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: visible !important;
+    margin-right: 30px !important;
+}
+
+.pm2-avatar {
+    width: 84px !important;
+    height: 84px !important;
+    font-size: 34px !important;
+    position: relative !important;
+    z-index: 2 !important;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.pm2-avatar-wrap .special-frame-overlay {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 168px !important;
+    height: 168px !important;
+    max-width: 168px !important;
+    max-height: 168px !important;
+    min-width: 168px !important;
+    min-height: 168px !important;
+    z-index: 25 !important;
+    pointer-events: none !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    animation: none !important;
+}
+
+.pm2-avatar-wrap .special-frame-overlay svg,
+.pm2-avatar-wrap .special-frame-overlay .fr-svg {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    display: block !important;
+}
+
+@media (min-width: 1024px) {
+    .pm2-avatar-wrap {
+        width: 120px !important;
+        height: 120px !important;
+        margin-right: 50px !important;
+    }
+    .pm2-avatar {
+        width: 120px !important;
+        height: 120px !important;
+    }
+    .pm2-avatar-wrap .special-frame-overlay {
+        width: 240px !important;
+        height: 240px !important;
+        max-width: 240px !important;
+        max-height: 240px !important;
+        min-width: 240px !important;
+        min-height: 240px !important;
+    }
+}
+
+/* ---------- 13. LITE-РЕЖИМ — ГЛУШИМ ВСЁ ---------- */
+html.lite-mode .special-frame-overlay,
+html.lite-mode .special-frame-overlay svg,
+html.lite-mode .special-frame-overlay svg *,
+html.lite-mode .list-frame-overlay,
+html.lite-mode .list-frame-overlay svg,
+html.lite-mode .list-frame-overlay svg *,
+html.lite-mode .frame-preview-overlay svg,
+html.lite-mode .frame-preview-overlay svg * {
+    animation: none !important;
+    transition: none !important;
+    will-change: auto !important;
+}
+
+html.lite-mode .special-frame-overlay svg *,
+html.lite-mode .list-frame-overlay svg * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+html.lite-mode .profile-equipped-badge {
+    animation: none !important;
+}
+
+/* ============================================================ */
+/* 🎮 ПРОФИЛЬ v4 — КОНЕЦ БЛОКА                                   */
+/* ============================================================ */
     
 </style>
 </head>
@@ -18816,8 +19660,9 @@ async function renderProfileView(user, options = {}) {
     // 🔥 ЕДИНЫЙ HTML (используется и в своём, и в чужом профиле)
 const html = `
     <!-- ============ HERO ============ -->
-    <div class="profile-hero-compact" data-profile-bg>
-        <span class="sc-corner sc-tl"></span>
+<div class="profile-hero-compact ${(user.equipped_items?.profile_bg) ? 'has-custom-bg' : ''}" data-profile-bg>
+    <div class="profile-bg-overlay"></div>
+    <span class="sc-corner sc-tl"></span>
         <span class="sc-corner sc-tr"></span>
         <span class="sc-corner sc-bl"></span>
         <span class="sc-corner sc-br"></span>
@@ -28963,7 +29808,35 @@ function applyLiteMode(on) {
     }
     localStorage.setItem('appLiteMode', on ? '1' : '0');
 
-    // Показать полоску загрузки на момент смены
+    // 🔥 Перерисовываем открытые профили — чтобы SVG-рамки перерисовались
+    if (document.getElementById('page-profile')?.classList.contains('active')) {
+        if (typeof currentUser !== 'undefined' && currentUser) {
+            const cont = document.getElementById('profileContent');
+            if (cont && typeof applyCustomizationToElement === 'function') {
+                cont.querySelectorAll('.special-frame-overlay, .list-frame-overlay').forEach(o => o.remove());
+                applyCustomizationToElement(cont, currentUser);
+            }
+        }
+    }
+
+    const playerModal = document.getElementById('playerModal');
+    if (playerModal?.classList.contains('active')) {
+        if (typeof currentProfileUserId !== 'undefined' && currentProfileUserId) {
+            const cont = document.getElementById('playerModalContent');
+            if (cont) {
+                cont.querySelectorAll('.special-frame-overlay, .list-frame-overlay').forEach(o => o.remove());
+                if (typeof sb !== 'undefined') {
+                    sb.from('users').select('*').eq('telegram_id', currentProfileUserId).maybeSingle()
+                        .then(({ data }) => {
+                            if (data && typeof applyCustomizationToElement === 'function') {
+                                applyCustomizationToElement(cont, data);
+                            }
+                        });
+                }
+            }
+        }
+    }
+
     const bar = document.getElementById('pageLoadingBar');
     if (bar) {
         bar.classList.add('active');
@@ -33654,6 +34527,14 @@ const overlay = document.createElement('div');
 overlay.className = `special-frame-overlay special-frame-${val.special_type || 'default'}`;
 overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
 syncFrameAnimation(overlay);
+
+// 🔥 LITE: глушим SVG-анимации сразу при создании
+if (document.documentElement.classList.contains('lite-mode')) {
+    overlay.querySelectorAll('svg, svg *').forEach(el => {
+        el.style.setProperty('animation', 'none', 'important');
+        el.style.setProperty('transition', 'none', 'important');
+    });
+}
 // 🔥 Вставляем ПОСЛЕ аватара — рамка сверху
 wrap.appendChild(overlay);
 }
