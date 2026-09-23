@@ -16696,6 +16696,7 @@ function checkIcon(status, size = 14) {
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzbXVvcG9hc2d6eXJvbWRqdG50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMzA0MzMsImV4cCI6MjEwNDkwNjQzM30.qEUIVTAQMuP37z4JSa75dlWSelqhNolUuobp7hcAKjc';
         const NOTIFY_URL = SUPABASE_URL + '/functions/v1/notify';
         const MM_URL = SUPABASE_URL + '/functions/v1/mm-tick';
+        const SAVE_PREPARED_URL = SUPABASE_URL + '/functions/v1/save-prepared-message';
 
         const BUCKETS = {
             avatars: 'avatars',
@@ -39151,22 +39152,102 @@ function closeSharePreview() {
 }
 
 // ============================================================
-// ОТПРАВКА В TELEGRAM — нативный шер с фото
+// ОТПРАВКА В TELEGRAM — через prepared inline message
+// Юзер выбирает чат → Telegram сам отправляет фото + текст + ссылку
 // ============================================================
 async function doShareToTelegram() {
     const blob = window._shareBlob;
     const user = window._shareUserData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
-    const shareText = `Играй со мной на De1mos Faceit\nhttp://t.me/De1mosFaceit_bot/De1mosFaceit`;
-    const file = new File([blob], `de1mos_${user.telegram_id}.png`, { type: 'image/png' });
+    // Проверяем, что API доступно
+    if (!tg?.shareMessage) {
+        // Фолбэк — старый способ
+        console.warn('tg.shareMessage недоступен, использую фолбэк');
+        await doShareToTelegramFallback(blob, user);
+        return;
+    }
 
-    // === СПОСОБ 1: navigator.share с файлами (iOS / Android TG) ===
+    const btn = document.querySelector('.share-preview-btn.primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'ПОДГОТОВКА...'; }
+
+    try {
+        showToast('⏳ Готовлю картинку...');
+
+        // ============================================================
+        // 1. Загружаем blob в Edge Function → получаем prepared_message_id
+        // ============================================================
+        const formData = new FormData();
+        formData.append('userId', String(user.telegram_id));
+        formData.append('text', 'Играй со мной на De1mos Faceit');
+        formData.append('url', 'http://t.me/De1mosFaceit_bot/De1mosFaceit');
+        formData.append('photo', blob, `de1mos_${user.telegram_id}.png`);
+
+        const res = await fetch(SAVE_PREPARED_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'apikey': SUPABASE_ANON_KEY,
+            },
+            body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data?.prepared_message_id) {
+            console.error('save-prepared-message error:', data);
+            showToast('❌ ' + (data?.error || 'Ошибка подготовки'));
+            // Фолбэк — скачать и открыть шер
+            await doShareToTelegramFallback(blob, user);
+            return;
+        }
+
+        // ============================================================
+        // 2. Вызываем нативный шер
+        // ============================================================
+        tg.shareMessage(data.prepared_message_id, (sent) => {
+            if (sent) {
+                haptic('medium');
+                showToast('✅ Отправлено');
+                closeSharePreview();
+            } else {
+                showToast('Отменено');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Отправить';
+                }
+            }
+        });
+
+    } catch (e) {
+        console.error('doShareToTelegram error:', e);
+        showToast('Ошибка: ' + e.message);
+        await doShareToTelegramFallback(blob, user);
+    } finally {
+        if (btn && btn.disabled) {
+            // На случай, если юзер отменил — вернём кнопку
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = 'Отправить';
+            }, 3000);
+        }
+    }
+}
+
+// ============================================================
+// ФОЛБЭК: скачать + открыть шер (если shareMessage недоступен)
+// ============================================================
+async function doShareToTelegramFallback(blob, user) {
+    const shareUrl = 'http://t.me/De1mosFaceit_bot/De1mosFaceit';
+    const fileName = `de1mos_${user.telegram_id}.png`;
+
+    // Пробуем нативный share (редко работает)
+    const file = new File([blob], fileName, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
             await navigator.share({
                 files: [file],
-                text: shareText,
+                text: `Играй со мной на De1mos Faceit\n${shareUrl}`,
             });
             haptic('medium');
             showToast('✅ Отправлено');
@@ -39174,47 +39255,90 @@ async function doShareToTelegram() {
             return;
         } catch (e) {
             if (e.name === 'AbortError') return;
-            console.warn('navigator.share fail:', e);
         }
     }
 
-    // === СПОСОБ 2: скачиваем фото + открываем Telegram-шер ===
+    // Скачиваем картинку
     try {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `de1mos_${user.telegram_id}.png`;
+        a.download = fileName;
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 5000);
-
-        showToast('📥 Фото сохранено. Открываю Telegram...');
+        showToast('📥 Фото сохранено. Прикрепи из галереи');
     } catch (e) {
         console.warn('download fail:', e);
     }
 
+    // Открываем шер
     setTimeout(() => {
-        try {
-            const tgUrl =
-                `https://t.me/share/url?` +
-                `url=${encodeURIComponent('http://t.me/De1mosFaceit_bot/De1mosFaceit')}` +
-                `&text=${encodeURIComponent('Играй со мной на De1mos Faceit')}`;
+        const tgUrl =
+            `https://t.me/share/url?` +
+            `url=${encodeURIComponent(shareUrl)}` +
+            `&text=${encodeURIComponent('Играй со мной на De1mos Faceit')}`;
 
+        try {
             if (tg?.openTelegramLink) tg.openTelegramLink(tgUrl);
             else if (tg?.openLink) tg.openLink(tgUrl);
             else window.open(tgUrl, '_blank');
         } catch (e) {
-            window.open(
-                `https://t.me/share/url?url=${encodeURIComponent('http://t.me/De1mosFaceit_bot/De1mosFaceit')}&text=${encodeURIComponent('Играй со мной на De1mos Faceit')}`,
-                '_blank'
-            );
+            window.open(tgUrl, '_blank');
         }
 
-        haptic('medium');
-        showToast('💡 Прикрепи фото из галереи');
         closeSharePreview();
     }, 800);
+}
+
+// ============================================================
+// Скачать Blob в галерею — 3 способа с фолбэками
+// ============================================================
+async function downloadImageToGallery(blob, fileName) {
+    // ---- Способ 1: Telegram.WebApp.downloadFile (если есть) ----
+    try {
+        if (tg?.downloadFile) {
+            const reader = new FileReader();
+            const dataUrl = await new Promise(res => {
+                reader.onload = () => res(reader.result);
+                reader.readAsDataURL(blob);
+            });
+            tg.downloadFile({ url: dataUrl, file_name: fileName });
+            showToast('📥 Фото сохранено в галерею');
+            return;
+        }
+    } catch (e) {
+        console.warn('tg.downloadFile fail:', e);
+    }
+
+    // ---- Способ 2: a.download ----
+    try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        showToast('📥 Фото сохранено в галерею');
+        return;
+    } catch (e) {
+        console.warn('a.download fail:', e);
+    }
+
+    // ---- Способ 3: открыть blob в новой вкладке (юзер сохранит сам) ----
+    try {
+        const url = URL.createObjectURL(blob);
+        if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank');
+        showToast('💡 Сохрани картинку из открывшейся вкладки');
+    } catch (e) {
+        showToast('❌ Не удалось сохранить фото');
+    }
 }
 
 // ============================================================
