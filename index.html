@@ -38341,134 +38341,128 @@ function roundRect(ctx, x, y, w, h, r) {
 // ГЛАВНАЯ: генерация картинки профиля
 // ============================================================
 async function generateProfileShareImage(user) {
-    // Ждём загрузки библиотеки
-    if (typeof html2canvas === 'undefined') {
-        // Пробуем подождать
-        let tries = 0;
-        while (typeof html2canvas === 'undefined' && tries < 30) {
-            await new Promise(r => setTimeout(r, 100));
-            tries++;
-        }
+    // ============================================================
+    // ТАЙМАУТ НА ВСЮ ФУНКЦИЮ — 15 секунд
+    // ============================================================
+    const timeoutPromise = new Promise((_, rej) =>
+        setTimeout(() => rej(new Error('Превышено время генерации (5 сек)')), 5000)
+    );
+
+    const workPromise = (async () => {
+        // Ждём загрузки библиотеки
         if (typeof html2canvas === 'undefined') {
-            throw new Error('html2canvas не загрузился');
+            let tries = 0;
+            while (typeof html2canvas === 'undefined' && tries < 30) {
+                await new Promise(r => setTimeout(r, 100));
+                tries++;
+            }
+            if (typeof html2canvas === 'undefined') {
+                console.warn('⚠️ html2canvas не загрузился — fallback');
+                throw new Error('html2canvas не загрузился');
+            }
         }
-    }
+
+        // ============================================================
+        // 1. Создаём СКРЫТУЮ копию шапки профиля
+        // ============================================================
+        const stage = document.createElement('div');
+        stage.style.cssText = `
+            position: fixed;
+            top: -99999px;
+            left: -99999px;
+            width: 900px;
+            padding: 0;
+            margin: 0;
+            background: #000;
+            z-index: 99999;
+        `;
+
+        const realHero = document.querySelector('.profile-hero-compact[data-profile-bg]');
+        if (!realHero) throw new Error('Шапка профиля не найдена');
+
+        const clone = realHero.cloneNode(true);
+        clone.querySelectorAll('.avatar-edit-btn, .phc-actions, .phc-settings, .phc-icon-btn, button').forEach(el => el.remove());
+
+        stage.appendChild(clone);
+        document.body.appendChild(stage);
+
+        try {
+            await copyComputedStylesRecursive(realHero, clone);
+
+            clone.style.width = (realHero.offsetWidth * 2) + 'px';
+            clone.style.transform = 'scale(2)';
+            clone.style.transformOrigin = 'top left';
+
+            await new Promise(r => setTimeout(r, 300));
+
+            // ============================================================
+            // 2. РЕНДЕР
+            // ============================================================
+            let canvas;
+            try {
+                canvas = await html2canvas(clone, {
+                    backgroundColor: '#050807',
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                });
+            } catch (e) {
+                console.error('html2canvas fail:', e);
+                throw new Error('html2canvas не смог отрисовать');
+            }
+
+            // ============================================================
+            // 3. Дорисовываем график и CTA снизу
+            // ============================================================
+            const W = canvas.width;
+            const heroH = canvas.height;
+            const extraH = Math.round(W * 0.75);
+
+            const final = document.createElement('canvas');
+            final.width = W;
+            final.height = heroH + extraH;
+            const ctx = final.getContext('2d');
+
+            ctx.drawImage(canvas, 0, 0);
+
+            const colors = getThemeColors();
+            const cS = W / 1080;
+
+            const bgGrad = ctx.createLinearGradient(0, heroH, 0, heroH + extraH);
+            bgGrad.addColorStop(0, colors.bg2);
+            bgGrad.addColorStop(1, '#000');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, heroH, W, extraH);
+
+            let history = [];
+            try {
+                const { data } = await sb.from('dxp_history')
+                    .select('elo_after, elo_before, delta, won')
+                    .eq('telegram_id', Number(user.telegram_id))
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+                history = (data || []).slice().reverse();
+            } catch (e) {}
+
+            drawMiniChartOnCanvas(ctx, W, heroH + 40 * cS, extraH - 200 * cS, history, colors, cS);
+            drawCTABlock(ctx, W, heroH + extraH - 160 * cS, colors, cS);
+
+            return final;
+        } finally {
+            stage.remove();
+        }
+    })();
 
     // ============================================================
-    // 1. Создаём СКРЫТУЮ копию шапки профиля для рендера
+    // ГОНКА: работа vs таймаут
     // ============================================================
-    const stage = document.createElement('div');
-    stage.style.cssText = `
-        position: fixed;
-        top: -99999px;
-        left: -99999px;
-        width: 900px;
-        padding: 0;
-        margin: 0;
-        background: #000;
-        z-index: 99999;
-    `;
-
-    // Копируем HTML шапки профиля — берём его из реального DOM
-    const realHero = document.querySelector('.profile-hero-compact[data-profile-bg]');
-    if (!realHero) {
-        throw new Error('Шапка профиля не найдена');
-    }
-
-    // 🔥 КЛОНИРУЕМ узел как есть
-    const clone = realHero.cloneNode(true);
-
-    // Убираем редактирование, кнопки и т.д.
-    clone.querySelectorAll('.avatar-edit-btn, .phc-actions, .phc-settings, .phc-icon-btn, button').forEach(el => el.remove());
-
-    stage.appendChild(clone);
-    document.body.appendChild(stage);
-
-    // ============================================================
-    // 2. Копируем вычисленные стили с оригинала на клон (включая фон, рамку)
-    // ============================================================
-    await copyComputedStylesRecursive(realHero, clone);
-
-    // Размеры делаем больше для качества
-    stage.style.width = (realHero.offsetWidth * 2) + 'px';
-    clone.style.width = (realHero.offsetWidth * 2) + 'px';
-    clone.style.transform = 'scale(2)';
-    clone.style.transformOrigin = 'top left';
-
-    // Ждём отрисовки
-    await new Promise(r => setTimeout(r, 300));
-
-    // ============================================================
-    // 3. Рендерим через html2canvas
-    // ============================================================
-    let canvas;
     try {
-        canvas = await html2canvas(clone, {
-            backgroundColor: '#050807',
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            width: clone.offsetWidth,
-            height: clone.offsetHeight,
-            windowWidth: clone.scrollWidth,
-            windowHeight: clone.scrollHeight,
-        });
+        return await Promise.race([workPromise, timeoutPromise]);
     } catch (e) {
-        console.error('html2canvas fail:', e);
-        // Fallback — генерируем «старую» версию
-        stage.remove();
+        console.warn('generateProfileShareImage fail:', e.message);
         return await generateProfileShareImageFallback(user);
     }
-
-    stage.remove();
-
-    // ============================================================
-    // 4. Дополняем картинку снизу (CTA + график)
-    // ============================================================
-    const W = canvas.width;
-    const heroH = canvas.height;
-    const extraH = Math.round(W * 0.75); // сколько добавить снизу
-
-    const final = document.createElement('canvas');
-    final.width = W;
-    final.height = heroH + extraH;
-    const ctx = final.getContext('2d');
-
-    // Копируем шапку
-    ctx.drawImage(canvas, 0, 0);
-
-    // ============================================================
-    // 5. Рисуем график + CTA под шапкой
-    // ============================================================
-    const colors = getThemeColors();
-    const cS = W / 1080; // коэффициент масштаба
-
-    // Фон
-    const bgGrad = ctx.createLinearGradient(0, heroH, 0, heroH + extraH);
-    bgGrad.addColorStop(0, colors.bg2);
-    bgGrad.addColorStop(1, '#000');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, heroH, W, extraH);
-
-    // Загружаем историю
-    let history = [];
-    try {
-        const { data } = await sb.from('dxp_history')
-            .select('elo_after, elo_before, delta, won')
-            .eq('telegram_id', Number(user.telegram_id))
-            .order('created_at', { ascending: false })
-            .limit(20);
-        history = (data || []).slice().reverse();
-    } catch (e) {}
-
-    // График
-    drawMiniChartOnCanvas(ctx, W, heroH + 40 * cS, extraH - 200 * cS, history, colors, cS);
-
-    // CTA снизу
-    drawCTABlock(ctx, W, heroH + extraH - 160 * cS, colors, cS);
-
-    return final;
 }
 
 // ============================================================
@@ -38635,21 +38629,156 @@ function drawCTABlock(ctx, W, y, colors, cS) {
 }
 
 // ============================================================
-// FALLBACK — старая версия (если html2canvas не сработал)
+// FALLBACK — если html2canvas не сработал
 // ============================================================
 async function generateProfileShareImageFallback(user) {
-    // ... оставь старую версию (только текст + график)
-    // Если не хочешь — сделай простую заглушку
+    const W = 1080;
+    const H = 1350;
     const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1080;
+    canvas.width = W;
+    canvas.height = H;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 1080, 1080);
-    ctx.fillStyle = '#fff';
-    ctx.font = '900 48px sans-serif';
+    const colors = getThemeColors();
+
+    // Фон
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, colors.bg1);
+    bg.addColorStop(0.5, colors.bg2);
+    bg.addColorStop(1, '#000');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Свечение
+    const glow = ctx.createRadialGradient(W / 2, 300, 0, W / 2, 300, W * 0.9);
+    glow.addColorStop(0, colors.glow);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // Сетка
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 60) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 60) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // Лого
     ctx.textAlign = 'center';
-    ctx.fillText('De1mos Faceit', 540, 540);
+    ctx.textBaseline = 'middle';
+    ctx.font = '900 64px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 30;
+    ctx.fillText('De1mos Faceit', W / 2, 150);
+    ctx.shadowBlur = 0;
+
+    // Аватар
+    const avSrc = user.custom_avatar || user.photo_url;
+    const avCx = W / 2;
+    const avCy = 400;
+    const avR = 140;
+
+    // Кольца
+    for (let i = 2; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.arc(avCx, avCy, avR + 10 + i * 10, 0, Math.PI * 2);
+        ctx.strokeStyle = colors.primary + (i === 1 ? 'aa' : '33');
+        ctx.lineWidth = i === 1 ? 5 : 2;
+        ctx.shadowColor = colors.primary;
+        ctx.shadowBlur = i === 1 ? 40 : 12;
+        ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+
+    // Чёрный круг
+    ctx.beginPath();
+    ctx.arc(avCx, avCy, avR + 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+
+    // Аватар
+    let avatarDrawn = false;
+    if (avSrc) {
+        try {
+            const img = await loadImageAsPromise(avSrc);
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(img, avCx - avR, avCy - avR, avR * 2, avR * 2);
+            ctx.restore();
+            avatarDrawn = true;
+        } catch (e) { console.warn('avatar load fail:', e); }
+    }
+    if (!avatarDrawn) {
+        ctx.beginPath();
+        ctx.arc(avCx, avCy, avR, 0, Math.PI * 2);
+        const avGrad = ctx.createLinearGradient(avCx - avR, avCy - avR, avCx + avR, avCy + avR);
+        avGrad.addColorStop(0, colors.primary);
+        avGrad.addColorStop(1, colors.secondary);
+        ctx.fillStyle = avGrad;
+        ctx.fill();
+        ctx.font = '900 120px -apple-system, sans-serif';
+        ctx.fillStyle = '#04140e';
+        ctx.fillText((user.display_name || 'U')[0].toUpperCase(), avCx, avCy + 5);
+    }
+
+    // Ник
+    ctx.font = '900 60px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 25;
+    ctx.fillText(user.display_name || 'Игрок', W / 2, 660);
+    ctx.shadowBlur = 0;
+
+    // Юзернейм
+    if (user.username) {
+        ctx.font = '700 26px -apple-system, sans-serif';
+        ctx.fillStyle = colors.primary;
+        ctx.fillText('@' + user.username, W / 2, 710);
+    }
+
+    // Уровень
+    const lvl = eloToLevel(user.elo);
+    ctx.font = '900 28px -apple-system, sans-serif';
+    ctx.fillStyle = colors.light;
+    ctx.fillText('⚡ УРОВЕНЬ ' + lvl, W / 2, 780);
+
+    // DXP
+    ctx.font = '900 92px -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 30;
+    ctx.fillText(String(user.elo ?? 1000), W / 2, 890);
+    ctx.shadowBlur = 0;
+
+    ctx.font = '900 26px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('D X P', W / 2, 950);
+
+    // CTA
+    ctx.font = '800 28px -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('Играй со мной на', W / 2, 1120);
+
+    ctx.font = '900 52px -apple-system, sans-serif';
+    const nameGrad = ctx.createLinearGradient(W / 2 - 300, 0, W / 2 + 300, 0);
+    nameGrad.addColorStop(0, colors.primary);
+    nameGrad.addColorStop(0.5, colors.light);
+    nameGrad.addColorStop(1, colors.primary);
+    ctx.fillStyle = nameGrad;
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 25;
+    ctx.fillText('De1mos Faceit', W / 2, 1190);
+    ctx.shadowBlur = 0;
+
+    ctx.font = '700 22px -apple-system, sans-serif';
+    ctx.fillStyle = colors.primary;
+    ctx.fillText('t.me/De1mosFaceit_bot/De1mosFaceit', W / 2, 1250);
+
     return canvas;
 }
 
@@ -38657,7 +38786,6 @@ async function generateProfileShareImageFallback(user) {
 // ОТКРЫТИЕ МОДАЛКИ ПРЕВЬЮ
 // ============================================================
 async function openSharePreview(userId) {
-    // Убираем старую модалку
     document.getElementById('sharePreviewOverlay')?.remove();
 
     const overlay = document.createElement('div');
@@ -38675,7 +38803,7 @@ async function openSharePreview(userId) {
         </div>
         <div class="share-preview-body">
             <div class="share-preview-canvas-wrap">
-                <canvas id="sharePreviewCanvas" style="width:100%;height:auto;"></canvas>
+                <canvas id="sharePreviewCanvas" style="width:100%;height:auto;display:block;"></canvas>
             </div>
             <div class="share-preview-info" id="sharePreviewInfo">
                 Генерирую картинку...
@@ -38696,7 +38824,8 @@ async function openSharePreview(userId) {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    // Загружаем юзера и генерируем
+    const info = document.getElementById('sharePreviewInfo');
+
     try {
         const { data: user } = await sb.from('users')
             .select('*').eq('telegram_id', userId).single();
@@ -38709,13 +38838,14 @@ async function openSharePreview(userId) {
         if (wrap && wrap.parentNode) {
             wrap.parentNode.replaceChild(canvas, wrap);
             canvas.id = 'sharePreviewCanvas';
+            canvas.style.cssText = 'width:100%;height:auto;display:block;';
         }
 
-        // Готовим blob
+        // Blob
         const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+        if (!blob) throw new Error('Не удалось создать картинку');
         window._shareBlob = blob;
 
-        const info = document.getElementById('sharePreviewInfo');
         if (info) info.textContent = 'Готово! Нажми «Отправить» чтобы поделиться';
 
         const actions = document.getElementById('sharePreviewActions');
@@ -38723,7 +38853,6 @@ async function openSharePreview(userId) {
 
     } catch (e) {
         console.error('openSharePreview:', e);
-        const info = document.getElementById('sharePreviewInfo');
         if (info) info.textContent = '❌ Ошибка: ' + e.message;
     }
 }
@@ -38747,7 +38876,7 @@ async function doShareToTelegram() {
 
     const file = new File([blob], `de1mos_${user.telegram_id}.png`, { type: 'image/png' });
 
-    // === СПОСОБ 1: navigator.share с файлами (iOS / Android Chrome) ===
+    // === СПОСОБ 1: navigator.share с файлами ===
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
             await navigator.share({
@@ -38760,13 +38889,12 @@ async function doShareToTelegram() {
             closeSharePreview();
             return;
         } catch (e) {
-            if (e.name === 'AbortError') return; // юзер отменил
+            if (e.name === 'AbortError') return;
             console.warn('navigator.share fail:', e);
         }
     }
 
-    // === СПОСОБ 2: открываем Telegram + скачиваем картинку ===
-    // Скачиваем в галерею
+    // === СПОСОБ 2: скачиваем + открываем Telegram ===
     try {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -38782,7 +38910,6 @@ async function doShareToTelegram() {
         console.warn('download fail:', e);
     }
 
-    // Открываем Telegram с текстом
     setTimeout(() => {
         try {
             const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
