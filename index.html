@@ -18288,6 +18288,1019 @@ html.lite-mode .achv-tooltip.visible {
         font-size: 10.5px;
     }
 }
+
+    /* ============================================================ */
+/* 🎯 ПРОГНОЗ НА МАТЧ                                            */
+/* ============================================================ */
+
+.match-predict-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 32px);
+    max-width: 520px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #0a1410 0%, #050807 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    padding: 18px;
+    z-index: 810;
+    animation: mpIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes mpIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.mp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+}
+
+.mp-header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.6;
+}
+
+.mp-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--emerald);
+}
+
+.mp-title svg {
+    filter: drop-shadow(0 0 4px rgba(var(--emerald-rgb), 0.6));
+}
+
+.mp-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: var(--hint);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+}
+
+.mp-close:active { transform: scale(0.9); }
+
+/* Команды */
+.mp-teams {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.mp-team {
+    padding: 12px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.mp-team.team-a {
+    background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.10), rgba(0, 0, 0, 0.4));
+    border: 1px solid rgba(var(--emerald-rgb), 0.35);
+}
+
+.mp-team.team-b {
+    background: linear-gradient(180deg, rgba(255, 84, 112, 0.10), rgba(0, 0, 0, 0.4));
+    border: 1px solid rgba(255, 84, 112, 0.35);
+}
+
+.mp-team-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.mp-team-icon { font-size: 16px; }
+
+.mp-team-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+}
+
+.mp-team.team-a .mp-team-name { color: var(--emerald); }
+.mp-team.team-b .mp-team-name { color: #ff5470; }
+
+.mp-team-avg, .mp-team-wr {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 6px;
+}
+
+.mp-team-wr { margin-bottom: 0; }
+
+.mp-avg-label, .mp-wr-label {
+    font-size: 9px;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 800;
+}
+
+.mp-avg-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.mp-team.team-a .mp-avg-value { color: var(--emerald); text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.5); }
+.mp-team.team-b .mp-avg-value { color: #ff5470; text-shadow: 0 0 10px rgba(255, 84, 112, 0.5); }
+
+.mp-wr-value {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--text);
+}
+
+.mp-vs {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--hint);
+    letter-spacing: 2px;
+    padding: 0 4px;
+}
+
+/* Вероятность */
+.mp-probability {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.mp-prob-label {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--hint);
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.mp-prob-bar {
+    display: flex;
+    height: 32px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-strong);
+}
+
+.mp-prob-a, .mp-prob-b {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    color: #fff;
+    transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-width: 30px;
+}
+
+.mp-prob-a {
+    background: linear-gradient(90deg, var(--emerald-2), var(--emerald));
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.mp-prob-b {
+    background: linear-gradient(90deg, #ff5470, #cc1e38);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Составы */
+.mp-rosters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mp-roster {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.mp-roster-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+
+.mp-roster.team-a .mp-roster-title { color: var(--emerald); }
+.mp-roster.team-b .mp-roster-title { color: #ff5470; }
+
+.mp-star { font-size: 10px; }
+
+.mp-player {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 0;
+    min-width: 0;
+}
+
+.mp-player-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+    color: #04140e;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.mp-player.team-b .mp-player-avatar {
+    background: linear-gradient(135deg, #ff5470, #cc1e38);
+    color: #fff;
+}
+
+.mp-player-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mp-player-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mp-player-name {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mp-player-elo {
+    font-size: 9px;
+    color: var(--hint);
+    font-weight: 700;
+    margin-top: 1px;
+}
+
+/* Кнопка старт */
+.mp-start-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
+    color: #04140e;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.4);
+    transition: transform 0.18s ease, box-shadow 0.22s ease;
+}
+
+.mp-start-btn:active { transform: scale(0.97); }
+
+.mp-start-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Адаптив */
+@media (max-width: 380px) {
+    .mp-rosters { grid-template-columns: 1fr; }
+    .mp-avg-value { font-size: 18px; }
+    .mp-prob-a, .mp-prob-b { font-size: 11px; }
+}
+
+    /* ============================================================ */
+/* 📊 РАСШИРЕННАЯ СТАТИСТИКА                                      */
+/* ============================================================ */
+
+.ext-stats-card {
+    margin-bottom: 12px;
+    padding: 14px;
+    background: #03060a;
+    background-image: linear-gradient(180deg,
+        rgba(167, 139, 250, 0.06) 0%,
+        rgba(0, 0, 0, 0.85) 55%,
+        #000000 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 4px 20px rgba(0, 0, 0, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.ext-stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--purple), transparent);
+    opacity: 0.7;
+}
+
+.ext-stat-block {
+    margin-bottom: 16px;
+}
+
+.ext-stat-block:last-child { margin-bottom: 0; }
+
+.ext-stat-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--purple);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ext-stat-title svg {
+    filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.6));
+}
+
+/* Streak */
+.ext-streak {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 900;
+    text-align: center;
+    padding: 12px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.ext-streak.win {
+    background: linear-gradient(135deg, rgba(140, 230, 90, 0.15), rgba(140, 230, 90, 0.04));
+    border: 1px solid rgba(140, 230, 90, 0.4);
+    color: #8ce65a;
+    text-shadow: 0 0 10px rgba(140, 230, 90, 0.5);
+}
+
+.ext-streak.loss {
+    background: linear-gradient(135deg, rgba(255, 84, 112, 0.15), rgba(255, 84, 112, 0.04));
+    border: 1px solid rgba(255, 84, 112, 0.4);
+    color: #ff5470;
+    text-shadow: 0 0 10px rgba(255, 84, 112, 0.5);
+}
+
+.ext-streak-sub {
+    text-align: center;
+    font-size: 10px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* Любимые карты */
+.ext-map-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    margin-bottom: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: background 0.2s ease;
+}
+
+.ext-map-row:last-child { margin-bottom: 0; }
+
+.ext-map-thumb {
+    width: 40px;
+    height: 30px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+}
+
+.ext-map-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ext-map-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ext-map-sub {
+    font-size: 10px;
+    color: var(--hint);
+    margin-top: 1px;
+}
+
+.ext-map-wr {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    padding: 4px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.ext-map-wr.good {
+    background: rgba(140, 230, 90, 0.12);
+    color: #8ce65a;
+    border: 1px solid rgba(140, 230, 90, 0.35);
+}
+
+.ext-map-wr.bad {
+    background: rgba(255, 84, 112, 0.12);
+    color: #ff5470;
+    border: 1px solid rgba(255, 84, 112, 0.35);
+}
+
+/* Часы активности */
+.ext-hours {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 2px;
+    height: 60px;
+    align-items: end;
+}
+
+.ext-hour {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.ext-hour-bar {
+    width: 100%;
+    min-height: 2px;
+    background: rgba(167, 139, 250, 0.3);
+    border-radius: 2px 2px 0 0;
+    transition: background 0.2s ease;
+}
+
+.ext-hour.active .ext-hour-bar {
+    background: linear-gradient(180deg, var(--purple), rgba(167, 139, 250, 0.5));
+    box-shadow: 0 0 4px rgba(167, 139, 250, 0.6);
+}
+
+.ext-hour-label {
+    position: absolute;
+    bottom: -14px;
+    font-size: 7px;
+    color: var(--hint);
+    font-weight: 700;
+}
+
+@media (max-width: 480px) {
+    .ext-hour-label:nth-child(odd) { display: none; }
+}
+
+/* Месяцы */
+.ext-months {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    height: 80px;
+    align-items: end;
+}
+
+.ext-month {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.ext-month-bar-wrap {
+    width: 100%;
+    height: 50px;
+    display: flex;
+    align-items: flex-end;
+}
+
+.ext-month-bar {
+    width: 100%;
+    min-height: 2px;
+    background: linear-gradient(180deg, var(--purple), rgba(167, 139, 250, 0.4));
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 0 6px rgba(167, 139, 250, 0.4);
+    transition: height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ext-month-label {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ext-month-count {
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--purple);
+}
+
+/* Lite mode */
+html.lite-mode .ext-month-bar,
+html.lite-mode .mp-prob-a,
+html.lite-mode .mp-prob-b {
+    transition: none !important;
+}
+
+    /* ============================================================ */
+/* 🎁 КЕЙСЫ                                                       */
+/* ============================================================ */
+
+.cases-hero {
+    text-align: center;
+    padding: 20px 16px 24px;
+    margin-bottom: 16px;
+    background: linear-gradient(180deg, rgba(217, 171, 90, 0.10), transparent);
+    border: 1px solid rgba(217, 171, 90, 0.3);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.cases-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.cases-hero-icon {
+    color: var(--gold);
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 12px rgba(217, 171, 90, 0.6));
+    display: inline-block;
+}
+
+.cases-hero-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(217, 171, 90, 0.5);
+    margin-bottom: 4px;
+}
+
+.cases-hero-sub {
+    font-size: 11px;
+    color: var(--hint);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Карточка кейса */
+.case-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.4));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.case-card.daily {
+    border-color: rgba(217, 171, 90, 0.4);
+}
+
+.case-card.daily.available {
+    background: linear-gradient(180deg, rgba(217, 171, 90, 0.10), rgba(0, 0, 0, 0.4));
+    box-shadow: 0 0 20px rgba(217, 171, 90, 0.2);
+}
+
+.case-card.premium {
+    border-color: rgba(167, 139, 250, 0.5);
+    background: linear-gradient(180deg, rgba(167, 139, 250, 0.10), rgba(0, 0, 0, 0.4));
+}
+
+.case-card-glow {
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent 65%);
+    pointer-events: none;
+    filter: blur(20px);
+}
+
+.case-card.daily.available .case-card-glow {
+    background: radial-gradient(circle, rgba(217, 171, 90, 0.4), transparent 65%);
+}
+
+.case-card.premium .case-card-glow {
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.4), transparent 65%);
+}
+
+.case-card-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    filter: drop-shadow(0 0 8px rgba(217, 171, 90, 0.5));
+}
+
+.case-card.premium .case-card-icon {
+    color: var(--purple);
+    filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.5));
+}
+
+.case-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.case-card-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.case-card-desc {
+    font-size: 10px;
+    color: var(--hint);
+    margin-bottom: 6px;
+}
+
+.case-card-chances {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.cc {
+    font-size: 9px;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+}
+
+.cc.common    { background: rgba(154, 167, 181, 0.15); color: #9aa7b5; }
+.cc.rare      { background: rgba(79, 195, 247, 0.15); color: #4fc3f7; }
+.cc.epic      { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+.cc.legendary { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+
+.case-card-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.18s ease;
+}
+
+.case-card-btn:active { transform: scale(0.95); }
+
+.case-card-btn.free {
+    background: linear-gradient(135deg, var(--gold), #b8860b);
+    color: #000;
+    box-shadow: 0 4px 14px rgba(217, 171, 90, 0.4);
+    animation: casePulse 2s ease-in-out infinite;
+}
+
+@keyframes casePulse {
+    0%, 100% { box-shadow: 0 4px 14px rgba(217, 171, 90, 0.4); }
+    50%      { box-shadow: 0 4px 22px rgba(217, 171, 90, 0.7); }
+}
+
+.case-card-btn.buy {
+    background: rgba(var(--emerald-rgb), 0.15);
+    color: var(--emerald);
+    border: 1px solid var(--border-strong);
+}
+
+.case-card-btn.buy.premium {
+    background: rgba(167, 139, 250, 0.15);
+    color: var(--purple);
+    border: 1px solid rgba(167, 139, 250, 0.4);
+}
+
+.case-card-btn.cooldown {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--hint);
+    cursor: not-allowed;
+    font-size: 10px;
+}
+
+/* История */
+.case-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.case-history-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.case-history-rarity {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 900;
+    flex-shrink: 0;
+}
+
+.case-history-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.case-history-name {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.case-history-time {
+    font-size: 9px;
+    color: var(--hint);
+    margin-top: 1px;
+}
+
+/* ---- Модалка открытия ---- */
+.case-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: caseFadeIn 0.3s ease;
+}
+
+@keyframes caseFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.case-modal-inner {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    background: linear-gradient(180deg, #0a1410 0%, #050807 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    padding: 30px 20px;
+    text-align: center;
+    overflow: hidden;
+    animation: caseIn 0.4s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+@keyframes caseIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+.case-modal-inner.rarity-legendary {
+    border-color: #ffd700;
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.5), inset 0 0 40px rgba(255, 215, 0, 0.1);
+}
+
+.case-modal-inner.rarity-epic {
+    border-color: #a78bfa;
+    box-shadow: 0 0 40px rgba(167, 139, 250, 0.5), inset 0 0 40px rgba(167, 139, 250, 0.1);
+}
+
+.case-modal-inner.rarity-rare {
+    border-color: #4fc3f7;
+    box-shadow: 0 0 30px rgba(79, 195, 247, 0.4);
+}
+
+.case-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, var(--rarity-color, #888), transparent 70%);
+    opacity: 0.15;
+    pointer-events: none;
+    filter: blur(30px);
+    animation: caseGlowPulse 2s ease-in-out infinite;
+}
+
+@keyframes caseGlowPulse {
+    0%, 100% { opacity: 0.15; }
+    50%      { opacity: 0.35; }
+}
+
+.case-spinner {
+    color: #ffd700;
+    margin-bottom: 20px;
+    animation: caseShake 0.3s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px currentColor);
+}
+
+@keyframes caseShake {
+    0%, 100% { transform: rotate(-3deg); }
+    50%      { transform: rotate(3deg); }
+}
+
+.case-opening-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--hint);
+    animation: caseTextPulse 1s ease-in-out infinite;
+}
+
+@keyframes caseTextPulse {
+    0%, 100% { opacity: 0.6; }
+    50%      { opacity: 1; }
+}
+
+.case-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: caseResultIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes caseResultIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+.case-result-rarity {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-shadow: 0 0 12px currentColor;
+    animation: caseRarityPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes caseRarityPulse {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1; }
+}
+
+.case-result-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 90px;
+    padding: 8px;
+}
+
+.case-result-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.case-result-duplicate {
+    font-size: 11px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.case-result-btn {
+    margin-top: 10px;
+    padding: 12px 30px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    color: #04140e;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(var(--emerald-rgb), 0.4);
+}
+
+.case-result-btn:active { transform: scale(0.96); }
+
+/* Lite mode */
+html.lite-mode .case-card-btn.free,
+html.lite-mode .case-spinner,
+html.lite-mode .case-opening-text,
+html.lite-mode .case-glow,
+html.lite-mode .case-result-rarity {
+    animation: none !important;
+}
     
 </style>
 </head>
@@ -18476,6 +19489,11 @@ html.lite-mode .achv-tooltip.visible {
     <!-- ============ QUESTS ============ -->
 <div class="container page" id="page-quests">
     <div id="questsContent"><div class="empty">Загрузка...</div></div>
+</div>
+
+    <!-- ============ CASES ============ -->
+<div class="container page" id="page-cases">
+    <div id="casesContent"><div class="empty">Загрузка...</div></div>
 </div>
     
     <!-- ============ SHOP ============ -->
@@ -19254,6 +20272,19 @@ html.lite-mode .achv-tooltip.visible {
     </span> Друзья
 </button>
 
+    <button class="menu-drawer-btn" data-menu="cases" onclick="menuDrawerGo('cases')">
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md cy-gold" viewBox="0 0 24 24">
+            <rect x="3" y="7" width="18" height="14" rx="2"/>
+            <path d="M3 11h18"/>
+            <path d="M12 7v14"/>
+            <path d="M7 7V4a5 5 0 0 1 10 0v3"/>
+        </svg>
+    </span>
+    Кейсы
+    <span class="nav-badge" id="casesMenuBadge" style="display:none;">🎁</span>
+</button>
+
 <button class="menu-drawer-btn" data-menu="quests" onclick="menuDrawerGo('quests')">
     <span class="menu-drawer-icon">
         <svg class="cy-icon cy-md cy-emerald" viewBox="0 0 24 24">
@@ -19432,6 +20463,442 @@ const RANK_CONFIG = {
         { min: 2300, max: Infinity, name: 'Бог',         color: '#ffcc2e', level: 10 },
     ],
 };
+
+          // ============================================================
+// 🎁 КЕЙСЫ
+// ============================================================
+const CASE_CONFIG = {
+    daily_free: {
+        name: 'Ежедневный кейс',
+        price: 0,
+        cooldown: 'daily',              // раз в день
+        free: true,
+        rarity_chances: {
+            common: 0.60,
+            rare: 0.28,
+            epic: 0.10,
+            legendary: 0.02,
+        },
+    },
+    common: {
+        name: 'Обычный кейс',
+        price: 500,
+        free: false,
+        rarity_chances: {
+            common: 0.50,
+            rare: 0.30,
+            epic: 0.15,
+            legendary: 0.05,
+        },
+    },
+    premium: {
+        name: 'Премиум кейс',
+        price: 1500,
+        free: false,
+        rarity_chances: {
+            common: 0.20,
+            rare: 0.35,
+            epic: 0.30,
+            legendary: 0.15,
+        },
+    },
+};
+
+// ============================================================
+// 🎁 SVG-ИКОНКИ КЕЙСОВ
+// ============================================================
+function getCaseSvg(size = 48) {
+    const c = `width="${size}" height="${size}" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
+    return `<svg ${c}>
+        <rect x="6" y="14" width="36" height="28" rx="3"/>
+        <path d="M6 22h36"/>
+        <path d="M24 14v28"/>
+        <path d="M14 14V8a10 10 0 0 1 20 0v6"/>
+        <circle cx="24" cy="30" r="2" fill="currentColor"/>
+    </svg>`;
+}
+
+// Проверка: можно ли открыть бесплатный кейс
+async function canOpenFreeCase() {
+    if (!currentUser) return { can: false, timeLeft: 0 };
+
+    try {
+        const { data } = await sb.from('case_openings')
+            .select('opened_at')
+            .eq('telegram_id', currentUser.telegram_id)
+            .eq('case_type', 'daily_free')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (!data) return { can: true, timeLeft: 0 };
+
+        const lastOpen = new Date(data.opened_at);
+        const nextOpen = new Date(lastOpen);
+        nextOpen.setUTCDate(nextOpen.getUTCDate() + 1);
+        nextOpen.setUTCHours(0, 0, 0, 0);
+
+        const now = Date.now();
+        const diff = nextOpen.getTime() - now;
+
+        if (diff > 0) {
+            return { can: false, timeLeft: diff, nextOpen: nextOpen.toISOString() };
+        }
+        return { can: true, timeLeft: 0 };
+    } catch (e) {
+        return { can: false, timeLeft: 0 };
+    }
+}
+
+// Получить случайный предмет из магазина по редкости
+async function getRandomItemByRarity(rarity) {
+    try {
+        const { data } = await sb.from('shop_items')
+            .select('*')
+            .eq('is_available', true)
+            .eq('rarity', rarity)
+            .neq('category', 'profile_bg'); // исключим фоны профиля (тяжёлые)
+
+        if (!data || !data.length) return null;
+        return data[Math.floor(Math.random() * data.length)];
+    } catch (e) {
+        return null;
+    }
+}
+
+// Выбрать редкость по шансам
+function rollRarity(chances) {
+    const roll = Math.random();
+    let cumulative = 0;
+    for (const [rarity, chance] of Object.entries(chances)) {
+        cumulative += chance;
+        if (roll < cumulative) return rarity;
+    }
+    return 'common';
+}
+
+// Открытие кейса
+async function openCase(caseType) {
+    if (!currentUser) return;
+
+    const config = CASE_CONFIG[caseType];
+    if (!config) return;
+
+    // Проверки
+    if (caseType === 'daily_free') {
+        const { can } = await canOpenFreeCase();
+        if (!can) {
+            showToast('⏳ Бесплатный кейс уже открыт. Возвращайся завтра!');
+            return;
+        }
+    } else {
+        // Платный — списываем монеты
+        if ((currentUser.coins || 0) < config.price) {
+            showToast('❌ Недостаточно монет');
+            return;
+        }
+        if (!confirm(`Открыть ${config.name} за ${config.price} монет?`)) return;
+
+        // Списываем
+        try {
+            await sb.rpc('add_coins', {
+                p_user_id: currentUser.telegram_id,
+                p_amount: -config.price,
+                p_reason: `case:${caseType}`,
+                p_meta: { case_type: caseType },
+            });
+            currentUser.coins -= config.price;
+            updateCoinsBadge();
+        } catch (e) {
+            showToast('❌ Ошибка списания');
+            return;
+        }
+    }
+
+    // Определяем редкость
+    const rarity = rollRarity(config.rarity_chances);
+
+    // Получаем предмет
+    let item = await getRandomItemByRarity(rarity);
+
+    // Если нет предметов этой редкости — откат на common
+    if (!item) {
+        item = await getRandomItemByRarity('common');
+    }
+    if (!item) {
+        showToast('❌ Нет доступных предметов');
+        return;
+    }
+
+    // Даём предмет игроку
+    try {
+        // Проверка — есть ли уже
+        const { data: existing } = await sb.from('user_inventory')
+            .select('id')
+            .eq('telegram_id', currentUser.telegram_id)
+            .eq('item_id', item.id)
+            .maybeSingle();
+
+        if (existing) {
+            // Дубликат — даём монеты вместо предмета
+            const refund = Math.round(item.price * 0.5);
+            await sb.rpc('add_coins', {
+                p_user_id: currentUser.telegram_id,
+                p_amount: refund,
+                p_reason: `case_duplicate:${item.id}`,
+                p_meta: { item_id: item.id },
+            });
+            currentUser.coins += refund;
+            updateCoinsBadge();
+
+            // Логируем
+            await sb.from('case_openings').insert({
+                telegram_id: currentUser.telegram_id,
+                case_type: caseType,
+                item_id: item.id,
+                item_rarity: rarity,
+                is_free: config.free,
+            });
+
+            // Показываем анимацию дубликата
+            showCaseOpening(item, rarity, true, refund);
+        } else {
+            // Добавляем в инвентарь
+            await sb.from('user_inventory').insert({
+                telegram_id: currentUser.telegram_id,
+                item_id: item.id,
+                is_equipped: false,
+            });
+
+            // Логируем
+            await sb.from('case_openings').insert({
+                telegram_id: currentUser.telegram_id,
+                case_type: caseType,
+                item_id: item.id,
+                item_rarity: rarity,
+                is_free: config.free,
+            });
+
+            // Показываем анимацию
+            showCaseOpening(item, rarity, false, 0);
+        }
+
+        haptic('heavy');
+    } catch (e) {
+        console.error('openCase:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+// Красивая анимация открытия
+function showCaseOpening(item, rarity, isDuplicate, refund) {
+    document.getElementById('caseModal')?.remove();
+
+    const rarityColors = {
+        common:    { color: '#9aa7b5', label: 'ОБЫЧНЫЙ',    emoji: '⚪' },
+        rare:      { color: '#4fc3f7', label: 'РЕДКИЙ',     emoji: '🔵' },
+        epic:      { color: '#a78bfa', label: 'ЭПИЧЕСКИЙ',  emoji: '🟣' },
+        legendary: { color: '#ffd700', label: 'ЛЕГЕНДАРНЫЙ', emoji: '🟡' },
+    };
+    const meta = rarityColors[rarity] || rarityColors.common;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'case-modal-overlay';
+    overlay.id = 'caseModal';
+
+    overlay.innerHTML = `
+        <div class="case-modal-inner rarity-${rarity}">
+            <div class="case-glow" style="--rarity-color: ${meta.color}"></div>
+
+            <div class="case-spinner" id="caseSpinner">
+                ${getCaseSvg(80)}
+            </div>
+
+            <div class="case-result" id="caseResult" style="display: none;">
+                <div class="case-result-rarity" style="color: ${meta.color};">
+                    ${meta.emoji} ${meta.label}
+                </div>
+                <div class="case-result-preview">
+                    ${renderCaseItemPreview(item)}
+                </div>
+                <div class="case-result-name">${escapeHtml(item.name)}</div>
+                ${isDuplicate
+                    ? `<div class="case-result-duplicate">Дубликат · +${refund} монет</div>`
+                    : `<div class="case-result-duplicate" style="color: var(--emerald);">✓ Добавлено в инвентарь</div>`
+                }
+                <button class="case-result-btn" onclick="document.getElementById('caseModal').remove(); openCasesScreen();">
+                    ОК
+                </button>
+            </div>
+
+            <div class="case-opening-text" id="caseOpeningText">
+                ОТКРЫТИЕ...
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Через 2 сек показываем результат
+    setTimeout(() => {
+        document.getElementById('caseSpinner').style.display = 'none';
+        document.getElementById('caseOpeningText').style.display = 'none';
+        document.getElementById('caseResult').style.display = 'flex';
+        haptic('medium');
+    }, 2000);
+}
+
+// Превью предмета
+function renderCaseItemPreview(item) {
+    const val = item.value || {};
+    if (item.category === 'nickname_color') {
+        if (val.gradient) {
+            return `<span style="font-size: 28px; font-weight: 900; background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">De1mos</span>`;
+        }
+        if (val.color) {
+            return `<span style="font-size: 28px; font-weight: 900; color: ${val.color}; text-shadow: 0 0 12px ${val.color};">De1mos</span>`;
+        }
+    }
+    if (item.category === 'avatar_frame') {
+        if (val.special === true) {
+            return `<div style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                ${typeof getSpecialFrameHTML === 'function' ? getSpecialFrameHTML(val.special_type || 'default', val.color || '#fff') : ''}
+            </div>`;
+        }
+        return `<div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #444, #222); box-shadow: 0 0 0 3px ${val.color || '#fff'}, 0 0 20px ${val.color || '#fff'};"></div>`;
+    }
+    if (item.category === 'badge') {
+        if (val.svg) return `<div style="width: 60px; height: 60px;">${val.svg}</div>`;
+        if (val.emoji) return `<span style="font-size: 44px;">${val.emoji}</span>`;
+        if (val.url) return `<img src="${val.url}" style="width: 60px; height: 60px; object-fit: contain;">`;
+    }
+    if (item.category === 'title') {
+        return `<span style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: ${val.color || 'var(--gold)'}; text-shadow: 0 0 12px ${val.color || 'var(--gold)'};">${val.text || 'TITLE'}</span>`;
+    }
+    return '<span style="font-size: 44px;">🎁</span>';
+}
+
+// Экран кейсов
+async function openCasesScreen() {
+    switchPage('cases');
+
+    const container = document.getElementById('casesContent');
+    if (!container) return;
+    container.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    const freeInfo = await canOpenFreeCase();
+
+    // История последних 10 открытий
+    const { data: history } = await sb.from('case_openings')
+        .select('*')
+        .eq('telegram_id', currentUser.telegram_id)
+        .order('opened_at', { ascending: false })
+        .limit(10);
+
+    const formatTimeLeft = (ms) => {
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        if (h > 0) return `${h}ч ${m}м`;
+        return `${m}м`;
+    };
+
+    const historyHTML = (history || []).map(h => {
+        const meta = {
+            common:    { c: '#9aa7b5', l: 'C' },
+            rare:      { c: '#4fc3f7', l: 'R' },
+            epic:      { c: '#a78bfa', l: 'E' },
+            legendary: { c: '#ffd700', l: 'L' },
+        }[h.item_rarity] || { c: '#9aa7b5', l: '?' };
+
+        return `
+            <div class="case-history-row">
+                <div class="case-history-rarity" style="color: ${meta.c}; border-color: ${meta.c};">${meta.l}</div>
+                <div class="case-history-info">
+                    <div class="case-history-name">${escapeHtml(h.item_id)}</div>
+                    <div class="case-history-time">${formatTimeAgo(h.opened_at)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="cases-hero">
+            <div class="cases-hero-icon">${getCaseSvg(56)}</div>
+            <div class="cases-hero-title">КЕЙСЫ</div>
+            <div class="cases-hero-sub">Открывай кейсы и получай эксклюзивные предметы</div>
+        </div>
+
+        <!-- Ежедневный бесплатный -->
+        <div class="case-card daily ${freeInfo.can ? 'available' : 'cooldown'}">
+            <div class="case-card-glow"></div>
+            <div class="case-card-icon">${getCaseSvg(48)}</div>
+            <div class="case-card-info">
+                <div class="case-card-name">🎁 Ежедневный кейс</div>
+                <div class="case-card-desc">Раз в день — бесплатно</div>
+                <div class="case-card-chances">
+                    <span class="cc common">60%</span>
+                    <span class="cc rare">28%</span>
+                    <span class="cc epic">10%</span>
+                    <span class="cc legendary">2%</span>
+                </div>
+            </div>
+            ${freeInfo.can
+                ? `<button class="case-card-btn free" onclick="openCase('daily_free')">ОТКРЫТЬ</button>`
+                : `<button class="case-card-btn cooldown" disabled>⏳ ${formatTimeLeft(freeInfo.timeLeft)}</button>`
+            }
+        </div>
+
+        <!-- Обычный -->
+        <div class="case-card common">
+            <div class="case-card-glow"></div>
+            <div class="case-card-icon">${getCaseSvg(48)}</div>
+            <div class="case-card-info">
+                <div class="case-card-name">Обычный кейс</div>
+                <div class="case-card-desc">Шанс на редкость</div>
+                <div class="case-card-chances">
+                    <span class="cc common">50%</span>
+                    <span class="cc rare">30%</span>
+                    <span class="cc epic">15%</span>
+                    <span class="cc legendary">5%</span>
+                </div>
+            </div>
+            <button class="case-card-btn buy" onclick="openCase('common')">
+                💰 500
+            </button>
+        </div>
+
+        <!-- Премиум -->
+        <div class="case-card premium">
+            <div class="case-card-glow"></div>
+            <div class="case-card-icon">${getCaseSvg(48)}</div>
+            <div class="case-card-info">
+                <div class="case-card-name">⭐ Премиум кейс</div>
+                <div class="case-card-desc">Повышенный шанс на эпик</div>
+                <div class="case-card-chances">
+                    <span class="cc common">20%</span>
+                    <span class="cc rare">35%</span>
+                    <span class="cc epic">30%</span>
+                    <span class="cc legendary">15%</span>
+                </div>
+            </div>
+            <button class="case-card-btn buy premium" onclick="openCase('premium')">
+                💰 1500
+            </button>
+        </div>
+
+        <!-- История -->
+        ${history?.length ? `
+            <div class="section-title" style="margin-top: 20px;">📜 История открытий</div>
+            <div class="case-history-list">
+                ${historyHTML}
+            </div>
+        ` : ''}
+
+        <button class="profile-action-btn cancel" onclick="switchPage('dashboard')" style="margin-top: 20px;">
+            ← НАЗАД
+        </button>
+    `;
+}  
 
 // ============================================================
 // 🎯 КВЕСТЫ — конфиг
@@ -21098,6 +22565,7 @@ async function init() {
         loadLeaderboard();
         startOnlineHeartbeat();   // 🟢 ЗАПУСКАЕМ HEARTBEAT
         updateQuestsBadge();
+        updateCasesBadge();
         // 🔄 Автообновление online-статусов каждые 30 сек
 setInterval(() => {
     document.querySelectorAll('[data-online-status]').forEach(el => {
@@ -21892,6 +23360,11 @@ async function renderProfileView(user, options = {}) {
                 </span>
             </div>
         </div>
+
+        <!-- 📊 РАСШИРЕННАЯ СТАТИСТИКА -->
+<div class="ext-stats-card" id="extStatsCard_${user.telegram_id}">
+    <div class="empty" style="font-size: 11px;">Загрузка статистики...</div>
+</div>
 
         <!-- График DXP -->
         <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
@@ -27213,6 +28686,186 @@ async function submitWinner() {
 }
 
             // ============================================================
+// 🎯 ПРОГНОЗ НА МАТЧ
+// ============================================================
+
+// Формула ELO: P(A) = 1 / (1 + 10^((eloB - eloA) / 400))
+function calculateWinProbability(eloA, eloB) {
+    const diff = (eloB - eloA) / 400;
+    return 1 / (1 + Math.pow(10, diff));
+}
+
+// Получить данные для прогноза
+async function getMatchPrediction(teamA, teamB) {
+    const idsA = teamA.map(p => Number(p.telegram_id)).filter(Boolean);
+    const idsB = teamB.map(p => Number(p.telegram_id)).filter(Boolean);
+
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, elo, matches_played, wins, custom_avatar, photo_url')
+        .in('telegram_id', [...idsA, ...idsB]);
+
+    const userMap = {};
+    (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+    const playersA = idsA.map(id => userMap[id]).filter(Boolean);
+    const playersB = idsB.map(id => userMap[id]).filter(Boolean);
+
+    const avgA = playersA.length ? Math.round(playersA.reduce((s, u) => s + (u.elo || 1000), 0) / playersA.length) : 1000;
+    const avgB = playersB.length ? Math.round(playersB.reduce((s, u) => s + (u.elo || 1000), 0) / playersB.length) : 1000;
+
+    // Общий winrate команд
+    const wrA = playersA.length
+        ? playersA.reduce((s, u) => s + ((u.matches_played || 0) > 0 ? (u.wins / u.matches_played) : 0), 0) / playersA.length
+        : 0;
+    const wrB = playersB.length
+        ? playersB.reduce((s, u) => s + ((u.matches_played || 0) > 0 ? (u.wins / u.matches_played) : 0), 0) / playersB.length
+        : 0;
+
+    const probA = calculateWinProbability(avgA, avgB);
+    const probB = 1 - probA;
+
+    // Топ-игрок каждой команды
+    const topA = [...playersA].sort((a, b) => (b.elo || 0) - (a.elo || 0))[0];
+    const topB = [...playersB].sort((a, b) => (b.elo || 0) - (a.elo || 0))[0];
+
+    return {
+        avgA, avgB,
+        wrA: Math.round(wrA * 100),
+        wrB: Math.round(wrB * 100),
+        probA: Math.round(probA * 100),
+        probB: Math.round(probB * 100),
+        topA, topB,
+        playersA, playersB,
+    };
+}
+
+// Показать экран прогноза
+async function showMatchPrediction(teamA, teamB, onStart) {
+    const data = await getMatchPrediction(teamA, teamB);
+
+    // Модалка
+    document.getElementById('matchPredictOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'matchPredictOverlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'match-predict-modal';
+    modal.id = 'matchPredictModal';
+
+    const renderPlayerMini = (u, team) => {
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        const av = src ? `<img src="${src}" alt="">` : initial;
+        const lvl = eloToLevel(u.elo);
+        return `
+            <div class="mp-player team-${team}">
+                <div class="mp-player-avatar">${av}</div>
+                <div class="mp-player-info">
+                    <div class="mp-player-name">${escapeHtml(u.display_name || 'Игрок')}</div>
+                    <div class="mp-player-elo">⚡ ${lvl} ур. · ${u.elo || 1000} DXP</div>
+                </div>
+            </div>
+        `;
+    };
+
+    modal.innerHTML = `
+        <div class="mp-header">
+            <div class="mp-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18"/>
+                    <path d="m7 14 4-4 4 4 5-7"/>
+                </svg>
+                ПРОГНОЗ НА МАТЧ
+            </div>
+            <button class="mp-close" onclick="document.getElementById('matchPredictOverlay').remove()">✕</button>
+        </div>
+
+        <div class="mp-teams">
+            <div class="mp-team team-a">
+                <div class="mp-team-header">
+                    <span class="mp-team-icon">🛡️</span>
+                    <span class="mp-team-name">КОМАНДА A</span>
+                </div>
+                <div class="mp-team-avg">
+                    <span class="mp-avg-label">Средний DXP</span>
+                    <span class="mp-avg-value">${data.avgA}</span>
+                </div>
+                <div class="mp-team-wr">
+                    <span class="mp-wr-label">Winrate состава</span>
+                    <span class="mp-wr-value">${data.wrA}%</span>
+                </div>
+            </div>
+
+            <div class="mp-vs">VS</div>
+
+            <div class="mp-team team-b">
+                <div class="mp-team-header">
+                    <span class="mp-team-icon">💣</span>
+                    <span class="mp-team-name">КОМАНДА B</span>
+                </div>
+                <div class="mp-team-avg">
+                    <span class="mp-avg-label">Средний DXP</span>
+                    <span class="mp-avg-value">${data.avgB}</span>
+                </div>
+                <div class="mp-team-wr">
+                    <span class="mp-wr-label">Winrate состава</span>
+                    <span class="mp-wr-value">${data.wrB}%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mp-probability">
+            <div class="mp-prob-label">ВЕРОЯТНОСТЬ ПОБЕДЫ</div>
+            <div class="mp-prob-bar">
+                <div class="mp-prob-a" style="width: ${data.probA}%">
+                    <span>${data.probA}%</span>
+                </div>
+                <div class="mp-prob-b" style="width: ${data.probB}%">
+                    <span>${data.probB}%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mp-rosters">
+            <div class="mp-roster team-a">
+                <div class="mp-roster-title">
+                    <span class="mp-star">⭐</span>
+                    КОМАНДА A
+                </div>
+                ${data.playersA.map(u => renderPlayerMini(u, 'a')).join('')}
+            </div>
+            <div class="mp-roster team-b">
+                <div class="mp-roster-title">
+                    <span class="mp-star">⭐</span>
+                    КОМАНДА B
+                </div>
+                ${data.playersB.map(u => renderPlayerMini(u, 'b')).join('')}
+            </div>
+        </div>
+
+        <button class="mp-start-btn" id="mpStartBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 3l14 9-14 9V3Z"/>
+            </svg>
+            НАЧАТЬ МАТЧ
+        </button>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Кнопка старт
+    document.getElementById('mpStartBtn').onclick = () => {
+        overlay.remove();
+        if (typeof onStart === 'function') onStart();
+    };
+
+    haptic('medium');
+}
+
+            // ============================================================
 // Попытка завершить матч на основе голосов в match_votes
 // ============================================================
 async function tryFinishMatch(matchId) {
@@ -29607,7 +31260,19 @@ async function startMatch(roomId) {
         return;
     }
 
-    if (!confirm('Начать матч? Сначала — пики карт.')) return;
+    // Собираем команды для прогноза
+const { data: allPlayers } = await sb.from('room_players')
+    .select('telegram_id, team')
+    .eq('room_id', roomId)
+    .eq('is_ready', true);
+
+const predTeamA = (allPlayers || []).filter(p => p.team === 'A').map(p => ({ telegram_id: p.telegram_id }));
+const predTeamB = (allPlayers || []).filter(p => p.team === 'B').map(p => ({ telegram_id: p.telegram_id }));
+
+// Показываем прогноз, потом запускаем
+await new Promise((resolve) => {
+    showMatchPrediction(predTeamA, predTeamB, resolve);
+});
 
     try {
         const captainA = teamA[0].telegram_id;
@@ -32116,6 +33781,9 @@ function menuDrawerGo(dest) {
                 break;
             case 'matches':
                 openMatchesHistory();
+                break;
+                case 'cases':
+                openCasesScreen();
                 break;
             case 'chat':                    
                 openChatPage();             
@@ -35294,7 +36962,8 @@ async function initProfileExtrasUnified(user) {
         loadLastMatchInlineUnified(uid),
         renderHeatmapUnified(uid),
         renderRecentMatches(uid),
-        renderAchievements(uid)
+        renderAchievements(uid),
+        renderExtendedStats(uid),   // ← добавили
     ]);
     updateGoalsUnified(user);
 }
@@ -43984,17 +45653,35 @@ async function updateQuestsBadge() {
             !r.claimed && r.progress >= r.target
         ).length;
 
-        const badge = document.querySelector('.menu-drawer-btn[data-menu="quests"] .nav-badge');
+        const badge = document.getElementById('questsMenuBadge');
         if (badge) {
             if (claimable > 0) {
                 badge.textContent = claimable;
-                badge.style.display = 'flex';
+                badge.style.display = 'inline-flex';
             } else {
                 badge.style.display = 'none';
             }
         }
-    } catch (e) {}
-}            
+    } catch (e) {
+        console.warn('updateQuestsBadge:', e);
+    }
+}  
+
+    // ============================================================
+// 🎁 БЕЙДЖ КЕЙСОВ (показываем 🎁 если доступен бесплатный)
+// ============================================================
+async function updateCasesBadge() {
+    if (!currentUser) return;
+    try {
+        const { can } = await canOpenFreeCase();
+        const badge = document.getElementById('casesMenuBadge');
+        if (badge) {
+            badge.style.display = can ? 'inline-flex' : 'none';
+        }
+    } catch (e) {
+        console.warn('updateCasesBadge:', e);
+    }
+}
 
             // ============================================================
 // 🎯 ЭКРАН КВЕСТОВ
@@ -44122,6 +45809,251 @@ function getTimeUntil(isoDate) {
     }
     if (hours >= 1) return `${hours}ч ${mins}м`;
     return `${mins}м`;
+}
+
+    // ============================================================
+// 📊 РАСШИРЕННАЯ СТАТИСТИКА ПРОФИЛЯ
+// ============================================================
+async function getExtendedStats(userId) {
+    try {
+        const { data: matches } = await sb.from('game_matches')
+            .select('*')
+            .eq('status', 'finished')
+            .order('finished_at', { ascending: false })
+            .limit(500);
+
+        const myMatches = (matches || []).filter(m => {
+            const ids = [...(m.team_a_players || []), ...(m.team_b_players || [])]
+                .map(p => Number(p.telegram_id));
+            return ids.includes(Number(userId));
+        });
+
+        if (!myMatches.length) {
+            return {
+                totalMatches: 0,
+                favoriteMaps: [],
+                mapStats: [],
+                streaks: { current: 0, currentType: null, best: 0, bestType: null },
+                hourlyActivity: Array(24).fill(0),
+                monthlyStats: [],
+            };
+        }
+
+        // ---- Статистика по картам ----
+        const mapStats = {};
+        let currentStreak = 0;
+        let currentStreakType = null;
+        let bestStreak = 0;
+        let bestStreakType = null;
+        let tempStreak = 0;
+        let tempStreakType = null;
+        const hourlyActivity = Array(24).fill(0);
+
+        // Идём от старых к новым для подсчёта streak
+        const sorted = [...myMatches].reverse();
+
+        sorted.forEach(m => {
+            const myTeam = (m.team_a_players || []).some(p => Number(p.telegram_id) === Number(userId)) ? 'A' : 'B';
+            const isWin = m.winner_team === myTeam;
+            const map = m.final_map || '—';
+
+            // Статистика по карте
+            if (!mapStats[map]) mapStats[map] = { wins: 0, losses: 0, total: 0 };
+            mapStats[map].total++;
+            if (isWin) mapStats[map].wins++;
+            else mapStats[map].losses++;
+
+            // Streak
+            if (tempStreakType === null) {
+                tempStreak = 1;
+                tempStreakType = isWin ? 'win' : 'loss';
+            } else if ((isWin && tempStreakType === 'win') || (!isWin && tempStreakType === 'loss')) {
+                tempStreak++;
+            } else {
+                if (tempStreak > bestStreak) {
+                    bestStreak = tempStreak;
+                    bestStreakType = tempStreakType;
+                }
+                tempStreak = 1;
+                tempStreakType = isWin ? 'win' : 'loss';
+            }
+
+            // Часы активности
+            if (m.finished_at) {
+                const h = new Date(m.finished_at).getHours();
+                hourlyActivity[h]++;
+            }
+        });
+
+        if (tempStreak > bestStreak) {
+            bestStreak = tempStreak;
+            bestStreakType = tempStreakType;
+        }
+        currentStreak = tempStreak;
+        currentStreakType = tempStreakType;
+
+        // Топ-5 любимых карт
+        const favoriteMaps = Object.entries(mapStats)
+            .map(([map, s]) => ({
+                map,
+                wins: s.wins,
+                losses: s.losses,
+                total: s.total,
+                wr: Math.round((s.wins / s.total) * 100),
+            }))
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
+
+        // Статистика по месяцам (6 месяцев)
+        const monthlyStats = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const monthMatches = myMatches.filter(m => {
+                if (!m.finished_at) return false;
+                const md = new Date(m.finished_at);
+                return `${md.getFullYear()}-${String(md.getMonth() + 1).padStart(2, '0')}` === monthKey;
+            });
+            const monthWins = monthMatches.filter(m => {
+                const myTeam = (m.team_a_players || []).some(p => Number(p.telegram_id) === Number(userId)) ? 'A' : 'B';
+                return m.winner_team === myTeam;
+            }).length;
+            monthlyStats.push({
+                label: d.toLocaleString('ru-RU', { month: 'short' }),
+                matches: monthMatches.length,
+                wins: monthWins,
+            });
+        }
+
+        return {
+            totalMatches: myMatches.length,
+            favoriteMaps,
+            mapStats: Object.entries(mapStats).map(([map, s]) => ({ map, ...s })),
+            streaks: { current: currentStreak, currentType: currentStreakType, best: bestStreak, bestType: bestStreakType },
+            hourlyActivity,
+            monthlyStats,
+        };
+    } catch (e) {
+        console.warn('getExtendedStats:', e);
+        return null;
+    }
+}
+
+    async function renderExtendedStats(userId) {
+    const container = document.getElementById(`extStatsCard_${userId}`);
+    if (!container) return;
+
+    container.innerHTML = `<div class="empty" style="font-size: 11px;">Загрузка...</div>`;
+
+    const stats = await getExtendedStats(userId);
+    if (!stats || stats.totalMatches === 0) {
+        container.innerHTML = `<div class="empty" style="font-size: 11px;">Недостаточно данных для статистики</div>`;
+        return;
+    }
+
+    // Streak
+    const curStreakText = stats.streaks.current > 0
+        ? `${stats.streaks.currentType === 'win' ? '🔥' : '💀'} ${stats.streaks.current} ${stats.streaks.currentType === 'win' ? 'побед' : 'поражений'} подряд`
+        : '—';
+
+    // Любимые карты
+    const mapsHTML = stats.favoriteMaps.map(m => {
+        const bg = typeof mapBgUrl === 'function' ? mapBgUrl(m.map) : '';
+        return `
+            <div class="ext-map-row">
+                <div class="ext-map-thumb" style="background-image: url('${bg}')"></div>
+                <div class="ext-map-info">
+                    <div class="ext-map-name">${escapeHtml(m.map)}</div>
+                    <div class="ext-map-sub">${m.wins}W · ${m.losses}L · ${m.total} матчей</div>
+                </div>
+                <div class="ext-map-wr ${m.wr >= 50 ? 'good' : 'bad'}">${m.wr}%</div>
+            </div>
+        `;
+    }).join('');
+
+    // Активность по часам
+    const maxHour = Math.max(...stats.hourlyActivity, 1);
+    const hoursHTML = stats.hourlyActivity.map((count, h) => {
+        const pct = (count / maxHour) * 100;
+        const active = count > 0;
+        return `
+            <div class="ext-hour ${active ? 'active' : ''}" title="${h}:00 — ${count} матчей">
+                <div class="ext-hour-bar" style="height: ${pct}%"></div>
+                <div class="ext-hour-label">${h}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Месяцы
+    const maxMonth = Math.max(...stats.monthlyStats.map(m => m.matches), 1);
+    const monthsHTML = stats.monthlyStats.map(m => {
+        const pct = (m.matches / maxMonth) * 100;
+        const wr = m.matches > 0 ? Math.round((m.wins / m.matches) * 100) : 0;
+        return `
+            <div class="ext-month">
+                <div class="ext-month-bar-wrap">
+                    <div class="ext-month-bar" style="height: ${pct}%"></div>
+                </div>
+                <div class="ext-month-label">${m.label}</div>
+                <div class="ext-month-count">${m.matches}</div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <!-- Streak -->
+        <div class="ext-stat-block">
+            <div class="ext-stat-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v6l3-2M12 2v6l-3-2M12 22v-6l3 2M12 22v-6l-3 2"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                ТЕКУЩАЯ СЕРИЯ
+            </div>
+            <div class="ext-streak ${stats.streaks.currentType === 'win' ? 'win' : 'loss'}">
+                ${curStreakText}
+            </div>
+            <div class="ext-streak-sub">Лучшая: ${stats.streaks.best} ${stats.streaks.bestType === 'win' ? 'побед' : 'поражений'}</div>
+        </div>
+
+        <!-- Любимые карты -->
+        <div class="ext-stat-block">
+            <div class="ext-stat-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="m21 15-5-5L5 21"/>
+                </svg>
+                ЛЮБИМЫЕ КАРТЫ
+            </div>
+            ${mapsHTML}
+        </div>
+
+        <!-- Часы активности -->
+        <div class="ext-stat-block">
+            <div class="ext-stat-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 7v5l3 2"/>
+                </svg>
+                АКТИВНОСТЬ ПО ЧАСАМ
+            </div>
+            <div class="ext-hours">${hoursHTML}</div>
+        </div>
+
+        <!-- Месяцы -->
+        <div class="ext-stat-block">
+            <div class="ext-stat-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18"/>
+                    <path d="M7 15h2v4H7zM11 10h2v9h-2zM15 6h2v13h-2z"/>
+                </svg>
+                ПО МЕСЯЦАМ
+            </div>
+            <div class="ext-months">${monthsHTML}</div>
+        </div>
+    `;
 }
             
     </script>
