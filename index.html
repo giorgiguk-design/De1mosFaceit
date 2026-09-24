@@ -15767,20 +15767,25 @@ html.lite-mode .list-frame-overlay svg * {
 /* Тег клана */
 .club-tag-badge {
     display: none;
-    padding: 3px 8px;
-    border-radius: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
     font-size: 11px;
     font-weight: 900;
     letter-spacing: 1px;
     text-transform: uppercase;
-    background: linear-gradient(135deg,
-        rgba(var(--emerald-rgb), 0.20),
-        rgba(var(--emerald-rgb), 0.06));
-    border: 1px solid rgba(var(--emerald-rgb), 0.45);
+    /* 🔥 нейтральный тёмный фон — под любой цвет/градиент */
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: var(--emerald-3);
-    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
     flex-shrink: 0;
     line-height: 1.4;
+    transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
+                0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.club-tag-badge.visible {
+    display: inline-flex;
+    align-items: center;
 }
 
 .club-tag-badge.visible {
@@ -44738,17 +44743,24 @@ async function openClanInventory() {
         return;
     }
 
-    const categories = {
-        tag_color:    { label: 'Цвет тега',     icon: '🎨' },
-        tag_gradient: { label: 'Градиент тега', icon: '🌈' },
-        clan_badge:   { label: 'Значки клана',  icon: '🏅' },
+    // ============================================================
+    // 🔥 UI-КАТЕГОРИИ (tag_color объединяет цвет + градиент)
+    // ============================================================
+    const UI_CATEGORIES = {
+        tag_color:  { label: 'Цвет тега',    icon: '🎨', dbCategories: ['tag_color', 'tag_gradient'] },
+        clan_badge: { label: 'Значки клана', icon: '🏅', dbCategories: ['clan_badge'] },
     };
 
     const grouped = {};
     inventory.forEach(invItem => {
         const item = items.find(i => i.id === invItem.item_id);
         if (!item) return;
-        (grouped[item.category] ||= []).push({ item, is_equipped: invItem.is_equipped });
+        for (const [uiCat, meta] of Object.entries(UI_CATEGORIES)) {
+            if (meta.dbCategories.includes(item.category)) {
+                (grouped[uiCat] ||= []).push({ item, is_equipped: invItem.is_equipped });
+                break;
+            }
+        }
     });
 
     // Модалка
@@ -44775,7 +44787,7 @@ async function openClanInventory() {
     `;
 
     Object.entries(grouped).forEach(([cat, list]) => {
-        const meta = categories[cat] || { label: cat, icon: '📦' };
+        const meta = UI_CATEGORIES[cat] || { label: cat, icon: '📦' };
         html += `<div class="section-title" style="margin-top: 14px;">${meta.icon} ${meta.label}</div>`;
         html += list.map(({ item, is_equipped }) => `
             <div class="clan-inv-item ${is_equipped ? 'equipped' : ''}"
@@ -44841,16 +44853,36 @@ async function openClanShop() {
     const owned = new Set(inventory.map(i => i.item_id));
     const equipped = new Set(inventory.filter(i => i.is_equipped).map(i => i.item_id));
 
-    // Группируем
-    const categories = {
-        tag_color:    { label: 'Цвет тега',    icon: '🎨', desc: 'Раскрась тег клана' },
-        tag_gradient: { label: 'Градиент тега', icon: '🌈', desc: 'Переливающийся тег' },
-        clan_badge:   { label: 'Значки клана',  icon: '🏅', desc: 'Особые метки клана' },
+    // ============================================================
+    // 🔥 UI-КАТЕГОРИИ (tag_color включает И цвет, И градиент)
+    // ============================================================
+    const UI_CATEGORIES = {
+        tag_color: {
+            label: 'Цвет тега',
+            icon: 'tag_color',
+            desc: 'Раскрась тег клана',
+            dbCategories: ['tag_color', 'tag_gradient'],
+        },
+        clan_badge: {
+            label: 'Значки клана',
+            icon: 'clan_badge',
+            desc: 'Особые метки клана',
+            dbCategories: ['clan_badge'],
+        },
     };
 
     const RARITY_ORDER = { common: 1, rare: 2, epic: 3, legendary: 4 };
     const grouped = {};
-    items.forEach(i => { (grouped[i.category] ||= []).push(i); });
+
+    items.forEach(i => {
+        for (const [uiCat, meta] of Object.entries(UI_CATEGORIES)) {
+            if (meta.dbCategories.includes(i.category)) {
+                (grouped[uiCat] ||= []).push(i);
+                break;
+            }
+        }
+    });
+
     Object.keys(grouped).forEach(cat => {
         grouped[cat].sort((a, b) => {
             const rA = RARITY_ORDER[a.rarity] || 0;
@@ -44867,12 +44899,11 @@ async function openClanShop() {
 
     const activeCat = window._clanShopActiveCategory;
     const activeItems = grouped[activeCat] || [];
-    const activeMeta = categories[activeCat] || { label: activeCat, icon: '📦', desc: '' };
+    const activeMeta = UI_CATEGORIES[activeCat] || { label: activeCat, icon: '📦', desc: '' };
 
     const catIcon = (type) => {
         const svgs = {
             tag_color: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.82Z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></svg>`,
-            tag_gradient: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>`,
             clan_badge: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z"/></svg>`,
         };
         return svgs[type] || svgs.clan_badge;
@@ -44926,14 +44957,15 @@ async function openClanShop() {
 
         <div class="shop-cat-tabs">
             ${Object.entries(grouped).map(([cat, list]) => {
-                const meta = categories[cat] || { label: cat, icon: 'clan_badge' };
+                const meta = UI_CATEGORIES[cat] || { label: cat, icon: 'clan_badge' };
                 const isActive = window._clanShopActiveCategory === cat;
+                const ownedInCat = list.filter(i => owned.has(i.id)).length;
                 return `
                     <button class="shop-cat-btn ${isActive ? 'active' : ''}" onclick="switchClanShopCategory('${cat}')">
                         <span class="shop-cat-btn-icon">${catIcon(meta.icon)}</span>
                         <span class="shop-cat-btn-info">
                             <span class="shop-cat-btn-name">${meta.label}</span>
-                            <span class="shop-cat-btn-count">${list.filter(i => owned.has(i.id)).length}/${list.length}</span>
+                            <span class="shop-cat-btn-count">${ownedInCat}/${list.length}</span>
                         </span>
                     </button>
                 `;
@@ -44941,13 +44973,11 @@ async function openClanShop() {
         </div>
 
         <div class="shop-active-cat">
-            ...
             <div class="shop-grid">
                 ${activeItems.map(item => renderClanShopItem(item, owned.has(item.id), equipped.has(item.id), canBuy)).join('')}
             </div>
         </div>
 
-        <!-- 🔥 Кнопка "Внести монеты" — только для OWNER / ELDER -->
         ${canBuy ? `
             <button class="sheet-option" onclick="openClanDonateSheet()" style="margin-bottom: 8px;">
                 <span style="font-size: 18px;">💰</span> Внести монеты в казну
@@ -45160,9 +45190,18 @@ async function equipClanItem(itemId) {
             .select('category').eq('id', itemId).single();
         if (!item) return;
 
-        // Снять все в той же категории
+        // ============================================================
+        // 🔥 ЦВЕТ И ГРАДИЕНТ — ВЗАИМОИСКЛЮЧАЮЩИЕ
+        // ============================================================
+        let categoriesToClear;
+        if (item.category === 'tag_color' || item.category === 'tag_gradient') {
+            categoriesToClear = ['tag_color', 'tag_gradient'];
+        } else {
+            categoriesToClear = [item.category];
+        }
+
         const { data: sameCat } = await sb.from('clan_shop_items')
-            .select('id').eq('category', item.category);
+            .select('id').in('category', categoriesToClear);
         const sameCatIds = (sameCat || []).map(i => i.id);
 
         if (sameCatIds.length) {
@@ -45178,7 +45217,7 @@ async function equipClanItem(itemId) {
             .eq('club_id', myClub.club.id)
             .eq('item_id', itemId);
 
-        // Собрать equipped_items
+        // Собрать equipped_items — только tag_color ИЛИ tag_gradient в приоритете
         const { data: inv } = await sb.from('clan_inventory')
             .select('item_id, clan_shop_items!inner(category)')
             .eq('club_id', myClub.club.id)
@@ -45186,18 +45225,20 @@ async function equipClanItem(itemId) {
 
         const equipped = {};
         (inv || []).forEach(i => {
-            if (i.clan_shop_items) equipped[i.clan_shop_items.category] = i.item_id;
+            if (!i.clan_shop_items) return;
+            const dbCat = i.clan_shop_items.category;
+            // Складываем и color, и gradient в один ключ tag_color
+            // (чтобы applyClanTagCustomization не висел на устаревшем ключе)
+            if (dbCat === 'tag_color' || dbCat === 'tag_gradient') {
+                equipped.tag_color = i.item_id;
+                equipped[dbCat] = i.item_id; // оставляем и родной ключ — пригодится
+            } else {
+                equipped[dbCat] = i.item_id;
+            }
         });
 
         await sb.from('clubs').update({ equipped_items: equipped }).eq('id', myClub.club.id);
         myClub.club.equipped_items = equipped;
-
-        // 🔥 ФИКС: обновляем кэш для всех участников клуба
-        myClub.members.forEach(m => {
-            if (clubTagCache[m.telegram_id]) {
-                clubTagCache[m.telegram_id].equipped = equipped;
-            }
-        });
 
         // 🔥 Перезагружаем кэш товаров клана, чтобы подхватить свежие value
         await loadClanShopCache(true);
@@ -45234,18 +45275,13 @@ async function equipClanItem(itemId) {
             }
         }
 
-        // 🔥 Обновляем теги в списках (leaderboard, chat, room)
-        document.querySelectorAll('.clan-tag').forEach(el => {
-            // Проще всего пересобрать содержимое из myClubTagHTML
-            const parent = el.parentElement;
-            const nicknameEl = parent?.querySelector('[data-list-nick]');
-            if (nicknameEl) {
-                const uidMatch = parent.closest('[data-user-id]')?.dataset.userId;
-                if (uidMatch && clubTagCache[uidMatch]) {
-                    el.outerHTML = myClubTagHTML(uidMatch);
-                }
+        // 🔥 Обновляем тег у себя в шапке профиля (если открыт)
+        if (document.getElementById('page-profile')?.classList.contains('active')) {
+            const myTagEl = document.querySelector('#profileContent [data-club-tag]');
+            if (myTagEl && clubTagCache[currentUser.telegram_id]) {
+                applyClanTagCustomization(myTagEl, clubTagCache[currentUser.telegram_id]);
             }
-        });
+        }
 
         showToast('✅ Надето');
         haptic('medium');
@@ -45257,7 +45293,11 @@ async function equipClanItem(itemId) {
     }
 }
 
-// ===== ПРИМЕНИТЬ СТИЛЬ ТЕГА КЛАНОВ =====
+// ============================================================
+// 🏷️ Применить стиль тега клана (цвет ИЛИ градиент)
+// Ключи в club.equipped: tag_color (обычный цвет) и tag_gradient (градиент).
+// Оба взаимоисключающие — если в БД оба, приоритет у градиента.
+// ============================================================
 function applyClanTagCustomization(tagEl, club) {
     if (!tagEl || !club) return;
 
@@ -45271,6 +45311,8 @@ function applyClanTagCustomization(tagEl, club) {
     tagEl.style.backgroundImage = '';
     tagEl.style.color = '';
     tagEl.style.textShadow = '';
+    tagEl.style.borderColor = '';
+    tagEl.style.boxShadow = '';
     tagEl.classList.remove('clan-tag-gradient', 'clan-tag-color');
 
     const eq = club.equipped || {};
@@ -45289,6 +45331,13 @@ function applyClanTagCustomization(tagEl, club) {
             tagEl.style.backgroundClip = 'text';
             tagEl.style.webkitTextFillColor = 'transparent';
             tagEl.style.color = 'transparent';
+            tagEl.style.textShadow = 'none';
+
+            // Тонкая обводка под градиент — цвет берём из первого стопа
+            const firstColor = val.gradient[0];
+            tagEl.style.borderColor = firstColor + '88';
+            tagEl.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.4), 0 0 12px ${firstColor}44`;
+
             tagEl.classList.add('clan-tag-gradient');
             return;
         }
@@ -45304,16 +45353,22 @@ function applyClanTagCustomization(tagEl, club) {
         const val = CLAN_SHOP_CACHE[eq.tag_color].value || {};
         if (val.color) {
             tagEl.style.color = val.color;
-            tagEl.style.textShadow = `0 0 8px ${val.color}`;
+            tagEl.style.textShadow = `0 0 8px ${val.color}, 0 1px 2px rgba(0,0,0,0.8)`;
+            tagEl.style.borderColor = val.color + '99';
+            tagEl.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.4), 0 0 12px ${val.color}44`;
+
             tagEl.classList.add('clan-tag-color');
             return;
         }
     }
 
-    // Ничего не надето — используем дефолтный цвет темы
+    // ============================================================
+    // Ничего не надето — дефолтный стиль темы
+    // ============================================================
     tagEl.style.color = 'var(--emerald-3)';
+    tagEl.style.borderColor = 'rgba(var(--emerald-rgb), 0.45)';
+    tagEl.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.4)';
 }
-
             // ============================================================
 // 🖥️ DESKTOP DETECTION + АДАПТАЦИЯ ПОВЕДЕНИЯ
 // ============================================================
