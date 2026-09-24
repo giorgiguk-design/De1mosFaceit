@@ -19713,6 +19713,62 @@ html.lite-mode .case-open-reel-item[data-rarity="legendary"] {
     animation: none !important;
 }
 html.lite-mode .case-open-reel { filter: none !important; }
+
+    /* ============================================================ */
+/* 🎰 ЛЕНТА КЕЙСА — ОПТИМИЗАЦИЯ SVG                              */
+/* ============================================================ */
+
+/* Все SVG в ленте — статичные. Отключаем анимации для производительности */
+.case-open-reel-item:not(.won) svg,
+.case-open-reel-item:not(.won) svg * {
+    animation: none !important;
+}
+
+/* Убираем blur/glow у маленьких SVG — быстрее рендер */
+.case-open-reel-item:not(.won) svg * {
+    filter: none !important;
+}
+
+/* Красивое превью в ленте */
+.case-open-reel-item-preview {
+    overflow: hidden;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.case-open-reel-item-preview > * {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+/* Легкое свечение снизу под иконкой — «подставка» */
+.case-open-reel-item::after {
+    content: '';
+    position: absolute;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 6px;
+    background: radial-gradient(ellipse at center,
+        var(--item-color) 0%, transparent 70%);
+    opacity: 0.35;
+    filter: blur(4px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Победная ячейка — анимации ВКЛЮЧАЕМ обратно */
+.case-open-reel-item.won svg,
+.case-open-reel-item.won svg * {
+    animation: revert !important;
+    filter: revert !important;
+}
     
 </style>
 </head>
@@ -21471,33 +21527,206 @@ function spawnCaseParticles(rarity) {
 }
 
 // Превью предмета
+// ============================================================
+// 🎨 КРАСИВОЕ ПРЕВЬЮ ТОВАРА ДЛЯ ЛЕНТЫ КЕЙСА
+// ============================================================
 function renderCaseItemPreview(item) {
+    if (!item) {
+        return '<span style="font-size: 36px; opacity: 0.4;">❓</span>';
+    }
+
     const val = item.value || {};
+
+    // ============================================================
+    // 🎨 ЦВЕТ НИКА — показываем «De1mos» в нужном стиле
+    // ============================================================
     if (item.category === 'nickname_color') {
-        if (val.gradient) {
-            return `<span style="font-size: 28px; font-weight: 900; background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">De1mos</span>`;
+        if (val.gradient && Array.isArray(val.gradient) && val.gradient.length) {
+            return `<span style="
+                font-family: 'Orbitron', sans-serif;
+                font-size: 20px;
+                font-weight: 900;
+                letter-spacing: 0.5px;
+                background: linear-gradient(90deg, ${val.gradient.join(',')});
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+                white-space: nowrap;
+            ">De1mos</span>`;
         }
         if (val.color) {
-            return `<span style="font-size: 28px; font-weight: 900; color: ${val.color}; text-shadow: 0 0 12px ${val.color};">De1mos</span>`;
+            return `<span style="
+                font-family: 'Orbitron', sans-serif;
+                font-size: 20px;
+                font-weight: 900;
+                letter-spacing: 0.5px;
+                color: ${val.color};
+                text-shadow: 0 0 14px ${val.color}, 0 2px 4px rgba(0,0,0,0.6);
+                white-space: nowrap;
+            ">De1mos</span>`;
         }
+        return `<span style="font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;color:#fff;">De1mos</span>`;
     }
+
+    // ============================================================
+    // 🖼️ РАМКА АВАТАРА
+    // ============================================================
     if (item.category === 'avatar_frame') {
-        if (val.special === true) {
-            return `<div style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
-                ${typeof getSpecialFrameHTML === 'function' ? getSpecialFrameHTML(val.special_type || 'default', val.color || '#fff') : ''}
+        const frameStyle = val.style || 'glow';
+        const color = val.color || '#fff';
+        const isSpecial = val.special === true;
+
+        // ---- Спец-рамка: рендерим SVG с миньоном-аватаром ----
+        if (isSpecial) {
+            const svgUnique = uniquifySvgIds(
+                getSpecialFrameHTML(val.special_type || 'default', color)
+            );
+            return `<div style="
+                position: relative;
+                width: 96px;
+                height: 96px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: visible;
+            ">
+                <div style="
+                    position: absolute;
+                    top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 42px; height: 42px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #2e4a3d, #0f1a15);
+                    border: 1.5px solid rgba(255,255,255,0.18);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-family: 'Orbitron', sans-serif;
+                    font-weight: 900;
+                    font-size: 16px;
+                    color: #fff;
+                    z-index: 2;
+                    box-shadow: 0 0 12px ${color}66;
+                ">A</div>
+                <div style="
+                    position: absolute;
+                    top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 100%; height: 100%;
+                    z-index: 3;
+                    pointer-events: none;
+                    overflow: visible;
+                ">${svgUnique}</div>
             </div>`;
         }
-        return `<div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #444, #222); box-shadow: 0 0 0 3px ${val.color || '#fff'}, 0 0 20px ${val.color || '#fff'};"></div>`;
+
+        // ---- Обычная рамка ----
+        let boxShadow = `0 0 0 3px ${color}, 0 0 18px ${color}`;
+        if (frameStyle === 'ring') {
+            boxShadow = `0 0 0 3px ${color}, inset 0 0 14px ${color}, 0 0 22px ${color}`;
+        } else if (frameStyle === 'double') {
+            boxShadow = `0 0 0 2px ${color}, 0 0 0 4px rgba(0,0,0,0.55), 0 0 0 6px ${color}, 0 0 20px ${color}`;
+        }
+
+        return `<div style="
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2e4a3d, #0f1a15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 24px;
+            color: #fff;
+            box-shadow: ${boxShadow};
+        ">A</div>`;
     }
+
+    // ============================================================
+    // 🌄 ФОН ПРОФИЛЯ
+    // ============================================================
+    if (item.category === 'profile_bg' || item.category === 'dxp_chart_bg') {
+        if (val.url) {
+            return `<div style="
+                width: 100%;
+                height: 100%;
+                min-height: 88px;
+                border-radius: 8px;
+                background-image:
+                    linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.45)),
+                    url('${val.url}');
+                background-size: cover;
+                background-position: center;
+                border: 1px solid rgba(255,255,255,0.15);
+                box-shadow: inset 0 0 30px rgba(0,0,0,0.35),
+                            0 2px 12px rgba(0,0,0,0.5);
+            "></div>`;
+        }
+        return `<span style="font-size: 36px;">${item.category === 'profile_bg' ? '🌄' : '📈'}</span>`;
+    }
+
+    // ============================================================
+    // 🏅 ЗНАЧОК
+    // ============================================================
     if (item.category === 'badge') {
-        if (val.svg) return `<div style="width: 60px; height: 60px;">${val.svg}</div>`;
-        if (val.emoji) return `<span style="font-size: 44px;">${val.emoji}</span>`;
-        if (val.url) return `<img src="${val.url}" style="width: 60px; height: 60px; object-fit: contain;">`;
+        if (val.url) {
+            return `<img src="${val.url}" style="
+                width: 58px;
+                height: 58px;
+                object-fit: contain;
+                filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+            ">`;
+        }
+        if (val.svg) {
+            const svgUnique = uniquifySvgIds(val.svg);
+            return `<div style="
+                width: 58px;
+                height: 58px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                filter: drop-shadow(0 0 8px rgba(255,255,255,0.35));
+            ">${svgUnique}</div>`;
+        }
+        if (val.emoji) {
+            return `<span style="
+                font-size: 46px;
+                line-height: 1;
+                filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+            ">${val.emoji}</span>`;
+        }
+        return '<span style="font-size: 46px;">🏅</span>';
     }
+
+    // ============================================================
+    // 👑 ТИТУЛ
+    // ============================================================
     if (item.category === 'title') {
-        return `<span style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: ${val.color || 'var(--gold)'}; text-shadow: 0 0 12px ${val.color || 'var(--gold)'};">${val.text || 'TITLE'}</span>`;
+        const text = (val.text || 'TITLE').toUpperCase();
+        const color = val.color || '#ffd700';
+        return `<span style="
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            color: ${color};
+            text-shadow: 0 0 14px ${color}, 0 2px 4px rgba(0,0,0,0.6);
+            text-align: center;
+            padding: 4px 10px;
+            line-height: 1.2;
+            max-width: 100%;
+            word-break: break-word;
+            white-space: normal;
+        ">${escapeHtml(text)}</span>`;
     }
-    return '<span style="font-size: 44px;">🎁</span>';
+
+    // ============================================================
+    // FALLBACK
+    // ============================================================
+    return '<span style="font-size: 36px;">🎁</span>';
 }
 
 // Экран кейсов
@@ -42344,12 +42573,16 @@ async function openSeason() {
 
 async function loadShopItemsCache() {
     try {
-        const { data } = await sb.from('shop_items').select('id, category, value');
+        // 🔥 Грузим ВСЁ — иначе в кейсе будут пустые превью
+        const { data } = await sb.from('shop_items').select('*');
         (data || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         applyCustomization();
         updateCoinsBadge();
-    } catch (e) { console.warn('loadShopItemsCache:', e); }
-} 
+        console.log('✅ SHOP_ITEMS_CACHE загружен:', Object.keys(SHOP_ITEMS_CACHE).length, 'товаров');
+    } catch (e) { 
+        console.warn('loadShopItemsCache:', e); 
+    }
+}
 
 async function openCustomizationSheet() {
     if (!currentUser) return;
