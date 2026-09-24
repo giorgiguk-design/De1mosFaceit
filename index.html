@@ -23893,6 +23893,7 @@ setInterval(() => {
         subscribeCoversRealtime();
         loadShopItemsCache();
         subscribeShopItemsRealtime();
+        subscribeClanShopItemsRealtime();
         cleanupBrokenEquipped();
         updateChatsBadge();
         subscribeChatsRealtime();
@@ -37172,19 +37173,36 @@ function subscribeClubsRealtime() {
             event: '*',
             schema: 'public',
             table: 'clubs'
-        }, (payload) => {
+        }, async (payload) => {
             const club = payload.new;
 
-            // 🔥 КЛЮЧЕВОЕ: если изменились equipped_items —
-            // обновляем кэш тега для всех участников ЭТОГО клуба
+            // 🔥 Если обновился equipped_items — перезагружаем кэш клана
             if (club && club.id && club.equipped_items) {
+                // Форсируем перезагрузку CLAN_SHOP_CACHE на случай
+                // если админ добавил/удалил товар
+                await loadClanShopCache(true);
+
                 Object.keys(clubTagCache).forEach(uid => {
                     if (clubTagCache[uid]?.club_id === club.id) {
                         clubTagCache[uid].equipped = club.equipped_items;
                     }
                 });
 
-                // 🔥 Перерисовываем теги клана во всех открытых списках
+                // ============================================================
+                // 🔥 ОБНОВЛЯЕМ ТЕГИ В ШАПКАХ ПРОФИЛЯ
+                // ============================================================
+                document.querySelectorAll('[data-club-tag]').forEach(el => {
+                    const scope = el.closest('[data-user-id]');
+                    const uid = scope?.dataset.userId;
+                    // В своём профиле data-user-id может не быть — берём currentUser
+                    const targetUid = uid || currentUser?.telegram_id;
+                    if (targetUid && clubTagCache[targetUid]
+                        && Number(clubTagCache[targetUid].club_id) === Number(club.id)) {
+                        applyClanTagCustomization(el, clubTagCache[targetUid]);
+                    }
+                });
+
+                // 🔥 ОБНОВЛЯЕМ ТЕГИ В СПИСКАХ (.clan-tag)
                 document.querySelectorAll('.clan-tag').forEach(el => {
                     const parent = el.closest('[data-user-id]');
                     const uid = parent?.dataset.userId;
@@ -37192,6 +37210,16 @@ function subscribeClubsRealtime() {
                         el.outerHTML = myClubTagHTML(uid);
                     }
                 });
+
+                // Если открыт playerModal с чужим профилем — перерисуем его
+                const playerModal = document.getElementById('playerModal');
+                if (playerModal?.classList.contains('active') && currentProfileUserId) {
+                    const u = clubTagCache[currentProfileUserId];
+                    if (u && Number(u.club_id) === Number(club.id)) {
+                        const tagEl = document.querySelector('#playerModalContent [data-club-tag]');
+                        if (tagEl) applyClanTagCustomization(tagEl, u);
+                    }
+                }
             }
 
             // Обновляем страницу клуба, если открыта
@@ -37199,7 +37227,7 @@ function subscribeClubsRealtime() {
                 loadClub();
             }
 
-            // Обновляем открытый шит "Все клубы"
+            // Обновляем шит "Все клубы"
             if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
                 const q = document.getElementById('allClubsSearch')?.value.trim() || '';
                 if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
@@ -37321,6 +37349,40 @@ function subscribeClubsRealtime() {
             console.log('📡 clubs_rt status:', status);
         });
 }
+
+        // ============================================================
+// 📡 REALTIME на clan_shop_items — обновляем кэш стилей тега
+// ============================================================
+let clanShopItemsChannel = null;
+
+function subscribeClanShopItemsRealtime() {
+    if (clanShopItemsChannel) {
+        try { sb.removeChannel(clanShopItemsChannel); } catch (e) {}
+    }
+    clanShopItemsChannel = sb.channel('clan_shop_items_rt')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'clan_shop_items'
+        }, async () => {
+            await loadClanShopCache(true);
+
+            // Перерисовываем все теги
+            document.querySelectorAll('[data-club-tag]').forEach(el => {
+                const scope = el.closest('[data-user-id]');
+                const uid = scope?.dataset.userId || currentUser?.telegram_id;
+                if (uid && clubTagCache[uid]) {
+                    applyClanTagCustomization(el, clubTagCache[uid]);
+                }
+            });
+            document.querySelectorAll('.clan-tag').forEach(el => {
+                const parent = el.closest('[data-user-id]');
+                const uid = parent?.dataset.userId;
+                if (uid && clubTagCache[uid]) el.outerHTML = myClubTagHTML(uid);
+            });
+        })
+        .subscribe();
+}    
 
 // ============================================================
 // REALTIME — game_matches (история матчей)
@@ -39799,6 +39861,16 @@ function applyCustomizationToElement(scopeEl, user) {
             clubTagEl.classList.remove('visible');
         }
     }
+
+        // ============================================================
+    // 0. ТЕГ КЛАНА
+    // ============================================================
+    // 🔥 Гарантируем что CLAN_SHOP_CACHE загружен
+    if (typeof CLAN_SHOP_CACHE !== 'undefined' && Object.keys(CLAN_SHOP_CACHE).length === 0) {
+        try { await loadClanShopCache(true); } catch (e) {}
+    }
+
+    const clubTagEl = scopeEl.querySelector('[data-club-tag]');
 
 // ============================================================
 // 0.5. РАНГ-БЕЙДЖ
@@ -44632,12 +44704,15 @@ const CLAN_SHOP_CACHE = {};
 // ============================================================
 // 🔥 Предзагрузка товаров клана (чтобы тег рендерился сразу)
 // ============================================================
-async function loadClanShopCache() {
-    if (window._clanShopCacheLoaded) return;
+async function loadClanShopCache(force = false) {
+    if (window._clanShopCacheLoaded && !force) return;
     try {
         const { data } = await sb.from('clan_shop_items').select('id, category, value');
+        // 🔥 Чистим старый кэш, чтобы удалённые предметы ушли
+        Object.keys(CLAN_SHOP_CACHE).forEach(k => delete CLAN_SHOP_CACHE[k]);
         (data || []).forEach(i => CLAN_SHOP_CACHE[i.id] = i);
         window._clanShopCacheLoaded = true;
+        console.log('✅ CLAN_SHOP_CACHE загружен:', Object.keys(CLAN_SHOP_CACHE).length, 'предметов');
     } catch (e) {
         console.warn('loadClanShopCache:', e);
     }
@@ -45129,12 +45204,40 @@ async function equipClanItem(itemId) {
             }
         });
 
-        // 🔥 Обновляем все теги в UI
+        // 🔥 Перезагружаем кэш товаров клана, чтобы подхватить свежие value
+        await loadClanShopCache(true);
+
+        // 🔥 Обновляем кэш для всех участников клуба
+        myClub.members.forEach(m => {
+            if (clubTagCache[m.telegram_id]) {
+                clubTagCache[m.telegram_id].equipped = equipped;
+            }
+        });
+
+        // 🔥 Обновляем тег в своём профиле (шапка)
         document.querySelectorAll('[data-club-tag]').forEach(el => {
-            // Перерисуем через applyClanTagCustomization
             const uid = currentUser.telegram_id;
             if (clubTagCache[uid]) applyClanTagCustomization(el, clubTagCache[uid]);
         });
+
+        // 🔥 Обновляем теги в списках
+        document.querySelectorAll('.clan-tag').forEach(el => {
+            const parent = el.closest('[data-user-id]');
+            const uid = parent?.dataset.userId;
+            if (uid && clubTagCache[uid]) {
+                el.outerHTML = myClubTagHTML(uid);
+            }
+        });
+
+        // 🔥 Обновляем открытый чужой профиль (модалка)
+        const playerModal = document.getElementById('playerModal');
+        if (playerModal?.classList.contains('active') && currentProfileUserId) {
+            const u = clubTagCache[currentProfileUserId];
+            if (u) {
+                const tagEl = document.querySelector('#playerModalContent [data-club-tag]');
+                if (tagEl) applyClanTagCustomization(tagEl, u);
+            }
+        }
 
         // 🔥 Обновляем теги в списках (leaderboard, chat, room)
         document.querySelectorAll('.clan-tag').forEach(el => {
@@ -45162,23 +45265,58 @@ async function equipClanItem(itemId) {
 // ===== ПРИМЕНИТЬ СТИЛЬ ТЕГА КЛАНОВ =====
 function applyClanTagCustomization(tagEl, club) {
     if (!tagEl || !club) return;
+
+    // ============================================================
+    // 🔥 СБРОС ВСЕХ РАНЕЕ ПРИМЕНЁННЫХ СТИЛЕЙ
+    // ============================================================
+    tagEl.style.background = '';
+    tagEl.style.webkitBackgroundClip = '';
+    tagEl.style.backgroundClip = '';
+    tagEl.style.webkitTextFillColor = '';
+    tagEl.style.backgroundImage = '';
+    tagEl.style.color = '';
+    tagEl.style.textShadow = '';
+    tagEl.classList.remove('clan-tag-gradient', 'clan-tag-color');
+
     const eq = club.equipped || {};
 
-    if (eq.tag_gradient && typeof CLAN_SHOP_CACHE !== 'undefined' && CLAN_SHOP_CACHE[eq.tag_gradient]) {
+    // ============================================================
+    // 🌈 ГРАДИЕНТ — приоритет выше цвета
+    // ============================================================
+    if (eq.tag_gradient
+        && typeof CLAN_SHOP_CACHE !== 'undefined'
+        && CLAN_SHOP_CACHE[eq.tag_gradient]) {
+
         const val = CLAN_SHOP_CACHE[eq.tag_gradient].value || {};
-        if (val.gradient) {
+        if (val.gradient && Array.isArray(val.gradient) && val.gradient.length) {
             tagEl.style.background = `linear-gradient(90deg, ${val.gradient.join(',')})`;
             tagEl.style.webkitBackgroundClip = 'text';
             tagEl.style.backgroundClip = 'text';
             tagEl.style.webkitTextFillColor = 'transparent';
+            tagEl.style.color = 'transparent';
+            tagEl.classList.add('clan-tag-gradient');
+            return;
         }
-    } else if (eq.tag_color && typeof CLAN_SHOP_CACHE !== 'undefined' && CLAN_SHOP_CACHE[eq.tag_color]) {
+    }
+
+    // ============================================================
+    // 🎨 ОБЫЧНЫЙ ЦВЕТ
+    // ============================================================
+    if (eq.tag_color
+        && typeof CLAN_SHOP_CACHE !== 'undefined'
+        && CLAN_SHOP_CACHE[eq.tag_color]) {
+
         const val = CLAN_SHOP_CACHE[eq.tag_color].value || {};
         if (val.color) {
             tagEl.style.color = val.color;
             tagEl.style.textShadow = `0 0 8px ${val.color}`;
+            tagEl.classList.add('clan-tag-color');
+            return;
         }
     }
+
+    // Ничего не надето — используем дефолтный цвет темы
+    tagEl.style.color = 'var(--emerald-3)';
 }
 
             // ============================================================
