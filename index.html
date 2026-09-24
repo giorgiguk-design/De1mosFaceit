@@ -39841,7 +39841,7 @@ function applyCustomization() {
 // 🎨 ПРИМЕНЕНИЕ КАСТОМИЗАЦИИ К КОНКРЕТНОМУ ЭЛЕМЕНТУ
 // (работает для любого игрока, не только для себя)
 // ============================================================
-function applyCustomizationToElement(scopeEl, user) {
+async function applyCustomizationToElement(scopeEl, user) {
     if (!scopeEl || !user) return;
 
     const eq = user.equipped_items || {};
@@ -39849,6 +39849,11 @@ function applyCustomizationToElement(scopeEl, user) {
     // ============================================================
     // 0. ТЕГ КЛАНА
     // ============================================================
+    // 🔥 Гарантируем что CLAN_SHOP_CACHE загружен
+    if (typeof CLAN_SHOP_CACHE !== 'undefined' && Object.keys(CLAN_SHOP_CACHE).length === 0) {
+        try { await loadClanShopCache(true); } catch (e) {}
+    }
+
     const clubTagEl = scopeEl.querySelector('[data-club-tag]');
     if (clubTagEl) {
         const club = clubTagCache[user.telegram_id];
@@ -39861,16 +39866,6 @@ function applyCustomizationToElement(scopeEl, user) {
             clubTagEl.classList.remove('visible');
         }
     }
-
-        // ============================================================
-    // 0. ТЕГ КЛАНА
-    // ============================================================
-    // 🔥 Гарантируем что CLAN_SHOP_CACHE загружен
-    if (typeof CLAN_SHOP_CACHE !== 'undefined' && Object.keys(CLAN_SHOP_CACHE).length === 0) {
-        try { await loadClanShopCache(true); } catch (e) {}
-    }
-
-    const clubTagEl = scopeEl.querySelector('[data-club-tag]');
 
 // ============================================================
 // 0.5. РАНГ-БЕЙДЖ
