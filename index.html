@@ -20519,11 +20519,32 @@ function getCaseSvg(size = 48) {
 }
 
 // Проверка: можно ли открыть бесплатный кейс
+// ============================================================
+// 🎁 Проверка: можно ли открыть бесплатный кейс
+// Двойная защита: сервер + localStorage
+// ============================================================
 async function canOpenFreeCase() {
     if (!currentUser) return { can: false, timeLeft: 0 };
 
+    const localKey = `dailyCaseOpenedAt_${currentUser.telegram_id}`;
+    const localOpened = localStorage.getItem(localKey);
+
+    // ---- Клиентский кулдаун ----
+    let localNextOpen = null;
+    if (localOpened) {
+        const lastLocal = new Date(localOpened);
+        if (!isNaN(lastLocal.getTime())) {
+            const nextLocal = new Date(lastLocal);
+            nextLocal.setUTCDate(nextLocal.getUTCDate() + 1);
+            nextLocal.setUTCHours(0, 0, 0, 0);
+            localNextOpen = nextLocal;
+        }
+    }
+
+    // ---- Серверный кулдаун ----
+    let serverNextOpen = null;
     try {
-        const { data } = await sb.from('case_openings')
+        const { data, error } = await sb.from('case_openings')
             .select('opened_at')
             .eq('telegram_id', currentUser.telegram_id)
             .eq('case_type', 'daily_free')
@@ -20531,23 +20552,54 @@ async function canOpenFreeCase() {
             .limit(1)
             .maybeSingle();
 
-        if (!data) return { can: true, timeLeft: 0 };
-
-        const lastOpen = new Date(data.opened_at);
-        const nextOpen = new Date(lastOpen);
-        nextOpen.setUTCDate(nextOpen.getUTCDate() + 1);
-        nextOpen.setUTCHours(0, 0, 0, 0);
-
-        const now = Date.now();
-        const diff = nextOpen.getTime() - now;
-
-        if (diff > 0) {
-            return { can: false, timeLeft: diff, nextOpen: nextOpen.toISOString() };
+        if (!error && data && data.opened_at) {
+            const last = new Date(data.opened_at);
+            if (!isNaN(last.getTime())) {
+                const next = new Date(last);
+                next.setUTCDate(next.getUTCDate() + 1);
+                next.setUTCHours(0, 0, 0, 0);
+                serverNextOpen = next;
+            }
         }
-        return { can: true, timeLeft: 0 };
     } catch (e) {
-        return { can: false, timeLeft: 0 };
+        console.warn('canOpenFreeCase (server):', e);
     }
+
+    // ---- Берём МАКСИМАЛЬНУЮ дату из двух источников ----
+    let nextOpen = null;
+    if (serverNextOpen && localNextOpen) {
+        nextOpen = serverNextOpen > localNextOpen ? serverNextOpen : localNextOpen;
+    } else {
+        nextOpen = serverNextOpen || localNextOpen;
+    }
+
+    if (!nextOpen) return { can: true, timeLeft: 0 };
+
+    const diff = nextOpen.getTime() - Date.now();
+    if (diff > 0) {
+        return { can: false, timeLeft: diff, nextOpen: nextOpen.toISOString() };
+    }
+    return { can: true, timeLeft: 0 };
+}
+
+// ============================================================
+// 🎁 Пометить бесплатный кейс как открытый (локально)
+// Вызывается СРАЗУ при успешной проверке can, ДО анимации
+// ============================================================
+function markDailyCaseOpened() {
+    if (!currentUser) return;
+    const localKey = `dailyCaseOpenedAt_${currentUser.telegram_id}`;
+    localStorage.setItem(localKey, new Date().toISOString());
+}
+
+// ============================================================
+// 🎁 Сбросить локальную метку (для дебага)
+// ============================================================
+function resetDailyCaseLocal() {
+    if (!currentUser) return;
+    const localKey = `dailyCaseOpenedAt_${currentUser.telegram_id}`;
+    localStorage.removeItem(localKey);
+    console.log('🔄 Локальный кулдаун сброшен');
 }
 
 // Получить случайный предмет из магазина по редкости
@@ -20591,6 +20643,10 @@ async function openCase(caseType) {
             showToast('⏳ Бесплатный кейс уже открыт. Возвращайся завтра!');
             return;
         }
+
+        // 🔥 КРИТИЧНО: помечаем локально СРАЗУ,
+        // чтобы даже если БД отвалится — кулдаун сработал
+        markDailyCaseOpened();
     } else {
         // Платный — списываем монеты
         if ((currentUser.coins || 0) < config.price) {
@@ -20640,8 +20696,11 @@ async function openCase(caseType) {
             .maybeSingle();
 
         if (existing) {
-            // Дубликат — даём монеты вместо предмета
+            // ============================================================
+            // ДУБЛИКАТ — даём монеты вместо предмета
+            // ============================================================
             const refund = Math.round(item.price * 0.5);
+
             await sb.rpc('add_coins', {
                 p_user_id: currentUser.telegram_id,
                 p_amount: refund,
@@ -20651,35 +20710,48 @@ async function openCase(caseType) {
             currentUser.coins += refund;
             updateCoinsBadge();
 
-            // Логируем
-            await sb.from('case_openings').insert({
-                telegram_id: currentUser.telegram_id,
-                case_type: caseType,
-                item_id: item.id,
-                item_rarity: rarity,
-                is_free: config.free,
-            });
+            // Логируем (не критично — если упадёт, всё равно показываем картинку)
+            try {
+                await sb.from('case_openings').insert({
+                    telegram_id: currentUser.telegram_id,
+                    case_type: caseType,
+                    item_id: item.id,
+                    item_rarity: rarity,
+                    is_free: config.free,
+                    opened_at: new Date().toISOString(),
+                });
+            } catch (logErr) {
+                console.warn('case_openings insert (dup) failed:', logErr);
+            }
 
-            // Показываем анимацию дубликата
+            // 🔥 Показываем анимацию В ЛЮБОМ СЛУЧАЕ
             showCaseOpening(item, rarity, true, refund);
+
         } else {
-            // Добавляем в инвентарь
+            // ============================================================
+            // НОВЫЙ ПРЕДМЕТ — добавляем в инвентарь
+            // ============================================================
             await sb.from('user_inventory').insert({
                 telegram_id: currentUser.telegram_id,
                 item_id: item.id,
                 is_equipped: false,
             });
 
-            // Логируем
-            await sb.from('case_openings').insert({
-                telegram_id: currentUser.telegram_id,
-                case_type: caseType,
-                item_id: item.id,
-                item_rarity: rarity,
-                is_free: config.free,
-            });
+            // Логируем (не критично)
+            try {
+                await sb.from('case_openings').insert({
+                    telegram_id: currentUser.telegram_id,
+                    case_type: caseType,
+                    item_id: item.id,
+                    item_rarity: rarity,
+                    is_free: config.free,
+                    opened_at: new Date().toISOString(),
+                });
+            } catch (logErr) {
+                console.warn('case_openings insert failed:', logErr);
+            }
 
-            // Показываем анимацию
+            // 🔥 Показываем анимацию
             showCaseOpening(item, rarity, false, 0);
         }
 
