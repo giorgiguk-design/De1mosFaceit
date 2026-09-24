@@ -31219,11 +31219,10 @@ async function createRoomInline() {
 async function joinRoom(roomId) {
     haptic('medium');
 
-    // 🔥 Проверяем бан
     if (await guardMatchBan()) return;
 
+    // 🔥 Ищем, не в комнате ли я уже
     const { data: mine } = await sb.from('room_players')
-        .from('room_players')
         .select('room_id')
         .eq('telegram_id', currentUser.telegram_id);
 
