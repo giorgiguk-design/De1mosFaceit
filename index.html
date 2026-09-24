@@ -24891,6 +24891,8 @@ async function openPlayerProfile(userId) {
 
     const modal = document.getElementById('playerModal');
     const content = document.getElementById('playerModalContent');
+    if (!modal || !content) return;
+
     content.innerHTML = '<div class="empty">Загрузка...</div>';
     modal.classList.add('active');
 
@@ -24902,11 +24904,14 @@ async function openPlayerProfile(userId) {
         const html = await renderProfileView(user, { inModal: true });
         content.innerHTML = html;
 
-        await applyCustomizationToElement(container, user);
+        // 🔥 ВАЖНО: применяем кастомизацию к content, а не к несуществующему container
+        await applyCustomizationToElement(content, user);
 
         await Promise.all([
-            renderEloChart(user.telegram_id,
-                content.querySelector(`#eloChartCard_${user.telegram_id}`)),
+            renderEloChart(
+                user.telegram_id,
+                content.querySelector(`#eloChartCard_${user.telegram_id}`)
+            ),
             initProfileExtrasUnified(user),
             loadProfileMatchHistoryInModal(user.telegram_id),
         ]);
@@ -24939,15 +24944,12 @@ async function acceptFriendFromProfile(relId, btn) {
     try {
         await sb.from('friendships').update({ status: 'accepted' }).eq('id', relId);
         showToast('✅ Теперь вы друзья');
-        // Обновим профиль
-        const modal = document.getElementById('playerModal');
-        if (modal.classList.contains('active')) {
-            // Найдём userId по текущему открытому профилю неудобно, перерисуем через замыкание
-            // Проще: закрыть и загрузить заново — оставляем как есть
-        }
         closePlayerModal();
         openFriendsPage();
-    } catch (e) { showToast('Ошибка'); if (btn) { btn.disabled = false; } }
+    } catch (e) {
+        showToast('Ошибка');
+        if (btn) { btn.disabled = false; }
+    }
 }
 
 async function removeFriendFromProfile(relId, btn) {
