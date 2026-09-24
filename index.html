@@ -20686,7 +20686,6 @@ html.lite-mode .case-open-reel { filter: none !important; }
     </details>
 
 </div>
-    </div>
     <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
 </div>
 
@@ -43818,8 +43817,8 @@ async function guardMatchBan() {
     return true;
 }
 
-            // ============================================================
-// 📈 ЗАГРУЗКА ФОНА ДЛЯ ГРАФИКА DXP (только админ)
+// ============================================================
+// 📈 ДОБАВЛЕНИЕ ФОНА ГРАФИКА DXP
 // ============================================================
 async function openAddDxpChartBackgroundSheet() {
     if (!isCurrentUserAdmin()) {
@@ -43827,7 +43826,6 @@ async function openAddDxpChartBackgroundSheet() {
         return;
     }
 
-    // Убираем старые копии
     document.getElementById('addDxpBgOverlay')?.remove();
     document.getElementById('addDxpBgSheet')?.remove();
 
@@ -43837,47 +43835,20 @@ async function openAddDxpChartBackgroundSheet() {
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay';
     overlay.id = 'addDxpBgOverlay';
-    overlay.style.cssText = `
-        position: fixed !important;
-        inset: 0 !important;
-        background: rgba(0, 0, 0, 0.88) !important;
-        z-index: 9000 !important;
-        opacity: 0 !important;
-        pointer-events: auto !important;
-        visibility: visible !important;
-        transition: opacity 0.25s ease !important;
-    `;
+    overlay.style.zIndex = '9000';
     overlay.onclick = (e) => {
         if (e.target === overlay) closeAddDxpBackgroundSheet();
     };
 
     // ============================================================
-    // ШИТ
+    // ШИТ — классы для анимации, инлайн только z-index
     // ============================================================
     const sheet = document.createElement('div');
     sheet.className = 'sheet';
     sheet.id = 'addDxpBgSheet';
-    sheet.style.cssText = `
-        position: fixed !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        top: auto !important;
-        z-index: 9001 !important;
-        max-height: 90vh !important;
-        overflow-y: auto !important;
-        padding: 20px 20px 32px !important;
-        background: #0e1a16 !important;
-        border-top-left-radius: 22px !important;
-        border-top-right-radius: 22px !important;
-        border-top: 1px solid var(--border-strong) !important;
-        transform: translateY(100%) !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        visibility: visible !important;
-        transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        -webkit-overflow-scrolling: touch !important;
-    `;
+    sheet.style.zIndex = '9001';
+    sheet.style.maxHeight = '90vh';
+    sheet.style.overflowY = 'auto';
 
     sheet.innerHTML = `
         <div class="sheet-title">📈 Добавить фон графика DXP</div>
@@ -43887,27 +43858,20 @@ async function openAddDxpChartBackgroundSheet() {
         </div>
 
         <div style="margin-bottom: 10px;">
-            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
-                НАЗВАНИЕ
-            </label>
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">НАЗВАНИЕ</label>
             <input type="text" class="field-input" id="newDxpBgName"
                    placeholder="Например: Кибер-сетка" maxlength="40" autocomplete="off">
         </div>
 
         <div style="margin-bottom: 10px;">
-            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
-                ЦЕНА (монет)
-            </label>
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">ЦЕНА (монет)</label>
             <input type="number" class="field-input" id="newDxpBgPrice"
                    value="1200" min="0" max="99999" inputmode="numeric">
         </div>
 
         <div style="margin-bottom: 10px;">
-            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
-                РЕДКОСТЬ
-            </label>
-            <select class="field-input" id="newDxpBgRarity"
-                    style="padding: 12px; appearance: auto; -webkit-appearance: menulist;">
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">РЕДКОСТЬ</label>
+            <select class="field-input" id="newDxpBgRarity" style="padding: 12px;">
                 <option value="common">Common</option>
                 <option value="rare">Rare</option>
                 <option value="epic" selected>Epic</option>
@@ -43916,9 +43880,7 @@ async function openAddDxpChartBackgroundSheet() {
         </div>
 
         <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
-                КАРТИНКА
-            </label>
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">КАРТИНКА</label>
             <button class="profile-action-btn cancel" style="margin-top: 0;"
                     onclick="document.getElementById('newDxpBgFile').click()">
                 📤 Выбрать файл
@@ -43942,11 +43904,11 @@ async function openAddDxpChartBackgroundSheet() {
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
 
-    // 🔥 Навешиваем .active в следующем кадре, чтобы анимация сработала
+    // 🔥 Включаем анимацию через requestAnimationFrame
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            overlay.style.opacity = '1';
-            sheet.style.transform = 'translateY(0)';
+            overlay.classList.add('active');
+            sheet.classList.add('active');
         });
     });
 
@@ -43976,45 +43938,18 @@ async function openAddDxpChartBackgroundSheet() {
             }
         };
     }
+}
 
-    // ============================================================
-    // 🔍 ДИАГНОСТИКА — если что-то не так, будет видно в консоли
-    // ============================================================
+function closeAddDxpBackgroundSheet() {
+    const ov = document.getElementById('addDxpBgOverlay');
+    const sh = document.getElementById('addDxpBgSheet');
+    if (ov) ov.classList.remove('active');
+    if (sh) sh.classList.remove('active');
     setTimeout(() => {
-        const s = document.getElementById('addDxpBgSheet');
-        const o = document.getElementById('addDxpBgOverlay');
-        const i = document.getElementById('newDxpBgName');
-
-        if (s && i) {
-            const sc = getComputedStyle(s);
-            const ic = getComputedStyle(i);
-            const oc = o ? getComputedStyle(o) : null;
-
-            console.log('🔍 [DXP sheet] диагностика:', {
-                'sheet z-index': sc.zIndex,
-                'sheet pointer-events': sc.pointerEvents,
-                'sheet visibility': sc.visibility,
-                'sheet display': sc.display,
-                'sheet transform': sc.transform,
-                'input pointer-events': ic.pointerEvents,
-                'input visibility': ic.visibility,
-                'input disabled': i.disabled,
-                'input readOnly': i.readOnly,
-                'overlay z-index': oc?.zIndex,
-                'overlay pointer-events': oc?.pointerEvents,
-                'elementFromPoint(input center)':
-                    document.elementFromPoint(
-                        i.getBoundingClientRect().left + 10,
-                        i.getBoundingClientRect().top + i.offsetHeight / 2
-                    )?.tagName + '#' + (
-                        document.elementFromPoint(
-                            i.getBoundingClientRect().left + 10,
-                            i.getBoundingClientRect().top + i.offsetHeight / 2
-                        )?.id || ''
-                    ),
-            });
-        }
-    }, 500);
+        ov?.remove();
+        sh?.remove();
+        window._newDxpBgBlob = null;
+    }, 400);
 }
 
 function closeAddDxpBackgroundSheet() {
