@@ -17680,6 +17680,95 @@ html.lite-mode .fr-mx-char,
 html.lite-mode .fr-mx-skull {
     animation: none !important;
 }
+
+    /* ============================================================ */
+/* 🏷️ ТЕГ КЛАНА + 🎒 ИНВЕНТАРЬ                                   */
+/* ============================================================ */
+
+.clan-tag {
+    display: inline-block;
+    margin-right: 4px;
+    font-size: 0.75em;
+    line-height: 1;
+    vertical-align: middle;
+    transition: opacity 0.2s ease;
+}
+
+.clan-tag-gradient {
+    /* стиль подставляется inline через myClubTagHTML */
+}
+
+.clan-tag-color {
+    /* стиль подставляется inline */
+}
+
+/* ---- Инвентарь клана ---- */
+.clan-inv-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: rgba(var(--emerald-rgb), 0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clan-inv-item:hover {
+    background: rgba(var(--emerald-rgb), 0.10);
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+}
+
+.clan-inv-item.equipped {
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.15),
+        rgba(var(--emerald-rgb), 0.04));
+    border-color: var(--emerald);
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.25);
+}
+
+.clan-inv-preview {
+    width: 52px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.clan-inv-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.clan-inv-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.clan-inv-status {
+    font-size: 10px;
+    color: var(--hint);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.clan-inv-item.equipped .clan-inv-status {
+    color: var(--emerald);
+    font-weight: 900;
+}
     
 </style>
 </head>
@@ -20689,6 +20778,9 @@ function renderDashboard(user) {
 async function loadClubTagsForUsers(userIds) {
     if (!userIds?.length) return;
     try {
+        // 🔥 Предзагружаем кэш предметов клана
+        await loadClanShopCache();
+
         const { data: memberships } = await sb.from('club_members')
             .select('telegram_id, club_id')
             .in('telegram_id', userIds);
@@ -20702,23 +20794,11 @@ async function loadClubTagsForUsers(userIds) {
         const clubMap = {};
         (clubs || []).forEach(c => clubMap[c.id] = c);
 
-        // 🔥 Догружаем shop_items для стилей
-        const allItemIds = new Set();
-        (clubs || []).forEach(c => {
-            if (c.equipped_items) Object.values(c.equipped_items).forEach(id => allItemIds.add(id));
-        });
-
-        const missing = [...allItemIds].filter(id => !CLAN_SHOP_CACHE[id]);
-        if (missing.length) {
-            const { data: shopItems } = await sb.from('clan_shop_items')
-                .select('id, category, value').in('id', missing);
-            (shopItems || []).forEach(i => CLAN_SHOP_CACHE[i.id] = i);
-        }
-
         memberships.forEach(m => {
             const club = clubMap[m.club_id];
             if (club) {
                 clubTagCache[m.telegram_id] = {
+                    club_id: club.id,
                     tag: club.tag,
                     name: club.name,
                     equipped: club.equipped_items || {}
@@ -20730,27 +20810,35 @@ async function loadClubTagsForUsers(userIds) {
     }
 }
 
+// ============================================================
+// 🏷️ HTML тега клана (с учётом equipped_items)
+// ============================================================
 function myClubTagHTML(telegramId) {
     const club = clubTagCache[telegramId];
     if (!club) return '';
 
-    // 🔥 Применяем стиль тега из equipped_items клана
     const eq = club.equipped || {};
-    let style = 'color: var(--hint); font-size: 0.7em; opacity: 0.7; font-weight: 700; margin-right: 4px;';
+    let style = 'color: var(--hint); opacity: 0.7; font-weight: 700;';
+    let extraCls = '';
 
+    // 🌈 ГРАДИЕНТ
     if (eq.tag_gradient && CLAN_SHOP_CACHE[eq.tag_gradient]) {
         const val = CLAN_SHOP_CACHE[eq.tag_gradient].value || {};
-        if (val.gradient) {
-            style = `background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-size: 0.75em; font-weight: 900; margin-right: 4px; letter-spacing: 0.3px;`;
+        if (val.gradient && val.gradient.length) {
+            style = `background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-weight: 900; letter-spacing: 0.4px;`;
+            extraCls = 'clan-tag-gradient';
         }
-    } else if (eq.tag_color && CLAN_SHOP_CACHE[eq.tag_color]) {
+    }
+    // 🎨 ЦВЕТ
+    else if (eq.tag_color && CLAN_SHOP_CACHE[eq.tag_color]) {
         const val = CLAN_SHOP_CACHE[eq.tag_color].value || {};
         if (val.color) {
-            style = `color: ${val.color}; text-shadow: 0 0 8px ${val.color}; font-size: 0.75em; font-weight: 900; margin-right: 4px; letter-spacing: 0.3px;`;
+            style = `color: ${val.color}; text-shadow: 0 0 8px ${val.color}; font-weight: 900; letter-spacing: 0.4px;`;
+            extraCls = 'clan-tag-color';
         }
     }
 
-    return `<span style="${style}">[${escapeHtml(club.tag)}]</span>`;
+    return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
 }
 
             // ============================================================
@@ -22195,24 +22283,19 @@ const membersHTML = sorted.map(m => {
 }).join('');
 
     let actionBtns = '';
-    if (canEdit) {
-        actionBtns = `
-            <div class="club-actions-row-new">
-                ${isOwner ? `<button class="club-mini-btn" id="requestsBtn" onclick="openRequestsSheet()">📥<span>Заявки</span></button>` : ''}
-                ${(isOwner || isElder) ? `<button class="club-mini-btn" onclick="openClubInviteSheet()">➕<span>Пригласить</span></button>` : ''}
-                ${isOwner ? `<button class="club-mini-btn danger" onclick="openBansSheet()">🚫<span>Баны</span></button>` : ''}
-<button class="club-mini-btn" onclick="openClanShop()">🏪<span>Магазин</span></button>
-                <button class="club-mini-btn" onclick="openClubEventsSheet()">📜<span>События</span></button>
-                ${isOwner ? `<button class="club-mini-btn danger" onclick="deleteClubConfirm()">🗑<span>Удалить</span></button>` : ''}
-            </div>
-        `;
-    } else {
-        actionBtns = `
-            <div class="club-actions-row-new">
-                <button class="club-mini-btn" onclick="openClubEventsSheet()">📜<span>События</span></button>
-            </div>
-        `;
-    }
+if (canEdit) {
+    actionBtns = `
+        <div class="club-actions-row-new">
+            ${isOwner ? `<button class="club-mini-btn" id="requestsBtn" onclick="openRequestsSheet()">📥<span>Заявки</span></button>` : ''}
+            ${(isOwner || isElder) ? `<button class="club-mini-btn" onclick="openClubInviteSheet()">➕<span>Пригласить</span></button>` : ''}
+            ${(isOwner || isElder) ? `<button class="club-mini-btn" onclick="openClanInventory()">🎒<span>Инвентарь</span></button>` : ''}
+            ${isOwner ? `<button class="club-mini-btn danger" onclick="openBansSheet()">🚫<span>Баны</span></button>` : ''}
+            <button class="club-mini-btn" onclick="openClanShop()">🏪<span>Магазин</span></button>
+            <button class="club-mini-btn" onclick="openClubEventsSheet()">📜<span>События</span></button>
+            ${isOwner ? `<button class="club-mini-btn danger" onclick="deleteClubConfirm()">🗑<span>Удалить</span></button>` : ''}
+        </div>
+    `;
+}
 
     const playBtn = (isOwner || isElder) ? `
         <button class="club-play-main" onclick="startClubParty()">
@@ -33449,57 +33532,171 @@ function subscribeFriendshipsRealtime() {
 let clubsRealtimeChannel = null;
 
 function subscribeClubsRealtime() {
-    if (clubsRealtimeChannel) sb.removeChannel(clubsRealtimeChannel);
+    if (clubsRealtimeChannel) {
+        try { sb.removeChannel(clubsRealtimeChannel); } catch (e) {}
+        clubsRealtimeChannel = null;
+    }
     if (!currentUser) return;
 
     const myId = Number(currentUser.telegram_id);
 
-    clubsRealtimeChannel = sb.channel('clubs_rt_global')
-        // Изменения в клубах (название, лого, состав)
+    clubsRealtimeChannel = sb.channel('clubs_rt_global_' + Date.now())
+
+        // ============================================================
+        // 1. ИЗМЕНЕНИЯ В КЛУБАХ (название, лого, состав, equipped_items)
+        // ============================================================
         .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'clubs'
-        }, () => {
+            event: '*',
+            schema: 'public',
+            table: 'clubs'
+        }, (payload) => {
+            const club = payload.new;
+
+            // 🔥 КЛЮЧЕВОЕ: если изменились equipped_items —
+            // обновляем кэш тега для всех участников ЭТОГО клуба
+            if (club && club.id && club.equipped_items) {
+                Object.keys(clubTagCache).forEach(uid => {
+                    if (clubTagCache[uid]?.club_id === club.id) {
+                        clubTagCache[uid].equipped = club.equipped_items;
+                    }
+                });
+
+                // 🔥 Перерисовываем теги клана во всех открытых списках
+                document.querySelectorAll('.clan-tag').forEach(el => {
+                    const parent = el.closest('[data-user-id]');
+                    const uid = parent?.dataset.userId;
+                    if (uid && clubTagCache[uid]) {
+                        el.outerHTML = myClubTagHTML(uid);
+                    }
+                });
+            }
+
+            // Обновляем страницу клуба, если открыта
             if (document.getElementById('page-club')?.classList.contains('active')) {
                 loadClub();
             }
+
+            // Обновляем открытый шит "Все клубы"
             if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
                 const q = document.getElementById('allClubsSearch')?.value.trim() || '';
-                loadAllClubsSheet(q);
+                if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
             }
         })
-        // Изменения в составе клуба
+
+        // ============================================================
+        // 2. ИЗМЕНЕНИЯ В СОСТАВЕ КЛУБА (вход, выход, кик, повышение)
+        // ============================================================
         .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'club_members'
-        }, () => {
-            if (document.getElementById('page-club')?.classList.contains('active')) {
-                loadClub();
+            event: '*',
+            schema: 'public',
+            table: 'club_members'
+        }, (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            // Если это МОЯ запись — обновляем myClub
+            if (Number(row.telegram_id) === myId) {
+                // Перезагружаем клуб (если я вступил/вышел/меня кикнули)
+                if (document.getElementById('page-club')?.classList.contains('active')) {
+                    loadClub();
+                }
+                // Сбрасываем кэш тега
+                delete clubTagCache[myId];
+                loadClubTagsForUsers([myId]);
+            } else {
+                // Кто-то другой — просто обновляем клуб
+                if (document.getElementById('page-club')?.classList.contains('active')) {
+                    loadClub();
+                }
             }
+
+            // Обновляем открытый шит "Все клубы"
             if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
                 const q = document.getElementById('allClubsSearch')?.value.trim() || '';
-                loadAllClubsSheet(q);
+                if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
+            }
+
+            // Обновляем "Состав" в модалке просмотра клуба
+            const modal = document.getElementById('playerModal');
+            if (modal?.classList.contains('active')) {
+                // Если открыт профиль клуба — обновим (не всегда нужно, поэтому без фанатизма)
             }
         })
-        // Заявки в клуб
+
+        // ============================================================
+        // 3. ЗАЯВКИ В КЛУБ (только для OWNER / ELDER)
+        // ============================================================
         .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'club_requests'
-        }, () => {
-            if (document.getElementById('page-club')?.classList.contains('active')
-                && myClub?.club) {
-                if (typeof updateRequestsBadge === 'function') updateRequestsBadge();
+            event: '*',
+            schema: 'public',
+            table: 'club_requests'
+        }, (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            // Обновляем бейдж заявок только если мой клуб
+            if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
+                if (typeof updateRequestsBadge === 'function') {
+                    updateRequestsBadge();
+                }
+                // Обновляем список заявок, если он открыт
                 if (document.getElementById('requestsSheet')?.classList.contains('active')) {
                     renderRequestsSheet();
                 }
             }
         })
-        // Приглашения в клуб
+
+        // ============================================================
+        // 4. ПРИГЛАШЕНИЯ В КЛУБ
+        // ============================================================
         .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'club_invites'
-        }, () => {
+            event: '*',
+            schema: 'public',
+            table: 'club_invites'
+        }, (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            // Если это МОЁ приглашение — обновляем уведомления
+            if (Number(row.to_id) === myId) {
+                if (typeof updateNotifBadge === 'function') {
+                    updateNotifBadge();
+                }
+                haptic('light');
+            }
+
+            // Обновляем страницу клуба, если открыта
             if (document.getElementById('page-club')?.classList.contains('active')) {
                 loadClub();
             }
         })
-        .subscribe();
+
+        // ============================================================
+        // 5. ИНВЕНТАРЬ КЛУБА (купленные/надетые предметы)
+        // ============================================================
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'clan_inventory'
+        }, (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            // Если это инвентарь МОЕГО клуба — перезагружаем клуб
+            if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
+                if (document.getElementById('page-club')?.classList.contains('active')) {
+                    loadClub();
+                }
+                // Обновляем инвентарь, если он открыт
+                if (document.getElementById('clanInventorySheet')?.classList.contains('active')) {
+                    openClanInventory();
+                }
+            }
+        })
+
+        .subscribe((status) => {
+            console.log('📡 clubs_rt status:', status);
+        });
 }
 
 // ============================================================
@@ -40485,6 +40682,125 @@ function closeShopItemSheet() {
 
 const CLAN_SHOP_CACHE = {};
 
+// ============================================================
+// 🔥 Предзагрузка товаров клана (чтобы тег рендерился сразу)
+// ============================================================
+async function loadClanShopCache() {
+    if (window._clanShopCacheLoaded) return;
+    try {
+        const { data } = await sb.from('clan_shop_items').select('id, category, value');
+        (data || []).forEach(i => CLAN_SHOP_CACHE[i.id] = i);
+        window._clanShopCacheLoaded = true;
+    } catch (e) {
+        console.warn('loadClanShopCache:', e);
+    }
+}
+
+// ============================================================
+// 🎒 ИНВЕНТАРЬ КЛАНА
+// ============================================================
+async function openClanInventory() {
+    if (!myClub?.club) return;
+
+    const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+    const canEquip = myRole === 'owner' || myRole === 'elder'
+        || myClub.club.owner_id === currentUser.telegram_id;
+
+    // Загружаем
+    const [invRes, itemsRes] = await Promise.all([
+        sb.from('clan_inventory').select('item_id, is_equipped, purchased_by').eq('club_id', myClub.club.id),
+        sb.from('clan_shop_items').select('*')
+    ]);
+
+    const inventory = invRes.data || [];
+    const items = itemsRes.data || [];
+    items.forEach(i => CLAN_SHOP_CACHE[i.id] = i);
+
+    if (!inventory.length) {
+        showToast('🎒 Инвентарь пуст. Купи что-нибудь в магазине!');
+        return;
+    }
+
+    const categories = {
+        tag_color:    { label: 'Цвет тега',     icon: '🎨' },
+        tag_gradient: { label: 'Градиент тега', icon: '🌈' },
+        clan_badge:   { label: 'Значки клана',  icon: '🏅' },
+    };
+
+    const grouped = {};
+    inventory.forEach(invItem => {
+        const item = items.find(i => i.id === invItem.item_id);
+        if (!item) return;
+        (grouped[item.category] ||= []).push({ item, is_equipped: invItem.is_equipped });
+    });
+
+    // Модалка
+    document.getElementById('clanInventoryOverlay')?.remove();
+    document.getElementById('clanInventorySheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'clanInventoryOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeClanInventory(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'clanInventorySheet';
+    sheet.style.zIndex = '810';
+    sheet.style.maxHeight = '90vh';
+    sheet.style.overflowY = 'auto';
+
+    let html = `
+        <div class="sheet-title">🎒 Инвентарь клана</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+            ${canEquip ? 'Нажми на предмет, чтобы надеть' : 'Только OWNER / ELDER может надевать'}
+        </div>
+    `;
+
+    Object.entries(grouped).forEach(([cat, list]) => {
+        const meta = categories[cat] || { label: cat, icon: '📦' };
+        html += `<div class="section-title" style="margin-top: 14px;">${meta.icon} ${meta.label}</div>`;
+        html += list.map(({ item, is_equipped }) => `
+            <div class="clan-inv-item ${is_equipped ? 'equipped' : ''}"
+                 onclick="${canEquip ? `equipClanItem('${item.id}'); closeClanInventory();` : ''}">
+                <div class="clan-inv-preview">
+                    ${renderClanItemPreview(item)}
+                </div>
+                <div class="clan-inv-info">
+                    <div class="clan-inv-name">${escapeHtml(item.name)}</div>
+                    <div class="clan-inv-status">${is_equipped ? '✓ Надето' : (canEquip ? 'Нажми чтобы надеть' : 'Не надето')}</div>
+                </div>
+            </div>
+        `).join('');
+    });
+
+    html += `<button class="sheet-cancel" onclick="closeClanInventory()">ЗАКРЫТЬ</button>`;
+
+    sheet.innerHTML = html;
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    haptic('medium');
+}
+
+function closeClanInventory() {
+    document.getElementById('clanInventoryOverlay')?.remove();
+    document.getElementById('clanInventorySheet')?.remove();
+}
+
+function renderClanItemPreview(item) {
+    const val = item.value || {};
+    if (item.category === 'tag_color' && val.color) {
+        return `<span style="color: ${val.color}; text-shadow: 0 0 10px ${val.color}; font-weight: 900; font-size: 16px;">[TAG]</span>`;
+    }
+    if (item.category === 'tag_gradient' && val.gradient) {
+        return `<span style="background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; font-size: 16px;">[TAG]</span>`;
+    }
+    if (item.category === 'clan_badge' && val.emoji) {
+        return `<span style="font-size: 24px;">${val.emoji}</span>`;
+    }
+    return '📦';
+}
+
 async function openClanShop() {
     if (!myClub?.club) { showToast('Ты не в клубе'); return; }
 
@@ -40823,11 +41139,13 @@ async function equipClanItem(itemId) {
     if (!canEquip) { showToast('Только OWNER / ELDER'); return; }
 
     try {
-        const { data: item } = await sb.from('clan_shop_items').select('category').eq('id', itemId).single();
+        const { data: item } = await sb.from('clan_shop_items')
+            .select('category').eq('id', itemId).single();
         if (!item) return;
 
         // Снять все в той же категории
-        const { data: sameCat } = await sb.from('clan_shop_items').select('id').eq('category', item.category);
+        const { data: sameCat } = await sb.from('clan_shop_items')
+            .select('id').eq('category', item.category);
         const sameCatIds = (sameCat || []).map(i => i.id);
 
         if (sameCatIds.length) {
@@ -40843,7 +41161,7 @@ async function equipClanItem(itemId) {
             .eq('club_id', myClub.club.id)
             .eq('item_id', itemId);
 
-        // Обновить equipped_items у клана
+        // Собрать equipped_items
         const { data: inv } = await sb.from('clan_inventory')
             .select('item_id, clan_shop_items!inner(category)')
             .eq('club_id', myClub.club.id)
@@ -40857,10 +41175,32 @@ async function equipClanItem(itemId) {
         await sb.from('clubs').update({ equipped_items: equipped }).eq('id', myClub.club.id);
         myClub.club.equipped_items = equipped;
 
-        // Обновляем локальный кэш тега
-        if (clubTagCache[myClub.club.id]) {
-            clubTagCache[myClub.club.id].equipped = equipped;
-        }
+        // 🔥 ФИКС: обновляем кэш для всех участников клуба
+        myClub.members.forEach(m => {
+            if (clubTagCache[m.telegram_id]) {
+                clubTagCache[m.telegram_id].equipped = equipped;
+            }
+        });
+
+        // 🔥 Обновляем все теги в UI
+        document.querySelectorAll('[data-club-tag]').forEach(el => {
+            // Перерисуем через applyClanTagCustomization
+            const uid = currentUser.telegram_id;
+            if (clubTagCache[uid]) applyClanTagCustomization(el, clubTagCache[uid]);
+        });
+
+        // 🔥 Обновляем теги в списках (leaderboard, chat, room)
+        document.querySelectorAll('.clan-tag').forEach(el => {
+            // Проще всего пересобрать содержимое из myClubTagHTML
+            const parent = el.parentElement;
+            const nicknameEl = parent?.querySelector('[data-list-nick]');
+            if (nicknameEl) {
+                const uidMatch = parent.closest('[data-user-id]')?.dataset.userId;
+                if (uidMatch && clubTagCache[uidMatch]) {
+                    el.outerHTML = myClubTagHTML(uidMatch);
+                }
+            }
+        });
 
         showToast('✅ Надето');
         haptic('medium');
