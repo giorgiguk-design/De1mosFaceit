@@ -24744,7 +24744,7 @@ async function renderProfileView(user, options = {}) {
     container.innerHTML = html;
 
     // Применяем кастомизацию сразу (DOM уже вставлен)
-    applyCustomizationToElement(container, user);
+    await applyCustomizationToElement(container, user);
 
     // Асинхронные задачи — параллельно
     await Promise.all([
@@ -24897,7 +24897,7 @@ async function openPlayerProfile(userId) {
         const html = await renderProfileView(user, { inModal: true });
         content.innerHTML = html;
 
-        applyCustomizationToElement(content, user);
+        await applyCustomizationToElement(container, user);
 
         await Promise.all([
             renderEloChart(user.telegram_id,
@@ -36809,7 +36809,7 @@ function subscribeUsersRealtime() {
                         if (document.getElementById('page-profile')?.classList.contains('active')
                             && !profileEditMode) {
                             const cont = document.getElementById('profileContent');
-                            if (cont) applyCustomizationToElement(cont, currentUser);
+                            if (cont) applyCustomizationToElement(cont, currentUser).catch(e => console.warn(e));
                         }
 
                         // 🔥 2. Меню-дровер
