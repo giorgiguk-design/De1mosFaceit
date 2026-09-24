@@ -10804,6 +10804,13 @@ html.lite-mode .header-coins::before {
                 0 4px 20px rgba(0, 0, 0, 0.65) !important;
 }
 
+    .elo-chart-card.has-dxp-bg {
+    background-image: var(--dxp-bg-image, none) !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
 /* Goals */
 .goals-card {
     background: #03060a !important;
@@ -24643,7 +24650,7 @@ async function renderProfileView(user, options = {}) {
 </div>
 
         <!-- График DXP -->
-        <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}">
+        <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}" data-dxp-bg>
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
             <span class="ech-corner ech-bl"></span>
@@ -39933,33 +39940,62 @@ wrap.appendChild(overlay);
         }
     }
 
-// ============================================================
-// 3. ФОН ПРОФИЛЯ — ТОЛЬКО ШАПКА
-// ============================================================
-const bgId = eq.profile_bg;
-const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
-if (bgId && SHOP_ITEMS_CACHE[bgId]) {
-    const val = SHOP_ITEMS_CACHE[bgId].value || {};
-    if (val.url) {
+    // ============================================================
+    // 3. ФОН ПРОФИЛЯ — ТОЛЬКО ШАПКА
+    // ============================================================
+    const bgId = eq.profile_bg;
+    const bgEls = scopeEl.querySelectorAll('[data-profile-bg]');
+    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
+        const val = SHOP_ITEMS_CACHE[bgId].value || {};
+        if (val.url) {
+            bgEls.forEach(el => {
+                if (!el.classList.contains('profile-hero-compact') &&
+                    !el.classList.contains('profile-hero') &&
+                    !el.classList.contains('pm2-hero')) {
+                    return;
+                }
+                el.style.setProperty(
+                    'background-image',
+                    `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url("${val.url}")`,
+                    'important'
+                );
+                el.style.setProperty('background-size', 'cover', 'important');
+                el.style.setProperty('background-position', 'center', 'important');
+                el.classList.add('has-custom-bg');
+            });
+        }
+    } else {
         bgEls.forEach(el => {
-            // 🔥 применяем только к шапке профиля
-            if (!el.classList.contains('profile-hero-compact') &&
-                !el.classList.contains('profile-hero') &&
-                !el.classList.contains('pm2-hero')) {
-                return;
-            }
-            el.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url('${val.url}')`;
-            el.style.backgroundSize = 'cover';
-            el.style.backgroundPosition = 'center';
-            el.classList.add('has-custom-bg');
+            el.style.removeProperty('background-image');
+            el.classList.remove('has-custom-bg');
         });
     }
-} else {
-    bgEls.forEach(el => {
-        el.style.backgroundImage = '';
-        el.classList.remove('has-custom-bg');
-    });
-}
+
+    // ============================================================
+    // 3.5. ФОН ГРАФИКА DXP
+    // ============================================================
+    const dxpBgId = eq.dxp_chart_bg;
+    const dxpBgEls = scopeEl.querySelectorAll('[data-dxp-bg]');
+    if (dxpBgId && SHOP_ITEMS_CACHE[dxpBgId]) {
+        const val = SHOP_ITEMS_CACHE[dxpBgId].value || {};
+        if (val.url) {
+            dxpBgEls.forEach(el => {
+                el.style.setProperty(
+                    'background-image',
+                    `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url("${val.url}")`,
+                    'important'
+                );
+                el.style.setProperty('background-size', 'cover', 'important');
+                el.style.setProperty('background-position', 'center', 'important');
+                el.classList.add('has-dxp-bg');
+            });
+        }
+    } else {
+        dxpBgEls.forEach(el => {
+            el.style.removeProperty('background-image');
+            el.classList.remove('has-dxp-bg');
+        });
+    }
 
     // ============================================================
     // 4. ЗНАЧОК
@@ -43952,14 +43988,6 @@ async function uploadImageToStorage(blob, prefix = 'img') {
         try {
             console.log(`📤 Пробую bucket: ${bucket}`);
 
-            // Проверяем что bucket существует
-            const { data: bucketInfo, error: bucketErr } = await sb.storage.getBucket(bucket);
-            if (bucketErr) {
-                console.warn(`⚠️ Bucket "${bucket}" не найден:`, bucketErr.message);
-                errors.push(`${bucket}: не найден`);
-                continue;
-            }
-
             const { data: upData, error: upErr } = await sb.storage
                 .from(bucket)
                 .upload(fileName, blob, {
@@ -43975,24 +44003,12 @@ async function uploadImageToStorage(blob, prefix = 'img') {
             }
 
             if (!upData?.path) {
-                console.warn(`⚠️ ${bucket}: пустой ответ от upload`);
                 errors.push(`${bucket}: пустой ответ`);
                 continue;
             }
 
             const { data: urlData } = sb.storage.from(bucket).getPublicUrl(upData.path);
             console.log(`✅ Загружено в ${bucket}:`, urlData.publicUrl);
-
-            // Проверяем доступность
-            try {
-                const head = await fetch(urlData.publicUrl, { method: 'HEAD' });
-                if (!head.ok) {
-                    console.warn(`⚠️ Файл в ${bucket} недоступен (HTTP ${head.status})`);
-                }
-            } catch (e) {
-                console.warn('HEAD проверка упала:', e.message);
-            }
-
             return { ok: true, url: urlData.publicUrl, bucket };
 
         } catch (e) {
@@ -44001,14 +44017,17 @@ async function uploadImageToStorage(blob, prefix = 'img') {
         }
     }
 
-    // Все бакеты провалились → фолбэк на base64
+    // === Фолбэк на base64 ===
     console.warn('⚠️ Все бакеты провалились, использую base64');
     try {
         const base64 = await blobToDataURL(blob);
-        if (base64 && base64.length < 900_000) {   // до ~900KB (лимит Postgres на строку ~1MB)
+
+        // 🔥 Лимит поднят до 5MB — большинство сжатых картинок помещаются
+        if (base64 && base64.length < 5_000_000) {
             console.log('✅ Fallback: base64, размер', Math.round(base64.length / 1024), 'KB');
             return { ok: true, url: base64, bucket: 'base64' };
         }
+
         return {
             ok: false,
             error: `Все бакеты недоступны. Причина: ${errors.join('; ')}. Base64 слишком большой (${Math.round(base64.length / 1024)}KB)`
