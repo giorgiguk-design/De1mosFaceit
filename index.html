@@ -23562,7 +23562,8 @@ setInterval(() => {
         loadAllCovers();
         subscribeCoversRealtime();
         loadShopItemsCache();
-        subscribeShopItemsRealtime();   // ← ДОБАВИТЬ
+        subscribeShopItemsRealtime();
+        cleanupBrokenEquipped();
         updateChatsBadge();
         subscribeChatsRealtime();
         subscribeDxpHistoryRealtime();
@@ -38781,10 +38782,9 @@ async function openShop() {
     if (!container) return;
     container.innerHTML = '<div class="empty">Загрузка...</div>';
 
-    // 🔥 Сбрасываем кэш перед загрузкой
-    Object.keys(SHOP_ITEMS_CACHE).forEach(k => {
-        if (!k.startsWith('frame_')) delete SHOP_ITEMS_CACHE[k];
-    });
+    // 🔥 Полный сброс кэша перед загрузкой
+    Object.keys(SHOP_ITEMS_CACHE).forEach(k => delete SHOP_ITEMS_CACHE[k]);
+    console.log('🔄 SHOP_ITEMS_CACHE очищен, грузим заново...');
 
     try {
         const [itemsRes, invRes] = await Promise.all([
@@ -42633,16 +42633,35 @@ async function openSeason() {
     }
 }
 
+// ============================================================
+// 🛒 Загрузка товаров магазина — ПОЛНАЯ синхронизация с БД
+// ============================================================
 async function loadShopItemsCache() {
     try {
-        // 🔥 Грузим ВСЁ — иначе в кейсе будут пустые превью
-        const { data } = await sb.from('shop_items').select('*');
+        // 🔥 1. Полная очистка — удаляем ВСЁ, что было в кэше
+        Object.keys(SHOP_ITEMS_CACHE).forEach(k => delete SHOP_ITEMS_CACHE[k]);
+
+        // 🔥 2. Загрузка из БД
+        const { data, error } = await sb.from('shop_items').select('*');
+        if (error) throw error;
+
         (data || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+        console.log('✅ SHOP_ITEMS_CACHE пересобран:', Object.keys(SHOP_ITEMS_CACHE).length, 'товаров');
+
+        // 🔥 3. Если открыт магазин — обновляем
+        if (document.getElementById('page-shop')?.classList.contains('active')) {
+            if (document.getElementById('shopCatModal')) {
+                await refreshShopCategory();
+            } else {
+                await openShop();
+            }
+        }
+
         applyCustomization();
         updateCoinsBadge();
-        console.log('✅ SHOP_ITEMS_CACHE загружен:', Object.keys(SHOP_ITEMS_CACHE).length, 'товаров');
-    } catch (e) { 
-        console.warn('loadShopItemsCache:', e); 
+    } catch (e) {
+        console.warn('loadShopItemsCache:', e);
     }
 }
 
@@ -47310,6 +47329,62 @@ function openAddAnyShopItemSheet() {
 
     openAddShopItemSheet(category);
 }
+
+       // ============================================================
+// 🧹 Автоочистка битых ссылок на удалённые товары
+// ============================================================
+async function cleanupBrokenEquipped() {
+    if (!currentUser) return;
+
+    try {
+        const eq = currentUser.equipped_items || {};
+        if (!Object.keys(eq).length) return;
+
+        const itemIds = Object.values(eq);
+        const { data: existing } = await sb.from('shop_items')
+            .select('id').in('id', itemIds);
+
+        const existingIds = new Set((existing || []).map(i => i.id));
+        const cleaned = {};
+
+        let changed = false;
+        for (const [cat, id] of Object.entries(eq)) {
+            if (existingIds.has(id)) {
+                cleaned[cat] = id;
+            } else {
+                console.log(`🧹 Удалён битый предмет: ${cat} = ${id}`);
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            await sb.from('users')
+                .update({ equipped_items: cleaned })
+                .eq('telegram_id', currentUser.telegram_id);
+            currentUser.equipped_items = cleaned;
+
+            // Чистим и инвентарь
+            const { data: inv } = await sb.from('user_inventory')
+                .select('item_id').eq('telegram_id', currentUser.telegram_id);
+
+            const brokenInvIds = (inv || [])
+                .map(i => i.item_id)
+                .filter(id => !existingIds.has(id));
+
+            if (brokenInvIds.length) {
+                await sb.from('user_inventory')
+                    .delete()
+                    .eq('telegram_id', currentUser.telegram_id)
+                    .in('item_id', brokenInvIds);
+                console.log('🧹 Удалено битых записей инвентаря:', brokenInvIds.length);
+            }
+
+            applyCustomization();
+        }
+    } catch (e) {
+        console.warn('cleanupBrokenEquipped:', e);
+    }
+}     
             
     </script>
 </body>
