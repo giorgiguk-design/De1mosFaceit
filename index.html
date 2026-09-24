@@ -17391,6 +17391,114 @@ html.lite-mode .phc-avatar .special-frame-overlay {
     transform: translate(-50%, -50%) !important;
     animation: none !important;
 }
+
+    /* ============================================================ */
+/* 🏅 КОМПАКТНАЯ ПОЛОСКА ДОСТИЖЕНИЙ                              */
+/* ============================================================ */
+
+.achievements-strip {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    width: 100%;
+}
+
+.achv-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    width: 100%;
+}
+
+.achv-mini {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: transform 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Получено */
+.achv-mini.unlocked {
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.18),
+        rgba(217, 171, 90, 0.04));
+    border: 1px solid rgba(217, 171, 90, 0.45);
+    color: #ffd700;
+}
+.achv-mini.unlocked svg {
+    stroke: #ffd700;
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5));
+}
+
+/* Не получено */
+.achv-mini.locked {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    color: var(--hint);
+    opacity: 0.35;
+}
+.achv-mini.locked svg {
+    stroke: var(--hint);
+    filter: none;
+}
+
+.achv-mini.unlocked:hover {
+    transform: translateY(-1px) scale(1.08);
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.28),
+        rgba(217, 171, 90, 0.08));
+    box-shadow: 0 0 10px rgba(217, 171, 90, 0.35);
+}
+
+/* SVG размер */
+.achv-mini svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    pointer-events: none;
+}
+
+/* Планшет / ПК — значки чуть крупнее */
+@media (min-width: 768px) {
+    .achv-mini {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        min-height: 30px;
+    }
+    .achv-mini svg { width: 18px; height: 18px; }
+}
+
+@media (min-width: 1024px) {
+    .achv-mini {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        min-height: 34px;
+        border-radius: 8px;
+    }
+    .achv-mini svg { width: 20px; height: 20px; }
+    .achv-strip { gap: 6px; }
+}
+
+/* Lite-mode — отключаем hover-трансформы */
+html.lite-mode .achv-mini.unlocked:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Удалить старую карточку достижений (если где-то осталась) */
+.achievements-card {
+    display: none !important;
+}
     
 </style>
 </head>
@@ -20864,6 +20972,11 @@ async function renderProfileView(user, options = {}) {
             </div>
         </div>
 
+        <!-- 🏅 КОМПАКТНЫЕ ДОСТИЖЕНИЯ -->
+            <div class="achievements-strip" id="achievementsCard_${user.telegram_id}">
+                <div class="achv-strip" data-achievements></div>
+            </div>
+
         <!-- 🔥 ПОСЛЕДНИЕ 3 МАТЧА -->
         <div class="recent-matches-block" id="recentMatchesBlock_${user.telegram_id}">
             <div class="rm-title">
@@ -20913,15 +21026,6 @@ async function renderProfileView(user, options = {}) {
                     <span class="pmr-value" id="lmbKDInline_${user.telegram_id}">— / —</span>
                 </span>
             </div>
-        </div>
-
-        <!-- 🔥 ДОСТИЖЕНИЯ -->
-        <div class="achievements-card" id="achievementsCard_${user.telegram_id}">
-            <div class="achv-header">
-                <span class="achv-title">🏅 Достижения</span>
-                <span class="achv-count" data-achv-count>0 / 8</span>
-            </div>
-            <div class="achievements-grid" data-achievements></div>
         </div>
 
         <!-- График DXP -->
@@ -41724,35 +41828,152 @@ const ACHIEVEMENTS = [
     { id: 'winrate60',     icon: '📈', name: 'Winrate 60%+',     check: (u) => (u.matches_played ?? 0) >= 10 && ((u.wins ?? 0) / u.matches_played) >= 0.6 },
 ];
 
+// ============================================================
+// 🏅 ДОСТИЖЕНИЯ — SVG иконки
+// ============================================================
+const ACHIEVEMENTS = [
+    { id: 'first_match',    name: 'Первая катка',       check: (u) => (u.matches_played ?? 0) >= 1 },
+    { id: 'first_win',      name: 'Первая победа',      check: (u) => (u.wins ?? 0) >= 1 },
+    { id: 'ten_matches',    name: '10 матчей',          check: (u) => (u.matches_played ?? 0) >= 10 },
+    { id: 'fifty_matches',  name: '50 матчей',          check: (u) => (u.matches_played ?? 0) >= 50 },
+    { id: 'hundred',        name: '100 матчей',         check: (u) => (u.matches_played ?? 0) >= 100 },
+    { id: 'two_fifty',      name: '250 матчей',         check: (u) => (u.matches_played ?? 0) >= 250 },
+    { id: 'ten_wins',       name: '10 побед',           check: (u) => (u.wins ?? 0) >= 10 },
+    { id: 'fifty_wins',     name: '50 побед',           check: (u) => (u.wins ?? 0) >= 50 },
+    { id: 'hundred_wins',   name: '100 побед',          check: (u) => (u.wins ?? 0) >= 100 },
+    { id: 'lvl3',           name: 'Уровень 3',          check: (u) => eloToLevel(u.elo) >= 3 },
+    { id: 'lvl5',           name: 'Уровень 5',          check: (u) => eloToLevel(u.elo) >= 5 },
+    { id: 'lvl7',           name: 'Уровень 7',          check: (u) => eloToLevel(u.elo) >= 7 },
+    { id: 'lvl8',           name: 'Уровень 8',          check: (u) => eloToLevel(u.elo) >= 8 },
+    { id: 'lvl10',          name: 'Уровень 10',         check: (u) => eloToLevel(u.elo) >= 10 },
+    { id: 'wr50',           name: 'Winrate 50%+',       check: (u) => (u.matches_played ?? 0) >= 10 && ((u.wins ?? 0) / u.matches_played) >= 0.5 },
+    { id: 'wr60',           name: 'Winrate 60%+',       check: (u) => (u.matches_played ?? 0) >= 20 && ((u.wins ?? 0) / u.matches_played) >= 0.6 },
+    { id: 'wr70',           name: 'Winrate 70%+',       check: (u) => (u.matches_played ?? 0) >= 30 && ((u.wins ?? 0) / u.matches_played) >= 0.7 },
+    { id: 'in_club',        name: 'В клане',            check: (u) => !!u.club_id },
+    { id: 'top10',          name: 'Топ-10 лидерборд',   check: (u) => (u.rank ?? 999) <= 10 },
+    { id: 'dev_tag',        name: 'Разработчик',        check: (u) => !!u.is_dev },
+];
+
 async function renderAchievements(userId) {
-    const grid = document.querySelector(`#achievementsCard_${userId} [data-achievements]`);
-    const countEl = document.querySelector(`#achievementsCard_${userId} [data-achv-count]`);
-    if (!grid) return;
+    const container = document.querySelector(`#achievementsCard_${userId} [data-achievements]`);
+    if (!container) return;
 
     let u;
     if (Number(userId) === Number(currentUser?.telegram_id)) {
-        u = currentUser;
+        u = { ...currentUser };
+        // обогащаем флагами, которые нельзя получить простым select
+        u.is_dev = isDevClubMember(userId);
+        // клан
+        try {
+            const { data: m } = await sb.from('club_members')
+                .select('club_id').eq('telegram_id', userId).maybeSingle();
+            u.club_id = m?.club_id || null;
+        } catch (e) {}
     } else {
         const { data } = await sb.from('users')
             .select('matches_played, wins, elo')
             .eq('telegram_id', userId)
             .single();
         u = data || {};
+        u.is_dev = isDevClubMember(userId);
+        try {
+            const { data: m } = await sb.from('club_members')
+                .select('club_id').eq('telegram_id', userId).maybeSingle();
+            u.club_id = m?.club_id || null;
+        } catch (e) {}
     }
 
-    const unlocked = ACHIEVEMENTS.filter(a => a.check(u));
-    if (countEl) countEl.textContent = `${unlocked.length} / ${ACHIEVEMENTS.length}`;
+    // Топ-10 в лидерборде
+    try {
+        const { count } = await sb.from('users')
+            .select('telegram_id', { count: 'exact', head: true })
+            .gt('elo', u.elo || 0);
+        u.rank = (count || 0) + 1;
+    } catch (e) {
+        u.rank = 999;
+    }
 
-    grid.innerHTML = ACHIEVEMENTS.map(a => {
-        const isUnlocked = a.check(u);
+    container.innerHTML = ACHIEVEMENTS.map(a => {
+        const isUnlocked = !!a.check(u);
         return `
-            <div class="achv ${isUnlocked ? 'unlocked' : 'locked'}"
-                 title="${escapeHtml(a.name)}${isUnlocked ? '' : ' (не получено)'}"
-                 onclick="showAchievementInfo('${a.id}')">
-                ${a.icon}
+            <div class="achv-mini ${isUnlocked ? 'unlocked' : 'locked'}"
+                 data-achv-id="${a.id}"
+                 title="${escapeHtml(a.name)}${isUnlocked ? '' : ' (не получено)'}">
+                ${getAchievementSvg(a.id, 16)}
             </div>
         `;
     }).join('');
+}
+
+// ============================================================
+// 🎯 SVG-ИКОНКИ ДОСТИЖЕНИЙ
+// ============================================================
+function getAchievementSvg(id, size = 18) {
+    const c = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"`;
+
+    const icons = {
+        // Первая катка — флаг старта
+        first_match: `<svg ${c}><path d="M5 21V4"/><path d="M5 4h12l-2 4 2 4H5"/></svg>`,
+
+        // Первая победа — кубок
+        first_win: `<svg ${c}><path d="M8 4h8v5a4 4 0 0 1-8 0Z"/><path d="M8 5H5v2a3 3 0 0 0 3 3M16 5h3v2a3 3 0 0 1-3 3"/><path d="M10 20h4M12 13v7"/></svg>`,
+
+        // 10 матчей — мишень
+        ten_matches: `<svg ${c}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>`,
+
+        // 50 матчей — меч
+        fifty_matches: `<svg ${c}><path d="m14 4 6 6-9 9H5v-6Z"/><path d="m14 4 4 4"/><path d="m3 21 4-4"/></svg>`,
+
+        // 100 матчей — двойной меч
+        hundred: `<svg ${c}><path d="M6 3v13l6 5 6-5V3"/><path d="M6 8h12"/><circle cx="12" cy="10" r="1.5" fill="currentColor"/></svg>`,
+
+        // 250 матчей — 3 звезды
+        two_fifty: `<svg ${c}><path d="m12 3 2 5 5 .5-4 3.5 1.5 5-4.5-2.5L7.5 17 9 12 5 8.5l5-.5Z"/></svg>`,
+
+        // 10 побед — медаль
+        ten_wins: `<svg ${c}><circle cx="12" cy="14" r="6"/><path d="m9 8-2-6h10l-2 6"/><path d="m12 12 1 2 2 .3-1.5 1.5.3 2-1.8-1-1.8 1 .3-2L9 13.3l2-.3Z"/></svg>`,
+
+        // 50 побед — щит с чеком
+        fifty_wins: `<svg ${c}><path d="M12 3 20 6v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg>`,
+
+        // 100 побед — корона
+        hundred_wins: `<svg ${c}><path d="M3 8l3 9h12l3-9-5 3-4-5-4 5Z"/><path d="M5 20h14"/></svg>`,
+
+        // Уровень 3 — треугольник
+        lvl3: `<svg ${c}><path d="M12 3 21 20H3Z"/></svg>`,
+
+        // Уровень 5 — ромб
+        lvl5: `<svg ${c}><path d="M12 3 21 12l-9 9-9-9Z"/><path d="M7 12h10"/></svg>`,
+
+        // Уровень 7 — двойной шеврон
+        lvl7: `<svg ${c}><path d="M12 2 22 8l-10 6L2 8Z"/><path d="m12 12 8 5-8 5-8-5Z"/></svg>`,
+
+        // Уровень 8 — звезда
+        lvl8: `<svg ${c}><path d="M12 2 14.5 8.5 21 9.5l-5 4.5 1.5 7L12 17.5 6.5 21 8 14 3 9.5l6.5-1Z"/></svg>`,
+
+        // Уровень 10 — молния
+        lvl10: `<svg ${c}><path d="M12 2 21 7v10l-9 5-9-5V7Z"/><path d="m13 6-4 7h3l-1 5 4-7h-3Z" fill="currentColor" stroke="none"/></svg>`,
+
+        // Winrate 50% — график ровный
+        wr50: `<svg ${c}><path d="M3 20h18"/><path d="m6 15 4-4 4 4 6-8"/></svg>`,
+
+        // Winrate 60% — график вверх
+        wr60: `<svg ${c}><path d="M3 20h18"/><path d="m6 16 5-5 3 3 6-9"/><path d="M16 5h4v4"/></svg>`,
+
+        // Winrate 70% — молния-график
+        wr70: `<svg ${c}><path d="M3 20h18"/><path d="m5 18 5-8 3 4 6-11"/><path d="M15 3h4v4"/></svg>`,
+
+        // В клане — щит
+        in_club: `<svg ${c}><path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5Z"/><path d="M12 8v4M10 10h4"/></svg>`,
+
+        // Топ-10 — кубок с 10
+        top10: `<svg ${c}><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v2a4 4 0 0 0 4 4M17 5h3v2a4 4 0 0 1-4 4"/><path d="M9 20h6M12 13v7"/></svg>`,
+
+        // Разработчик — звезда в круге
+        dev_tag: `<svg ${c}><circle cx="12" cy="12" r="9"/><path d="m12 7 1.5 3 3 .5-2 2.5.5 3-3-1.5L9 16l.5-3-2-2.5 3-.5Z"/></svg>`,
+    };
+
+    return icons[id] || `<svg ${c}><circle cx="12" cy="12" r="9"/></svg>`;
 }
 
 function showAchievementInfo(achvId) {
