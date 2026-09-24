@@ -22465,14 +22465,14 @@ async function renderModeratorPanel() {
                     <button class="club-full-btn club-btn-edit" onclick="openCoverPickerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
                         🎨 Обложки кнопок
                     </button>
+                    <button class="club-full-btn club-btn-edit" onclick="openAddCustomBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
+                        🌄 Добавить фон шапки
+                    </button>
+                    <button class="club-full-btn club-btn-edit" onclick="openAddDxpChartBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
+                        📈 Добавить фон графика DXP
+                    </button>
                     <button class="club-full-btn club-btn-danger" onclick="openModBanPlayerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
                         🚫 Забанить игрока
-                    </button>
-                    <button class="club-full-btn club-btn-edit" onclick="openAddCustomBackgroundSheet()" ...>
-                        🌄 Добавить фон профиля
-                    </button>
-                    <button class="club-full-btn club-btn-edit" onclick="openAddDxpChartBackgroundSheet()" ...>
-                        📈 Добавить фон графика DXP
                     </button>
                 </div>
             ` : ''}
@@ -23562,6 +23562,7 @@ setInterval(() => {
         loadAllCovers();
         subscribeCoversRealtime();
         loadShopItemsCache();
+        subscribeShopItemsRealtime();   // ← ДОБАВИТЬ
         updateChatsBadge();
         subscribeChatsRealtime();
         subscribeDxpHistoryRealtime();
@@ -25562,6 +25563,55 @@ async function loadAllClubsSheet(q) {
             </div>
         `;
     }
+}
+
+            // ============================================================
+// 📡 Realtime на shop_items — обновление магазина у всех
+// ============================================================
+let shopItemsChannel = null;
+
+function subscribeShopItemsRealtime() {
+    if (shopItemsChannel) {
+        try { sb.removeChannel(shopItemsChannel); } catch (e) {}
+        shopItemsChannel = null;
+    }
+
+    shopItemsChannel = sb.channel('shop_items_rt')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'shop_items'
+        }, (payload) => {
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            console.log('📦 shop_items event:', payload.eventType, row.id);
+
+            // Обновляем кэш
+            if (payload.eventType === 'DELETE') {
+                delete SHOP_ITEMS_CACHE[row.id];
+            } else if (payload.new) {
+                SHOP_ITEMS_CACHE[payload.new.id] = payload.new;
+            }
+
+            // Если открыт магазин — обновляем
+            if (document.getElementById('page-shop')?.classList.contains('active')) {
+                // Открыта ли категория в модалке
+                if (document.getElementById('shopCatModal')) {
+                    refreshShopCategory().catch(e => console.warn(e));
+                } else {
+                    openShop();
+                }
+            }
+
+            // Если открыт магазин клана — обновляем и его
+            if (document.getElementById('clanShopSheet')?.classList.contains('active')) {
+                openClanShop();
+            }
+        })
+        .subscribe((status) => {
+            console.log('📡 shop_items_rt status:', status);
+        });
 }
 
             // ============================================================
@@ -38811,6 +38861,19 @@ async function openShop() {
             </div>
 
             <div class="section-title">Категории</div>
+                        ${isCurrentUserAdmin() ? `
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                    <button class="shop-btn buy" style="padding: 12px; font-size: 11px;" onclick="openAddCustomBackgroundSheet()">
+                        🌄 + Фон шапки
+                    </button>
+                    <button class="shop-btn buy" style="padding: 12px; font-size: 11px;" onclick="openAddDxpChartBackgroundSheet()">
+                        📈 + Фон графика
+                    </button>
+                    <button class="shop-btn buy" style="padding: 12px; font-size: 11px;" onclick="openAddAnyShopItemSheet()">
+                        ✨ + Любой товар
+                    </button>
+                </div>
+            ` : ''}
             <div class="shop-cat-tabs">
                 ${Object.entries(categories).map(([cat, meta]) => {
                     const list = grouped[cat] || [];
@@ -43304,6 +43367,176 @@ async function guardMatchBan() {
 }
 
             // ============================================================
+// 📈 ЗАГРУЗКА ФОНА ДЛЯ ГРАФИКА DXP (только админ)
+// ============================================================
+async function openAddDxpChartBackgroundSheet() {
+    if (!isCurrentUserAdmin()) {
+        showToast('Только администратор');
+        return;
+    }
+
+    document.getElementById('addDxpBgOverlay')?.remove();
+    document.getElementById('addDxpBgSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'addDxpBgOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeAddDxpBackgroundSheet(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'addDxpBgSheet';
+    sheet.style.zIndex = '806';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">📈 Добавить фон графика DXP</div>
+        <div style="font-size: 12px; color: var(--hint); text-align: center; margin-bottom: 14px; line-height: 1.5;">
+            Картинка появится в магазине как товар.<br>
+            Рекомендуемый размер: <b>1200×600</b> или шире.
+        </div>
+
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
+                НАЗВАНИЕ
+            </label>
+            <input type="text" class="field-input" id="newDxpBgName" placeholder="Например: Кибер-сетка" maxlength="40">
+        </div>
+
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
+                ЦЕНА (монет)
+            </label>
+            <input type="number" class="field-input" id="newDxpBgPrice" value="1200" min="0" max="99999">
+        </div>
+
+        <div style="margin-bottom: 10px;">
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
+                РЕДКОСТЬ
+            </label>
+            <select class="field-input" id="newDxpBgRarity" style="padding: 12px;">
+                <option value="common">Common</option>
+                <option value="rare">Rare</option>
+                <option value="epic" selected>Epic</option>
+                <option value="legendary">Legendary</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
+                КАРТИНКА
+            </label>
+            <button class="profile-action-btn cancel" style="margin-top: 0;" onclick="document.getElementById('newDxpBgFile').click()">
+                📤 Выбрать файл
+            </button>
+            <input type="file" id="newDxpBgFile" accept="image/*" style="display: none;">
+            <div id="newDxpBgPreview" style="margin-top: 10px; width: 100%; height: 100px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--hint);">
+                Превью появится здесь
+            </div>
+        </div>
+
+        <button class="profile-action-btn save" id="addDxpBgSubmitBtn" onclick="submitNewDxpBackground()">
+            ✅ ДОБАВИТЬ В МАГАЗИН
+        </button>
+        <button class="sheet-cancel" onclick="closeAddDxpBackgroundSheet()">ОТМЕНА</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    document.getElementById('newDxpBgFile').onchange = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (file.size > 5_000_000) { showToast('⚠️ Максимум 5 МБ'); return; }
+
+        try {
+            const blob = await compressImage(file, 1400, 0.85);
+            window._newDxpBgBlob = blob;
+            const url = URL.createObjectURL(blob);
+            const prev = document.getElementById('newDxpBgPreview');
+            if (prev) {
+                prev.style.background = `url('${url}') center/cover`;
+                prev.innerHTML = '';
+                prev.style.border = '1px solid var(--border-strong)';
+            }
+        } catch (err) { showToast('Ошибка обработки'); }
+    };
+}
+
+function closeAddDxpBackgroundSheet() {
+    document.getElementById('addDxpBgOverlay')?.remove();
+    document.getElementById('addDxpBgSheet')?.remove();
+    window._newDxpBgBlob = null;
+}
+
+async function submitNewDxpBackground() {
+    if (!isCurrentUserAdmin()) { showToast('❌ Только администратор'); return; }
+
+    const name = document.getElementById('newDxpBgName')?.value.trim();
+    const price = parseInt(document.getElementById('newDxpBgPrice')?.value) || 0;
+    const rarity = document.getElementById('newDxpBgRarity')?.value || 'epic';
+    const blob = window._newDxpBgBlob;
+
+    if (!name || name.length < 2) { showToast('⚠️ Введи название'); return; }
+    if (!blob) { showToast('⚠️ Загрузи картинку'); return; }
+
+    const btn = document.getElementById('addDxpBgSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'ЗАГРУЗКА...';
+
+    try {
+        const fileName = `dxp_bg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+
+        const { error: upErr } = await sb.storage.from('profile_backgrounds')
+            .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from('profile_backgrounds').getPublicUrl(fileName);
+        const publicUrl = urlData.publicUrl;
+
+        const itemId = `dxpbg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+        const { error: insertErr } = await sb.from('shop_items').insert({
+            id: itemId,
+            category: 'dxp_chart_bg',
+            name: name,
+            description: 'Кастомный фон графика DXP',
+            price: price,
+            rarity: rarity,
+            value: { url: publicUrl },
+            is_available: true,
+            sort_order: 100,
+        });
+        if (insertErr) throw new Error(insertErr.message);
+
+        SHOP_ITEMS_CACHE[itemId] = {
+            id: itemId,
+            category: 'dxp_chart_bg',
+            name,
+            rarity,
+            value: { url: publicUrl }
+        };
+
+        showToast('✅ Фон графика добавлен');
+        haptic('medium');
+        closeAddDxpBackgroundSheet();
+
+        // Обновляем кэш и открываем магазин на нужной категории
+        await loadShopItemsCache();
+        setTimeout(() => {
+            window._shopActiveCategory = 'dxp_chart_bg';
+            openShop();
+        }, 300);
+
+    } catch (e) {
+        console.error('submitNewDxpBackground:', e);
+        showToast('❌ ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '✅ ДОБАВИТЬ В МАГАЗИН';
+    }
+}
+
+            // ============================================================
 // 🎨 КАСТОМНАЯ ЗАГРУЗКА ФОНОВ ПРОФИЛЯ (только для админа)
 // ============================================================
 const PROFILE_BG_BUCKET = 'profile_backgrounds';
@@ -43893,24 +44126,59 @@ async function saveShopItem(category, itemId) {
     }
 }
 
-// ===== УДАЛИТЬ ТОВАР =====
+// ============================================================
+// 🗑️ УДАЛЕНИЕ ТОВАРА — полная очистка у всех игроков
+// ============================================================
 async function deleteShopItem(itemId) {
     if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
 
     const item = SHOP_ITEMS_CACHE[itemId];
     const itemName = item?.name || itemId;
 
-    if (!confirm(`Удалить товар "${itemName}"?`)) return;
+    if (!confirm(`Удалить товар "${itemName}" у ВСЕХ игроков?`)) return;
+
+    showToast('⏳ Удаление...');
 
     try {
+        // 1. Узнаём категорию (если кэш её хранит)
+        const category = item?.category;
+
+        // 2. Удаляем из инвентаря ВСЕХ игроков
+        const { error: invErr } = await sb.from('user_inventory')
+            .delete()
+            .eq('item_id', itemId);
+        if (invErr) console.warn('user_inventory clean:', invErr);
+
+        // 3. Убираем из equipped_items у всех, кто его надел
+        if (category) {
+            const { data: usersWithItem } = await sb.from('users')
+                .select('telegram_id, equipped_items')
+                .not('equipped_items', 'is', null);
+
+            for (const u of usersWithItem || []) {
+                const eq = u.equipped_items || {};
+                if (eq[category] === itemId) {
+                    delete eq[category];
+                    await sb.from('users')
+                        .update({ equipped_items: eq })
+                        .eq('telegram_id', u.telegram_id);
+                }
+            }
+        }
+
+        // 4. Удаляем сам товар
         const { error } = await sb.from('shop_items').delete().eq('id', itemId);
         if (error) throw error;
 
+        // 5. Чистим локальный кэш
         delete SHOP_ITEMS_CACHE[itemId];
-        showToast('🗑️ Товар удалён');
+
+        showToast('🗑️ Товар удалён у всех');
         haptic('medium');
 
+        // 6. Перезагружаем магазин
         openShop();
+
     } catch (e) {
         console.error('deleteShopItem:', e);
         showToast('❌ ' + e.message);
@@ -47009,6 +47277,38 @@ async function getExtendedStats(userId) {
             <div class="ext-months">${monthsHTML}</div>
         </div>
     `;
+}
+
+            // ============================================================
+// ➕ УНИВЕРСАЛЬНОЕ ДОБАВЛЕНИЕ ТОВАРА (админ)
+// ============================================================
+function openAddAnyShopItemSheet() {
+    if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
+
+    const cat = prompt(
+        'Категория товара:\n\n' +
+        '1 — nickname_color (цвет ника)\n' +
+        '2 — avatar_frame (рамка)\n' +
+        '3 — badge (значок)\n' +
+        '4 — title (титул)\n' +
+        '5 — profile_bg (фон шапки)\n' +
+        '6 — dxp_chart_bg (фон графика)\n\n' +
+        'Введи номер:'
+    );
+    if (!cat) return;
+
+    const map = {
+        '1': 'nickname_color',
+        '2': 'avatar_frame',
+        '3': 'badge',
+        '4': 'title',
+        '5': 'profile_bg',
+        '6': 'dxp_chart_bg',
+    };
+    const category = map[cat.trim()];
+    if (!category) { showToast('Неверный номер'); return; }
+
+    openAddShopItemSheet(category);
 }
             
     </script>
