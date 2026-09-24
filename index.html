@@ -18103,6 +18103,191 @@ html.lite-mode .quest-btn.claim-btn {
         font-size: 11px;
     }
 }
+
+    /* ============================================================ */
+/* 🏅 ТУЛТИП ДОСТИЖЕНИЙ — КИБЕРСПОРТИВНЫЙ СТИЛЬ                   */
+/* ============================================================ */
+
+.achv-tooltip {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 260px;
+    min-width: 180px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(180deg,
+        rgba(10, 20, 16, 0.98) 0%,
+        rgba(5, 10, 8, 0.98) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    clip-path: polygon(
+        10px 0, 100% 0, 100% calc(100% - 10px),
+        calc(100% - 10px) 100%, 0 100%, 0 10px
+    );
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(var(--emerald-rgb), 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.achv-tooltip::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.achv-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Стрелочка снизу */
+.achv-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 10px;
+    height: 10px;
+    background: rgba(5, 10, 8, 0.98);
+    border-right: 1px solid var(--border-strong);
+    border-bottom: 1px solid var(--border-strong);
+    pointer-events: none;
+}
+
+.achv-tooltip.below::after {
+    bottom: auto;
+    top: -6px;
+    border-right: none;
+    border-bottom: none;
+    border-left: 1px solid var(--border-strong);
+    border-top: 1px solid var(--border-strong);
+}
+
+/* Иконка */
+.achv-tt-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid rgba(var(--emerald-rgb), 0.35);
+    border-radius: 8px;
+    color: var(--emerald);
+}
+
+.achv-tt-icon svg {
+    width: 22px;
+    height: 22px;
+    filter: drop-shadow(0 0 4px rgba(var(--emerald-rgb), 0.5));
+}
+
+/* Тело */
+.achv-tt-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.achv-tt-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.15;
+}
+
+.achv-tt-desc {
+    font-size: 11px;
+    color: var(--hint);
+    line-height: 1.35;
+    margin-bottom: 6px;
+}
+
+/* Статус */
+.achv-tt-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.achv-tt-status.unlocked {
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.20),
+        rgba(217, 171, 90, 0.06));
+    border: 1px solid rgba(217, 171, 90, 0.5);
+    color: #ffd700;
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
+.achv-tt-status.unlocked svg {
+    color: #ffd700;
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.7));
+}
+
+.achv-tt-status.locked {
+    background: rgba(255, 84, 112, 0.08);
+    border: 1px solid rgba(255, 84, 112, 0.3);
+    color: #ff5470;
+    opacity: 0.85;
+}
+
+.achv-tt-status.locked svg {
+    color: #ff5470;
+    opacity: 0.7;
+}
+
+/* Lite mode — без transform-анимации */
+html.lite-mode .achv-tooltip {
+    transition: opacity 0.12s ease !important;
+    transform: none !important;
+}
+html.lite-mode .achv-tooltip.visible {
+    transform: none !important;
+}
+
+/* Мобильный — тултип чуть крупнее */
+@media (max-width: 480px) {
+    .achv-tooltip {
+        max-width: 240px;
+        padding: 9px 11px;
+    }
+    .achv-tt-icon {
+        width: 34px;
+        height: 34px;
+    }
+    .achv-tt-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    .achv-tt-name {
+        font-size: 11px;
+    }
+    .achv-tt-desc {
+        font-size: 10.5px;
+    }
+}
     
 </style>
 </head>
@@ -19125,6 +19310,7 @@ html.lite-mode .quest-btn.claim-btn {
 </div>
 </div>
     <div class="toast" id="toast"></div>
+    <div class="achv-tooltip" id="achvTooltip"></div>
     <div class="page-loading-bar" id="pageLoadingBar"></div>
         <script>
             // ============================================================
@@ -43351,28 +43537,27 @@ function closeSharePreview() {
 // 🏅 ДОСТИЖЕНИЯ — SVG иконки
 // ============================================================
 const ACHIEVEMENTS = [
-    { id: 'first_match',    name: 'Первая катка',       check: (u) => (u.matches_played ?? 0) >= 1 },
-    { id: 'first_win',      name: 'Первая победа',      check: (u) => (u.wins ?? 0) >= 1 },
-    { id: 'ten_matches',    name: '10 матчей',          check: (u) => (u.matches_played ?? 0) >= 10 },
-    { id: 'fifty_matches',  name: '50 матчей',          check: (u) => (u.matches_played ?? 0) >= 50 },
-    { id: 'hundred',        name: '100 матчей',         check: (u) => (u.matches_played ?? 0) >= 100 },
-    { id: 'two_fifty',      name: '250 матчей',         check: (u) => (u.matches_played ?? 0) >= 250 },
-    { id: 'ten_wins',       name: '10 побед',           check: (u) => (u.wins ?? 0) >= 10 },
-    { id: 'fifty_wins',     name: '50 побед',           check: (u) => (u.wins ?? 0) >= 50 },
-    { id: 'hundred_wins',   name: '100 побед',          check: (u) => (u.wins ?? 0) >= 100 },
-    { id: 'lvl3',           name: 'Уровень 3',          check: (u) => eloToLevel(u.elo) >= 3 },
-    { id: 'lvl5',           name: 'Уровень 5',          check: (u) => eloToLevel(u.elo) >= 5 },
-    { id: 'lvl7',           name: 'Уровень 7',          check: (u) => eloToLevel(u.elo) >= 7 },
-    { id: 'lvl8',           name: 'Уровень 8',          check: (u) => eloToLevel(u.elo) >= 8 },
-    { id: 'lvl10',          name: 'Уровень 10',         check: (u) => eloToLevel(u.elo) >= 10 },
-    { id: 'wr50',           name: 'Winrate 50%+',       check: (u) => (u.matches_played ?? 0) >= 10 && ((u.wins ?? 0) / u.matches_played) >= 0.5 },
-    { id: 'wr60',           name: 'Winrate 60%+',       check: (u) => (u.matches_played ?? 0) >= 20 && ((u.wins ?? 0) / u.matches_played) >= 0.6 },
-    { id: 'wr70',           name: 'Winrate 70%+',       check: (u) => (u.matches_played ?? 0) >= 30 && ((u.wins ?? 0) / u.matches_played) >= 0.7 },
-    { id: 'in_club',        name: 'В клане',            check: (u) => !!u.club_id },
-    { id: 'top10',          name: 'Топ-10 лидерборд',   check: (u) => (u.rank ?? 999) <= 10 },
-    { id: 'dev_tag',        name: 'Разработчик',        check: (u) => !!u.is_dev },
+    { id: 'first_match',    name: 'Первая катка',       desc: 'Сыграть свой первый матч на Faceit',           check: (u) => (u.matches_played ?? 0) >= 1 },
+    { id: 'first_win',      name: 'Первая победа',      desc: 'Выиграть первый матч',                          check: (u) => (u.wins ?? 0) >= 1 },
+    { id: 'ten_matches',    name: '10 матчей',          desc: 'Сыграть 10 матчей',                             check: (u) => (u.matches_played ?? 0) >= 10 },
+    { id: 'fifty_matches',  name: '50 матчей',          desc: 'Сыграть 50 матчей',                             check: (u) => (u.matches_played ?? 0) >= 50 },
+    { id: 'hundred',        name: '100 матчей',         desc: 'Сыграть 100 матчей',                            check: (u) => (u.matches_played ?? 0) >= 100 },
+    { id: 'two_fifty',      name: '250 матчей',         desc: 'Сыграть 250 матчей. Ветеран арены',             check: (u) => (u.matches_played ?? 0) >= 250 },
+    { id: 'ten_wins',       name: '10 побед',           desc: 'Одержать 10 побед',                             check: (u) => (u.wins ?? 0) >= 10 },
+    { id: 'fifty_wins',     name: '50 побед',           desc: 'Одержать 50 побед',                             check: (u) => (u.wins ?? 0) >= 50 },
+    { id: 'hundred_wins',   name: '100 побед',          desc: 'Одержать 100 побед. Легенда сервера',           check: (u) => (u.wins ?? 0) >= 100 },
+    { id: 'lvl3',           name: 'Уровень 3',          desc: 'Достичь 3 уровня — Боец',                       check: (u) => eloToLevel(u.elo) >= 3 },
+    { id: 'lvl5',           name: 'Уровень 5',          desc: 'Достичь 5 уровня — Мастер',                     check: (u) => eloToLevel(u.elo) >= 5 },
+    { id: 'lvl7',           name: 'Уровень 7',          desc: 'Достичь 7 уровня — Про',                        check: (u) => eloToLevel(u.elo) >= 7 },
+    { id: 'lvl8',           name: 'Уровень 8',          desc: 'Достичь 8 уровня — Легенда',                    check: (u) => eloToLevel(u.elo) >= 8 },
+    { id: 'lvl10',          name: 'Уровень 10',         desc: 'Достичь максимального 10 уровня — БОГ',         check: (u) => eloToLevel(u.elo) >= 10 },
+    { id: 'wr50',           name: 'Winrate 50%+',       desc: 'Побеждать в половине матчей (10+ игр)',         check: (u) => (u.matches_played ?? 0) >= 10 && ((u.wins ?? 0) / u.matches_played) >= 0.5 },
+    { id: 'wr60',           name: 'Winrate 60%+',       desc: 'Побеждать в 60% матчей (20+ игр)',              check: (u) => (u.matches_played ?? 0) >= 20 && ((u.wins ?? 0) / u.matches_played) >= 0.6 },
+    { id: 'wr70',           name: 'Winrate 70%+',       desc: 'Побеждать в 70% матчей (30+ игр)',              check: (u) => (u.matches_played ?? 0) >= 30 && ((u.wins ?? 0) / u.matches_played) >= 0.7 },
+    { id: 'in_club',        name: 'В клане',            desc: 'Вступить в любой клуб Faceit',                  check: (u) => !!u.club_id },
+    { id: 'top10',          name: 'Топ-10 лидерборд',   desc: 'Войти в топ-10 игроков по DXP',                 check: (u) => (u.rank ?? 999) <= 10 },
+    { id: 'dev_tag',        name: 'Разработчик',        desc: 'Особая метка разработчика Faceit',              check: (u) => !!u.is_dev },
 ];
-
 async function renderAchievements(userId) {
     const container = document.querySelector(`#achievementsCard_${userId} [data-achievements]`);
     if (!container) return;
@@ -43417,12 +43602,16 @@ async function renderAchievements(userId) {
         return `
             <div class="achv-mini ${isUnlocked ? 'unlocked' : 'locked'}"
                  data-achv-id="${a.id}"
-                 title="${escapeHtml(a.name)}${isUnlocked ? '' : ' (не получено)'}">
+                 data-achv-name="${escapeHtml(a.name)}"
+                 data-achv-desc="${escapeHtml(a.desc)}"
+                 data-achv-unlocked="${isUnlocked ? '1' : '0'}">
                 ${getAchievementSvg(a.id, 16)}
             </div>
         `;
     }).join('');
-}
+
+    // 🔥 Навешиваем обработчики для тултипов
+    attachAchievementTooltips();
 
 // ============================================================
 // 🎯 SVG-ИКОНКИ ДОСТИЖЕНИЙ
@@ -43493,6 +43682,99 @@ function getAchievementSvg(id, size = 18) {
     };
 
     return icons[id] || `<svg ${c}><circle cx="12" cy="12" r="9"/></svg>`;
+}
+
+    // ============================================================
+// 🏅 ТУЛТИПЫ ДОСТИЖЕНИЙ
+// ============================================================
+function attachAchievementTooltips() {
+    const tooltip = document.getElementById('achvTooltip');
+
+    document.querySelectorAll('.achv-mini').forEach(el => {
+        // Наведение мышью (ПК)
+        el.addEventListener('mouseenter', () => showAchvTooltip(el));
+        el.addEventListener('mouseleave', () => hideAchvTooltip());
+
+        // Тап на мобилке
+        el.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            showAchvTooltip(el);
+            // Автоскрытие через 2.5 сек
+            clearTimeout(el._tooltipTimer);
+            el._tooltipTimer = setTimeout(() => hideAchvTooltip(), 2500);
+        }, { passive: false });
+    });
+}
+
+function showAchvTooltip(el) {
+    const tooltip = document.getElementById('achvTooltip');
+    if (!tooltip) return;
+
+    const name = el.dataset.achvName || '—';
+    const desc = el.dataset.achvDesc || '';
+    const unlocked = el.dataset.achvUnlocked === '1';
+    const achvId = el.dataset.achvId;
+
+    // Иконка
+    const iconSvg = getAchievementSvg(achvId, 22);
+
+    // Статус
+    const statusHTML = unlocked
+        ? `<div class="achv-tt-status unlocked">
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                   <path d="m5 13 4 4L19 7"/>
+               </svg>
+               ПОЛУЧЕНО
+           </div>`
+        : `<div class="achv-tt-status locked">
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                   <rect x="5" y="11" width="14" height="10" rx="2"/>
+                   <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+               </svg>
+               НЕ ПОЛУЧЕНО
+           </div>`;
+
+    tooltip.innerHTML = `
+        <div class="achv-tt-icon">${iconSvg}</div>
+        <div class="achv-tt-body">
+            <div class="achv-tt-name">${name}</div>
+            <div class="achv-tt-desc">${desc}</div>
+            ${statusHTML}
+        </div>
+    `;
+
+    tooltip.classList.add('visible');
+
+    // Позиционирование
+    const rect = el.getBoundingClientRect();
+    const ttRect = tooltip.getBoundingClientRect();
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    let left = rect.left + rect.width / 2 - ttRect.width / 2;
+    let top = rect.top - ttRect.height - 10;
+
+    // Не вылазим слева/справа
+    if (left < 8) left = 8;
+    if (left + ttRect.width > viewportW - 8) {
+        left = viewportW - ttRect.width - 8;
+    }
+
+    // Если сверху не влезает — показываем снизу
+    if (top < 8) {
+        top = rect.bottom + 10;
+        tooltip.classList.add('below');
+    } else {
+        tooltip.classList.remove('below');
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+}
+
+function hideAchvTooltip() {
+    const tooltip = document.getElementById('achvTooltip');
+    if (tooltip) tooltip.classList.remove('visible');
 }
 
 function showAchievementInfo(achvId) {
