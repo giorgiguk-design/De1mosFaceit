@@ -22825,11 +22825,31 @@ function sideModelUrl(side) {
     return null;
 }
 
-        // Защита: ждём загрузку Supabase
+// ============================================================
+// SUPABASE CLIENT + INITIALIZATION
+// ============================================================
 let sb = null;
-if (window.supabase?.createClient) {
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // ============================================================
+
+// 🔥 Инициализация клиента. Вызывается при загрузке и в safeBoot
+function initSupabaseClient() {
+    if (sb) return true;
+    if (!window.supabase?.createClient) return false;
+    try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('✅ Supabase client создан');
+        return true;
+    } catch (e) {
+        console.error('❌ Ошибка создания Supabase client:', e);
+        return false;
+    }
+}
+
+// Первая попытка — сразу при загрузке
+if (!initSupabaseClient()) {
+    console.warn('⚠️ Supabase SDK ещё не загружен, ждём...');
+}
+
+// ============================================================
 // DXP HELPERS — единая точка правды
 // В БД поле называется elo, в UI показываем как DXP
 // ============================================================
@@ -22837,9 +22857,6 @@ function getDXP(user) {
     if (!user) return 1000;
     const v = user.elo ?? user.DXP;
     return (typeof v === 'number' && !isNaN(v)) ? v : 1000;
-}
-} else {
-    console.warn('⚠️ Supabase не загружен при старте скрипта');
 }
 
 // ============================================================
@@ -24195,6 +24212,13 @@ async function init() {
     // Защита от повторного вызова
     if (window._initDone) return;
     window._initDone = true;
+
+    // 🔥 ЖЁСТКАЯ ПРОВЕРКА: без sb дальше нет смысла
+    if (!sb || typeof sb.from !== 'function') {
+        console.error('❌ init(): sb не готов! Откладываем запуск...');
+        window._initDone = false;   // сбросим флаг — попробуем позже
+        return;
+    }
 
     // ============================================================
     // ПОЛУЧАЕМ ПОЛЬЗОВАТЕЛЯ
@@ -38575,12 +38599,24 @@ function safeBoot() {
         return false;
     }
 
+    // 🔥 КРИТИЧНО: пересоздаём sb, если он был null
+    if (!sb) {
+        if (!initSupabaseClient()) {
+            console.warn('⚠️ Не удалось создать Supabase client');
+            return false;
+        }
+    }
+
+    // Дополнительно проверяем что sb реально готов
+    if (!sb || typeof sb.from !== 'function') {
+        console.error('❌ sb не готов, ждём...');
+        return false;
+    }
+
     // Supabase готов — запускаем
     _bootDone = true;
     console.log('🚀 Запуск приложения. TG SDK:', tgReady ? 'есть' : 'нет');
 
-    // Если TG уже есть — init сразу
-    // Если нет — init всё равно (init умеет ждать tg внутри)
     init();
     return true;
 }
