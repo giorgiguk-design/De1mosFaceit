@@ -20010,6 +20010,78 @@ html.lite-mode .case-open-reel { filter: none !important; }
 }
 
     /* ============================================================ */
+/* 🏷️ ТЕГ КЛАНА В СПИСКАХ (leaderboard / chat / room)          */
+/* ============================================================ */
+.clan-tag {
+    display: inline-block;
+    vertical-align: middle;
+    font-weight: 900;
+    letter-spacing: 0.4px;
+    transition: filter 0.2s ease;
+}
+
+/* Эффекты в списках — те же .ctb-* что в профиле, но чуть слабее */
+.clan-tag.ctb-neon     { animation: ctbNeonPulse 2.2s ease-in-out infinite; }
+.clan-tag.ctb-blood    { animation: ctbBlood 3s ease-in-out infinite; }
+.clan-tag.ctb-electric { animation: ctbElectric 0.18s steps(2) infinite; }
+.clan-tag.ctb-pulse    { animation: ctbPulse 1.4s ease-in-out infinite; display: inline-block; }
+.clan-tag.ctb-cyber    { animation: ctbCyber 3s linear infinite; }
+
+/* Бегущие градиенты — в списках медленнее, чтобы не отвлекать */
+.clan-tag.ctb-fire {
+    animation: ctbFire 3s linear infinite;
+}
+.clan-tag.ctb-shimmer {
+    animation: ctbShimmer 4s linear infinite;
+}
+.clan-tag.ctb-rainbow {
+    animation: ctbRainbow 6s linear infinite;
+}
+.clan-tag.ctb-hologram {
+    animation: ctbHologram 8s ease-in-out infinite;
+}
+.clan-tag.ctb-galaxy {
+    animation: ctbGalaxy 8s ease-in-out infinite;
+}
+
+@keyframes ctbNeonPulse {
+    0%, 100% { filter: brightness(1); }
+    50%      { filter: brightness(1.35); }
+}
+
+/* ============================================================ */
+/* 🚀 LITE MODE — отключаем анимации, но оставляем цвет/свечение */
+/* ============================================================ */
+html.lite-mode .clan-tag,
+html.lite-mode .clan-tag *,
+html.lite-mode .ctb-text,
+html.lite-mode .ctb-text * {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* В lite-mode для градиентных эффектов фиксируем позицию,
+   чтобы они выглядели как статичный градиент */
+html.lite-mode .clan-tag.ctb-fire,
+html.lite-mode .clan-tag.ctb-shimmer,
+html.lite-mode .clan-tag.ctb-rainbow,
+html.lite-mode .clan-tag.ctb-hologram,
+html.lite-mode .clan-tag.ctb-galaxy,
+html.lite-mode .ctb-text.ctb-fire,
+html.lite-mode .ctb-text.ctb-shimmer,
+html.lite-mode .ctb-text.ctb-rainbow,
+html.lite-mode .ctb-text.ctb-hologram,
+html.lite-mode .ctb-text.ctb-galaxy {
+    background-position: 0% 0% !important;
+}
+
+/* В lite-mode убираем «пульсацию яркости» у neon */
+html.lite-mode .clan-tag.ctb-neon,
+html.lite-mode .ctb-text.ctb-neon {
+    filter: none !important;
+}
+    
+    /* ============================================================ */
 /* 🛒 СОРТИРОВКА                                                */
 /* ============================================================ */
 .shop-sort-wrap {
@@ -24442,8 +24514,9 @@ async function loadClubTagsForUsers(userIds) {
 }
 
 // ============================================================
-// 🏷️ HTML тега клана для списков (leaderboard, чат, комната)
-// Поддерживает: tag_color, tag_gradient, tag_effect
+// 🏷️ HTML тега клана для СПИСКОВ (leaderboard, чат, комната)
+// Поддерживает: tag_effect, tag_gradient, tag_color
+// Автоматически отключает анимации в lite-mode (CSS рулит)
 // ============================================================
 function myClubTagHTML(telegramId) {
     const club = clubTagCache[telegramId];
@@ -24453,20 +24526,22 @@ function myClubTagHTML(telegramId) {
     const cache = (typeof CLAN_SHOP_CACHE !== 'undefined') ? CLAN_SHOP_CACHE : {};
 
     let style = 'color: var(--hint); opacity: 0.7; font-weight: 700;';
-    let extraCls = '';
+    let extraCls = 'clan-tag';
+    let tagText = `[${escapeHtml(club.tag)}]`;
 
     // ============================================================
-    // ✨ ЭФФЕКТ ТЕГА — приоритет выше цвета и градиента
+    // ✨ ЭФФЕКТ — приоритет 1
     // ============================================================
     if (eq.tag_effect && cache[eq.tag_effect]) {
         const val = cache[eq.tag_effect].value || {};
         const effStyle = val.style || 'neon';
         const color = val.color || '#00e08a';
 
-        // Inline-фолбэк — работает даже если CSS-класса нет
+        // Inline-стили: цвет/градиент/тень — всегда видны
+        // Анимации применяет CSS-класс .ctb-XXX (там же отключаются в lite-mode)
         const effectInline = {
             neon:     `color:${color};text-shadow:0 0 4px ${color},0 0 8px ${color},0 0 16px ${color};`,
-            glass:    `color:${color};text-shadow:0 1px 0 rgba(255,255,255,0.4),0 -1px 0 rgba(0,0,0,0.6),0 0 8px ${color};letter-spacing:1px;`,
+            glass:    `color:${color};text-shadow:0 1px 0 rgba(255,255,255,0.4),0 -1px 0 rgba(0,0,0,0.6),0 0 8px ${color};`,
             gold:     `background:linear-gradient(180deg,#fff5cc,#ffd700 40%,#b8860b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
             blood:    `color:#ff2e4d;text-shadow:0 0 6px #ff2e4d,0 0 14px #7f1d1d,0 1px 2px #000;`,
             ice:      `color:#7dd3fc;text-shadow:0 0 6px #7dd3fc,0 0 14px #4fc3f7,0 0 22px #0369a1;`,
@@ -24482,49 +24557,40 @@ function myClubTagHTML(telegramId) {
         };
 
         style = (effectInline[effStyle] || effectInline.neon) + ' font-weight: 900; letter-spacing: 0.4px;';
-        extraCls = `clan-tag-effect ctb-${effStyle}`;
+        extraCls = `clan-tag clan-tag-effect ctb-${effStyle}`;
 
-        return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
+        return `<span class="${extraCls}" data-ctb-c="${color}" style="${style}">${tagText}</span>`;
     }
 
     // ============================================================
-    // 🌈 ГРАДИЕНТ
+    // 🌈 ГРАДИЕНТ — приоритет 2
     // ============================================================
     if (eq.tag_gradient && cache[eq.tag_gradient]) {
         const val = cache[eq.tag_gradient].value || {};
         if (Array.isArray(val.gradient) && val.gradient.length) {
-            style = `
-                background: linear-gradient(90deg, ${val.gradient.join(',')});
-                -webkit-background-clip: text;
-                background-clip: text;
-                -webkit-text-fill-color: transparent;
-                color: transparent;
-                font-weight: 900;
-                letter-spacing: 0.4px;
-            `.replace(/\s+/g, ' ').trim();
-            extraCls = 'clan-tag-gradient';
-
-            return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
+            const stops = val.gradient.join(',');
+            style = `background:linear-gradient(90deg,${stops});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900;letter-spacing:0.4px;`;
+            extraCls = 'clan-tag clan-tag-gradient';
+            return `<span class="${extraCls}" style="${style}">${tagText}</span>`;
         }
     }
 
     // ============================================================
-    // 🎨 ОБЫЧНЫЙ ЦВЕТ
+    // 🎨 ЦВЕТ — приоритет 3
     // ============================================================
     if (eq.tag_color && cache[eq.tag_color]) {
         const val = cache[eq.tag_color].value || {};
         if (val.color) {
-            style = `color: ${val.color}; text-shadow: 0 0 8px ${val.color}; font-weight: 900; letter-spacing: 0.4px;`;
-            extraCls = 'clan-tag-color';
-
-            return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
+            style = `color:${val.color};text-shadow:0 0 8px ${val.color};font-weight:900;letter-spacing:0.4px;`;
+            extraCls = 'clan-tag clan-tag-color';
+            return `<span class="${extraCls}" style="${style}">${tagText}</span>`;
         }
     }
 
     // ============================================================
-    // Дефолт — серый тег
+    // Дефолт
     // ============================================================
-    return `<span class="clan-tag" style="${style}">[${escapeHtml(club.tag)}]</span>`;
+    return `<span class="${extraCls}" style="${style}">${tagText}</span>`;
 }
 
             // ============================================================
@@ -25536,11 +25602,11 @@ function renderLbItem(user, rank) {
 
             <div class="lb-info-compact">
                 <div class="lb-row-top">
-                    <span class="lb-nick-inline" data-list-nick>
-                        ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
-                    </span>
-                    ${isDev ? `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>` : ''}
-                    <span class="leaderboard-DXP" data-list-badge></span>
+            <span class="lb-nick-inline" data-list-nick>
+                ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
+                ${isDev ? `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>` : ''}
+            </span>
+            <span class="leaderboard-DXP" data-list-badge></span>
                 </div>
 
                 <div class="lb-row-bottom">
@@ -37288,25 +37354,35 @@ function updateUserInLeaderboard(u) {
     const el = document.querySelector(`.leaderboard-item[data-user-id="${u.telegram_id}"]`);
     if (!el) return;
 
+    // --- Аватар ---
     const avEl = el.querySelector('[data-list-avatar]');
     if (avEl) {
         const src = u.custom_avatar || u.photo_url;
         const initial = (u.display_name || 'U')[0].toUpperCase();
-        avEl.innerHTML = src ? `<img src="${src}" alt="">` : initial;
+        const onlineDot = avEl.querySelector('.online-dot')?.outerHTML || '';
+        avEl.innerHTML = (src ? `<img src="${src}" alt="">` : initial) + onlineDot;
     }
 
+    // --- Ник + клубный тег + DEV-тег + уровень ---
     const nickEl = el.querySelector('[data-list-nick]');
     if (nickEl) {
-        // Пересобираем ник с сохранением тега клуба и dev-тега
         const clubTag = myClubTagHTML(u.telegram_id);
-        const devTag = devTagHTML(u.telegram_id);
+        const devTag = isDevClubMember(u.telegram_id)
+            ? `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>`
+            : '';
         const lvl = eloToLevel(u.elo);
-        nickEl.innerHTML = `${clubTag}${escapeHtml(u.display_name || 'Игрок')} ${devTag} <span style="color:var(--hint);font-size:11px;">· ${lvl} ур.</span>`;
+
+        nickEl.innerHTML = `
+            ${clubTag}${escapeHtml(u.display_name || 'Игрок')}
+            ${devTag}
+        `;
     }
 
+    // --- DXP справа ---
     const eloEl = el.querySelector('.leaderboard-DXP-value');
     if (eloEl) eloEl.textContent = u.elo;
 
+    // --- Кастомизация (цвет ника, рамка, значок) ---
     applyListCustomization(el, u);
 }
 
@@ -37526,6 +37602,19 @@ function subscribeClubsRealtime() {
                     if (clubTagCache[uid]?.club_id === club.id) {
                         clubTagCache[uid].equipped = club.equipped_items;
                     }
+                });
+
+                // 🔥 Перерисовываем ВСЕ .clan-tag в списках
+                // (leaderboard, chat, room, friends, matches и т.д.)
+                document.querySelectorAll('.clan-tag').forEach(el => {
+                    const parent = el.closest('[data-user-id]');
+                    const uid = parent?.dataset.userId;
+                    if (!uid || !clubTagCache[uid]) return;
+
+                    const wrapper = document.createElement('span');
+                    wrapper.innerHTML = myClubTagHTML(uid);
+                    const newTag = wrapper.firstElementChild;
+                    if (newTag) el.replaceWith(newTag);
                 });
 
                 // ============================================================
@@ -45843,13 +45932,22 @@ async function equipClanItem(itemId) {
         });
 
         // 2. Все списки (.clan-tag) — лидерборд, чат, комната
-// Обновляем все `.clan-tag` в DOM
+// ============================================================
+// Обновляем .clan-tag ВО ВСЕХ списках
+// ============================================================
 document.querySelectorAll('.clan-tag').forEach(el => {
+    // Ищем data-user-id в любом родителе
     const parent = el.closest('[data-user-id]');
     const uid = parent?.dataset.userId;
-    if (uid && clubTagCache[uid]) {
-        el.outerHTML = myClubTagHTML(uid);
-    }
+
+    if (!uid) return;
+    if (!clubTagCache[uid]) return;
+
+    // Заменяем HTML тега
+    const wrapper = document.createElement('span');
+    wrapper.innerHTML = myClubTagHTML(uid);
+    const newTag = wrapper.firstElementChild;
+    if (newTag) el.replaceWith(newTag);
 });
 
         // 3. Открытый чужой профиль (модалка)
