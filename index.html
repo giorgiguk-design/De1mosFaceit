@@ -26827,39 +26827,106 @@ async function acceptClubRequest(requestId, userId) {
             } catch (e) { showToast('Ошибка'); }
         }
 
-        async function openCreateClubSheet() {
-            const { data: ban } = await sb.from('club_deletion_bans')
-                .select('banned_until, reason').eq('telegram_id', currentUser.telegram_id).maybeSingle();
-            if (ban && new Date(ban.banned_until) > new Date()) {
-                const left = Math.ceil((new Date(ban.banned_until) - Date.now()) / 3600000);
-                showToast(`🚫 Создание Клана заблокировано на ${left} ч.`);
-                return;
+async function openCreateClubSheet() {
+    const { data: ban } = await sb.from('club_deletion_bans')
+        .select('banned_until, reason').eq('telegram_id', currentUser.telegram_id).maybeSingle();
+    if (ban && new Date(ban.banned_until) > new Date()) {
+        const left = Math.ceil((new Date(ban.banned_until) - Date.now()) / 3600000);
+        showToast(`🚫 Создание Клана заблокировано на ${left} ч.`);
+        return;
+    }
+
+    const name = prompt('Название Клана (2-30 символов):');
+    if (!name || name.length < 2 || name.length > 30) {
+        showToast('Название: 2-30 символов');
+        return;
+    }
+
+    const tag = prompt('Тег (2-5 символов, латиница и цифры):');
+    if (!tag || tag.length < 2 || tag.length > 5) {
+        showToast('Тег: 2-5 символов');
+        return;
+    }
+
+    // 🔥 Нормализация + валидация
+    const cleanTag = tag.trim().toUpperCase();
+    if (!/^[A-Z0-9]{2,5}$/.test(cleanTag)) {
+        showToast('Тег: только A-Z и 0-9, 2-5 символов');
+        return;
+    }
+
+    // 🔥 Pre-check уникальности тега и имени
+    const { data: existing } = await sb.from('clubs')
+        .select('id, tag, name')
+        .or(`tag.ilike.${cleanTag},name.ilike.${name}`)
+        .limit(5);
+
+    if (existing && existing.length > 0) {
+        const clashTag = existing.find(c => c.tag?.toUpperCase() === cleanTag);
+        if (clashTag) {
+            showToast(`🚫 Тег [${cleanTag}] уже занят Кланом «${clashTag.name}»`);
+            return;
+        }
+        const clashName = existing.find(c => c.name?.toLowerCase() === name.toLowerCase());
+        if (clashName) {
+            showToast(`🚫 Название «${name}» уже занято`);
+            return;
+        }
+    }
+
+    const desc = prompt('Описание (необязательно, до 100 символов):') || '';
+    await createClub(name, cleanTag, desc.slice(0, 100));
+}
+
+async function createClub(name, tag, description) {
+    try {
+        const { data: club, error } = await sb.from('clubs').insert({
+            name,
+            tag: tag.toUpperCase(),
+            description,
+            owner_id: currentUser.telegram_id,
+            max_members: 10
+        }).select().single();
+
+        if (error) {
+            // 🔥 Разбор Postgres-ошибок в понятный текст
+            const msg = (error.message || '').toLowerCase();
+
+            if (error.code === '23505') {
+                if (msg.includes('clubs_tag_unique') || msg.includes('upper(tag)')) {
+                    throw new Error(`Тег [${tag}] уже занят другим Кланом`);
+                }
+                if (msg.includes('clubs_name_unique') || msg.includes('lower(name)')) {
+                    throw new Error(`Название «${name}» уже занято`);
+                }
+                throw new Error('Такой Клан уже существует');
             }
 
-            const name = prompt('Название Клана (2-30):');
-            if (!name || name.length < 2 || name.length > 30) return;
-            const tag = prompt('Тег (2-5):');
-            if (!tag || tag.length < 2 || tag.length > 5) return;
-            const desc = prompt('Описание (необязательно):') || '';
-            createClub(name, tag, desc);
+            throw error;
         }
 
-        async function createClub(name, tag, description) {
-            try {
-                const { data: club, error } = await sb.from('clubs').insert({
-                    name, tag, description, owner_id: currentUser.telegram_id, max_members: 10
-                }).select().single();
-                if (error) throw error;
-                await sb.from('club_members').insert({
-                    club_id: club.id, telegram_id: currentUser.telegram_id, role: 'owner'
-                });
-                await sb.from('club_events').insert({
-                    club_id: club.id, actor_id: currentUser.telegram_id,
-                    event_type: 'club_created', meta: {}
-                });
-                showToast('✅ Клан создан!'); openClubPage();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        }
+        await sb.from('club_members').insert({
+            club_id: club.id,
+            telegram_id: currentUser.telegram_id,
+            role: 'owner'
+        });
+
+        await sb.from('club_events').insert({
+            club_id: club.id,
+            actor_id: currentUser.telegram_id,
+            event_type: 'club_created',
+            meta: {}
+        });
+
+        haptic('heavy');
+        showToast('✅ Клан создан!');
+        openClubPage();
+    } catch (e) {
+        console.error('createClub:', e);
+        showToast('❌ ' + (e.message || 'Не удалось создать Клан'));
+        haptic('heavy');
+    }
+}
 
         function openEditClubSheet() {
             const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
