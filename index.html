@@ -15773,24 +15773,25 @@ html.lite-mode .list-frame-overlay svg * {
     font-weight: 900;
     letter-spacing: 1px;
     text-transform: uppercase;
-    /* 🔥 нейтральный тёмный фон — под любой цвет/градиент */
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.65);   /* тёмная плашка — всегда */
     border: 1px solid rgba(255, 255, 255, 0.15);
-    color: var(--emerald-3);
     flex-shrink: 0;
     line-height: 1.4;
-    transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
                 0 2px 8px rgba(0, 0, 0, 0.4);
+    overflow: hidden;                    /* чтобы градиент не вылезал */
 }
 .club-tag-badge.visible {
     display: inline-flex;
     align-items: center;
 }
 
-.club-tag-badge.visible {
-    display: inline-flex;
-    align-items: center;
+/* 🔥 Внутренний span — сюда накатываем цвет/градиент */
+.club-tag-badge .ctb-text {
+    display: inline-block;
+    color: var(--emerald-3);
+    transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
 /* ---- ТИТУЛ + ЗНАЧОК ---- */
@@ -39860,18 +39861,19 @@ async function applyCustomizationToElement(scopeEl, user) {
         try { await loadClanShopCache(true); } catch (e) {}
     }
 
-    const clubTagEl = scopeEl.querySelector('[data-club-tag]');
-    if (clubTagEl) {
-        const club = clubTagCache[user.telegram_id];
-        if (club) {
-            clubTagEl.textContent = `[${club.tag}]`;
-            clubTagEl.classList.add('visible');
-            applyClanTagCustomization(clubTagEl, club);
-        } else {
-            clubTagEl.textContent = '';
-            clubTagEl.classList.remove('visible');
-        }
+const clubTagEl = scopeEl.querySelector('[data-club-tag]');
+if (clubTagEl) {
+    const club = clubTagCache[user.telegram_id];
+    if (club) {
+        // 🔥 Внутренний span — под цвет/градиент, сама плашка тёмная
+        clubTagEl.innerHTML = `<span class="ctb-text">[${escapeHtml(club.tag)}]</span>`;
+        clubTagEl.classList.add('visible');
+        applyClanTagCustomization(clubTagEl, club);
+    } else {
+        clubTagEl.innerHTML = '';
+        clubTagEl.classList.remove('visible');
     }
+}
 
 // ============================================================
 // 0.5. РАНГ-БЕЙДЖ
@@ -45346,31 +45348,45 @@ async function equipClanItem(itemId) {
 }
 
 // ============================================================
-// 🏷️ Применить стиль тега клана (цвет ИЛИ градиент)
-// Ключи в club.equipped: tag_color (обычный цвет) и tag_gradient (градиент).
-// Оба взаимоисключающие — если в БД оба, приоритет у градиента.
+// 🏷️ Стиль тега клана — применяется к ВНУТРЕННЕМУ span.ctb-text
+// Плашка (.club-tag-badge) остаётся тёмной всегда.
 // ============================================================
 function applyClanTagCustomization(tagEl, club) {
     if (!tagEl || !club) return;
 
+    // Ищем внутренний span. Если нет — создаём на месте
+    let textEl = tagEl.querySelector('.ctb-text');
+    if (!textEl) {
+        const rawText = tagEl.textContent || '';
+        tagEl.innerHTML = `<span class="ctb-text">${escapeHtml(rawText)}</span>`;
+        textEl = tagEl.querySelector('.ctb-text');
+    }
+    if (!textEl) return;
+
     // ============================================================
-    // 🔥 СБРОС ВСЕХ РАНЕЕ ПРИМЕНЁННЫХ СТИЛЕЙ
+    // СБРОС СТИЛЕЙ (и на плашке, и на span)
     // ============================================================
+    // Плашка — всегда тёмная
     tagEl.style.background = '';
-    tagEl.style.webkitBackgroundClip = '';
-    tagEl.style.backgroundClip = '';
-    tagEl.style.webkitTextFillColor = '';
-    tagEl.style.backgroundImage = '';
-    tagEl.style.color = '';
-    tagEl.style.textShadow = '';
+    tagEl.style.backgroundColor = '';
     tagEl.style.borderColor = '';
     tagEl.style.boxShadow = '';
-    tagEl.classList.remove('clan-tag-gradient', 'clan-tag-color');
+
+    // Текст — сбрасываем всё
+    textEl.style.background = '';
+    textEl.style.backgroundImage = '';
+    textEl.style.backgroundColor = '';
+    textEl.style.webkitBackgroundClip = '';
+    textEl.style.backgroundClip = '';
+    textEl.style.webkitTextFillColor = '';
+    textEl.style.color = '';
+    textEl.style.textShadow = '';
+    textEl.classList.remove('ctb-gradient', 'ctb-color');
 
     const eq = club.equipped || {};
 
     // ============================================================
-    // 🌈 ГРАДИЕНТ — приоритет выше цвета
+    // 🌈 ГРАДИЕНТ — приоритет
     // ============================================================
     if (eq.tag_gradient
         && typeof CLAN_SHOP_CACHE !== 'undefined'
@@ -45378,19 +45394,20 @@ function applyClanTagCustomization(tagEl, club) {
 
         const val = CLAN_SHOP_CACHE[eq.tag_gradient].value || {};
         if (val.gradient && Array.isArray(val.gradient) && val.gradient.length) {
-            tagEl.style.background = `linear-gradient(90deg, ${val.gradient.join(',')})`;
-            tagEl.style.webkitBackgroundClip = 'text';
-            tagEl.style.backgroundClip = 'text';
-            tagEl.style.webkitTextFillColor = 'transparent';
-            tagEl.style.color = 'transparent';
-            tagEl.style.textShadow = 'none';
+            // 🔥 Градиент накладываем на SPAN, а не на плашку
+            textEl.style.backgroundImage = `linear-gradient(90deg, ${val.gradient.join(',')})`;
+            textEl.style.webkitBackgroundClip = 'text';
+            textEl.style.backgroundClip = 'text';
+            textEl.style.webkitTextFillColor = 'transparent';
+            textEl.style.color = 'transparent';
+            textEl.classList.add('ctb-gradient');
 
-            // Тонкая обводка под градиент — цвет берём из первого стопа
+            // Обводка плашки под градиент
             const firstColor = val.gradient[0];
-            tagEl.style.borderColor = firstColor + '88';
-            tagEl.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.4), 0 0 12px ${firstColor}44`;
-
-            tagEl.classList.add('clan-tag-gradient');
+            tagEl.style.borderColor = firstColor + '99';
+            tagEl.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.06),
+                                     0 2px 8px rgba(0,0,0,0.4),
+                                     0 0 12px ${firstColor}44`;
             return;
         }
     }
@@ -45404,20 +45421,22 @@ function applyClanTagCustomization(tagEl, club) {
 
         const val = CLAN_SHOP_CACHE[eq.tag_color].value || {};
         if (val.color) {
-            tagEl.style.color = val.color;
-            tagEl.style.textShadow = `0 0 8px ${val.color}, 0 1px 2px rgba(0,0,0,0.8)`;
-            tagEl.style.borderColor = val.color + '99';
-            tagEl.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.4), 0 0 12px ${val.color}44`;
+            textEl.style.color = val.color;
+            textEl.style.textShadow = `0 0 8px ${val.color}, 0 1px 2px rgba(0,0,0,0.8)`;
+            textEl.classList.add('ctb-color');
 
-            tagEl.classList.add('clan-tag-color');
+            tagEl.style.borderColor = val.color + '99';
+            tagEl.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.06),
+                                     0 2px 8px rgba(0,0,0,0.4),
+                                     0 0 12px ${val.color}44`;
             return;
         }
     }
 
     // ============================================================
-    // Ничего не надето — дефолтный стиль темы
+    // Ничего не надето — дефолт
     // ============================================================
-    tagEl.style.color = 'var(--emerald-3)';
+    textEl.style.color = 'var(--emerald-3)';
     tagEl.style.borderColor = 'rgba(var(--emerald-rgb), 0.45)';
     tagEl.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.4)';
 }
