@@ -24000,31 +24000,60 @@ async function closeReport(reportId) {
     }
 }
 
-        async function makeModerator() {
-            const val = document.getElementById('modInput').value.trim();
-            if (!val) { showToast('Введи @username или ID'); return; }
-            const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
-            const query = field === 'username' ? val.replace('@', '') : Number(val);
+async function makeModerator() {
+    const val = document.getElementById('modInput').value.trim();
+    if (!val) { showToast('Введи @username или ID'); return; }
 
-            try {
-                const { data, error } = await sb.from('users')
-                    .update({ is_mod: true }).eq(field, query).select();
-                if (error) throw error;
-                if (!data?.length) { showToast('Игрок не найден'); return; }
-                showToast('✅ Модератор назначен');
-                await notify(data[0].telegram_id, `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`);
-                await renderModeratorPanel();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        }
+    const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
+    const query = field === 'username' ? val.replace('@', '') : Number(val);
 
-        async function revokeModerator(userId) {
-            if (!confirm('Снять модератора?')) return;
-            try {
-                await sb.from('users').update({ is_mod: false }).eq('telegram_id', userId);
-                showToast('✅ Снят');
-                await renderModeratorPanel();
-            } catch (e) { showToast('Ошибка: ' + e.message); }
-        }
+    try {
+        const { data: userData, error: findErr } = await sb.from('users')
+            .select('telegram_id, display_name')
+            .eq(field, query)
+            .limit(1);
+
+        if (findErr) throw findErr;
+        if (!userData?.length) { showToast('Игрок не найден'); return; }
+
+        const targetId = userData[0].telegram_id;
+
+        const { data: roleResult, error: roleErr } = await sb.rpc('mod_set_role', {
+            p_user_id: targetId,
+            p_is_mod: true
+        });
+
+        if (roleErr) throw roleErr;
+        if (!roleResult?.ok) throw new Error('Не удалось назначить');
+
+        showToast('✅ Модератор назначен');
+        await notify(targetId, `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`);
+
+        const input = document.getElementById('modInput');
+        if (input) input.value = '';
+        await renderAdminPanel();
+    } catch (e) {
+        console.error('makeModerator:', e);
+        showToast('Ошибка: ' + e.message);
+    }
+}
+
+async function revokeModerator(userId) {
+    if (!confirm('Снять модератора?')) return;
+    try {
+        const { data, error } = await sb.rpc('mod_set_role', {
+            p_user_id: userId,
+            p_is_mod: false
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error('Не удалось снять');
+        showToast('✅ Модератор снят');
+        await renderAdminPanel();
+    } catch (e) {
+        console.error('revokeModerator:', e);
+        showToast('Ошибка: ' + e.message);
+    }
+}
 
         // ============================================================
         // HELPERS
@@ -30942,163 +30971,56 @@ async function tryFinishMatch(matchId) {
     }
 }
 
-            // ============================================================
-// Завершение матча: пересчёт ELO + статус finished
+// ============================================================
+// Завершение матча — вся логика в RPC finish_match
 // ============================================================
 async function finishMatch(matchId, result) {
     try {
-        // Защита: не завершаем дважды
-        const { data: fresh } = await sb.from('game_matches')
-            .select('status').eq('id', matchId).single();
-        if (fresh?.status === 'finished') return;
+        // 🔥 Определяем, я ли выиграл — ДО вызова RPC
+        // (нужно для квестов, которые считаются на клиенте)
+        const { data: match } = await sb.from('game_matches')
+            .select('team_a_players, team_b_players, status')
+            .eq('id', matchId)
+            .single();
 
-        const { data: match, error: mErr } = await sb.from('game_matches')
-            .select('*').eq('id', matchId).single();
-        if (mErr) throw mErr;
         if (!match) { showToast('Матч не найден'); return; }
+        if (match.status === 'finished') return; // защита от двойного вызова
 
+        const me = Number(currentUser?.telegram_id);
         const teamA = match.team_a_players || [];
         const teamB = match.team_b_players || [];
-        const winnerTeam = result.winner;
-
-        // 🎯 Определяем, я ли в матче и выиграл ли
-        const me = Number(currentUser?.telegram_id);
         const iAmInA = teamA.some(p => Number(p.telegram_id) === me);
         const iAmInB = teamB.some(p => Number(p.telegram_id) === me);
         const myTeam = iAmInA ? 'A' : (iAmInB ? 'B' : null);
-        const isWinnerMe = myTeam && myTeam === winnerTeam;
+        const isWinnerMe = myTeam && myTeam === result.winner;
 
-        const allPlayers = [...teamA, ...teamB];
-        const userIds = allPlayers.map(p => Number(p.telegram_id)).filter(Boolean);
+        // 🔥 Вызов RPC — вся логика в одной транзакции
+        const { data: rpcResult, error: rpcErr } = await sb.rpc('finish_match', {
+            p_match_id: matchId,
+            p_winner: result.winner,
+            p_score_a: result.score_a,
+            p_score_b: result.score_b
+        });
 
-        const { data: users } = await sb.from('users')
-            .select('telegram_id, elo, matches_played, wins')
-            .in('telegram_id', userIds);
-        const userMap = {};
-        (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
+        if (rpcErr) throw rpcErr;
 
-        const WIN_DELTA = 25;
-        const LOSE_DELTA = -25;
-
-        const updatesA = [];
-        const updatesB = [];
-        const historyRows = [];
-
-        // ============================================================
-        // 🔥 ОБНОВЛЯЕМ КОМАНДУ A (ОДИН РАЗ!)
-        // ============================================================
-        for (const p of teamA) {
-            const pid = Number(p.telegram_id);
-            if (!pid) continue;
-
-            const u = userMap[pid] || { elo: 1000, matches_played: 0, wins: 0 };
-            const before = u.elo ?? 1000;
-            const delta = winnerTeam === 'A' ? WIN_DELTA : LOSE_DELTA;
-            const after = Math.max(0, before + delta);
-            const won = winnerTeam === 'A';
-
-            updatesA.push({ ...p, elo_before: before, elo_after: after });
-
-            historyRows.push({
-                telegram_id: pid,
-                match_id: matchId,
-                elo_before: before,
-                elo_after: after,
-                delta: after - before,
-                won: won
-            });
-
-            await sb.from('users').update({
-                elo: after,
-                matches_played: (u.matches_played ?? 0) + 1,
-                wins: (u.wins ?? 0) + (won ? 1 : 0)
-            }).eq('telegram_id', pid);
-        }
-
-        // ============================================================
-        // 🔥 ОБНОВЛЯЕМ КОМАНДУ B (ОДИН РАЗ!)
-        // ============================================================
-        for (const p of teamB) {
-            const pid = Number(p.telegram_id);
-            if (!pid) continue;
-
-            const u = userMap[pid] || { elo: 1000, matches_played: 0, wins: 0 };
-            const before = u.elo ?? 1000;
-            const delta = winnerTeam === 'B' ? WIN_DELTA : LOSE_DELTA;
-            const after = Math.max(0, before + delta);
-            const won = winnerTeam === 'B';
-
-            updatesB.push({ ...p, elo_before: before, elo_after: after });
-
-            historyRows.push({
-                telegram_id: pid,
-                match_id: matchId,
-                elo_before: before,
-                elo_after: after,
-                delta: after - before,
-                won: won
-            });
-
-            await sb.from('users').update({
-                elo: after,
-                matches_played: (u.matches_played ?? 0) + 1,
-                wins: (u.wins ?? 0) + (won ? 1 : 0)
-            }).eq('telegram_id', pid);
-        }
-
-        // ============================================================
-        // 📜 Пишем историю DXP
-        // ============================================================
-        if (historyRows.length) {
-            try {
-                const { error: hErr } = await sb.from('dxp_history').insert(historyRows);
-                if (hErr) console.warn('dxp_history insert error:', hErr);
-            } catch (e) {
-                console.warn('dxp_history insert:', e);
+        if (!rpcResult?.ok) {
+            const err = rpcResult?.error || 'unknown';
+            if (err === 'already_finished') {
+                console.log('Матч уже завершён другим клиентом');
+                return;
             }
+            throw new Error('RPC error: ' + err);
         }
 
         // ============================================================
-        // 🎮 Финализируем матч
-        // ============================================================
-        const { error: matchErr } = await sb.from('game_matches').update({
-            status: 'finished',
-            result_status: 'confirmed',
-            winner_team: winnerTeam,
-            score_a: result.score_a,
-            score_b: result.score_b,
-            team_a_players: updatesA,
-            team_b_players: updatesB,
-            finished_at: new Date().toISOString()
-        }).eq('id', matchId);
-
-        if (matchErr) {
-            console.warn('finishMatch update error:', matchErr);
-            // Fallback без players-массивов
-            await sb.from('game_matches').update({
-                status: 'finished',
-                result_status: 'confirmed',
-                winner_team: winnerTeam,
-                score_a: result.score_a,
-                score_b: result.score_b,
-                finished_at: new Date().toISOString()
-            }).eq('id', matchId);
-        }
-
-        if (match.room_id) {
-            try {
-                await sb.from('rooms').update({ status: 'finished' }).eq('id', match.room_id);
-            } catch (e) {}
-        }
-
-        // ============================================================
-        // 🎯 ОБНОВЛЯЕМ КВЕСТЫ (до показа экрана — гарантия записи)
+        // 🎯 Обновляем квесты (клиентская логика)
         // ============================================================
         try {
             await updateQuestsProgress({
                 matches_played: 1,
                 wins: isWinnerMe ? 1 : 0,
-                mvps: 0  // позже, когда будет match_stats
+                mvps: 0
             });
         } catch (e) {
             console.warn('quests progress:', e);
@@ -31111,7 +31033,10 @@ async function finishMatch(matchId, result) {
         showToast('🏆 Матч завершён!');
 
         const { data: refreshed } = await sb.from('game_matches')
-            .select('*').eq('id', matchId).single();
+            .select('*')
+            .eq('id', matchId)
+            .single();
+
         currentMatch = refreshed;
 
         showFinishedScreen();
@@ -31702,26 +31627,39 @@ async function renderAdminPanel() {
 async function makeModerator() {
     const val = document.getElementById('modInput').value.trim();
     if (!val) { showToast('Введи @username или ID'); return; }
+
     const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
     const query = field === 'username' ? val.replace('@', '') : Number(val);
 
     try {
-        const { data, error } = await sb.from('users')
-            .update({ is_mod: true })
+        // 1. Находим пользователя
+        const { data: userData, error: findErr } = await sb.from('users')
+            .select('telegram_id, display_name')
             .eq(field, query)
-            .select();
-        if (error) throw error;
-        if (!data?.length) { showToast('Игрок не найден'); return; }
+            .limit(1);
+
+        if (findErr) throw findErr;
+        if (!userData?.length) { showToast('Игрок не найден'); return; }
+
+        const targetId = userData[0].telegram_id;
+
+        // 2. Через RPC (обходит триггер protect_user_fields)
+        const { data: roleResult, error: roleErr } = await sb.rpc('mod_set_role', {
+            p_user_id: targetId,
+            p_is_mod: true
+        });
+
+        if (roleErr) throw roleErr;
+        if (!roleResult?.ok) throw new Error('Не удалось назначить');
 
         showToast('✅ Модератор назначен');
-        await notify(data[0].telegram_id,
-            `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`
-        );
+        await notify(targetId, `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`);
 
         const input = document.getElementById('modInput');
         if (input) input.value = '';
         await renderAdminPanel();
     } catch (e) {
+        console.error('makeModerator:', e);
         showToast('Ошибка: ' + e.message);
     }
 }
@@ -31729,28 +31667,18 @@ async function makeModerator() {
 async function revokeModerator(userId) {
     if (!confirm('Снять модератора?')) return;
     try {
-        const { error } = await sb.from('users')
-            .update({ is_mod: false })
-            .eq('telegram_id', userId);
+        const { data, error } = await sb.rpc('mod_set_role', {
+            p_user_id: userId,
+            p_is_mod: false
+        });
         if (error) throw error;
+        if (!data?.ok) throw new Error('Не удалось снять');
         showToast('✅ Модератор снят');
         await renderAdminPanel();
     } catch (e) {
+        console.error('revokeModerator:', e);
         showToast('Ошибка: ' + e.message);
     }
-}
-
-async function removeModerator() {
-    const inputEl = document.getElementById('modInput');
-const val = inputEl ? inputEl.value.trim() : '';
-    if (!val) return;
-    const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
-    const query = field === 'username' ? val.replace('@', '') : Number(val);
-    try {
-        await sb.from('users').update({ is_mod: false }).eq(field, query);
-        showToast('✅ Снят');
-        await renderAdminPanel();
-    } catch (e) { showToast('Ошибка'); }
 }
 
        // ============================================================
@@ -44447,13 +44375,13 @@ async function doModBan(targetId, durationMs, closeReportId) {
 
     const btn = document.querySelector('#modBanSheet .ban-duration-btn:hover');
     try {
-        await sb.from('users').update({
-            match_ban_until: until,
-            match_ban_reason: reason || null
-        }).eq('telegram_id', targetId);
-
-        // Кикаем из всех открытых комнат (если он там)
-        await sb.from('room_players').delete().eq('telegram_id', targetId);
+        const { data: banResult, error: banErr } = await sb.rpc('mod_set_ban', {
+            p_user_id: targetId,
+            p_until: until,
+            p_reason: reason || null
+        });
+        if (banErr) throw banErr;
+        if (!banResult?.ok) throw new Error('Не удалось забанить');
 
         // Уведомляем
         const label = BAN_DURATIONS.find(d => d.ms === durationMs)?.label || 'некоторое время';
@@ -44483,15 +44411,21 @@ async function doModBan(targetId, durationMs, closeReportId) {
 async function unbanPlayerFromMatch(userId) {
     if (!confirm('Снять бан с игрока?')) return;
     try {
-        await sb.from('users').update({
-            match_ban_until: null,
-            match_ban_reason: null
-        }).eq('telegram_id', userId);
+        const { data, error } = await sb.rpc('mod_set_ban', {
+            p_user_id: userId,
+            p_until: null,
+            p_reason: null
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error('Не удалось снять бан');
 
         await notify(userId, `✅ <b>Твой бан от матчей снят.</b> Можешь снова играть.`, 'party');
         showToast('✅ Бан снят');
         renderModeratorPanel();
-    } catch (e) { showToast('Ошибка'); }
+    } catch (e) {
+        console.error('unbanPlayerFromMatch:', e);
+        showToast('Ошибка: ' + e.message);
+    }
 }
 
 // ============================================================
@@ -45804,68 +45738,58 @@ function closeClanShop() {
 async function openClanDonateSheet() {
     if (!myClub?.club) { showToast('Ты не в Клане'); return; }
 
-    // Проверка прав
     const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
     const canBuy = myRole === 'owner' || myRole === 'elder'
         || myClub.club.owner_id === currentUser.telegram_id;
     if (!canBuy) { showToast('Только OWNER / ELDER'); return; }
 
-    // Баланс игрока
     const myCoins = currentUser.coins || 0;
     if (myCoins <= 0) {
         showToast('❌ У тебя нет монет');
         return;
     }
 
-    // Красивое поле ввода через prompt (можно потом заменить на sheet с инпутом)
     const amount = prompt(`Сколько монет внести?\n\nУ тебя: ${myCoins} монет`);
     if (!amount) return;
 
-    const num = parseInt(amount);
+    const num = parseInt(amount, 10);
     if (!num || num <= 0) { showToast('⚠️ Введи число больше 0'); return; }
     if (num > myCoins) { showToast(`❌ У тебя только ${myCoins} монет`); return; }
 
     try {
-        // 1. Списываем со своего баланса
-        const { error: e1 } = await sb.from('users')
-            .update({ coins: myCoins - num })
-            .eq('telegram_id', currentUser.telegram_id);
-        if (e1) throw e1;
-        currentUser.coins = myCoins - num;
-
-        // 2. Добавляем в казну клана
-        const { data: club } = await sb.from('clubs')
-            .select('coins')
-            .eq('id', myClub.club.id)
-            .single();
-
-        const newBalance = (club?.coins || 0) + num;
-        await sb.from('clubs')
-            .update({ coins: newBalance })
-            .eq('id', myClub.club.id);
-
-        // 3. Логируем транзакцию
-        await sb.from('clan_coin_transactions').insert({
-            club_id: myClub.club.id,
-            amount: num,
-            reason: 'donation',
-            meta: { from: currentUser.telegram_id },
-            actor_id: currentUser.telegram_id
+        const { data, error } = await sb.rpc('clan_donate', {
+            p_club_id: myClub.club.id,
+            p_user_id: currentUser.telegram_id,
+            p_amount: num
         });
 
-        // 4. Обновляем UI
-        showToast(`✅ Внесено ${num} монет`);
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'not_enough_coins') {
+                showToast(`❌ У тебя только ${data.user_coins} монет`);
+            } else if (err === 'user_or_club_not_found') {
+                showToast('❌ Клан не найден');
+            } else {
+                showToast('❌ Ошибка: ' + err);
+            }
+            return;
+        }
+
+        // Обновляем локальные данные
+        currentUser.coins = data.user_coins;
+        if (myClub.club) myClub.club.coins = data.club_coins;
+
+        updateCoinsBadge();
         haptic('medium');
+        showToast(`✅ Внесено ${num} монет`);
 
-        // Обновляем баланс игрока в шапке
-        if (typeof updateCoinsBadge === 'function') updateCoinsBadge();
-
-        // Перезагружаем магазин клана
         openClanShop();
 
     } catch (e) {
         console.error('openClanDonateSheet:', e);
-        showToast('❌ ' + e.message);
+        showToast('❌ ' + (e.message || 'Ошибка'));
     }
 }
 
@@ -45998,46 +45922,49 @@ async function buyClanItem(itemId, price) {
         || myClub.club.owner_id === currentUser.telegram_id;
     if (!canBuy) { showToast('Только OWNER / ELDER'); return; }
 
-    // Проверяем баланс клана
-    const { data: club } = await sb.from('clubs').select('coins').eq('id', myClub.club.id).single();
-    if ((club?.coins || 0) < price) {
-        showToast(`❌ В казне клана только ${club?.coins || 0} монет`);
+    // Проверяем баланс клана для быстрого ответа
+    const clubCoins = myClub.club?.coins || 0;
+    if (clubCoins < price) {
+        showToast(`❌ В казне клана только ${clubCoins} монет`);
         return;
     }
 
     if (!confirm(`Купить за ${price} монет клана?`)) return;
 
     try {
-        const { data: existing } = await sb.from('clan_inventory')
-            .select('id').eq('club_id', myClub.club.id).eq('item_id', itemId).maybeSingle();
-        if (existing) { showToast('Уже куплено'); return; }
-
-        // Списать монеты
-        await sb.from('clubs').update({ coins: (club?.coins || 0) - price }).eq('id', myClub.club.id);
-
-        // Добавить в инвентарь
-        await sb.from('clan_inventory').insert({
-            club_id: myClub.club.id,
-            item_id: itemId,
-            is_equipped: false,
-            purchased_by: currentUser.telegram_id
+        const { data, error } = await sb.rpc('clan_purchase', {
+            p_club_id: myClub.club.id,
+            p_user_id: currentUser.telegram_id,
+            p_item_id: itemId,
+            p_price: price
         });
 
-        // Записать транзакцию
-        await sb.from('clan_coin_transactions').insert({
-            club_id: myClub.club.id,
-            amount: -price,
-            reason: `purchase:${itemId}`,
-            meta: { item_id: itemId },
-            actor_id: currentUser.telegram_id
-        });
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'not_enough_clan_coins') {
+                showToast(`❌ В казне только ${data.club_coins} монет`);
+            } else if (err === 'already_owned') {
+                showToast('Уже куплено');
+            } else if (err === 'club_not_found') {
+                showToast('❌ Клан не найден');
+            } else {
+                showToast('❌ Ошибка: ' + err);
+            }
+            return;
+        }
+
+        // Обновляем локальные данные
+        if (myClub.club) myClub.club.coins = data.club_coins;
 
         showToast('✅ Куплено');
         haptic('medium');
         openClanShop();
+
     } catch (e) {
         console.error('buyClanItem:', e);
-        showToast('❌ ' + e.message);
+        showToast('❌ ' + (e.message || 'Ошибка'));
     }
 }
 
