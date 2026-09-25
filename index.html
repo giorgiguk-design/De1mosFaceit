@@ -24442,34 +24442,89 @@ async function loadClubTagsForUsers(userIds) {
 }
 
 // ============================================================
-// 🏷️ HTML тега клана (с учётом equipped_items)
+// 🏷️ HTML тега клана для списков (leaderboard, чат, комната)
+// Поддерживает: tag_color, tag_gradient, tag_effect
 // ============================================================
 function myClubTagHTML(telegramId) {
     const club = clubTagCache[telegramId];
     if (!club) return '';
 
     const eq = club.equipped || {};
+    const cache = (typeof CLAN_SHOP_CACHE !== 'undefined') ? CLAN_SHOP_CACHE : {};
+
     let style = 'color: var(--hint); opacity: 0.7; font-weight: 700;';
     let extraCls = '';
 
-    // 🌈 ГРАДИЕНТ
-    if (eq.tag_gradient && CLAN_SHOP_CACHE[eq.tag_gradient]) {
-        const val = CLAN_SHOP_CACHE[eq.tag_gradient].value || {};
-        if (val.gradient && val.gradient.length) {
-            style = `background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-weight: 900; letter-spacing: 0.4px;`;
-            extraCls = 'clan-tag-gradient';
-        }
+    // ============================================================
+    // ✨ ЭФФЕКТ ТЕГА — приоритет выше цвета и градиента
+    // ============================================================
+    if (eq.tag_effect && cache[eq.tag_effect]) {
+        const val = cache[eq.tag_effect].value || {};
+        const effStyle = val.style || 'neon';
+        const color = val.color || '#00e08a';
+
+        // Inline-фолбэк — работает даже если CSS-класса нет
+        const effectInline = {
+            neon:     `color:${color};text-shadow:0 0 4px ${color},0 0 8px ${color},0 0 16px ${color};`,
+            glass:    `color:${color};text-shadow:0 1px 0 rgba(255,255,255,0.4),0 -1px 0 rgba(0,0,0,0.6),0 0 8px ${color};letter-spacing:1px;`,
+            gold:     `background:linear-gradient(180deg,#fff5cc,#ffd700 40%,#b8860b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
+            blood:    `color:#ff2e4d;text-shadow:0 0 6px #ff2e4d,0 0 14px #7f1d1d,0 1px 2px #000;`,
+            ice:      `color:#7dd3fc;text-shadow:0 0 6px #7dd3fc,0 0 14px #4fc3f7,0 0 22px #0369a1;`,
+            fire:     `background:linear-gradient(90deg,#ff1f00,#ff8c00,#ffe066,#ff8c00,#ff1f00);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
+            electric: `color:#7dd3fc;text-shadow:0 0 4px #7dd3fc,0 0 12px #4c1d95,0 0 20px #4c1d95;`,
+            shimmer:  `background:linear-gradient(90deg,${color},${color} 40%,#fff 50%,${color} 60%,${color});background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
+            pulse:    `color:${color};text-shadow:0 0 8px ${color},0 0 18px ${color};`,
+            rainbow:  `background:linear-gradient(90deg,#ff2e6d,#ff7a2e,#ffd700,#8ce65a,#4fc3f7,#a78bfa,#ff2e6d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
+            hologram: `background:linear-gradient(135deg,#4fc3f7,#a78bfa,#ff2e6d,#ffd700,#4fc3f7);background-size:300% 300%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
+            cyber:    `color:#00e08a;text-shadow:0 0 6px #00e08a,0 0 14px #00e08a;`,
+            outline:  `color:transparent;-webkit-text-stroke:1px ${color};text-shadow:0 0 6px ${color};`,
+            galaxy:   `background:linear-gradient(135deg,#1e1b4b,#7c3aed,#4c1d95,#1e1b4b);background-size:300% 300%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
+        };
+
+        style = (effectInline[effStyle] || effectInline.neon) + ' font-weight: 900; letter-spacing: 0.4px;';
+        extraCls = `clan-tag-effect ctb-${effStyle}`;
+
+        return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
     }
-    // 🎨 ЦВЕТ
-    else if (eq.tag_color && CLAN_SHOP_CACHE[eq.tag_color]) {
-        const val = CLAN_SHOP_CACHE[eq.tag_color].value || {};
-        if (val.color) {
-            style = `color: ${val.color}; text-shadow: 0 0 8px ${val.color}; font-weight: 900; letter-spacing: 0.4px;`;
-            extraCls = 'clan-tag-color';
+
+    // ============================================================
+    // 🌈 ГРАДИЕНТ
+    // ============================================================
+    if (eq.tag_gradient && cache[eq.tag_gradient]) {
+        const val = cache[eq.tag_gradient].value || {};
+        if (Array.isArray(val.gradient) && val.gradient.length) {
+            style = `
+                background: linear-gradient(90deg, ${val.gradient.join(',')});
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+                font-weight: 900;
+                letter-spacing: 0.4px;
+            `.replace(/\s+/g, ' ').trim();
+            extraCls = 'clan-tag-gradient';
+
+            return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
         }
     }
 
-    return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
+    // ============================================================
+    // 🎨 ОБЫЧНЫЙ ЦВЕТ
+    // ============================================================
+    if (eq.tag_color && cache[eq.tag_color]) {
+        const val = cache[eq.tag_color].value || {};
+        if (val.color) {
+            style = `color: ${val.color}; text-shadow: 0 0 8px ${val.color}; font-weight: 900; letter-spacing: 0.4px;`;
+            extraCls = 'clan-tag-color';
+
+            return `<span class="clan-tag ${extraCls}" style="${style}">[${escapeHtml(club.tag)}]</span>`;
+        }
+    }
+
+    // ============================================================
+    // Дефолт — серый тег
+    // ============================================================
+    return `<span class="clan-tag" style="${style}">[${escapeHtml(club.tag)}]</span>`;
 }
 
             // ============================================================
@@ -45788,13 +45843,14 @@ async function equipClanItem(itemId) {
         });
 
         // 2. Все списки (.clan-tag) — лидерборд, чат, комната
-        document.querySelectorAll('.clan-tag').forEach(el => {
-            const parent = el.closest('[data-user-id]');
-            const uid = parent?.dataset.userId;
-            if (uid && clubTagCache[uid]) {
-                el.outerHTML = myClubTagHTML(uid);
-            }
-        });
+// Обновляем все `.clan-tag` в DOM
+document.querySelectorAll('.clan-tag').forEach(el => {
+    const parent = el.closest('[data-user-id]');
+    const uid = parent?.dataset.userId;
+    if (uid && clubTagCache[uid]) {
+        el.outerHTML = myClubTagHTML(uid);
+    }
+});
 
         // 3. Открытый чужой профиль (модалка)
         const playerModal = document.getElementById('playerModal');
