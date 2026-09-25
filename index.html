@@ -20009,44 +20009,139 @@ html.lite-mode .case-open-reel { filter: none !important; }
     opacity: 0.6;
 }
 
-    /* ============================================================ */
-/* 🏷️ ТЕГ КЛАНА В СПИСКАХ (leaderboard / chat / room)          */
 /* ============================================================ */
+/* 🏷️ ТЕГ КЛАНА В СПИСКАХ                                       */
+/* Упрощённые эффекты — БЕЗ text-shadow с большим blur          */
+/* БЕЗ filter: drop-shadow — они дают блюр в WebView            */
+/* ============================================================ */
+
 .clan-tag {
     display: inline-block;
     vertical-align: middle;
     font-weight: 900;
     letter-spacing: 0.4px;
-    transition: filter 0.2s ease;
 }
 
-/* Эффекты в списках — те же .ctb-* что в профиле, но чуть слабее */
-.clan-tag.ctb-neon     { animation: ctbNeonPulse 2.2s ease-in-out infinite; }
-.clan-tag.ctb-blood    { animation: ctbBlood 3s ease-in-out infinite; }
-.clan-tag.ctb-electric { animation: ctbElectric 0.18s steps(2) infinite; }
-.clan-tag.ctb-pulse    { animation: ctbPulse 1.4s ease-in-out infinite; display: inline-block; }
-.clan-tag.ctb-cyber    { animation: ctbCyber 3s linear infinite; }
+/* ============================================================ */
+/* ✨ ЭФФЕКТЫ В СПИСКАХ — только чистый цвет + мягкая тень      */
+/* ============================================================ */
 
-/* Бегущие градиенты — в списках медленнее, чтобы не отвлекать */
+/* neon — оставляем одно свечение, убираем многослойность */
+.clan-tag.ctb-neon {
+    color: var(--ctb-c, #00e08a);
+    text-shadow: 0 0 4px var(--ctb-c, #00e08a);
+}
+
+/* glass — без blur, только чёткая тень-обводка */
+.clan-tag.ctb-glass {
+    color: var(--ctb-c, #a78bfa);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.3), 0 0 3px var(--ctb-c, #a78bfa);
+}
+
+/* gold — оставляем gradient, но БЕЗ drop-shadow */
+.clan-tag.ctb-gold {
+    background: linear-gradient(180deg, #fff5cc 0%, #ffd700 40%, #b8860b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* ❌ убираем filter: drop-shadow */
+}
+
+/* blood — без пульсации, только красный цвет + лёгкая тень */
+.clan-tag.ctb-blood {
+    color: #ff2e4d;
+    text-shadow: 0 0 4px #ff2e4d;
+    /* ❌ убираем animation: ctbBlood */
+}
+
+/* ice — один слой свечения */
+.clan-tag.ctb-ice {
+    color: #7dd3fc;
+    text-shadow: 0 0 4px #7dd3fc;
+}
+
+/* fire — градиент БЕЗ анимации фона и БЕЗ drop-shadow */
 .clan-tag.ctb-fire {
-    animation: ctbFire 3s linear infinite;
-}
-.clan-tag.ctb-shimmer {
-    animation: ctbShimmer 4s linear infinite;
-}
-.clan-tag.ctb-rainbow {
-    animation: ctbRainbow 6s linear infinite;
-}
-.clan-tag.ctb-hologram {
-    animation: ctbHologram 8s ease-in-out infinite;
-}
-.clan-tag.ctb-galaxy {
-    animation: ctbGalaxy 8s ease-in-out infinite;
+    background: linear-gradient(90deg, #ff1f00, #ff8c00, #ffe066, #ff8c00, #ff1f00);
+    background-size: 100% 100%;   /* статичный, не бегущий */
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* ❌ без animation и filter */
 }
 
-@keyframes ctbNeonPulse {
-    0%, 100% { filter: brightness(1); }
-    50%      { filter: brightness(1.35); }
+/* electric — без мерцания, только холодный цвет */
+.clan-tag.ctb-electric {
+    color: #7dd3fc;
+    text-shadow: 0 0 4px #7dd3fc;
+    /* ❌ без animation: ctbElectric */
+}
+
+/* shimmer — статичный градиент БЕЗ бегущего блика */
+.clan-tag.ctb-shimmer {
+    background: linear-gradient(90deg, var(--ctb-c, #ffd700), #fff 50%, var(--ctb-c, #ffd700));
+    background-size: 100% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* ❌ без animation и drop-shadow */
+}
+
+/* pulse — без скалирования, только цвет */
+.clan-tag.ctb-pulse {
+    color: var(--ctb-c, #ff2e6d);
+    text-shadow: 0 0 4px var(--ctb-c, #ff2e6d);
+    /* ❌ без animation: ctbPulse */
+}
+
+/* rainbow — статичный градиент, не бегущий */
+.clan-tag.ctb-rainbow {
+    background: linear-gradient(90deg, #ff2e6d, #ff7a2e, #ffd700, #8ce65a, #4fc3f7, #a78bfa);
+    background-size: 100% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* ❌ без animation */
+}
+
+/* hologram — статичный градиент */
+.clan-tag.ctb-hologram {
+    background: linear-gradient(135deg, #4fc3f7, #a78bfa, #ff2e6d, #ffd700);
+    background-size: 100% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* ❌ без animation и drop-shadow */
+}
+
+/* cyber — просто зелёный, без hue-rotate */
+.clan-tag.ctb-cyber {
+    color: #00e08a;
+    text-shadow: 0 0 4px #00e08a;
+    /* ❌ без animation: ctbCyber */
+}
+
+/* outline — обводка БЕЗ свечения (свечение даёт блюр) */
+.clan-tag.ctb-outline {
+    color: transparent;
+    -webkit-text-stroke: 1px var(--ctb-c, #fff);
+    /* ❌ без text-shadow */
+}
+
+/* galaxy — статичный градиент */
+.clan-tag.ctb-galaxy {
+    background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 30%, #7c3aed 60%, #4c1d95 100%);
+    background-size: 100% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* ❌ без animation и drop-shadow */
 }
 
 /* ============================================================ */
