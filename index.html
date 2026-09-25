@@ -22687,7 +22687,11 @@ function getQuestSvg(questId, size = 20) {
 // ============================================================
 // 🎯 SVG-ИКОНКИ РАНГОВ (киберспортивный стиль, outline)
 // ============================================================
+const _rankSvgCache = {};
 function getRankSvg(level, size = 24) {
+    const key = `${level}_${size}`;
+    if (_rankSvgCache[key]) return _rankSvgCache[key];
+
     const common = `width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"`;
 
     const svgs = {
@@ -22749,7 +22753,9 @@ function getRankSvg(level, size = 24) {
             </svg>`,
     };
 
-    return svgs[level] || svgs[1];
+    const result = svgs[level] || svgs[1];
+    _rankSvgCache[key] = result;
+    return result;
 }
 
 // ============================================================
@@ -25783,15 +25789,17 @@ async function loadLeaderboard() {
         </div>
     `;
 
-    // 2. Шиммеры
-    container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
+    // 2. Шиммеры — только если контейнер пустой
+    if (!container.querySelector('.leaderboard-item')) {
+        container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
+    }
     if (titleEl) titleEl.style.display = 'none';
 
     try {
-const { data, error } = await sb.from('users')
-    .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod, equipped_items, last_seen')
-    .order('elo', { ascending: false })
-    .limit(50);
+        const { data, error } = await sb.from('users')
+            .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, is_admin, is_mod, equipped_items, last_seen')
+            .order('elo', { ascending: false })
+            .limit(50);
         if (error) throw error;
 
         const others = data || [];
@@ -25805,7 +25813,7 @@ const { data, error } = await sb.from('users')
         const top10 = others.slice(0, 10);
         container.innerHTML = top10.map((user, i) => renderLbItem(user, i + 1)).join('');
 
-        // 🔥 Догружаем shop_items и применяем кастомизацию
+        // 🔥 Догружаем shop_items
         const allItems = new Set();
         top10.forEach(u => {
             if (u.equipped_items) Object.values(u.equipped_items).forEach(id => allItems.add(id));
@@ -25817,9 +25825,12 @@ const { data, error } = await sb.from('users')
             (shopItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         }
 
+        // 🔥 Map вместо find — O(N) вместо O(N²)
+        const userMap = new Map(top10.map(u => [Number(u.telegram_id), u]));
+
         container.querySelectorAll('.leaderboard-item[data-user-id]').forEach(el => {
             const uid = Number(el.dataset.userId);
-            const user = top10.find(u => u.telegram_id === uid);
+            const user = userMap.get(uid);
             if (user) applyListCustomization(el, user);
         });
 
@@ -25870,6 +25881,8 @@ function renderLbItem(user, rank) {
 async function openFullLeaderboard() {
     switchPage('leaderboard');
     const c = document.getElementById('leaderboardFull');
+    if (!c) return;
+
     c.innerHTML = Array(8).fill('<div class="loading-shimmer"></div>').join('');
 
     try {
@@ -25889,7 +25902,7 @@ async function openFullLeaderboard() {
 
         c.innerHTML = others.map((user, i) => renderLbItem(user, i + 1)).join('');
 
-        // 🔥 Применяем кастомизацию
+        // 🔥 Догружаем shop_items
         const allItems = new Set();
         others.forEach(u => {
             if (u.equipped_items) Object.values(u.equipped_items).forEach(id => allItems.add(id));
@@ -25901,13 +25914,16 @@ async function openFullLeaderboard() {
             (shopItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         }
 
+        // 🔥 Map вместо find — критично для 500 элементов
+        const userMap = new Map(others.map(u => [Number(u.telegram_id), u]));
+
         c.querySelectorAll('.leaderboard-item[data-user-id]').forEach(el => {
             const uid = Number(el.dataset.userId);
-            const user = others.find(u => u.telegram_id === uid);
+            const user = userMap.get(uid);
             if (user) applyListCustomization(el, user);
         });
     } catch (e) {
-        console.error(e);
+        console.error('openFullLeaderboard:', e);
         c.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка</div>';
     }
 }
@@ -28746,6 +28762,8 @@ function onMatchFound(match) {
     subscribeMatchRealtime();
 }
 
+let _matchRerenderTimer = null;
+
 async function subscribeMatchRealtime() {
     if (currentMatchChannel) {
         try { sb.removeChannel(currentMatchChannel); } catch (e) {}
@@ -28764,70 +28782,74 @@ async function subscribeMatchRealtime() {
             const fresh = payload.new;
             if (!fresh) return;
 
-            const prevStatus = currentMatch?.status;
-            currentMatch = fresh;
+            // 🔥 Debounce 200мс — защита от частых обновлений last_action_at
+            clearTimeout(_matchRerenderTimer);
+            _matchRerenderTimer = setTimeout(async () => {
+                const prevStatus = currentMatch?.status;
+                currentMatch = fresh;
 
-            console.log('📥 match event:', prevStatus, '→', fresh.status);
+                console.log('📥 match event:', prevStatus, '→', fresh.status);
 
-            // ==== VETO ====
-            if (fresh.status === 'veto') {
-                if (document.getElementById('page-veto')?.classList.contains('active')) {
-                    renderVeto();
-                    startVetoCountdown();
-                } else {
-                    showVetoScreen();
+                // ==== VETO ====
+                if (fresh.status === 'veto') {
+                    if (document.getElementById('page-veto')?.classList.contains('active')) {
+                        renderVeto();
+                        startVetoCountdown();
+                    } else {
+                        showVetoScreen();
+                    }
+                    return;
                 }
-                return;
-            }
 
-            // ==== SIDE_PICK ====
-            if (fresh.status === 'side_pick') {
-                haptic('heavy');
-                if (prevStatus !== 'side_pick') {
-                    showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
-                }
-                stopVetoPolling();
-                if (document.getElementById('page-veto')?.classList.contains('active')) {
-                    renderVeto();
-                    startVetoCountdown();
-                } else {
-                    showVetoScreen();
-                }
-                return;
-            }
-
-            // ==== IN_GAME ====
-            if (fresh.status === 'in_game') {
-                stopVetoPolling();
-                const { data: freshRoom } = await sb.from('rooms')
-                    .select('*').eq('id', fresh.room_id).single();
-                if (freshRoom) {
+                // ==== SIDE_PICK ====
+                if (fresh.status === 'side_pick') {
                     haptic('heavy');
-                    showInGameScreen(freshRoom.id, freshRoom);
+                    if (prevStatus !== 'side_pick') {
+                        showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
+                    }
+                    stopVetoPolling();
+                    if (document.getElementById('page-veto')?.classList.contains('active')) {
+                        renderVeto();
+                        startVetoCountdown();
+                    } else {
+                        showVetoScreen();
+                    }
+                    return;
                 }
-                return;
-            }
 
-            // ==== RESULT ====
-            if (fresh.status === 'result') {
-                stopVetoPolling();
-                showResultScreen();
-                return;
-            }
+                // ==== IN_GAME ====
+                if (fresh.status === 'in_game') {
+                    stopVetoPolling();
+                    const { data: freshRoom } = await sb.from('rooms')
+                        .select('*').eq('id', fresh.room_id).single();
+                    if (freshRoom) {
+                        haptic('heavy');
+                        showInGameScreen(freshRoom.id, freshRoom);
+                    }
+                    return;
+                }
 
-            // ==== FINISHED ====
-            if (fresh.status === 'finished') {
-                stopVetoPolling();
-                showFinishedScreen();
-                return;
-            }
+                // ==== RESULT ====
+                if (fresh.status === 'result') {
+                    stopVetoPolling();
+                    showResultScreen();
+                    return;
+                }
 
-            // ==== CANCELLED ====
-            if (fresh.status === 'cancelled') {
-                stopVetoPolling();
-                showVetoCancelledScreen(fresh.cancelled_reason);
-                return;
-            }
+                // ==== FINISHED ====
+                if (fresh.status === 'finished') {
+                    stopVetoPolling();
+                    showFinishedScreen();
+                    return;
+                }
+
+                // ==== CANCELLED ====
+                if (fresh.status === 'cancelled') {
+                    stopVetoPolling();
+                    showVetoCancelledScreen(fresh.cancelled_reason);
+                    return;
+                }
+            }, 200);
         })
         .subscribe((status) => {
             console.log('📡 match_' + matchId + ' status:', status);
@@ -33975,12 +33997,6 @@ async function enterInGameLinkAndGoResult(url, roomId) {
     }
 }
 
-function getVotesNeeded(totalPlayers) {
-    if (totalPlayers <= 2) return 2;        // 1×1
-    if (totalPlayers <= 4) return 3;        // 2×2
-    return 7;                                // 5×5 (10 игроков)
-}
-
 async function getCancelVotes(roomId) {
     try {
         const { data } = await sb.from('match_cancel_votes')
@@ -35148,7 +35164,9 @@ function showActiveRoomBanner(room) {
 
 function hideActiveRoomBanner() {
     const banner = document.getElementById('activeRoomBanner');
-    if (banner) banner.classList.remove('active');
+    if (banner?.classList.contains('active')) {
+        banner.classList.remove('active');
+    }
 }
 
 async function reopenActiveRoom() {
@@ -37721,6 +37739,17 @@ function subscribeClubsRealtime() {
                 // Форсируем перезагрузку CLAN_SHOP_CACHE на случай
                 // если админ добавил/удалил товар
                 await loadClanShopCache(true);
+
+                // 🔥 Обновляем казну клана если открыт магазин
+if (club && club.coins !== undefined) {
+    if (myClub?.club && Number(myClub.club.id) === Number(club.id)) {
+        myClub.club.coins = club.coins;
+        
+        // Если открыт магазин клана — обновляем цифру
+        const balanceEl = document.querySelector('.shop-hero-balance span');
+        if (balanceEl) balanceEl.textContent = club.coins;
+    }
+}
 
                 Object.keys(clubTagCache).forEach(uid => {
                     if (clubTagCache[uid]?.club_id === club.id) {
@@ -45769,7 +45798,9 @@ async function openClanDonateSheet() {
             const err = data?.error || 'unknown';
             if (err === 'not_enough_coins') {
                 showToast(`❌ У тебя только ${data.user_coins} монет`);
-            } else if (err === 'user_or_club_not_found') {
+            } else if (err === 'user_not_found') {
+                showToast('❌ Пользователь не найден');
+            } else if (err === 'club_not_found') {
                 showToast('❌ Клан не найден');
             } else {
                 showToast('❌ Ошибка: ' + err);
@@ -45777,7 +45808,6 @@ async function openClanDonateSheet() {
             return;
         }
 
-        // Обновляем локальные данные
         currentUser.coins = data.user_coins;
         if (myClub.club) myClub.club.coins = data.club_coins;
 
@@ -45922,7 +45952,6 @@ async function buyClanItem(itemId, price) {
         || myClub.club.owner_id === currentUser.telegram_id;
     if (!canBuy) { showToast('Только OWNER / ELDER'); return; }
 
-    // Проверяем баланс клана для быстрого ответа
     const clubCoins = myClub.club?.coins || 0;
     if (clubCoins < price) {
         showToast(`❌ В казне клана только ${clubCoins} монет`);
@@ -45955,7 +45984,6 @@ async function buyClanItem(itemId, price) {
             return;
         }
 
-        // Обновляем локальные данные
         if (myClub.club) myClub.club.coins = data.club_coins;
 
         showToast('✅ Куплено');
