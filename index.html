@@ -37,9 +37,8 @@
 <script src="./telegram-web-app.js" onerror="console.warn('⚠️ Telegram SDK не загрузился локально');"></script>
 
 <!-- Supabase — тоже лучше скачать локально, но CDN обычно работает -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
 <style>
         /* ============================================================
    ТЕМЫ
@@ -22758,14 +22757,38 @@ function getRankSvg(level, size = 24) {
 // ============================================================
 const AppState = {
     draftScore: { a: null, b: null, matchId: null },
-    friendRelations: {},
     ovWinner: null,
-    reportSelectedReason: null,
     submitVoteLock: false,
+    currentCancellingMatchId: null,
+
+    friendRelations: {},
+    reportSelectedReason: null,
+    reportSelectedReasonV2: null,
+
     buyInProgress: new Set(),
     equipInProgress: new Set(),
-    clubShopActiveCategory: null,
     shopActiveCategory: null,
+    clubShopActiveCategory: null,
+    clanShopCacheLoaded: false,
+
+    pendingCoverKey: null,
+    newBgBlob: null,
+    newDxpBgBlob: null,
+
+    share: {
+        text: null,
+        user: null,
+        blob: null,
+        userData: null,
+        manualText: null,
+    },
+
+    channels: {
+        queue: null,
+        partyInvite: null,
+    },
+
+    rerenderProfileTimer: null,
 };
 
         // ============================================================
@@ -23816,13 +23839,13 @@ function openOverrideResultSheet() {
 
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
-    window._ovWinner = currentMatch.winner_team || null;
-    if (window._ovWinner === 'A') document.getElementById('ovWinA')?.classList.add('active');
-    if (window._ovWinner === 'B') document.getElementById('ovWinB')?.classList.add('active');
+    AppState.ovWinner = currentMatch.winner_team || null;
+    if (AppState.ovWinner === 'A') document.getElementById('ovWinA')?.classList.add('active');
+    if (AppState.ovWinner === 'B') document.getElementById('ovWinB')?.classList.add('active');
 }
 
 function ovSelectWinner(team) {
-    window._ovWinner = team;
+    AppState.ovWinner = team;
     document.getElementById('ovWinA')?.classList.toggle('active', team === 'A');
     document.getElementById('ovWinB')?.classList.toggle('active', team === 'B');
 }
@@ -23830,20 +23853,20 @@ function ovSelectWinner(team) {
 function closeOverrideSheet() {
     document.getElementById('overrideOverlay')?.remove();
     document.getElementById('overrideSheet')?.remove();
-    window._ovWinner = null;
+    AppState.ovWinner = null;
 }
 
 async function submitOverride() {
     if (!isModerator(currentUser)) return;
     if (!currentMatch) return;
-    if (!window._ovWinner) { showToast('Выбери победителя'); return; }
+    if (!AppState.ovWinner) { showToast('Выбери победителя'); return; }
 
     const scoreA = parseInt(document.getElementById('ovScoreA').value) || 0;
     const scoreB = parseInt(document.getElementById('ovScoreB').value) || 0;
 
     if (scoreA === scoreB) { showToast('Счёт не может быть равным'); return; }
-    if (window._ovWinner === 'A' && scoreA <= scoreB) { showToast('Счёт не совпадает с победителем'); return; }
-    if (window._ovWinner === 'B' && scoreB <= scoreA) { showToast('Счёт не совпадает с победителем'); return; }
+    if (AppState.ovWinner === 'A' && scoreA <= scoreB) { showToast('Счёт не совпадает с победителем'); return; }
+    if (AppState.ovWinner === 'B' && scoreB <= scoreA) { showToast('Счёт не совпадает с победителем'); return; }
 
     try {
         // 1. Откатываем старые дельты, если матч уже был завершён
@@ -23884,7 +23907,7 @@ async function submitOverride() {
             match_id: currentMatch.id,
             telegram_id: Number(currentMatch.captain_a_id),
             team: 'A', is_captain: true,
-            winner: window._ovWinner,
+            winner: AppState.ovWinner,
             score_a: scoreA, score_b: scoreB,
             created_at: new Date().toISOString()
         }, { onConflict: 'match_id,telegram_id' });
@@ -23893,7 +23916,7 @@ async function submitOverride() {
             match_id: currentMatch.id,
             telegram_id: Number(currentMatch.captain_b_id),
             team: 'B', is_captain: true,
-            winner: window._ovWinner,
+            winner: AppState.ovWinner,
             score_a: scoreA, score_b: scoreB,
             created_at: new Date().toISOString()
         }, { onConflict: 'match_id,telegram_id' });
@@ -23913,7 +23936,7 @@ async function submitOverride() {
         const teamB = currentMatch.team_b_players || [];
         for (const p of [...teamA, ...teamB]) {
             await notify(Number(p.telegram_id),
-                `⚖️ Модератор переопределил результат матча. Новый счёт: <b>${scoreA} : ${scoreB}</b>, победитель — команда <b>${window._ovWinner}</b>.`,
+                `⚖️ Модератор переопределил результат матча. Новый счёт: <b>${scoreA} : ${scoreB}</b>, победитель — команда <b>${AppState.ovWinner}</b>.`,
                 'party'
             );
         }
@@ -24041,30 +24064,35 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
-        let toastTimer;
-        function showToast(msg, type = 'info') {
+let toastTimer;
+function showToast(msg, type = 'info') {
     const toast = document.getElementById('toast');
-    
-    // Иконка по типу
-    const icons = { 
-        info: '💬', 
-        success: '✅', 
-        error: '❌', 
-        warning: '⚠️' 
-    };
-    
-    // Автоопределение типа по эмодзи в тексте
+    if (!toast) return;
+
+    const icons = { info: '💬', success: '✅', error: '❌', warning: '⚠️' };
+
     if (msg.startsWith('✅')) type = 'success';
     else if (msg.startsWith('❌') || msg.startsWith('🚫')) type = 'error';
     else if (msg.startsWith('⚠️') || msg.startsWith('⏰')) type = 'warning';
-    
-    toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+
+    const cleanMsg = msg.replace(/^[✅❌🚫⚠️⏰💬🏆🗑️📋🔔🔒💰🎁🎮📤🎯⚡🛡️👑🚀📊⏳]\s*/u, '');
+
+    toast.innerHTML = '';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'toast-icon';
+    iconSpan.textContent = icons[type] || '💬';
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = cleanMsg;
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(textSpan);
+
     toast.className = `toast toast-${type} show`;
-    
+
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => {
-        toast.classList.remove('show');
-    }, 2500);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
 function renderAvatar(user) {
@@ -24083,14 +24111,15 @@ function renderAvatar(user) {
 
 async function notify(telegramId, text, type = null) {
     if (!telegramId || !text) return;
-    if (String(telegramId) === String(currentUser?.telegram_id)) return;
+    if (String(telegramId) === String(currentUser?.telegram_id || '')) return;
 
-    // Проверяем флаг bot_notify_* у получателя
     if (type) {
         try {
             const { data: u } = await sb.from('users')
                 .select('notify_off, bot_notify_friend_requests, bot_notify_club_requests, bot_notify_party_invites, bot_notify_messages')
-                .eq('telegram_id', telegramId).maybeSingle();
+                .eq('telegram_id', telegramId)
+                .maybeSingle();
+
             if (u) {
                 if (u.notify_off === true) return;
                 if (type === 'friend' && u.bot_notify_friend_requests === false) return;
@@ -24098,7 +24127,9 @@ async function notify(telegramId, text, type = null) {
                 if (type === 'party' && u.bot_notify_party_invites === false) return;
                 if (type === 'message' && u.bot_notify_messages === false) return;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('notify flags check:', e);
+        }
     }
 
     try {
@@ -24111,7 +24142,17 @@ async function notify(telegramId, text, type = null) {
             },
             body: JSON.stringify({ telegram_id: telegramId, text })
         });
-    } catch (e) {}
+    } catch (e) {
+        console.warn('notify fetch:', e);
+    }
+}
+
+async function notifyMany(telegramIds, text, type = null) {
+    if (!Array.isArray(telegramIds) || !telegramIds.length || !text) return;
+    const ids = telegramIds
+        .filter(id => id && String(id) !== String(currentUser?.telegram_id || ''));
+    if (!ids.length) return;
+    await Promise.all(ids.map(id => notify(id, text, type)));
 }
 
         async function mmCall(action, body = {}) {
@@ -24140,18 +24181,11 @@ async function notify(telegramId, text, type = null) {
 // ============================================================
 function startOnlineHeartbeat() {
     if (!currentUser) return;
-
-    const tick = async () => {
-        if (document.hidden) return;
-        try {
-            await sb.from('users')
-                .update({ last_seen: new Date().toISOString() })
-                .eq('telegram_id', currentUser.telegram_id);
-        } catch (e) {}
-    };
-
-    tick();
-    setInterval(tick, 30000);
+    sb.from('users')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('telegram_id', currentUser.telegram_id)
+        .then(() => {})
+        .catch(() => {});
 }
 
         // ============================================================
@@ -24304,13 +24338,6 @@ async function init() {
         startOnlineHeartbeat();   // 🟢 ЗАПУСКАЕМ HEARTBEAT
         updateQuestsBadge();
         updateCasesBadge();
-        // 🔄 Автообновление online-статусов каждые 30 сек
-setInterval(() => {
-    document.querySelectorAll('[data-online-status]').forEach(el => {
-        const iso = el.dataset.lastSeen || '';
-        updateOnlineStatusEl(el, iso);
-    });
-}, 30000);
 
         // Гасим UI комнаты
         activeRoomId = null;
@@ -24371,16 +24398,16 @@ setInterval(() => {
 
         // Автоочистка
         cleanupStaleRooms();
-        setInterval(cleanupStaleRooms, 60000);
-
-        // Периодическая проверка комнаты
-        setInterval(checkActiveRoom, 4000);
+        // Периодические задачи — через единый тикер (см. registerTicker)
 
         // Кнопка модератора
         if (isModerator(currentUser) && !currentUser.is_admin) {
             const modBtn = document.getElementById('moderatorMenuBtn');
             if (modBtn) modBtn.style.display = 'flex';
         }
+
+        // 🔥 Запускаем единый тикер
+        startGlobalTicker();
     } catch (e) {
         console.error('Init error:', e);
         showToast('Ошибка: ' + (e?.message || e));
@@ -24400,7 +24427,11 @@ function applyHeaderAvatar(user) {
     }
 }
 
-                function switchPage(page) {
+function switchPage(page) {
+    if (page === 'dashboard') {
+        cleanupClubTagCache();
+    }
+
     // 🔥 Если переходим на главную — гасим UI комнаты
     if (page === 'dashboard') {
         const banner = document.getElementById('activeRoomBanner');
@@ -24578,7 +24609,21 @@ function renderDashboard(user) {
             renderProfileView(user);
         }
 
-            let clubTagCache = {}; // { telegram_id: { tag, name } }
+let clubTagCache = {};
+const CLUB_TAG_CACHE_MAX = 300;
+
+function cleanupClubTagCache() {
+    const keys = Object.keys(clubTagCache);
+    if (keys.length <= CLUB_TAG_CACHE_MAX) return;
+    const keepCount = Math.floor(CLUB_TAG_CACHE_MAX * 0.66);
+    const removeCount = keys.length - keepCount;
+    keys.slice(0, removeCount).forEach(k => delete clubTagCache[k]);
+    console.log(`🧹 clubTagCache: удалено ${removeCount}, осталось ${Object.keys(clubTagCache).length}`);
+}
+
+function resetClubTagCache() {
+    clubTagCache = {};
+}
 
 async function loadClubTagsForUsers(userIds) {
     if (!userIds?.length) return;
@@ -24610,6 +24655,8 @@ async function loadClubTagsForUsers(userIds) {
                 };
             }
         });
+
+        cleanupClubTagCache();
     } catch (e) {
         console.warn('loadClubTags:', e);
     }
@@ -27309,19 +27356,22 @@ async function createClub(name, tag, description) {
 
                 // Уведомляем всех членов Клана
                 const others = myClub.members.filter(m => m.telegram_id !== currentUser.telegram_id);
-                for (const m of others) {
-                    await sb.from('party_invites').upsert({
+
+                await Promise.all([
+                    ...others.map(m => sb.from('party_invites').upsert({
                         party_id: party.id,
                         from_id: currentUser.telegram_id,
                         to_id: m.telegram_id,
                         status: 'pending'
-                    }, { onConflict: 'party_id,to_id' });
+                    }, { onConflict: 'party_id,to_id' })),
 
-                    notify(m.telegram_id,
+                    notifyMany(
+                        others.map(m => m.telegram_id),
                         `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> создал клановую битву в Клане <b>${escapeHtml(myClub.club.name)}</b>.\n` +
-                    `Вступи в игру! Открой De1mos Faceit → Клан.`, 'club'
-                    );
-                }
+                        `Вступи в игру! Открой De1mos Faceit → Клан.`,
+                        'club'
+                    ),
+                ]);
 
                 showToast(`✅ Приглашения отправлены (${others.length})`);
                 switchPage('play');
@@ -28274,9 +28324,9 @@ async function askJoinRoom(partyId) {
         }
 
         function subscribePartyInvitesRealtime() {
-            if (window._partyInviteChannel) sb.removeChannel(window._partyInviteChannel);
+            if (AppState.channels.partyInvite) sb.removeChannel(AppState.channels.partyInvite);
 
-            window._partyInviteChannel = sb.channel('party_invites_' + currentUser.telegram_id)
+            AppState.channels.partyInvite = sb.channel('party_invites_' + currentUser.telegram_id)
                 .on('postgres_changes', {
                     event: 'INSERT',
                     schema: 'public',
@@ -28299,8 +28349,8 @@ async function askJoinRoom(partyId) {
         }
 
         function subscribeQueueRealtime() {
-            if (window._queueChannel) sb.removeChannel(window._queueChannel);
-            window._queueChannel = sb.channel('queue_realtime')
+            if (AppState.channels.queue) sb.removeChannel(AppState.channels.queue);
+            AppState.channels.queue = sb.channel('queue_realtime')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'mm_queue' }, () => {
                     if (document.getElementById('page-play').classList.contains('active')) {
                         loadOpenRooms();
@@ -29506,16 +29556,15 @@ async function pickSideVeto(side) {
         // 4. Перерисовываем — покажем финал на пару секунд
         renderVeto();
 
-        // 5. Уведомляем всех
         const allPlayers = [
             ...(currentMatch.team_a_players || []),
             ...(currentMatch.team_b_players || [])
         ];
-        for (const p of allPlayers) {
-            notify(p.telegram_id,
-                `🎮 Матч готов! Карта: <b>${escapeHtml(currentMatch.final_map)}</b>. Стороны: A — ${side}, B — ${opposite}.`,
-                'party'
-            );
+        await notifyMany(
+            allPlayers.map(p => p.telegram_id),
+            `🎮 Матч готов! Карта: <b>${escapeHtml(currentMatch.final_map)}</b>. Стороны: A — ${side}, B — ${opposite}.`,
+            'party'
+        );
         }
 
         // 6. Через 1.5 сек — in-game экран с правильным room
@@ -33000,20 +33049,25 @@ async function checkTeamsReady(roomId, room) {
             const { data: roomData } = await sb.from('rooms')
                 .select('leader_id, name').eq('id', roomId).single();
 
-            for (const p of allPlayers) {
-                if (String(p.telegram_id) === String(roomData.leader_id)) {
-                    await notify(p.telegram_id,
-                        `✅ <b>Ваша комната заполнена!</b>\n` +
-                        `Все игроки собрались. <b>Запускайте матч!</b>\n\n` +
-                        `🎮 ${escapeHtml(roomData.name)}`, 'party'
-                    );
-                } else {
-                    await notify(p.telegram_id,
-                        `🎮 <b>Заходи в приложение, игра вот-вот начнётся!</b>\n` +
-                        `Все игроки собрались в комнате <b>${escapeHtml(roomData.name)}</b>.`, 'party'
-                    );
-                }
-            }
+            const leaderId = Number(roomData.leader_id);
+            const leaderIds = [];
+            const otherIds = [];
+            allPlayers.forEach(p => {
+                if (Number(p.telegram_id) === leaderId) leaderIds.push(p.telegram_id);
+                else otherIds.push(p.telegram_id);
+            });
+
+            await Promise.all([
+                notifyMany(leaderIds,
+                    `✅ <b>Ваша комната заполнена!</b>\n` +
+                    `Все игроки собрались. <b>Запускайте матч!</b>\n\n` +
+                    `🎮 ${escapeHtml(roomData.name)}`, 'party'
+                ),
+                notifyMany(otherIds,
+                    `🎮 <b>Заходи в приложение, игра вот-вот начнётся!</b>\n` +
+                    `Все игроки собрались в комнате <b>${escapeHtml(roomData.name)}</b>.`, 'party'
+                ),
+            ]);
 
             await sb.from('rooms').update({
                 teams_notified_at: new Date().toISOString()
@@ -34048,12 +34102,7 @@ async function cancelMatchAndExitAll(roomId, reason = 'vote') {
             ? '🚫 Матч отменён голосованием игроков.'
             : '🚫 Матч отменён.';
 
-        for (const id of allIds) {
-            if (id === me) continue;
-            try {
-                await notify(id, msg, 'party');
-            } catch (e) {}
-        }
+        await notifyMany(allIds, msg, 'party');
 
         // 5. Удаляем всех из комнаты
         try {
@@ -34108,7 +34157,7 @@ async function fullExitFromMatch(roomId) {
         activeRoomId = null;
         currentPlayRoomId = null;
         currentMatch = null;
-        window._ovWinner = null;
+        AppState.ovWinner = null;
 
         // Гасим все UI-элементы
         hideActiveRoomBanner();
@@ -34137,26 +34186,28 @@ async function fullExitFromMatch(roomId) {
     }
 }
 
-         /**
+/**
  * Единая отмена матча
  * @param {number} roomId
- * @param {'veto_timeout' | 'vote' | 'host_closed' | 'other'} reason
+ * @param {'veto_timeout' | 'vote' | 'host_closed' | 'stale_cleanup' | 'other'} reason
  */
 async function cancelMatch(roomId, reason = 'other') {
+    // 🔥 Если roomId не передан — пробуем найти через game_match
     if (!roomId) {
-        // 🔥 Пробуем найти комнату через game_match
         try {
             const { data: match } = await sb.from('game_matches')
                 .select('room_id')
-                .eq('id', window._currentCancellingMatchId || 0)
+                .eq('id', AppState.currentCancellingMatchId || 0)
                 .maybeSingle();
             if (match?.room_id) roomId = match.room_id;
-        } catch (e) {}
+        } catch (e) {
+            console.warn('cancelMatch: resolve roomId:', e);
+        }
     }
     if (!roomId) return;
 
     try {
-        // 1. Сразу собираем СПИСОК ВСЕХ игроков ДО любых удалений
+        // 1. Собираем ВСЕХ игроков комнаты ДО любых удалений
         const { data: players } = await sb.from('room_players')
             .select('telegram_id')
             .eq('room_id', roomId);
@@ -34166,10 +34217,13 @@ async function cancelMatch(roomId, reason = 'other') {
 
         // 2. Проверяем — не отменён ли уже (защита от двойных вызовов)
         const { data: room } = await sb.from('rooms')
-            .select('status').eq('id', roomId).maybeSingle();
+            .select('status')
+            .eq('id', roomId)
+            .maybeSingle();
+
         if (!room || room.status === 'cancelled') return;
 
-        // 3. Меняем статус
+        // 3. Меняем статус комнаты
         await sb.from('rooms').update({
             status: 'cancelled',
             cancelled_at: new Date().toISOString(),
@@ -34177,48 +34231,57 @@ async function cancelMatch(roomId, reason = 'other') {
             cancelled_by: String(currentUser?.telegram_id || 'system')
         }).eq('id', roomId);
 
-        // 4. Отправляем уведомление ВСЕМ (кроме себя)
+        // 4. Отправляем уведомления ВСЕМ параллельно
         const texts = {
-            'veto_timeout': '⏰ Матч отменён: капитан не успел забрать карту вовремя.',
-            'vote':         '🚫 Матч отменён по голосованию игроков.',
-            'host_closed':  '🚪 Хост закрыл комнату. Матч отменён.',
-            'other':        '🚫 Матч отменён.'
+            'veto_timeout':   '⏰ Матч отменён: капитан не успел забрать карту вовремя.',
+            'side_timeout':   '⏰ Матч отменён: капитан не выбрал сторону вовремя.',
+            'vote':           '🚫 Матч отменён по голосованию игроков.',
+            'host_closed':    '🚪 Хост закрыл комнату. Матч отменён.',
+            'stale_cleanup':  '⏰ Матч отменён: игроки слишком долго не проявляли активность.',
+            'no_match':       '❌ Матч отменён: не удалось создать игру.',
+            'other':          '🚫 Матч отменён.'
         };
         const msg = texts[reason] || texts['other'];
 
-        for (const id of allIds) {
-            if (String(id) === String(currentUser?.telegram_id)) continue;
-            try {
-                await notify(id, msg, 'party');
-            } catch (e) {}
+        await notifyMany(allIds, msg, 'party');
+
+        // 5. Удаляем участников сразу
+        try {
+            await sb.from('room_players').delete().eq('room_id', roomId);
+        } catch (e) {
+            console.warn('cancelMatch: delete room_players:', e);
         }
 
-        // 5. Сразу удаляем участников, но комнату — через 3 сек
-try {
-    await sb.from('room_players').delete().eq('room_id', roomId);
-} catch (e) { console.warn('delete room_players:', e); }
+        // 6. Комнату и всё связанное — через 3 секунды
+        setTimeout(async () => {
+            try {
+                await sb.from('room_messages').delete().eq('room_id', roomId);
+            } catch (e) { console.warn('cancelMatch: delete room_messages:', e); }
 
-setTimeout(async () => {
-    try {
-        await sb.from('room_messages').delete().eq('room_id', roomId);
-        await sb.from('match_cancel_votes').delete().eq('match_id', roomId);
-        await sb.from('rooms').delete().eq('id', roomId);
-    } catch (e) {}
-}, 3000);
+            try {
+                await sb.from('match_cancel_votes').delete().eq('match_id', roomId);
+            } catch (e) { console.warn('cancelMatch: delete votes:', e); }
 
-// Гасим UI немедленно
-if (activeRoomId === roomId) {
-    activeRoomId = null;
-    hideActiveRoomBanner();
-    const indicator = document.getElementById('headerRoomIndicator');
-    if (indicator) indicator.style.display = 'none';
-    const flt = document.getElementById('playEnterFloat');
-    if (flt) flt.classList.remove('active');
-}
+            try {
+                await sb.from('rooms').delete().eq('id', roomId);
+            } catch (e) { console.warn('cancelMatch: delete room:', e); }
+        }, 3000);
+
+        // 7. Гасим локальный UI, если мы были в этой комнате
+        if (activeRoomId === roomId) {
+            activeRoomId = null;
+            hideActiveRoomBanner();
+
+            const indicator = document.getElementById('headerRoomIndicator');
+            if (indicator) indicator.style.display = 'none';
+
+            const flt = document.getElementById('playEnterFloat');
+            if (flt) flt.classList.remove('active');
+        }
     } catch (e) {
         console.error('cancelMatch:', e);
     }
-}   
+}
 
 async function cancelMatchByVote(roomId) {
     await cancelMatch(roomId, 'vote');
@@ -37308,170 +37371,63 @@ function subscribeUsersRealtime() {
 
     const myId = Number(currentUser.telegram_id);
 
-    console.log('📡 Подписка на users realtime...');
+    console.log('📡 Подписка на свой профиль (users realtime)...');
 
-    usersRealtimeChannel = sb.channel('users_rt_global_' + Date.now())
+    usersRealtimeChannel = sb.channel('users_rt_self_' + myId)
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'users'
+            table: 'users',
+            filter: `telegram_id=eq.${myId}`
         }, async (payload) => {
             const u = payload.new;
             if (!u) return;
 
-            console.log('📥 users UPDATE:', u.telegram_id, '| equipped:', u.equipped_items);
+            const eloChanged = u.elo !== currentUser.elo;
+            const coinsChanged = u.coins !== currentUser.coins;
+            const equipChanged = JSON.stringify(u.equipped_items || {}) !== JSON.stringify(currentUser.equipped_items || {});
+            const statsChanged = u.wins !== currentUser.wins
+                || u.matches_played !== currentUser.matches_played
+                || u.display_name !== currentUser.display_name
+                || u.custom_avatar !== currentUser.custom_avatar;
 
-            // ============================================================
-            // 1. ЭТО Я — обновляем currentUser и всё, что от него зависит
-            // ============================================================
-            if (Number(u.telegram_id) === myId) {
-                const eloChanged = u.elo !== currentUser.elo;
-                const statsChanged = u.wins !== currentUser.wins
-                    || u.matches_played !== currentUser.matches_played
-                    || u.display_name !== currentUser.display_name
-                    || u.custom_avatar !== currentUser.custom_avatar;
-                const coinsChanged = u.coins !== currentUser.coins;
+            currentUser = { ...currentUser, ...u };
 
-                // 🔥 КРИТИЧНО: сравниваем equipped_items
-                const oldEq = JSON.stringify(currentUser.equipped_items || {});
-                const newEq = JSON.stringify(u.equipped_items || {});
-                const equipChanged = oldEq !== newEq;
+            if (coinsChanged) updateCoinsBadge();
 
-                currentUser = { ...currentUser, ...u };
-
-                if (coinsChanged) updateCoinsBadge();
-
-                // 🔥 Если кастомизация изменилась — обновляем ВСЁ
-                if (equipChanged) {
-                    console.log('🎨 Кастомизация изменилась! Перерисовываю всё...');
-
-                    // Догружаем shop_items, если появились новые id
-                    const itemIds = Object.values(currentUser.equipped_items || {});
-                    const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
-
-                    const reloadAndApply = async () => {
-                        if (missing.length) {
-                            const { data: items } = await sb.from('shop_items')
-                                .select('id, category, value')
-                                .in('id', missing);
-                            (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
-                        }
-
-                        // 🔥 1. Свой профиль — если открыт
-                        if (document.getElementById('page-profile')?.classList.contains('active')
-                            && !profileEditMode) {
-                            const cont = document.getElementById('profileContent');
-                            if (cont) applyCustomizationToElement(cont, currentUser).catch(e => console.warn(e));
-                        }
-
-                        // 🔥 2. Меню-дровер
-                        fillMenuDrawerUser();
-                        applyCustomization();
-
-                        // 🔥 3. Аватар в шапке
-                        applyHeaderAvatar(currentUser);
-
-                        // 🔥 4. Обновляем все открытые списки с собой
-                        refreshAllMyAppearances();
-                    };
-
-                    await reloadAndApply();
-                }
-
-                if (eloChanged || statsChanged) {
-                    if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-                        renderDashboard(currentUser);
-                        updatePlayBtnSub();
-                    }
-                    if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
-                        renderProfileView(currentUser);
-                    }
-                    applyHeaderAvatar(currentUser);
-                    fillMenuDrawerUser();
-                }
-            }
-
-            // ============================================================
-            // 2. ЭТО ДРУГОЙ ИГРОК — обновляем его везде, где он есть
-            // ============================================================
-
-            // 🔥 Догружаем shop_items для чужих equipped_items
-            if (u.equipped_items && Object.keys(u.equipped_items).length) {
-                const itemIds = Object.values(u.equipped_items);
+            if (equipChanged) {
+                const itemIds = Object.values(currentUser.equipped_items || {});
                 const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
                 if (missing.length) {
                     const { data: items } = await sb.from('shop_items')
                         .select('id, category, value').in('id', missing);
                     (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
                 }
-            }
 
-            // 2.1. Лидерборд на главной
-            if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-                updateUserInLeaderboard(u);
-            }
-
-            // 2.2. Полный лидерборд
-            if (document.getElementById('page-leaderboard')?.classList.contains('active')) {
-                updateUserInFullLeaderboard(u);
-            }
-
-            // 2.3. Друзья
-            if (document.getElementById('page-friends')?.classList.contains('active')) {
-                updateUserInFriendsList(u);
-            }
-
-            // 2.4. Клан
-            if (document.getElementById('page-club')?.classList.contains('active')) {
-                updateUserInClubList(u);
-            }
-
-            // 2.5. Список чатов
-            if (document.getElementById('page-chat')?.classList.contains('active')) {
-                updateUserInChatList(u);
-            }
-
-            // 2.6. Открытый чужой профиль
-            const playerModal = document.getElementById('playerModal');
-            if (playerModal?.classList.contains('active')
-                && currentProfileUserId
-                && Number(u.telegram_id) === Number(currentProfileUserId)) {
-                // Перерисовываем чуть позже, чтобы не спамить
-                debouncedRerenderPlayerProfile();
-            }
-
-            // 2.7. Открытая комната (play screen)
-            if (document.getElementById('playScreen')?.classList.contains('active')) {
-                if (currentPlayRoomId) {
-                    updateUserInRoomView(u);
-                } else {
-                    updateUserInRoomsList(u);
+                if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
+                    const cont = document.getElementById('profileContent');
+                    if (cont) applyCustomizationToElement(cont, currentUser).catch(() => {});
                 }
+                fillMenuDrawerUser();
+                applyCustomization();
+                applyHeaderAvatar(currentUser);
+                refreshAllMyAppearances();
             }
 
-            // 2.8. In-game экран (составы команд)
-            if (document.getElementById('page-veto')?.classList.contains('active')
-                && currentMatch) {
-                updateUserInVeto(u);
-            }
-
-            // 2.9. Открытые модалки матчей
-            if (document.getElementById('playerModal')?.classList.contains('active')) {
-                updateUserInMatchDetails(u);
-            }
-        })
-        .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'users'
-        }, () => {
-            // Новый игрок — обновляем лидерборд
-            if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-                loadLeaderboard();
+            if (eloChanged || statsChanged) {
+                if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+                    renderDashboard(currentUser);
+                    updatePlayBtnSub();
+                }
+                if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
+                    renderProfileView(currentUser);
+                }
+                applyHeaderAvatar(currentUser);
+                fillMenuDrawerUser();
             }
         })
         .subscribe((status) => {
-            console.log('📡 users_rt status:', status);
+            console.log('📡 users_rt_self status:', status);
         });
 }
 
@@ -38045,8 +38001,7 @@ function registerInterval(name, id) {
 }
 
 function clearAllIntervals() {
-    INTERVALS.forEach(id => clearInterval(id));
-    INTERVALS.clear();
+    _tickers.forEach(t => t.counter = 0);
 }
 
 // При сворачивании — пауза, при разворачивании — резюм
@@ -38501,8 +38456,8 @@ async function shareProfile(userId) {
     
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
-    window._shareText = text;
-    window._shareUser = user;
+    AppState.share.text = text;
+    AppState.share.user = user;
     haptic('medium');
 }
 
@@ -38514,7 +38469,7 @@ function closeShareSheet() {
 }
 
 async function copyShareText() {
-    const text = window._shareText || '';
+    const text = AppState.share.text || '';
     if (!text) return;
     
     try {
@@ -38556,7 +38511,7 @@ function fallbackCopySilent(text) {
 }
 
 function shareToTelegram() {
-    const text = window._shareText || '';
+    const text = AppState.share.text || '';
     if (!text) return;
     const encoded = encodeURIComponent(text);
     const url = `https://t.me/share/url?url=${encodeURIComponent('De1mos Faceit')}&text=${encoded}`;
@@ -38655,11 +38610,6 @@ if (!safeBoot()) {
         }
     }, 200);
 }
-
-// Периодическое обновление бейджа уведомлений
-registerInterval('notifBadge', setInterval(() => {
-    if (isAppVisible && currentUser) updateNotifBadge();
-}, 45000));
 
 // ============================================================
 // ДОП. ВЫЗОВ INIT — если SDK Telegram загрузился позже
@@ -39950,7 +39900,7 @@ async function openShop() {
 // 🛒 Открытие категории в модалке
 // ============================================================
 async function openShopCategory(category) {
-     window._shopActiveCategory = category;
+     AppState.shopActiveCategory = category;
     const categories = {
         nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
         avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
@@ -40340,7 +40290,7 @@ async function refreshShopCategory() {
     const grid = document.querySelector('.shop-cat-modal-body .shop-grid');
     if (!grid) return;
 
-    const category = window._shopActiveCategory;
+    const category = AppState.shopActiveCategory;
     if (!category) return;
 
     try {
@@ -44185,7 +44135,7 @@ async function openReportReasonSheet(targetId, team) {
 
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
-    window._reportSelectedReasonV2 = null;
+    AppState.reportSelectedReasonV2 = null;
     haptic('medium');
 }
 
@@ -44195,7 +44145,7 @@ function closeReportReasonSheet() {
 }
 
 function selectReportReasonV2(reasonId, btn, targetId, team) {
-    window._reportSelectedReasonV2 = reasonId;
+    AppState.reportSelectedReasonV2 = reasonId;
     document.querySelectorAll('#reportReasonSheet .report-reason-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     const submit = document.getElementById('reportSubmitBtnV2');
@@ -44204,7 +44154,7 @@ function selectReportReasonV2(reasonId, btn, targetId, team) {
 }
 
 async function submitReportV2(targetId, team) {
-    const reasonId = window._reportSelectedReasonV2;
+    const reasonId = AppState.reportSelectedReasonV2;
     if (!reasonId) { showToast('Выбери причину'); return; }
     if (!currentMatch) { showToast('Матч не найден'); return; }
 
@@ -44230,7 +44180,7 @@ async function submitReportV2(targetId, team) {
 
         showToast('✅ Жалоба отправлена модераторам');
         haptic('heavy');
-        window._reportSelectedReasonV2 = null;
+        AppState.reportSelectedReasonV2 = null;
         closeReportReasonSheet();
     } catch (e) {
         showToast('Ошибка: ' + e.message);
@@ -44578,7 +44528,7 @@ async function openAddDxpChartBackgroundSheet() {
 
             try {
                 const blob = await compressImage(file, 1400, 0.85);
-                window._newDxpBgBlob = blob;
+                AppState.newDxpBgBlob = blob;
                 const url = URL.createObjectURL(blob);
                 const prev = document.getElementById('newDxpBgPreview');
                 if (prev) {
@@ -44601,7 +44551,7 @@ function closeAddDxpBackgroundSheet() {
     setTimeout(() => {
         ov?.remove();
         sh?.remove();
-        window._newDxpBgBlob = null;
+        AppState.newDxpBgBlob = null;
     }, 400);
 }
 
@@ -44619,7 +44569,7 @@ function closeAddDxpBackgroundSheet() {
     setTimeout(() => {
         ov?.remove();
         sh?.remove();
-        window._newDxpBgBlob = null;
+        AppState.newDxpBgBlob = null;
     }, 350);
 }
 
@@ -44715,7 +44665,7 @@ async function openAddCustomBackgroundSheet() {
 
         try {
             const blob = await compressImage(file, 1400, 0.85);
-            window._newBgBlob = blob;
+            AppState.newBgBlob = blob;
             const url = URL.createObjectURL(blob);
             const prev = document.getElementById('newBgPreview');
             if (prev) {
@@ -44737,7 +44687,7 @@ function closeAddCustomBackgroundSheet() {
     const sh = document.getElementById('addBgSheet');
     if (ov) ov.remove();
     if (sh) sh.remove();
-    window._newBgBlob = null;
+    AppState.newBgBlob = null;
 
     // Сброс инпутов
     const nameEl = document.getElementById('newBgName');
@@ -44842,7 +44792,7 @@ async function submitNewBackground() {
     const name   = nameEl?.value.trim();
     const price  = parseInt(priceEl?.value) || 0;
     const rarity = rarEl?.value || 'rare';
-    const blob   = window._newBgBlob;
+    const blob   = AppState.newBgBlob;
 
     console.log('🎨 submitNewBackground:', { name, price, rarity, blobSize: blob?.size });
 
@@ -44904,7 +44854,7 @@ async function submitNewBackground() {
         // 4. Открываем магазин на нужной категории
         await loadShopItemsCache();
         setTimeout(() => {
-            window._shopActiveCategory = 'profile_bg';
+            AppState.shopActiveCategory = 'profile_bg';
             openShop();
         }, 300);
 
@@ -44932,7 +44882,7 @@ async function submitNewDxpBackground() {
     const name   = nameEl?.value.trim();
     const price  = parseInt(priceEl?.value, 10) || 0;
     const rarity = rarEl?.value || 'epic';
-    const blob   = window._newDxpBgBlob;
+    const blob   = AppState.newDxpBgBlob;
 
     console.log('📈 submitNewDxpBackground:', { name, price, rarity, blobSize: blob?.size });
 
@@ -44989,7 +44939,7 @@ async function submitNewDxpBackground() {
 
         await loadShopItemsCache();
         setTimeout(() => {
-            window._shopActiveCategory = 'dxp_chart_bg';
+            AppState.shopActiveCategory = 'dxp_chart_bg';
             openShop();
         }, 300);
 
@@ -45410,13 +45360,13 @@ const CLAN_SHOP_CACHE = {};
 // 🔥 Предзагрузка товаров клана (чтобы тег рендерился сразу)
 // ============================================================
 async function loadClanShopCache(force = false) {
-    if (window._clanShopCacheLoaded && !force) return;
+    if (AppState.clanShopCacheLoaded && !force) return;
     try {
         const { data } = await sb.from('clan_shop_items').select('id, category, value');
         // 🔥 Чистим старый кэш, чтобы удалённые предметы ушли
         Object.keys(CLAN_SHOP_CACHE).forEach(k => delete CLAN_SHOP_CACHE[k]);
         (data || []).forEach(i => CLAN_SHOP_CACHE[i.id] = i);
-        window._clanShopCacheLoaded = true;
+        AppState.clanShopCacheLoaded = true;
         console.log('✅ CLAN_SHOP_CACHE загружен:', Object.keys(CLAN_SHOP_CACHE).length, 'предметов');
     } catch (e) {
         console.warn('loadClanShopCache:', e);
@@ -45632,12 +45582,12 @@ const UI_CATEGORIES = {
         }
     });
 
-    window._clanShopActiveCategory = window._clanShopActiveCategory || Object.keys(grouped)[0];
-    if (!grouped[window._clanShopActiveCategory]) {
-        window._clanShopActiveCategory = Object.keys(grouped)[0];
+    AppState.clubShopActiveCategory = AppState.clubShopActiveCategory || Object.keys(grouped)[0];
+    if (!grouped[AppState.clubShopActiveCategory]) {
+        AppState.clubShopActiveCategory = Object.keys(grouped)[0];
     }
 
-    const activeCat = window._clanShopActiveCategory;
+    const activeCat = AppState.clubShopActiveCategory;
     const activeItems = grouped[activeCat] || [];
     const activeMeta = UI_CATEGORIES[activeCat] || { label: activeCat, icon: '📦', desc: '' };
 
@@ -45698,7 +45648,7 @@ const UI_CATEGORIES = {
         <div class="shop-cat-tabs">
             ${Object.entries(grouped).map(([cat, list]) => {
                 const meta = UI_CATEGORIES[cat] || { label: cat, icon: 'clan_badge' };
-                const isActive = window._clanShopActiveCategory === cat;
+                const isActive = AppState.clubShopActiveCategory === cat;
                 const ownedInCat = list.filter(i => owned.has(i.id)).length;
                 return `
                     <button class="shop-cat-btn ${isActive ? 'active' : ''}" onclick="switchClanShopCategory('${cat}')">
@@ -45814,7 +45764,7 @@ async function openClanDonateSheet() {
 }
 
 function switchClanShopCategory(cat) {
-    window._clanShopActiveCategory = cat;
+    AppState.clubShopActiveCategory = cat;
     haptic('light');
     openClanShop();
 }
@@ -47418,7 +47368,7 @@ async function openSharePreview(userId) {
             }
         }
 
-        window._shareUserData = user;
+        AppState.share.userData = user;
 
         const canvas = await generateProfileShareImage(user);
         const wrap = document.getElementById('sharePreviewCanvas');
@@ -47430,7 +47380,7 @@ async function openSharePreview(userId) {
 
         const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
         if (!blob) throw new Error('Не удалось создать картинку');
-        window._shareBlob = blob;
+        AppState.share.blob = blob;
 
         if (info) info.textContent = 'Готово! Нажми «Отправить» чтобы поделиться';
 
@@ -47526,8 +47476,8 @@ function openBotChat() {
 }
             
 async function doShareToTelegram() {
-    const blob = window._shareBlob;
-    const user = window._shareUserData;
+    const blob = AppState.share.blob;
+    const user = AppState.share.userData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
     const btn = document.querySelector('.share-preview-btn.primary');
@@ -47808,12 +47758,12 @@ function showManualShareHint(user, blob, shareText) {
         </div>
     `;
 
-    window._manualShareText = shareText;
+    AppState.share.manualText = shareText;
     document.body.appendChild(overlay);
 }
 
 function copyShareTextManual(btn) {
-    const text = window._manualShareText || '';
+    const text = AppState.share.manualText || '';
     if (!text) return;
 
     const onSuccess = () => {
@@ -47854,8 +47804,8 @@ function openTelegramApp() {
 // СКАЧАТЬ КАРТИНКУ
 // ============================================================
 function doDownloadImage() {
-    const blob = window._shareBlob;
-    const user = window._shareUserData;
+    const blob = AppState.share.blob;
+    const user = AppState.share.userData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
 
     const fileName = `de1mos_${user.telegram_id}_${Date.now()}.png`;
@@ -47907,9 +47857,9 @@ function closeSharePreview() {
     document.getElementById('sharePreviewOverlay')?.remove();
     document.getElementById('manualShareHint')?.remove();
     document.getElementById('msgSentHint')?.remove();
-    window._shareBlob = null;
-    window._shareUserData = null;
-    window._manualShareText = null;
+    AppState.share.blob = null;
+    AppState.share.userData = null;
+    AppState.share.manualText = null;
 }
 
 // ============================================================
@@ -48853,7 +48803,59 @@ async function cleanupBrokenEquipped() {
     } catch (e) {
         console.warn('cleanupBrokenEquipped:', e);
     }
-}     
+}   
+
+            // ============================================================
+// ⏱️ ЕДИНЫЙ ТИКЕР
+// ============================================================
+const _tickers = [];
+let _tickerStarted = false;
+
+function registerTicker(name, fn, periodSec) {
+    _tickers.push({ name, fn, period: periodSec, counter: 0 });
+}
+
+function startGlobalTicker() {
+    if (_tickerStarted) return;
+    _tickerStarted = true;
+
+    setInterval(async () => {
+        if (document.hidden) return;
+        if (!currentUser) return;
+
+        for (const t of _tickers) {
+            t.counter++;
+            if (t.counter >= t.period) {
+                t.counter = 0;
+                try {
+                    await t.fn();
+                } catch (e) {
+                    console.warn(`ticker ${t.name}:`, e);
+                }
+            }
+        }
+    }, 1000);
+
+    console.log('⏱️ Global ticker started, tickers:', _tickers.length);
+}
+
+registerTicker('heartbeat', async () => {
+    await sb.from('users')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('telegram_id', currentUser.telegram_id);
+}, 30);
+
+registerTicker('checkActiveRoom', () => checkActiveRoom(), 8);
+registerTicker('cleanupStaleRooms', () => cleanupStaleRooms(), 60);
+registerTicker('updateNotifBadge', () => updateNotifBadge(), 45);
+registerTicker('updateChatsBadge', () => updateChatsBadge(), 30);
+registerTicker('cleanupClubTagCache', () => cleanupClubTagCache(), 300);
+
+registerTicker('refreshOnlineStatuses', () => {
+    document.querySelectorAll('[data-online-status]').forEach(el => {
+        updateOnlineStatusEl(el, el.dataset.lastSeen || '');
+    });
+}, 30);
             
     </script>
 </body>
