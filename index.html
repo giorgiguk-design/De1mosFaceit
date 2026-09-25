@@ -24205,6 +24205,51 @@ function startOnlineHeartbeat() {
         .catch(() => {});
 }
 
+            // ============================================================
+// 🚨 Экран ошибки инициализации — вместо тоста
+// ============================================================
+function showInitErrorScreen() {
+    document.body.innerHTML = `
+        <div style="
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 30px 20px; text-align: center;
+            background: #050807; color: #e6f5ee; font-family: -apple-system, sans-serif;
+        ">
+            <div style="font-size: 64px; margin-bottom: 20px;">📡</div>
+
+            <div style="font-size: 20px; font-weight: 800; margin-bottom: 12px;">
+                Нет соединения с сервером
+            </div>
+
+            <div style="font-size: 13px; color: #6d8a80; line-height: 1.6; max-width: 320px; margin-bottom: 24px;">
+                Не удалось загрузить твой профиль.<br>
+                Проверь интернет-соединение и попробуй снова.
+            </div>
+
+            <button onclick="location.reload()" style="
+                padding: 14px 32px;
+                background: linear-gradient(135deg, #00e08a, #00b874);
+                color: #04140e;
+                border: none;
+                border-radius: 12px;
+                font-weight: 900;
+                font-size: 14px;
+                letter-spacing: 1px;
+                cursor: pointer;
+                font-family: inherit;
+                box-shadow: 0 6px 22px rgba(0, 224, 138, 0.35);
+            ">
+                🔄 ПЕРЕЗАГРУЗИТЬ
+            </button>
+
+            <div style="font-size: 11px; color: #4a5d54; margin-top: 20px; line-height: 1.5;">
+                Если ошибка повторяется —<br>
+                возможно, сервер временно недоступен
+            </div>
+        </div>
+    `;
+}
+
         // ============================================================
         // INIT
         // ============================================================
@@ -24304,31 +24349,55 @@ async function init() {
     try {
         if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
 
-        // 🔥 Запрос с таймаутом
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('timeout')), 8000)
-        );
-        
-        const queryPromise = sb.from('users')
-            .select('*').eq('telegram_id', user.id).maybeSingle();
-        
-        let existing;
-        try {
-            const result = await Promise.race([queryPromise, timeoutPromise]);
-            existing = result.data;
-        } catch (e) {
-            console.error('❌ Supabase timeout:', e);
-            showToast('⚠️ Медленное соединение. Повторная попытка...');
-            
+        // ============================================================
+        // 🔥 Загрузка пользователя с ретраями и экспоненциальной задержкой
+        // Первый запрос на Supabase free tier может "будить" БД 10-20 сек
+        // ============================================================
+        let existing = null;
+        const MAX_ATTEMPTS = 3;
+        const TIMEOUTS = [15000, 20000, 30000];  // 15с, 20с, 30с
+
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            const timeoutMs = TIMEOUTS[attempt];
+
             try {
-                const retry = await Promise.race([
-                    sb.from('users').select('*').eq('telegram_id', user.id).maybeSingle(),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout2')), 8000))
+                // Показываем статус на 2-й+ попытке
+                if (attempt > 0) {
+                    showToast(`⏳ Попытка ${attempt + 1}/${MAX_ATTEMPTS}...`);
+                }
+
+                const result = await Promise.race([
+                    sb.from('users')
+                        .select('*')
+                        .eq('telegram_id', user.id)
+                        .maybeSingle(),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error(`timeout ${timeoutMs}ms`)), timeoutMs)
+                    )
                 ]);
-                existing = retry.data;
-            } catch (e2) {
-                showToast('❌ Не удалось загрузить профиль. Перезагрузи приложение');
-                return;
+
+                // Успех — выходим из цикла
+                if (result.error) {
+                    console.warn(`⚠️ Попытка ${attempt + 1}: ошибка БД`, result.error);
+                } else {
+                    existing = result.data;
+                    if (attempt > 0) {
+                        console.log(`✅ Успех с попытки ${attempt + 1}`);
+                    }
+                    break;
+                }
+            } catch (e) {
+                console.warn(`⚠️ Попытка ${attempt + 1}/${MAX_ATTEMPTS} не удалась:`, e.message);
+
+                // Если это последняя попытка — показываем ошибку
+                if (attempt === MAX_ATTEMPTS - 1) {
+                    console.error('❌ Все попытки исчерпаны');
+                    showInitErrorScreen();
+                    return;
+                }
+
+                // Задержка перед следующей попыткой (1с, 2с)
+                await new Promise(r => setTimeout(r, (attempt + 1) * 1000));
             }
         }
 
