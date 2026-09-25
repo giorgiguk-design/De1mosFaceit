@@ -20233,6 +20233,309 @@ html.lite-mode .ctb-text.ctb-neon {
     color: var(--emerald-3);
     text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.45);
 }
+
+    /* ============================================================
+   🎫 БОЕВОЙ ПРОПУСК
+   ============================================================ */
+.bp-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+    margin-bottom: 16px;
+    background: linear-gradient(160deg, rgba(var(--emerald-rgb), 0.15), rgba(0,0,0,0.6));
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    text-align: center;
+}
+.bp-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+}
+.bp-season-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--emerald);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.bp-season-timer {
+    font-size: 11px;
+    color: var(--hint);
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    font-weight: 700;
+}
+.bp-level-row {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.bp-level-num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 42px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.5);
+}
+.bp-level-label {
+    font-size: 12px;
+    color: var(--hint);
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+.bp-progress-bar {
+    height: 10px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 6px;
+    border: 1px solid var(--border);
+}
+.bp-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--emerald-2), var(--emerald), var(--emerald-3));
+    border-radius: 5px;
+    transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.6);
+}
+.bp-progress-text {
+    font-size: 11px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.bp-premium-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 14px;
+    background: linear-gradient(135deg, #ffd700, #b8860b);
+    border: none;
+    border-radius: 14px;
+    color: #000;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    box-shadow: 0 6px 22px rgba(255, 215, 0, 0.4);
+}
+.bp-premium-btn:active { transform: scale(0.97); }
+.bp-premium-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05));
+    border: 1px solid rgba(255,215,0,0.5);
+    border-radius: 999px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    color: #ffd700;
+    letter-spacing: 1px;
+}
+
+/* Скролл уровней */
+.bp-levels-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 8px 0 20px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+.bp-levels-scroll::-webkit-scrollbar { height: 6px; }
+.bp-levels-scroll::-webkit-scrollbar-thumb {
+    background: var(--emerald);
+    border-radius: 3px;
+}
+
+/* Карточка уровня */
+.bp-level-card {
+    flex: 0 0 130px;
+    scroll-snap-align: center;
+    background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.04), rgba(0,0,0,0.5));
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.bp-level-card.reached {
+    border-color: var(--border-strong);
+    box-shadow: 0 0 0 1px rgba(var(--emerald-rgb), 0.2);
+}
+.bp-level-card.current {
+    border-color: var(--emerald);
+    box-shadow: 0 0 0 1px var(--emerald), 0 0 20px rgba(var(--emerald-rgb), 0.3);
+}
+.bp-level-card:active { transform: scale(0.98); }
+
+.bp-level-header {
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--hint);
+    letter-spacing: 1px;
+    padding: 2px 0 6px;
+    border-bottom: 1px solid var(--border);
+}
+.bp-level-card.reached .bp-level-header { color: var(--emerald); }
+
+/* Ячейка награды */
+.bp-reward-cell {
+    position: relative;
+    padding: 8px 6px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    min-height: 68px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: transform 0.15s ease, background 0.2s ease;
+    border: 1px solid transparent;
+}
+.bp-reward-cell.premium {
+    background: linear-gradient(180deg, rgba(255,215,0,0.10), rgba(255,215,0,0.02));
+    border-color: rgba(255,215,0,0.25);
+}
+.bp-reward-cell.free {
+    background: linear-gradient(180deg, rgba(var(--emerald-rgb),0.08), rgba(var(--emerald-rgb),0.02));
+    border-color: rgba(var(--emerald-rgb),0.25);
+}
+.bp-reward-cell:active { transform: scale(0.95); }
+.bp-reward-cell.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.bp-reward-cell.claimed {
+    opacity: 0.55;
+    cursor: default;
+}
+.bp-reward-cell.claimed::after {
+    content: '✓';
+    position: absolute;
+    top: 3px; right: 6px;
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--emerald);
+}
+.bp-reward-cell.locked-premium {
+    opacity: 0.6;
+    cursor: pointer;
+    border-color: rgba(255,215,0,0.5);
+}
+.bp-reward-cell.locked-premium::before {
+    content: '🔒';
+    position: absolute;
+    top: 3px; right: 6px;
+    font-size: 11px;
+}
+.bp-reward-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+.bp-reward-amount {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+.bp-reward-cell.premium .bp-reward-amount { color: #ffd700; }
+.bp-reward-cell.free .bp-reward-amount { color: var(--emerald-3); }
+.bp-reward-name {
+    font-size: 9px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+.bp-empty-reward {
+    font-size: 10px;
+    color: var(--hint);
+    font-style: italic;
+    opacity: 0.5;
+}
+.bp-tier-label {
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+.bp-reward-cell.premium .bp-tier-label { color: #ffd700; }
+.bp-reward-cell.free .bp-tier-label { color: var(--emerald-3); }
+
+/* Админ-панель наград */
+.bp-admin-row {
+    display: grid;
+    grid-template-columns: 50px 1fr 1fr;
+    gap: 6px;
+    padding: 8px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+    align-items: center;
+}
+.bp-admin-lvl {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--emerald);
+    text-align: center;
+}
+.bp-admin-cell {
+    padding: 8px 6px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: transform 0.15s ease;
+}
+.bp-admin-cell:active { transform: scale(0.95); }
+.bp-admin-cell.free {
+    background: rgba(var(--emerald-rgb), 0.08);
+    border: 1px solid rgba(var(--emerald-rgb), 0.3);
+    color: var(--emerald-3);
+}
+.bp-admin-cell.premium {
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    color: #ffd700;
+}
+.bp-admin-cell.empty {
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed var(--border);
+    color: var(--hint);
+    font-weight: 500;
+}
     
 </style>
 </head>
@@ -22642,18 +22945,18 @@ async function openCasesScreen() {
 // ============================================================
 const QUESTS_CONFIG = {
     daily: [
-        { id: 'd_play_1',    name: 'Сыграть 1 матч',       target: 1,   reward: 100,  statKey: 'matches_played' },
-        { id: 'd_win_1',     name: 'Победить 1 раз',       target: 1,   reward: 150,  statKey: 'wins' },
-        { id: 'd_play_3',    name: 'Сыграть 3 матча',      target: 3,   reward: 250,  statKey: 'matches_played' },
-        { id: 'd_win_2',     name: 'Победить 2 раза',      target: 2,   reward: 300,  statKey: 'wins' },
-        { id: 'd_mvp_1',     name: 'Стать MVP матча',      target: 1,   reward: 200,  statKey: 'mvps' },
+        { id: 'd_play_1',    name: 'Сыграть 1 матч',       target: 1,   reward: 100,  bp_points: 10,  statKey: 'matches_played' },
+        { id: 'd_win_1',     name: 'Победить 1 раз',       target: 1,   reward: 150,  bp_points: 15,  statKey: 'wins' },
+        { id: 'd_play_3',    name: 'Сыграть 3 матча',      target: 3,   reward: 250,  bp_points: 20,  statKey: 'matches_played' },
+        { id: 'd_win_2',     name: 'Победить 2 раза',      target: 2,   reward: 300,  bp_points: 30,  statKey: 'wins' },
+        { id: 'd_mvp_1',     name: 'Стать MVP матча',      target: 1,   reward: 200,  bp_points: 25,  statKey: 'mvps' },
     ],
     weekly: [
-        { id: 'w_play_10',   name: 'Сыграть 10 матчей',    target: 10,  reward: 500,  statKey: 'matches_played' },
-        { id: 'w_win_5',     name: 'Победить 5 раз',       target: 5,   reward: 800,  statKey: 'wins' },
-        { id: 'w_play_25',   name: 'Сыграть 25 матчей',    target: 25,  reward: 1200, statKey: 'matches_played' },
-        { id: 'w_win_12',    name: 'Победить 12 раз',      target: 12,  reward: 1500, statKey: 'wins' },
-        { id: 'w_mvp_3',     name: 'Стать MVP 3 раза',     target: 3,   reward: 900,  statKey: 'mvps' },
+        { id: 'w_play_10',   name: 'Сыграть 10 матчей',    target: 10,  reward: 500,  bp_points: 100, statKey: 'matches_played' },
+        { id: 'w_win_5',     name: 'Победить 5 раз',       target: 5,   reward: 800,  bp_points: 150, statKey: 'wins' },
+        { id: 'w_play_25',   name: 'Сыграть 25 матчей',    target: 25,  reward: 1200, bp_points: 250, statKey: 'matches_played' },
+        { id: 'w_win_12',    name: 'Победить 12 раз',      target: 12,  reward: 1500, bp_points: 300, statKey: 'wins' },
+        { id: 'w_mvp_3',     name: 'Стать MVP 3 раза',     target: 3,   reward: 900,  bp_points: 200, statKey: 'mvps' },
     ],
 };
 
@@ -43636,6 +43939,13 @@ async function openCoinsHistory() {
     }
 }
 
+// ============================================================
+// 🎫 ЭКРАН БОЕВОГО ПРОПУСКА
+// ============================================================
+let currentSeason = null;      // { id, name, starts_at, ends_at, premium_price, max_level }
+let currentBpProgress = null;  // { points, level, premium_unlocked, claimed_free, claimed_premium }
+let currentBpRewards = {};     // { 'free-1': {...}, 'premium-1': {...} }
+
 async function openSeason() {
     switchPage('season');
     const container = document.getElementById('seasonContent');
@@ -43643,91 +43953,618 @@ async function openSeason() {
     container.innerHTML = '<div class="empty">Загрузка...</div>';
 
     try {
-        const { data: season } = await sb.from('seasons')
-            .select('*').eq('is_active', true).limit(1).maybeSingle();
-
-        if (!season) {
+        // 1. Активный сезон
+        const { data: seasonRes } = await sb.rpc('get_active_season');
+        if (!seasonRes?.ok) {
             container.innerHTML = `
-                <div class="empty">Активного сезона нет</div>
+                <div class="empty">
+                    🎫 Сезон ещё не начался<br>
+                    <span style="font-size: 11px; color: var(--hint); margin-top: 8px; display: block;">
+                        Загляни позже
+                    </span>
+                </div>
                 <button class="profile-action-btn cancel" onclick="switchPage('dashboard')">◀ Назад</button>
             `;
             return;
         }
 
-        const { data: me } = await sb.from('users').select('elo').eq('telegram_id', currentUser.telegram_id).single();
-        const myElo = me?.elo || 1000;
+        currentSeason = seasonRes.season;
 
-        const { count: aboveCount } = await sb.from('users')
-            .select('telegram_id', { count: 'exact', head: true }).gt('elo', myElo);
-        const myPlace = (aboveCount || 0) + 1;
-
-        const { data: top10 } = await sb.from('users')
-            .select('telegram_id, display_name, custom_avatar, photo_url, elo, equipped_items')
-            .order('elo', { ascending: false }).limit(10);
-
-        const start = new Date(season.starts_at).getTime();
-        const end = new Date(season.ends_at).getTime();
-        const now = Date.now();
-        const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-        const daysLeft = Math.max(0, Math.ceil((end - now) / 86400000));
-
-        container.innerHTML = `
-            <div class="season-hero">
-                <div class="season-title">${escapeHtml(season.name)}</div>
-                <div class="season-time">⏰ Осталось ${daysLeft} дней</div>
-                <div class="season-progress"><div class="season-progress-fill" style="width:${progress}%"></div></div>
-                <div class="season-stats">
-                    <div class="season-stat">
-                        <div class="season-stat-value">#${myPlace}</div>
-                        <div class="season-stat-label">Твоё место</div>
-                    </div>
-                    <div class="season-stat">
-                        <div class="season-stat-value">${myElo}</div>
-                        <div class="season-stat-label">DXP</div>
-                    </div>
-                </div>
-            </div>
-            <div class="section-title">🏆 Топ-10</div>
-            ${(top10 || []).map((u, i) => {
-                const src = u.custom_avatar || u.photo_url;
-                const initial = (u.display_name || 'U')[0].toUpperCase();
-                const av = src ? `<img src="${src}" alt="">` : initial;
-                return `
-                    <div class="leaderboard-item" onclick="openPlayerProfile(${u.telegram_id})"
-                         data-user-id="${u.telegram_id}">
-                        <span class="leaderboard-rank">#${i + 1}</span>
-                        <div class="lb-avatar" data-list-avatar>${av}</div>
-                        <span class="leaderboard-name">
-                            <span data-list-nick>${escapeHtml(u.display_name || 'Игрок')}</span>
-                            <span data-list-badge></span>
-                        </span>
-                        <span class="leaderboard-DXP-value">${u.elo}</span>
-                    </div>
-                `;
-            }).join('')}
-            <button class="profile-action-btn cancel" style="margin-top:20px;" onclick="switchPage('dashboard')">◀ Назад</button>
-        `;
-
-        // 🔥 Применяем кастомизацию
-        const allItems = new Set();
-        (top10 || []).forEach(u => {
-            if (u.equipped_items) Object.values(u.equipped_items).forEach(id => allItems.add(id));
+        // 2. Прогресс игрока
+        const { data: progressRes } = await sb.rpc('get_bp_progress', {
+            p_user_id: currentUser.telegram_id,
+            p_season_id: currentSeason.id
         });
-        const missing = [...allItems].filter(id => !SHOP_ITEMS_CACHE[id]);
-        if (missing.length) {
-            const { data: shopItems } = await sb.from('shop_items')
-                .select('id, category, value').in('id', missing);
-            (shopItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+        currentBpProgress = progressRes?.ok ? progressRes : {
+            points: 0,
+            level: 1,
+            premium_unlocked: false,
+            claimed_free: [],
+            claimed_premium: []
+        };
+
+        // 3. Награды
+        const { data: rewards } = await sb.from('battle_pass_rewards')
+            .select('*')
+            .eq('season_id', currentSeason.id);
+
+        currentBpRewards = {};
+        (rewards || []).forEach(r => {
+            currentBpRewards[`${r.tier}-${r.level}`] = r;
+        });
+
+        renderBattlePass(container);
+    } catch (e) {
+        console.error('openSeason:', e);
+        container.innerHTML = `<div class="empty" style="color: var(--red);">Ошибка: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+// ============================================================
+// 🎫 РЕНДЕР ЭКРАНА
+// ============================================================
+function renderBattlePass(container) {
+    const season = currentSeason;
+    const progress = currentBpProgress;
+
+    if (!season) return;
+
+    const points = progress.points || 0;
+    const level = progress.level || 1;
+    const currentLevelProgress = points % 100;
+    const isPremium = progress.premium_unlocked === true;
+
+    // Таймер до конца сезона
+    const endTime = new Date(season.ends_at).getTime();
+    const now = Date.now();
+    const diff = Math.max(0, endTime - now);
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+
+    // Собираем массив наград для рендера
+    const maxLevel = season.max_level || 50;
+    const rewardCells = [];
+
+    for (let lvl = 1; lvl <= maxLevel; lvl++) {
+        const freeReward = currentBpRewards[`free-${lvl}`];
+        const premiumReward = currentBpRewards[`premium-${lvl}`];
+        const isReached = lvl <= level;
+        const isCurrent = lvl === level;
+        const freeClaimed = (progress.claimed_free || []).includes(lvl);
+        const premiumClaimed = (progress.claimed_premium || []).includes(lvl);
+
+        rewardCells.push(`
+            <div class="bp-level-card ${isReached ? 'reached' : ''} ${isCurrent ? 'current' : ''}">
+                <div class="bp-level-header">LV ${lvl}</div>
+
+                ${renderRewardCell({
+                    tier: 'premium',
+                    level: lvl,
+                    reward: premiumReward,
+                    reached: isReached,
+                    claimed: premiumClaimed,
+                    hasPremium: isPremium
+                })}
+
+                ${renderRewardCell({
+                    tier: 'free',
+                    level: lvl,
+                    reward: freeReward,
+                    reached: isReached,
+                    claimed: freeClaimed,
+                    hasPremium: isPremium
+                })}
+            </div>
+        `);
+    }
+
+    // Кнопка админа
+    const adminBtn = currentUser.is_admin ? `
+        <button class="profile-action-btn cancel" style="margin-top: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;" onclick="openBpAdminEditor()">
+            👑 Настроить награды пропуска
+        </button>
+    ` : '';
+
+    // Premium CTA
+    const premiumBlock = isPremium
+        ? `<div class="bp-premium-active">⭐ PREMIUM АКТИВЕН</div>`
+        : `<button class="bp-premium-btn" onclick="buyBpPremium()">
+                💎 КУПИТЬ ПРЕМИУМ · ${season.premium_price} монет
+            </button>`;
+
+    container.innerHTML = `
+        <div class="bp-hero">
+            <div class="bp-season-name">${escapeHtml(season.name)}</div>
+            <div class="bp-season-timer">
+                ⏰ Осталось ${days} дн ${hours} ч
+            </div>
+
+            <div class="bp-level-row">
+                <div class="bp-level-num">${level}</div>
+                <div class="bp-level-label">УРОВЕНЬ</div>
+            </div>
+
+            <div class="bp-progress-bar">
+                <div class="bp-progress-fill" style="width: ${currentLevelProgress}%"></div>
+            </div>
+            <div class="bp-progress-text">${currentLevelProgress} / 100 очков до след. уровня</div>
+            <div class="bp-progress-text" style="margin-top: 4px;">Всего: ${points} очков</div>
+
+            ${premiumBlock}
+        </div>
+
+        <div class="section-title">🎁 Награды за уровни</div>
+        <div class="bp-levels-scroll">
+            ${rewardCells.join('')}
+        </div>
+
+        ${adminBtn}
+        <button class="profile-action-btn cancel" style="margin-top: 8px;" onclick="switchPage('dashboard')">
+            ◀ Назад
+        </button>
+    `;
+
+    // Автоскролл к текущему уровню
+    setTimeout(() => {
+        const currentCard = container.querySelector('.bp-level-card.current');
+        if (currentCard) {
+            currentCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    }, 300);
+}
+
+// ============================================================
+// 🎁 Ячейка награды
+// ============================================================
+function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium }) {
+    const isPremium = tier === 'premium';
+
+    // Premium + не куплен = жёлтый замочек
+    if (isPremium && !hasPremium) {
+        return `
+            <div class="bp-reward-cell premium locked-premium" onclick="buyBpPremium()">
+                <div class="bp-tier-label">PREMIUM</div>
+                <div class="bp-reward-icon">💎</div>
+                <div class="bp-reward-name" style="color: #ffd700;">Купить пропуск</div>
+            </div>
+        `;
+    }
+
+    // Нет награды в БД
+    if (!reward) {
+        return `
+            <div class="bp-reward-cell ${tier}">
+                <div class="bp-tier-label">${isPremium ? 'PREMIUM' : 'FREE'}</div>
+                <div class="bp-empty-reward">—</div>
+            </div>
+        `;
+    }
+
+    const val = reward.reward_value || {};
+    let icon = '🎁';
+    let amountText = '';
+
+    if (reward.reward_type === 'coins') {
+        icon = '💰';
+        amountText = val.amount || 0;
+    } else if (reward.reward_type === 'item') {
+        icon = '🎨';
+        const itemName = SHOP_ITEMS_CACHE[val.item_id]?.name || 'Награда';
+        amountText = itemName.length > 12 ? itemName.slice(0, 11) + '…' : itemName;
+    }
+
+    // Статус: not-reached, ready (можно забрать), claimed
+    const cls = !reached ? 'locked' : (claimed ? 'claimed' : '');
+    const onClick = reached && !claimed
+        ? `onclick="claimBpReward(${level}, '${tier}')"`
+        : '';
+
+    return `
+        <div class="bp-reward-cell ${tier} ${cls}" ${onClick}>
+            <div class="bp-tier-label">${isPremium ? 'PREMIUM' : 'FREE'}</div>
+            <div class="bp-reward-icon">${icon}</div>
+            <div class="bp-reward-amount">${typeof amountText === 'number' ? amountText : escapeHtml(amountText)}</div>
+        </div>
+    `;
+}
+
+// ============================================================
+// 🎁 ЗАБРАТЬ НАГРАДУ
+// ============================================================
+async function claimBpReward(level, tier) {
+    if (!currentSeason) return;
+
+    haptic('medium');
+
+    try {
+        const { data, error } = await sb.rpc('claim_bp_reward', {
+            p_user_id: currentUser.telegram_id,
+            p_season_id: currentSeason.id,
+            p_level: level,
+            p_tier: tier
+        });
+
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'level_locked') showToast(`🔒 Нужен уровень ${level}`);
+            else if (err === 'premium_required') showToast('💎 Нужен Premium');
+            else if (err === 'already_claimed') showToast('Уже забрано');
+            else showToast('❌ ' + err);
+            return;
         }
 
-        container.querySelectorAll('.leaderboard-item[data-user-id]').forEach(el => {
-            const uid = Number(el.dataset.userId);
-            const user = (top10 || []).find(u => u.telegram_id === uid);
-            if (user) applyListCustomization(el, user);
-        });
+        // Обновляем локально
+        if (tier === 'free') {
+            if (!currentBpProgress.claimed_free) currentBpProgress.claimed_free = [];
+            currentBpProgress.claimed_free.push(level);
+        } else {
+            if (!currentBpProgress.claimed_premium) currentBpProgress.claimed_premium = [];
+            currentBpProgress.claimed_premium.push(level);
+        }
+
+        // Обновляем монеты если награда — coins
+        if (data.reward_type === 'coins') {
+            const amount = data.reward_value?.amount || 0;
+            currentUser.coins = (currentUser.coins || 0) + amount;
+            updateCoinsBadge();
+            showToast(`💰 +${amount} монет`);
+        } else {
+            showToast('🎁 Награда получена');
+        }
+
+        haptic('heavy');
+        renderBattlePass(document.getElementById('seasonContent'));
     } catch (e) {
-        console.error(e);
-        container.innerHTML = `<div class="empty" style="color:var(--red);">Ошибка: ${e.message}</div>`;
+        console.error('claimBpReward:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+// ============================================================
+// 💎 КУПИТЬ ПРЕМИУМ
+// ============================================================
+async function buyBpPremium() {
+    if (!currentSeason) return;
+    if (currentBpProgress?.premium_unlocked) {
+        showToast('Уже куплено');
+        return;
+    }
+
+    const price = currentSeason.premium_price || 1500;
+    if ((currentUser.coins || 0) < price) {
+        showToast(`❌ Нужно ${price} монет`);
+        return;
+    }
+
+    if (!confirm(`Купить Premium-пропуск за ${price} монет?`)) return;
+
+    try {
+        const { data, error } = await sb.rpc('buy_bp_premium', {
+            p_user_id: currentUser.telegram_id,
+            p_season_id: currentSeason.id,
+            p_price: price
+        });
+
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'not_enough_coins') showToast(`❌ Нужно ${price} монет`);
+            else if (err === 'already_unlocked') showToast('Уже куплено');
+            else showToast('❌ ' + err);
+            return;
+        }
+
+        currentUser.coins = data.user_coins;
+        currentBpProgress.premium_unlocked = true;
+
+        updateCoinsBadge();
+        haptic('heavy');
+        showToast('💎 Premium активирован!');
+        renderBattlePass(document.getElementById('seasonContent'));
+    } catch (e) {
+        console.error('buyBpPremium:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+            // ============================================================
+// 👑 АДМИН: РЕДАКТОР НАГРАД ПРОПУСКА
+// ============================================================
+async function openBpAdminEditor() {
+    if (!currentUser.is_admin) {
+        showToast('Только админ');
+        return;
+    }
+    if (!currentSeason) {
+        showToast('Нет активного сезона');
+        return;
+    }
+
+    document.getElementById('bpAdminOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'bpAdminOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeBpAdminEditor(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'bpAdminSheet';
+    sheet.style.zIndex = '810';
+    sheet.style.maxHeight = '92vh';
+    sheet.style.overflowY = 'auto';
+
+    const maxLevel = currentSeason.max_level || 50;
+
+    // Собираем строки
+    let rowsHTML = '';
+    for (let lvl = 1; lvl <= maxLevel; lvl++) {
+        const free = currentBpRewards[`free-${lvl}`];
+        const prem = currentBpRewards[`premium-${lvl}`];
+
+        rowsHTML += `
+            <div class="bp-admin-row">
+                <div class="bp-admin-lvl">${lvl}</div>
+
+                <div class="bp-admin-cell free ${free ? '' : 'empty'}"
+                     onclick="editBpReward(${lvl}, 'free')">
+                    ${free ? formatAdminReward(free) : '+ Free'}
+                </div>
+
+                <div class="bp-admin-cell premium ${prem ? '' : 'empty'}"
+                     onclick="editBpReward(${lvl}, 'premium')">
+                    ${prem ? formatAdminReward(prem) : '+ Premium'}
+                </div>
+            </div>
+        `;
+    }
+
+    sheet.innerHTML = `
+        <div class="sheet-title">👑 Настройка наград пропуска</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px; line-height: 1.5;">
+            Сезон: <b>${escapeHtml(currentSeason.name)}</b><br>
+            Нажми на ячейку чтобы задать награду
+        </div>
+
+        <div style="padding: 10px 12px; margin-bottom: 12px; background: rgba(var(--emerald-rgb),0.06); border: 1px solid var(--border); border-radius: 10px; font-size: 11px; line-height: 1.5; color: var(--hint);">
+            <b style="color: var(--emerald-3);">Слева — Free, справа — Premium.</b><br>
+            Нажми на ячейку чтобы задать награду. Пустые ячейки = нет награды на этом уровне.
+        </div>
+
+        <div style="max-height: 55vh; overflow-y: auto; padding-right: 4px;">
+            ${rowsHTML}
+        </div>
+
+        <button class="sheet-cancel" onclick="closeBpAdminEditor()" style="margin-top: 12px;">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    haptic('medium');
+}
+
+function closeBpAdminEditor() {
+    document.getElementById('bpAdminOverlay')?.remove();
+    document.getElementById('bpAdminSheet')?.remove();
+}
+
+function formatAdminReward(reward) {
+    const val = reward.reward_value || {};
+    if (reward.reward_type === 'coins') {
+        return `💰 ${val.amount || 0}`;
+    }
+    if (reward.reward_type === 'item') {
+        const name = SHOP_ITEMS_CACHE[val.item_id]?.name || 'Предмет';
+        return `🎨 ${escapeHtml(name.slice(0, 8))}`;
+    }
+    return '❓';
+}
+
+// ============================================================
+// 👑 РЕДАКТОР ОДНОЙ НАГРАДЫ
+// ============================================================
+let _bpEditContext = null; // { level, tier }
+
+async function editBpReward(level, tier) {
+    _bpEditContext = { level, tier };
+
+    const existing = currentBpRewards[`${tier}-${level}`];
+
+    document.getElementById('bpEditOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'bpEditOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeBpEdit(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'bpEditSheet';
+    sheet.style.zIndex = '812';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">
+            ${tier === 'premium' ? '💎 Premium' : '🎁 Free'} · Уровень ${level}
+        </div>
+
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+            Выбери тип награды
+        </div>
+
+        <button class="sheet-option" onclick="showBpCoinsInput()">
+            💰 Монеты
+        </button>
+
+        <button class="sheet-option" onclick="showBpItemPicker()">
+            🎨 Предмет из магазина
+        </button>
+
+        ${existing ? `
+            <button class="sheet-option danger" onclick="deleteBpReward()">
+                🗑️ Удалить награду
+            </button>
+        ` : ''}
+
+        <button class="sheet-cancel" onclick="closeBpEdit()">ОТМЕНА</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    haptic('light');
+}
+
+function closeBpEdit() {
+    document.getElementById('bpEditOverlay')?.remove();
+    document.getElementById('bpEditSheet')?.remove();
+}
+
+async function showBpCoinsInput() {
+    const { level, tier } = _bpEditContext;
+    const existing = currentBpRewards[`${tier}-${level}`];
+    const currentAmount = existing?.reward_value?.amount || 100;
+
+    const amount = prompt('Сколько монет?', currentAmount);
+    if (!amount) return;
+
+    const num = parseInt(amount, 10);
+    if (!num || num <= 0) { showToast('Введи число > 0'); return; }
+
+    await saveBpReward(level, tier, 'coins', { amount: num });
+    closeBpEdit();
+}
+
+async function showBpItemPicker() {
+    const { level, tier } = _bpEditContext;
+
+    // Открываем модалку со списком всех shop_items
+    document.getElementById('bpItemPickOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'bpItemPickOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'bpItemPickSheet';
+    sheet.style.zIndex = '814';
+    sheet.style.maxHeight = '85vh';
+    sheet.style.overflowY = 'auto';
+
+    // Загружаем все товары
+    const { data: items } = await sb.from('shop_items')
+        .select('id, name, category, rarity, value')
+        .eq('is_available', true)
+        .order('category')
+        .order('sort_order');
+
+    (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+    const catLabel = {
+        nickname_color: '🎨 Цвет ника',
+        avatar_frame: '🖼 Рамка',
+        badge: '🏅 Значок',
+        title: '👑 Титул',
+        profile_bg: '🌄 Фон',
+        dxp_chart_bg: '📈 Фон графика',
+    };
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🎨 Выбери предмет</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 12px;">
+            Уровень ${level} · ${tier === 'premium' ? 'Premium' : 'Free'}
+        </div>
+        ${(!items || !items.length) ? '<div class="empty">Магазин пуст</div>' : ''}
+        ${(items || []).map(item => `
+            <button class="sheet-option" onclick="pickBpItem('${item.id}')">
+                <span style="font-size: 14px;">${catLabel[item.category] || '🎁'}</span>
+                <div style="flex: 1; text-align: left; min-width: 0;">
+                    <div style="font-weight: 800; color: var(--text);">${escapeHtml(item.name)}</div>
+                    <div style="font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.5px;">${item.rarity}</div>
+                </div>
+            </button>
+        `).join('')}
+        <button class="sheet-cancel" onclick="document.getElementById('bpItemPickOverlay').remove()">ОТМЕНА</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+}
+
+async function pickBpItem(itemId) {
+    const { level, tier } = _bpEditContext;
+    document.getElementById('bpItemPickOverlay')?.remove();
+
+    await saveBpReward(level, tier, 'item', { item_id: itemId });
+    closeBpEdit();
+}
+
+async function saveBpReward(level, tier, rewardType, rewardValue) {
+    try {
+        const { data, error } = await sb.rpc('admin_set_bp_reward', {
+            p_admin_id: currentUser.telegram_id,
+            p_season_id: currentSeason.id,
+            p_level: level,
+            p_tier: tier,
+            p_reward_type: rewardType,
+            p_reward_value: rewardValue
+        });
+
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Ошибка');
+
+        // Обновляем локальный кэш
+        currentBpRewards[`${tier}-${level}`] = {
+            level,
+            tier,
+            reward_type: rewardType,
+            reward_value: rewardValue
+        };
+
+        showToast('✅ Сохранено');
+        haptic('medium');
+
+        // Перерисовываем админ-панель
+        if (document.getElementById('bpAdminSheet')) {
+            closeBpAdminEditor();
+            setTimeout(() => openBpAdminEditor(), 250);
+        }
+    } catch (e) {
+        console.error('saveBpReward:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+async function deleteBpReward() {
+    const { level, tier } = _bpEditContext;
+    if (!confirm(`Удалить награду ${tier} с уровня ${level}?`)) return;
+
+    try {
+        const { data, error } = await sb.rpc('admin_delete_bp_reward', {
+            p_admin_id: currentUser.telegram_id,
+            p_season_id: currentSeason.id,
+            p_level: level,
+            p_tier: tier
+        });
+
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Ошибка');
+
+        delete currentBpRewards[`${tier}-${level}`];
+        showToast('🗑️ Удалено');
+        closeBpEdit();
+
+        if (document.getElementById('bpAdminSheet')) {
+            closeBpAdminEditor();
+            setTimeout(() => openBpAdminEditor(), 250);
+        }
+    } catch (e) {
+        console.error('deleteBpReward:', e);
+        showToast('❌ ' + e.message);
     }
 }
 
@@ -48248,7 +49085,6 @@ async function loadQuestsProgress() {
 // ============================================================
 async function updateQuestsProgress(stats) {
     if (!currentUser) return;
-    // stats: { matches_played: +1, wins: +1|0, mvps: +1|0 }
 
     const dailyReset = getDailyResetTime();
     const weeklyReset = getWeeklyResetTime();
@@ -48258,12 +49094,18 @@ async function updateQuestsProgress(stats) {
         ...QUESTS_CONFIG.weekly.map(q => ({ ...q, type: 'weekly', reset_at: weeklyReset })),
     ];
 
+    let totalBpPoints = 0;
+
     for (const q of all) {
         const inc = stats[q.statKey] || 0;
         if (!inc) continue;
 
+        // 🔥 Считаем очки пропуска (за каждое действие)
+        if (q.bp_points) {
+            totalBpPoints += q.bp_points * inc;
+        }
+
         try {
-            // Пытаемся найти запись
             const { data: existing } = await sb.from('quests_progress')
                 .select('id, progress, claimed, target')
                 .eq('telegram_id', currentUser.telegram_id)
@@ -48272,7 +49114,6 @@ async function updateQuestsProgress(stats) {
                 .maybeSingle();
 
             if (existing) {
-                // Обновляем
                 const newProgress = Math.min(existing.progress + inc, existing.target);
                 if (newProgress !== existing.progress && !existing.claimed) {
                     await sb.from('quests_progress')
@@ -48280,7 +49121,6 @@ async function updateQuestsProgress(stats) {
                         .eq('id', existing.id);
                 }
             } else {
-                // Создаём
                 await sb.from('quests_progress').insert({
                     telegram_id: currentUser.telegram_id,
                     quest_id: q.id,
@@ -48296,7 +49136,23 @@ async function updateQuestsProgress(stats) {
         }
     }
 
-    // Обновляем бейдж
+    // 🔥 Начисляем очки пропуска одной RPC
+    if (totalBpPoints > 0) {
+        try {
+            const { data } = await sb.rpc('add_bp_points', {
+                p_user_id: currentUser.telegram_id,
+                p_points: totalBpPoints
+            });
+            if (data?.ok) {
+                console.log(`🎫 BP: +${totalBpPoints} очков → уровень ${data.level}`);
+                // Обновляем бейдж квестов (там отображается кол-во готовых)
+                updateQuestsBadge();
+            }
+        } catch (e) {
+            console.warn('add_bp_points:', e);
+        }
+    }
+
     updateQuestsBadge();
 }
 
