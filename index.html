@@ -574,7 +574,7 @@ body::after {
             display: flex; align-items: center; justify-content: center;
         }
 
-        /* ====== ПОЛНОРАЗМЕРНЫЕ КНОПКИ КЛУБА ====== */
+        /* ====== ПОЛНОРАЗМЕРНЫЕ КНОПКИ КланА ====== */
         .club-full-btn {
             width: 100%;
             padding: 14px 16px;
@@ -4914,7 +4914,7 @@ body::after {
     filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.5));
 }
 
-/* Шестерёнка рядом с клубом */
+/* Шестерёнка рядом с Кланом */
 .club-gear {
     width: 40px;
     height: 40px;
@@ -11855,7 +11855,7 @@ html.lite-mode .header-coins::before {
 }
 
     /* ============================================================ */
-/* 🌄 ФОН ПРОФИЛЯ ВНУТРИ ПЛАШЕК (списки, лидерборд, клуб и т.д.)  */
+/* 🌄 ФОН ПРОФИЛЯ ВНУТРИ ПЛАШЕК (списки, лидерборд, Клан и т.д.)  */
 /* ============================================================ */
 
 /* Все элементы с кастомным фоном */
@@ -12403,7 +12403,7 @@ html.lite-mode .has-list-bg {
 
     #onboardingModal .player-modal-inner { max-width: 540px; }
 
-    /* -------- КЛУБ -------- */
+    /* -------- Клан -------- */
     #page-club.active { max-width: 900px; }
     .club-hero { padding: 22px; }
     .club-logo { width: 80px; height: 80px; font-size: 28px; }
@@ -20115,6 +20115,26 @@ html.lite-mode .case-open-reel { filter: none !important; }
     color: transparent;
 }
 
+    /* Страховка: если градиент/обводка не рендерятся — текст всё равно виден */
+.clan-tag.ctb-outline {
+    color: var(--ctb-c, #fff);
+    -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: 1.2px var(--ctb-c, #fff);
+    text-shadow: 0 0 8px var(--ctb-c, #fff);
+    paint-order: stroke fill;
+    font-weight: 900;
+}
+
+/* Все градиентные эффекты — мягкое свечение, чтобы даже при сбое было видно */
+.clan-tag.ctb-gold,
+.clan-tag.ctb-fire,
+.clan-tag.ctb-rainbow,
+.clan-tag.ctb-hologram,
+.clan-tag.ctb-galaxy,
+.clan-tag.ctb-shimmer {
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+}
+
 /* Lite-mode — тег уже статичный, ничего дополнительно не нужно */
 
 /* ============================================================ */
@@ -20199,7 +20219,18 @@ html.lite-mode .ctb-text.ctb-neon {
     }
 }
 
-    
+    .dev-tag-mini {
+    flex-shrink: 0;
+}
+
+    .clan-tag {
+    display: inline-block;
+    vertical-align: middle;
+    font-weight: 900;
+    letter-spacing: 0.4px;
+    color: var(--emerald-3);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.45);
+}
     
 </style>
 </head>
@@ -20567,7 +20598,7 @@ html.lite-mode .ctb-text.ctb-neon {
                 <path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z"/>
                 <path d="M12 8v4M10 10h4"/>
             </svg>
-        </span><span>Клуб</span>
+        </span><span>Клан</span>
     </button>
     <button class="nav-item" data-page="quests" onclick="openQuestsScreen()">
     <span class="nav-icon">
@@ -20775,7 +20806,7 @@ html.lite-mode .ctb-text.ctb-neon {
     </div>
 
     <div class="sheet" id="clubLogoSheet">
-        <div class="sheet-title">Эмблема клуба</div>
+        <div class="sheet-title">Эмблема Клана</div>
         <button class="sheet-option" onclick="pickClubLogoFromGallery()"><span style="font-size:18px;">🖼️</span> Загрузить из галереи</button>
         <button class="sheet-option danger" onclick="removeClubLogo()"><span style="font-size:18px;">🗑️</span> Удалить эмблему</button>
         <button class="sheet-cancel" onclick="closeAllSheets()">ОТМЕНА</button>
@@ -20788,7 +20819,7 @@ html.lite-mode .ctb-text.ctb-neon {
     </div>
 
     <div class="sheet" id="requestsSheet">
-        <div class="sheet-title">Заявки в клуб</div>
+        <div class="sheet-title">Заявки в Клан</div>
         <div id="requestsSheetContent"></div>
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
@@ -20869,7 +20900,7 @@ html.lite-mode .ctb-text.ctb-neon {
 </div>
 
         <div class="sheet" id="clubInviteSheet" style="max-height: 88vh;">
-    <div class="sheet-title">➕ Пригласить в клуб</div>
+    <div class="sheet-title">➕ Пригласить в Клан</div>
     <input type="text" class="field-input" id="clubInviteSearch"
            placeholder="🔍 Ник, @username или ID"
            autocomplete="off"
@@ -20886,7 +20917,7 @@ html.lite-mode .ctb-text.ctb-neon {
 </div>
 
     <div class="sheet" id="allClubsSheet" style="max-height: 88vh;">
-        <div class="sheet-title">🛡️ Все клубы</div>
+        <div class="sheet-title">🛡️ Все Кланы</div>
         <input type="text" class="field-input" id="allClubsSearch"
                placeholder="🔍 Название или тег" autocomplete="off"
                oninput="debouncedAllClubsSearch()" style="margin-bottom: 12px;">
@@ -20945,18 +20976,18 @@ html.lite-mode .ctb-text.ctb-neon {
     </details>
 
     <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
-        <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">🛡️ Как создать клуб?</summary>
+        <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">🛡️ Как создать Клан?</summary>
         <div style="margin-top: 10px; color: var(--hint); line-height: 1.7;">
-            Клуб — это твоя команда друзей с общим тегом, казной и магазином. Что даёт клуб:
+            Клан — это твоя команда друзей с общим тегом, казной и магазином. Что даёт Клан:
             <br><br>
             • <b>Тег [XXX]</b> рядом с ником во всех списках<br>
             • <b>Общая казна</b> — все скидываются монетами и покупают клановые украшения<br>
-            • <b>Клановый магазин</b> — цвета и градиенты для тега, значки клуба<br>
+            • <b>Клановый магазин</b> — цвета и градиенты для тега, значки Клана<br>
             • <b>Клановые матчи</b> — запускаются одной кнопкой<br>
             • <b>Иерархия:</b> OWNER (глава), ELDER (заместитель), MEMBER (участник)<br><br>
             <b style="color: var(--emerald);">Как создать:</b><br>
-            1. Вкладка <b>🛡️ Клуб</b><br>
-            2. Если ты не в клубе — кнопка «Создать клуб»<br>
+            1. Вкладка <b>🛡️ Клан</b><br>
+            2. Если ты не в Клане — кнопка «Создать Клан»<br>
             3. Введи название (2-30 символов), тег (2-5 символов), описание<br>
             4. Готово — приглашай друзей!
         </div>
@@ -21164,7 +21195,7 @@ html.lite-mode .ctb-text.ctb-neon {
             • Ник в Standoff 2 (для отображения в матчах)<br>
             • Standoff ID — 7-9-значный идентификатор игрока<br>
             • Аватар профиля (загружается из Telegram или галереи)<br>
-            • Название и тег клуба (если создаёте)<br>
+            • Название и тег Клана (если создаёте)<br>
             • Настройки приватности и уведомлений<br>
             • Тема оформления (Изумруд / Аметист / Кровь)<br><br>
             <b style="color: var(--text);">2.3. Игровая статистика (генерируется автоматически):</b><br>
@@ -21187,7 +21218,7 @@ html.lite-mode .ctb-text.ctb-neon {
             сопоставить ваш аккаунт в игре и добавить его в лобби. Без DXP невозможен подбор
             противников по уровню.<br><br>
             3.2. <b style="color: var(--text);">Для отображения профиля и статистики.</b> Ник, аватар и титул
-            видны другим игрокам в лидерборде, матчах и клубах.<br><br>
+            видны другим игрокам в лидерборде, матчах и Кланах.<br><br>
             3.3. <b style="color: var(--text);">Для работы уведомлений.</b> Мы отправляем сообщения о приглашениях
             в комнаты, друзьях и клановых событиях.<br><br>
             3.4. <b style="color: var(--text);">Для предотвращения нарушений.</b> История жалоб, баннов и
@@ -21357,7 +21388,7 @@ html.lite-mode .ctb-text.ctb-neon {
             Будут удалены:<br>
             • Профиль и DXP<br>
             • Клан (если ты владелец)<br>
-            • Выход из клубов<br><br>
+            • Выход из Кланов<br><br>
             Повторная регистрация — через 24 часа.
         </div>
     </div>
@@ -24634,11 +24665,8 @@ function myClubTagHTML(telegramId) {
         }
     }
 
-    // ============================================================
-    // Дефолт
-    // ============================================================
-    return `<span class="clan-tag" style="color:var(--hint);opacity:0.7;font-weight:700;">[${escapeHtml(club.tag)}]</span>`;
-}
+// Дефолт
+return `<span class="clan-tag">[${escapeHtml(club.tag)}]</span>`;
 
             // ============================================================
 // 👥 Кнопки "Друзья" и "Сообщение" в шапке чужого профиля
@@ -24898,7 +24926,7 @@ async function renderProfileView(user, options = {}) {
         ? Math.round((user.wins / user.matches_played) * 100) : 0;
     const level = eloToLevel(user.elo);
 
-    // Проверка DEV-клуба
+    // Проверка DEV-Клана
     let isDev = false;
     try {
         const { data: m } = await sb.from('club_members')
@@ -25648,13 +25676,13 @@ function renderLbItem(user, rank) {
             <div class="lb-avatar" data-list-avatar>${av}${onlineDot}</div>
 
             <div class="lb-info-compact">
-                <div class="lb-row-top">
-            <span class="lb-nick-inline" data-list-nick>
-                ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
-                ${isDev ? `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>` : ''}
-            </span>
-            <span class="leaderboard-DXP" data-list-badge></span>
-                </div>
+<div class="lb-row-top">
+    <span class="lb-nick-inline" data-list-nick>
+        ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
+    </span>
+    ${isDev ? `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>` : ''}
+    <span class="leaderboard-DXP" data-list-badge></span>
+</div>
 
                 <div class="lb-row-bottom">
                     <span class="lb-lvl-chip">⚡ ${lvl} ур.</span>
@@ -25942,7 +25970,7 @@ function subscribeClubRealtime() {
             event: '*', schema: 'public', table: 'club_members',
             filter: `telegram_id=eq.${currentUser.telegram_id}`
         }, async () => {
-            // Если меня кикнули / я вступил / вышел — перерисовываем клуб
+            // Если меня кикнули / я вступил / вышел — перерисовываем Клан
             if (document.getElementById('page-club')?.classList.contains('active')) {
                 await loadClub();
             }
@@ -25970,7 +25998,7 @@ async function openClubPage() {
                     myClub = null;
                     if (hadClubBefore && prevClub) {
                         wasKickedFromClub = { name: prevClub.name, tag: prevClub.tag };
-                        showToast(`🚪 Тебя исключили из клуба ${prevClub.name}`);
+                        showToast(`🚪 Тебя исключили из Клана ${prevClub.name}`);
                     }
                     renderNoClub(container);
                     return;
@@ -26004,7 +26032,7 @@ const { data: users } = await sb.from('users')
                         <div style="display:flex; align-items:center; gap:12px;">
                             <div style="font-size:32px;">🚪</div>
                             <div style="flex:1; min-width:0;">
-                                <div style="font-size:14px; font-weight:700;">Тебя исключили из клуба</div>
+                                <div style="font-size:14px; font-weight:700;">Тебя исключили из Клана</div>
                                 <div style="font-size:12px; color:var(--hint);">${escapeHtml(wasKickedFromClub.name)} [${escapeHtml(wasKickedFromClub.tag)}]</div>
                             </div>
                             <button class="friend-action decline" onclick="wasKickedFromClub = null; loadClub();">ОК</button>
@@ -26018,12 +26046,12 @@ const { data: users } = await sb.from('users')
                 <div class="profile-hero">
                     <div class="profile-hero-inner">
                         <div style="font-size:64px;margin-bottom:14px;">🛡️</div>
-                        <h3 style="margin-bottom:10px;">Вы не в клубе</h3>
-                        <p style="color:var(--hint);font-size:13px;margin-bottom:20px;">Создайте свой клуб или подайте заявку</p>
-                        <button class="profile-action-btn edit" onclick="openCreateClubSheet()">➕ Создать клуб</button>
+                        <h3 style="margin-bottom:10px;">Вы не в Клане</h3>
+                        <p style="color:var(--hint);font-size:13px;margin-bottom:20px;">Создайте свой Клан или подайте заявку</p>
+                        <button class="profile-action-btn edit" onclick="openCreateClubSheet()">➕ Создать Клан</button>
                     </div>
                 </div>
-                <div class="section-title">Найти клуб</div>
+                <div class="section-title">Найти Клан</div>
                 <div class="profile-hero" style="padding: 16px;">
                     <input type="text" class="field-input" id="clubSearchInput" placeholder="🔍 Название или тег" autocomplete="off" oninput="debouncedClubSearch()">
                     <label class="filter-toggle" style="margin-top: 12px;">
@@ -26123,9 +26151,9 @@ if (canEdit) {
                     <div class="club-hero-name">${escapeHtml(club.name)}</div>
                     <div class="club-hero-meta">[${escapeHtml(club.tag)}] · ${members.length}/${club.max_members}</div>
                 </div>
-                <button class="club-gear" type="button" onclick="event.stopPropagation(); openAllClubsSheet();" title="Все клубы">🔍</button>
+                <button class="club-gear" type="button" onclick="event.stopPropagation(); openAllClubsSheet();" title="Все Кланы">🔍</button>
                 ${canEdit ? `
-                    <button class="club-gear" type="button" onclick="event.stopPropagation(); openEditClubSheet();" title="Настройки клуба">⚙️</button>
+                    <button class="club-gear" type="button" onclick="event.stopPropagation(); openEditClubSheet();" title="Настройки Клана">⚙️</button>
                 ` : ''}
             </div>
             ${club.description ? `<div class="club-hero-desc">${escapeHtml(club.description)}</div>` : ''}
@@ -26139,13 +26167,13 @@ if (canEdit) {
 
         <button class="profile-action-btn cancel" onclick="leaveClub()"
                 style="margin-top: 16px; background: rgba(255,84,112,0.1); color: var(--red); border: 1px solid rgba(255,84,112,0.3);">
-            🚪 Покинуть клуб
+            🚪 Покинуть Клан
         </button>
     `;
 
     if (isOwner) updateRequestsBadge();
 
-    // 🔥 Применяем кастомизацию к членам клуба
+    // 🔥 Применяем кастомизацию к членам Клана
     (async () => {
         const allItems = new Set();
         sorted.forEach(m => {
@@ -26214,7 +26242,7 @@ async function openAllClubsSheet() {
     sheet.classList.add('active');
     if (search) search.value = '';
 
-    list.innerHTML = '<div class="empty" style="color: var(--emerald);">Загрузка клубов...</div>';
+    list.innerHTML = '<div class="empty" style="color: var(--emerald);">Загрузка Кланов...</div>';
 
     try {
         await loadAllClubsSheet('');
@@ -26247,7 +26275,7 @@ async function loadAllClubsSheet(q) {
     const el = document.getElementById('allClubsList');
     if (!el) {
         console.error('#allClubsList не найден');
-        showToast('❌ Список клубов не найден');
+        showToast('❌ Список Кланов не найден');
         return;
     }
 
@@ -26272,7 +26300,7 @@ async function loadAllClubsSheet(q) {
             console.error('Ошибка SELECT clubs:', error);
             el.innerHTML = `
                 <div class="empty" style="color: var(--red); font-size: 13px; line-height: 1.5; padding: 16px;">
-                    ❌ Ошибка загрузки клубов:<br>
+                    ❌ Ошибка загрузки Кланов:<br>
                     <b>${escapeHtml(error.message)}</b><br>
                     <span style="color: var(--hint); font-size: 11px;">
                         Код: ${escapeHtml(error.code || '—')}<br>
@@ -26290,9 +26318,9 @@ async function loadAllClubsSheet(q) {
         if (!clubs || clubs.length === 0) {
             el.innerHTML = `
                 <div class="empty" style="color: var(--gold); font-size: 13px; line-height: 1.6; padding: 20px; text-align: center;">
-                    ⚠️ Клубов не найдено<br>
+                    ⚠️ Кланов не найдено<br>
                     <span style="color: var(--hint); font-size: 11px; display: block; margin-top: 8px;">
-                        Если ты точно знаешь, что клубы есть —<br>
+                        Если ты точно знаешь, что Кланы есть —<br>
                         скорее всего это <b>RLS-политика</b> в Supabase.
                     </span>
                 </div>
@@ -26339,7 +26367,7 @@ async function loadAllClubsSheet(q) {
             `;
         }).join('');
 
-        console.log('✅ Отрисовано клубов:', clubs.length);
+        console.log('✅ Отрисовано Кланов:', clubs.length);
     } catch (e) {
         console.error('loadAllClubsSheet exception:', e);
         el.innerHTML = `
@@ -26400,7 +26428,7 @@ function subscribeShopItemsRealtime() {
 }
 
             // ============================================================
-// REALTIME — открытый шит "Все клубы"
+// REALTIME — открытый шит "Все Кланы"
 // ============================================================
 let allClubsSheetChannel = null;
 
@@ -26500,16 +26528,16 @@ async function renderClubEventsSheet() {
             const actor = userMap[e.actor_id]?.display_name || 'Кто-то';
             const target = userMap[e.target_id]?.display_name || 'игрок';
             switch (e.event_type) {
-                case 'club_created': return `<b>${actor}</b> создал клуб`;
-                case 'member_joined': return `<b>${target}</b> вступил в клуб`;
-                case 'member_left': return `<b>${target}</b> покинул клуб`;
+                case 'club_created': return `<b>${actor}</b> создал Клан`;
+                case 'member_joined': return `<b>${target}</b> вступил в Клан`;
+                case 'member_left': return `<b>${target}</b> покинул Клан`;
                 case 'member_kicked': return `<b>${actor}</b> исключил <b>${target}</b>`;
                 case 'member_banned': return `<b>${actor}</b> забанил <b>${target}</b>`;
                 case 'member_unbanned': return `<b>${actor}</b> разбанил <b>${target}</b>`;
                 case 'elder_promoted': return `<b>${actor}</b> назначил <b>${target}</b> Elder`;
                 case 'elder_demoted': return `<b>${actor}</b> снял Elder с <b>${target}</b>`;
                 case 'owner_transferred': return `<b>${actor}</b> передал владение <b>${target}</b>`;
-                case 'club_edited': return `<b>${actor}</b> изменил клуб`;
+                case 'club_edited': return `<b>${actor}</b> изменил Клан`;
                 case 'logo_changed': return `<b>${actor}</b> изменил эмблему`;
                 default: return `<b>${actor}</b> ${e.event_type}`;
             }
@@ -26639,7 +26667,7 @@ async function updateRequestsBadge() {
 async function acceptClubRequest(requestId, userId) {
     try {
         if (myClub.members.length >= myClub.club.max_members) {
-            showToast('Клуб заполнен');
+            showToast('Клан заполнен');
             return;
         }
 
@@ -26651,12 +26679,12 @@ async function acceptClubRequest(requestId, userId) {
 
         if (existingMemberships && existingMemberships.length > 0) {
             const existing = existingMemberships[0];
-            showToast(`🚫 Игрок уже в клубе «${existing.clubs?.name || 'другом'}»`);
+            showToast(`🚫 Игрок уже в Клане «${existing.clubs?.name || 'другом'}»`);
 
             await sb.from('club_requests').update({ status: 'declined' }).eq('id', requestId);
 
             notify(userId,
-                `🚫 Твоя заявка в клуб <b>${escapeHtml(myClub.club.name)}</b> отклонена — ты уже в клубе.`,
+                `🚫 Твоя заявка в Клан <b>${escapeHtml(myClub.club.name)}</b> отклонена — ты уже в Клане.`,
                 'club'
             );
             renderRequestsSheet();
@@ -26664,7 +26692,7 @@ async function acceptClubRequest(requestId, userId) {
             return;
         }
 
-        // Удаляем pending-заявки в другие клубы
+        // Удаляем pending-заявки в другие Кланы
         await sb.from('club_requests')
             .update({ status: 'declined' })
             .eq('telegram_id', userId)
@@ -26679,7 +26707,7 @@ async function acceptClubRequest(requestId, userId) {
         });
         await sb.from('club_requests').update({ status: 'accepted' }).eq('id', requestId);
         await logClubEvent('member_joined', currentUser.telegram_id, userId, {});
-        notify(userId, `✅ Тебя приняли в клуб <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
+        notify(userId, `✅ Тебя приняли в Клан <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
         showToast('✅ Принят');
         closeAllSheets();
         openClubPage();
@@ -26713,8 +26741,8 @@ async function acceptClubRequest(requestId, userId) {
                     await logClubEvent('member_kicked', currentUser.telegram_id, userId, {});
                 }
                 notify(userId, withBan
-                    ? `🚫 Тебя забанили в клубе <b>${escapeHtml(myClub.club.name)}</b>.`
-                    : `🚪 Тебя исключили из клуба <b>${escapeHtml(myClub.club.name)}</b>.`, 'club');
+                    ? `🚫 Тебя забанили в Клане <b>${escapeHtml(myClub.club.name)}</b>.`
+                    : `🚪 Тебя исключили из Клана <b>${escapeHtml(myClub.club.name)}</b>.`, 'club');
                 showToast(withBan ? 'Забанен' : 'Кикнут');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -26728,7 +26756,7 @@ async function acceptClubRequest(requestId, userId) {
                 await sb.from('club_members').update({ role: 'elder' })
                     .eq('club_id', myClub.club.id).eq('telegram_id', userId);
                 await logClubEvent('elder_promoted', currentUser.telegram_id, userId, {});
-                notify(userId, `⭐ Тебя назначили <b>Elder</b> в клубе <b>${escapeHtml(myClub.club.name)}</b>.`, 'club');
+                notify(userId, `⭐ Тебя назначили <b>Elder</b> в Клане <b>${escapeHtml(myClub.club.name)}</b>.`, 'club');
                 showToast('✅ Назначен Elder');
                 openClubPage();
             } catch (e) { showToast('Ошибка'); }
@@ -26753,7 +26781,7 @@ async function acceptClubRequest(requestId, userId) {
             if (myClub.club.owner_id !== currentUser.telegram_id) return;
             const targetName = member.user?.display_name || 'игрок';
             if (!confirm(`Передать владение игроку ${targetName}?`)) return;
-            const phrase = prompt(`Введи название клуба "${myClub.club.name}" для подтверждения:`);
+            const phrase = prompt(`Введи название Клана "${myClub.club.name}" для подтверждения:`);
             if (phrase !== myClub.club.name) { showToast('Отменено'); return; }
             try {
                 await sb.from('clubs').update({ owner_id: userId }).eq('id', myClub.club.id);
@@ -26762,14 +26790,14 @@ async function acceptClubRequest(requestId, userId) {
                 await sb.from('club_members').update({ role: 'member' })
                     .eq('club_id', myClub.club.id).eq('telegram_id', currentUser.telegram_id);
                 await logClubEvent('owner_transferred', currentUser.telegram_id, userId, {});
-                notify(userId, `👑 Ты стал новым <b>OWNER</b> клуба <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
-                showToast('✅ Клуб передан');
+                notify(userId, `👑 Ты стал новым <b>OWNER</b> Клана <b>${escapeHtml(myClub.club.name)}</b>!`, 'club');
+                showToast('✅ Клан передан');
                 openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
         async function leaveClub() {
-            if (!confirm('Покинуть клуб?')) return;
+            if (!confirm('Покинуть Клан?')) return;
             try {
                 const clubId = myClub.club.id;
                 const isOwner = myClub.club.owner_id === currentUser.telegram_id;
@@ -26781,17 +26809,17 @@ async function acceptClubRequest(requestId, userId) {
                 await sb.from('club_members').delete().eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id);
                 await sb.from('club_requests').delete().eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id);
                 if (isOwner) await sb.from('clubs').delete().eq('id', clubId);
-                showToast('Вы покинули клуб'); myClub = null; openClubPage();
+                showToast('Вы покинули Клан'); myClub = null; openClubPage();
             } catch (e) { showToast('Ошибка'); }
         }
 
         async function deleteClubConfirm() {
             if (myClub.club.owner_id !== currentUser.telegram_id) return;
-            const phrase = prompt(`Введи название клуба "${myClub.club.name}" для удаления:`);
+            const phrase = prompt(`Введи название Клана "${myClub.club.name}" для удаления:`);
             if (phrase !== myClub.club.name) { showToast('Отменено'); return; }
             try {
                 await sb.from('clubs').delete().eq('id', myClub.club.id);
-                showToast('Клуб удалён'); myClub = null; openClubPage();
+                showToast('Клан удалён'); myClub = null; openClubPage();
             } catch (e) { showToast('Ошибка'); }
         }
 
@@ -26800,11 +26828,11 @@ async function acceptClubRequest(requestId, userId) {
                 .select('banned_until, reason').eq('telegram_id', currentUser.telegram_id).maybeSingle();
             if (ban && new Date(ban.banned_until) > new Date()) {
                 const left = Math.ceil((new Date(ban.banned_until) - Date.now()) / 3600000);
-                showToast(`🚫 Создание клуба заблокировано на ${left} ч.`);
+                showToast(`🚫 Создание Клана заблокировано на ${left} ч.`);
                 return;
             }
 
-            const name = prompt('Название клуба (2-30):');
+            const name = prompt('Название Клана (2-30):');
             if (!name || name.length < 2 || name.length > 30) return;
             const tag = prompt('Тег (2-5):');
             if (!tag || tag.length < 2 || tag.length > 5) return;
@@ -26825,7 +26853,7 @@ async function acceptClubRequest(requestId, userId) {
                     club_id: club.id, actor_id: currentUser.telegram_id,
                     event_type: 'club_created', meta: {}
                 });
-                showToast('✅ Клуб создан!'); openClubPage();
+                showToast('✅ Клан создан!'); openClubPage();
             } catch (e) { showToast('Ошибка: ' + e.message); }
         }
 
@@ -26887,7 +26915,7 @@ async function acceptClubRequest(requestId, userId) {
             if (!container) return;
 
             const onlyNotFull = document.getElementById('onlyNotFullClubs')?.checked || false;
-            if (!clubs.length) { container.innerHTML = '<div class="empty">Клубов не найдено</div>'; return; }
+            if (!clubs.length) { container.innerHTML = '<div class="empty">Кланов не найдено</div>'; return; }
 
             const clubIds = clubs.map(c => c.id);
             const { data: members } = await sb.from('club_members').select('club_id').in('club_id', clubIds);
@@ -26921,7 +26949,7 @@ async function acceptClubRequest(requestId, userId) {
                 let btn;
                 if (isBanned) btn = `<button class="friend-action decline" disabled>🚫 Бан</button>`;
                 else if (status === 'pending') btn = `<button class="friend-action pending" disabled>⏳ Заявка</button>`;
-                else if (status === 'accepted') btn = `<button class="friend-action pending" disabled>✓ В клубе</button>`;
+                else if (status === 'accepted') btn = `<button class="friend-action pending" disabled>✓ В Клане</button>`;
                 else if (isFull) btn = `<button class="friend-action pending" disabled>Заполнен</button>`;
                 else btn = `<button class="friend-action add" onclick="event.stopPropagation();sendClubRequest(${c.id}, this)">+ Заявка</button>`;
 
@@ -26950,7 +26978,7 @@ async function acceptClubRequest(requestId, userId) {
     try {
         const { data: club, error: cErr } = await sb.from('clubs').select('*').eq('id', clubId).single();
         if (cErr) throw cErr;
-        if (!club) { content.innerHTML = '<div class="empty">Клуб не найден</div>'; return; }
+        if (!club) { content.innerHTML = '<div class="empty">Клан не найден</div>'; return; }
 
         const { data: members } = await sb.from('club_members').select('*').eq('club_id', club.id);
         const ids = (members || []).map(m => m.telegram_id);
@@ -26968,7 +26996,7 @@ async function acceptClubRequest(requestId, userId) {
             return (rank[a.role] ?? 3) - (rank[b.role] ?? 3);
         });
 
-        // Проверяем, я ли уже в клубе
+        // Проверяем, я ли уже в Клане
         const { data: myMemberships } = await sb.from('club_members')
             .select('club_id')
             .eq('telegram_id', currentUser.telegram_id)
@@ -26980,7 +27008,7 @@ async function acceptClubRequest(requestId, userId) {
         let joinBtn = '';
         if (!iAmInThisClub) {
             if (iAmInClub) {
-                joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">🚫 Ты уже в другом клубе</button>`;
+                joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">🚫 Ты уже в другом Клане</button>`;
             } else {
                 // Проверяем, есть ли уже заявка
                 const { data: myReqs } = await sb.from('club_requests')
@@ -26993,9 +27021,9 @@ async function acceptClubRequest(requestId, userId) {
                 if (myReq && myReq.status === 'pending') {
                     joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">⏳ Заявка отправлена</button>`;
                 } else if (myReq && myReq.status === 'accepted') {
-                    joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">✓ Ты в клубе</button>`;
+                    joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">✓ Ты в Клане</button>`;
                 } else if ((members || []).length >= club.max_members) {
-                    joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">Клуб заполнен</button>`;
+                    joinBtn = `<button class="profile-action-btn cancel" disabled style="margin-top: 14px;">Клан заполнен</button>`;
                 } else {
                     joinBtn = `<button class="profile-action-btn save" style="margin-top: 14px;" onclick="sendClubRequest(${club.id}, this)">➕ Подать заявку</button>`;
                 }
@@ -27034,7 +27062,7 @@ async function acceptClubRequest(requestId, userId) {
                 <button class="profile-action-btn cancel"
                         style="margin-top: 14px; background: rgba(255,84,112,0.15); border: 1px solid rgba(255,84,112,0.4); color: var(--red);"
                         onclick="adminDeleteClub(${clubId})">
-                    🗑️ Удалить клуб (модератор)
+                    🗑️ Удалить Клан (модератор)
                 </button>
             ` : ''}
 
@@ -27048,9 +27076,9 @@ async function acceptClubRequest(requestId, userId) {
 
             async function adminDeleteClub(clubId) {
     if (!isModerator(currentUser)) return;
-    if (!confirm('Удалить этот клуб по причине нарушений? Игроки получат уведомление.')) return;
+    if (!confirm('Удалить этот Клан по причине нарушений? Игроки получат уведомление.')) return;
 
-    const reason = prompt('Причина удаления (увидят владелец и участники):', 'Нарушение правил клуба');
+    const reason = prompt('Причина удаления (увидят владелец и участники):', 'Нарушение правил Клана');
     if (!reason) return;
 
     try {
@@ -27073,15 +27101,15 @@ async function acceptClubRequest(requestId, userId) {
             }, { onConflict: 'telegram_id' });
         }
 
-        const msg = `🚫 <b>Ваш клуб удалён по причине нарушений правил</b>\n\n` +
-                    `<b>Клуб:</b> ${escapeHtml(club?.name || '')} [${escapeHtml(club?.tag || '')}]\n` +
+        const msg = `🚫 <b>Ваш Клан удалён по причине нарушений правил</b>\n\n` +
+                    `<b>Клан:</b> ${escapeHtml(club?.name || '')} [${escapeHtml(club?.tag || '')}]\n` +
                     `<b>Причина:</b> ${escapeHtml(reason)}\n\n` +
-                    `Повторное создание клуба возможно только <b>через 24 часа</b>.`;
+                    `Повторное создание Клана возможно только <b>через 24 часа</b>.`;
         for (const m of members || []) {
             await notify(m.telegram_id, msg, 'club');
         }
 
-        showToast('✅ Клуб удалён');
+        showToast('✅ Клан удалён');
         closePlayerModal();
         if (myClub?.club?.id === clubId) { myClub = null; openClubPage(); }
     } catch (e) {
@@ -27097,12 +27125,12 @@ async function acceptClubRequest(requestId, userId) {
         const { data: ban } = await sb.from('club_bans')
             .select('id').eq('club_id', clubId).eq('telegram_id', currentUser.telegram_id).maybeSingle();
         if (ban) {
-            showToast('🚫 Ты забанен в этом клубе');
+            showToast('🚫 Ты забанен в этом Клане');
             if (btnEl) { btnEl.className = 'friend-action decline'; btnEl.textContent = '🚫 Бан'; }
             return;
         }
 
-        // 2. Уже в клубе? (limit(1) вместо maybeSingle)
+        // 2. Уже в Клане? (limit(1) вместо maybeSingle)
         const { data: existingMemberships } = await sb.from('club_members')
             .select('club_id, clubs(name, tag)')
             .eq('telegram_id', currentUser.telegram_id)
@@ -27110,15 +27138,15 @@ async function acceptClubRequest(requestId, userId) {
 
         if (existingMemberships && existingMemberships.length > 0) {
             const existing = existingMemberships[0];
-            showToast(`🚫 Ты уже в клубе «${existing.clubs?.name || 'другом'}»`);
+            showToast(`🚫 Ты уже в Клане «${existing.clubs?.name || 'другом'}»`);
             if (btnEl) {
                 btnEl.className = 'friend-action decline';
-                btnEl.textContent = '🚫 Уже в клубе';
+                btnEl.textContent = '🚫 Уже в Клане';
             }
             return;
         }
 
-        // 3. Клуб полон?
+        // 3. Клан полон?
         const { data: club } = await sb.from('clubs')
             .select('name, owner_id, max_members')
             .eq('id', clubId)
@@ -27129,7 +27157,7 @@ async function acceptClubRequest(requestId, userId) {
             .eq('club_id', clubId);
 
         if (club && (members || []).length >= club.max_members) {
-            showToast('Клуб заполнен');
+            showToast('Клан заполнен');
             if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = 'Заполнен'; }
             return;
         }
@@ -27143,7 +27171,7 @@ async function acceptClubRequest(requestId, userId) {
 
         if (club?.owner_id) {
             notify(club.owner_id,
-                `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в клуб <b>${escapeHtml(club.name)}</b>.`,
+                `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в Клан <b>${escapeHtml(club.name)}</b>.`,
                 'club'
             );
         }
@@ -27172,12 +27200,12 @@ async function acceptClubRequest(requestId, userId) {
             }
 
             if (myClub.members.length < 2) {
-                showToast('В клубе нужно минимум 2 игрока');
+                showToast('В Клане нужно минимум 2 игрока');
                 return;
             }
 
             if (myClub.members.length > 5) {
-                showToast('Для 5×5 в клубе максимум 5 игроков');
+                showToast('Для 5×5 в Клане максимум 5 игроков');
                 return;
             }
 
@@ -27208,7 +27236,7 @@ async function acceptClubRequest(requestId, userId) {
                     telegram_id: currentUser.telegram_id
                 });
 
-                // Уведомляем всех членов клуба
+                // Уведомляем всех членов Клана
                 const others = myClub.members.filter(m => m.telegram_id !== currentUser.telegram_id);
                 for (const m of others) {
                     await sb.from('party_invites').upsert({
@@ -27219,8 +27247,8 @@ async function acceptClubRequest(requestId, userId) {
                     }, { onConflict: 'party_id,to_id' });
 
                     notify(m.telegram_id,
-                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> создал клановую битву в клубе <b>${escapeHtml(myClub.club.name)}</b>.\n` +
-                    `Вступи в игру! Открой De1mos Faceit → Клуб.`, 'club'
+                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> создал клановую битву в Клане <b>${escapeHtml(myClub.club.name)}</b>.\n` +
+                    `Вступи в игру! Открой De1mos Faceit → Клан.`, 'club'
                     );
                 }
 
@@ -27268,7 +27296,7 @@ async function loadChatList() {
                 items.push({
                     type: 'club', id: club.id, name: club.name + ' [' + club.tag + ']',
                     avatar: club.logo_url, square: true,
-                    preview: lastMsg?.text || 'Чат клуба',
+                    preview: lastMsg?.text || 'Чат Клана',
                     lastAt: lastMsg?.created_at || '1970-01-01'
                 });
             }
@@ -27512,7 +27540,7 @@ function renderBubble(msg, user, me) {
 
     const edited = msg.edited_at ? ' <span style="font-size:10px;opacity:0.7;">(ред.)</span>' : '';
 
-    // 🔥 Галочки: для DM — sent/read, для клуба — без галочек
+    // 🔥 Галочки: для DM — sent/read, для Клана — без галочек
     let statusIcon = '';
     if (isMe && currentChat.type === 'dm') {
         statusIcon = msg.read_at ? checkIcon('read') : checkIcon('sent');
@@ -35626,7 +35654,7 @@ function openAppNotifSheet() {
                     onclick="toggleNotify('notify_friend_requests', this)"></button>
         </div>
         <div class="privacy-row">
-            <div><div class="privacy-row-label">🛡️ Заявки в клуб</div></div>
+            <div><div class="privacy-row-label">🛡️ Заявки в Клан</div></div>
             <button class="toggle-switch ${currentUser.notify_club_requests !== false ? 'on' : ''}"
                     onclick="toggleNotify('notify_club_requests', this)"></button>
         </div>
@@ -35654,7 +35682,7 @@ function openBotNotifSheet() {
                     onclick="toggleNotify('bot_notify_friend_requests', this)"></button>
         </div>
         <div class="privacy-row">
-            <div><div class="privacy-row-label">🛡️ Заявки в клуб</div></div>
+            <div><div class="privacy-row-label">🛡️ Заявки в Клан</div></div>
             <button class="toggle-switch ${currentUser.bot_notify_club_requests !== false ? 'on' : ''}"
                     onclick="toggleNotify('bot_notify_club_requests', this)"></button>
         </div>
@@ -35895,7 +35923,7 @@ async function loadNotifications() {
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
 
-        // 3. Приглашения в клуб
+        // 3. Приглашения в Клан
         const { data: clubInvites } = await sb.from('club_invites')
             .select('id, club_id, from_id, created_at')
             .eq('to_id', currentUser.telegram_id)
@@ -35924,7 +35952,7 @@ const { data: unreadMsgs } = await sb.from('messages')
             (users || []).forEach(u => userMap[u.telegram_id] = u);
         }
 
-        // Подгружаем теги клубов для всех, кто фигурирует
+        // Подгружаем теги Кланов для всех, кто фигурирует
         if (ids.size) {
             await loadClubTagsForUsers([...ids]);
         }
@@ -35939,7 +35967,7 @@ const { data: unreadMsgs } = await sb.from('messages')
             (parties || []).forEach(p => partyMap[p.id] = p);
         }
 
-        // Инфа о клубах (для приглашений в клуб)
+        // Инфа о Кланах (для приглашений в Клан)
         const clubIds = (clubInvites || []).map(i => i.club_id);
         let clubMap = {};
         if (clubIds.length) {
@@ -36011,7 +36039,7 @@ const { data: unreadMsgs } = await sb.from('messages')
     });
 });
 
-        // --- Клуб ---
+        // --- Клан ---
         (clubInvites || []).forEach(i => {
             const club = clubMap[i.club_id] || {};
             list.push({
@@ -36021,7 +36049,7 @@ const { data: unreadMsgs } = await sb.from('messages')
                 clubId: i.club_id,
                 userId: i.from_id,
                 user: userMap[i.from_id] || {},
-                text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> приглашает тебя в клуб <b>${escapeHtml(club.name || '')}</b> [${escapeHtml(club.tag || '')}]`,
+                text: `<b>${escapeHtml(userMap[i.from_id]?.display_name || 'Игрок')}</b> приглашает тебя в Клан <b>${escapeHtml(club.name || '')}</b> [${escapeHtml(club.tag || '')}]`,
                 time: i.created_at,
                 unread: true
             });
@@ -36376,7 +36404,7 @@ async function acceptClubInviteNotif(inviteId, clubId, fromId) {
             .limit(1);
 
         if (memberships && memberships.length > 0) {
-            showToast('Ты уже в клубе');
+            showToast('Ты уже в Клане');
             await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
             await renderNotifList();
             await updateNotifBadge();
@@ -36389,7 +36417,7 @@ async function acceptClubInviteNotif(inviteId, clubId, fromId) {
             .maybeSingle();
 
         if (!club) {
-            showToast('❌ Клуб больше не существует');
+            showToast('❌ Клан больше не существует');
             await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
             await renderNotifList();
             await updateNotifBadge();
@@ -36401,7 +36429,7 @@ async function acceptClubInviteNotif(inviteId, clubId, fromId) {
             .eq('club_id', clubId);
 
         if ((members || []).length >= club.max_members) {
-            showToast('❌ Клуб заполнен');
+            showToast('❌ Клан заполнен');
             await sb.from('club_invites').update({ status: 'declined' }).eq('id', inviteId);
             await renderNotifList();
             await updateNotifBadge();
@@ -36424,11 +36452,11 @@ async function acceptClubInviteNotif(inviteId, clubId, fromId) {
         });
 
         await notify(fromId,
-            `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение в клуб <b>${escapeHtml(club.name)}</b>.`,
+            `✅ <b>${escapeHtml(currentUser.display_name)}</b> принял приглашение в Клан <b>${escapeHtml(club.name)}</b>.`,
             'club'
         );
 
-        showToast('✅ Ты в клубе!');
+        showToast('✅ Ты в Клане!');
         await renderNotifList();
         await updateNotifBadge();
     } catch (e) {
@@ -36889,12 +36917,12 @@ async function confirmAccountDeletion() {
         // Помечаем код использованным
         await sb.from('account_deletion_codes').update({ used: true }).eq('id', rec.id);
 
-        // Удаляем из клуба
+        // Удаляем из Клана
         const { data: membership } = await sb.from('club_members')
             .select('club_id, role').eq('telegram_id', currentUser.telegram_id).maybeSingle();
         if (membership) {
             if (membership.role === 'owner') {
-                // Удаляем весь клуб
+                // Удаляем весь Клан
                 await sb.from('club_members').delete().eq('club_id', membership.club_id);
                 await sb.from('club_requests').delete().eq('club_id', membership.club_id);
                 await sb.from('club_events').delete().eq('club_id', membership.club_id);
@@ -37092,7 +37120,7 @@ async function countUnreadChats() {
             .eq('recipient_id', me)
             .gt('created_at', lastChatsReadAt.toISOString());
 
-        // Клубные непрочитанные (если в клубе)
+        // Кланные непрочитанные (если в Клане)
         let clubCount = 0;
         const { data: membership } = await sb.from('club_members')
             .select('club_id').eq('telegram_id', me).maybeSingle();
@@ -37322,7 +37350,7 @@ function subscribeUsersRealtime() {
                 updateUserInFriendsList(u);
             }
 
-            // 2.4. Клуб
+            // 2.4. Клан
             if (document.getElementById('page-club')?.classList.contains('active')) {
                 updateUserInClubList(u);
             }
@@ -37410,7 +37438,7 @@ function updateUserInLeaderboard(u) {
         avEl.innerHTML = (src ? `<img src="${src}" alt="">` : initial) + onlineDot;
     }
 
-    // --- Ник + клубный тег + DEV-тег + уровень ---
+    // --- Ник + Кланный тег + DEV-тег + уровень ---
     const nickEl = el.querySelector('[data-list-nick]');
     if (nickEl) {
         const clubTag = myClubTagHTML(u.telegram_id);
@@ -37630,7 +37658,7 @@ function subscribeClubsRealtime() {
     clubsRealtimeChannel = sb.channel('clubs_rt_global_' + Date.now())
 
         // ============================================================
-        // 1. ИЗМЕНЕНИЯ В КЛУБАХ (название, лого, состав, equipped_items)
+        // 1. ИЗМЕНЕНИЯ В КланАХ (название, лого, состав, equipped_items)
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -37698,12 +37726,12 @@ function subscribeClubsRealtime() {
                 }
             }
 
-            // Обновляем страницу клуба, если открыта
+            // Обновляем страницу Клана, если открыта
             if (document.getElementById('page-club')?.classList.contains('active')) {
                 loadClub();
             }
 
-            // Обновляем шит "Все клубы"
+            // Обновляем шит "Все Кланы"
             if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
                 const q = document.getElementById('allClubsSearch')?.value.trim() || '';
                 if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
@@ -37711,7 +37739,7 @@ function subscribeClubsRealtime() {
         })
 
         // ============================================================
-        // 2. ИЗМЕНЕНИЯ В СОСТАВЕ КЛУБА (вход, выход, кик, повышение)
+        // 2. ИЗМЕНЕНИЯ В СОСТАВЕ КланА (вход, выход, кик, повышение)
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -37723,7 +37751,7 @@ function subscribeClubsRealtime() {
 
             // Если это МОЯ запись — обновляем myClub
             if (Number(row.telegram_id) === myId) {
-                // Перезагружаем клуб (если я вступил/вышел/меня кикнули)
+                // Перезагружаем Клан (если я вступил/вышел/меня кикнули)
                 if (document.getElementById('page-club')?.classList.contains('active')) {
                     loadClub();
                 }
@@ -37731,27 +37759,27 @@ function subscribeClubsRealtime() {
                 delete clubTagCache[myId];
                 loadClubTagsForUsers([myId]);
             } else {
-                // Кто-то другой — просто обновляем клуб
+                // Кто-то другой — просто обновляем Клан
                 if (document.getElementById('page-club')?.classList.contains('active')) {
                     loadClub();
                 }
             }
 
-            // Обновляем открытый шит "Все клубы"
+            // Обновляем открытый шит "Все Кланы"
             if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
                 const q = document.getElementById('allClubsSearch')?.value.trim() || '';
                 if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
             }
 
-            // Обновляем "Состав" в модалке просмотра клуба
+            // Обновляем "Состав" в модалке просмотра Клана
             const modal = document.getElementById('playerModal');
             if (modal?.classList.contains('active')) {
-                // Если открыт профиль клуба — обновим (не всегда нужно, поэтому без фанатизма)
+                // Если открыт профиль Клана — обновим (не всегда нужно, поэтому без фанатизма)
             }
         })
 
         // ============================================================
-        // 3. ЗАЯВКИ В КЛУБ (только для OWNER / ELDER)
+        // 3. ЗАЯВКИ В Клан (только для OWNER / ELDER)
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -37761,7 +37789,7 @@ function subscribeClubsRealtime() {
             const row = payload.new || payload.old;
             if (!row) return;
 
-            // Обновляем бейдж заявок только если мой клуб
+            // Обновляем бейдж заявок только если мой Клан
             if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
                 if (typeof updateRequestsBadge === 'function') {
                     updateRequestsBadge();
@@ -37774,7 +37802,7 @@ function subscribeClubsRealtime() {
         })
 
         // ============================================================
-        // 4. ПРИГЛАШЕНИЯ В КЛУБ
+        // 4. ПРИГЛАШЕНИЯ В Клан
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -37792,14 +37820,14 @@ function subscribeClubsRealtime() {
                 haptic('light');
             }
 
-            // Обновляем страницу клуба, если открыта
+            // Обновляем страницу Клана, если открыта
             if (document.getElementById('page-club')?.classList.contains('active')) {
                 loadClub();
             }
         })
 
         // ============================================================
-        // 5. ИНВЕНТАРЬ КЛУБА (купленные/надетые предметы)
+        // 5. ИНВЕНТАРЬ КланА (купленные/надетые предметы)
         // ============================================================
         .on('postgres_changes', {
             event: '*',
@@ -37809,7 +37837,7 @@ function subscribeClubsRealtime() {
             const row = payload.new || payload.old;
             if (!row) return;
 
-            // Если это инвентарь МОЕГО клуба — перезагружаем клуб
+            // Если это инвентарь МОЕГО Клана — перезагружаем Клан
             if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
                 if (document.getElementById('page-club')?.classList.contains('active')) {
                     loadClub();
@@ -38137,7 +38165,7 @@ async function loadClubInviteList(q) {
             r.requester_id === me ? r.addressee_id : r.requester_id
         );
 
-        // Уже в клубе
+        // Уже в Клане
         const memberIds = new Set(myClub.members.map(m => m.telegram_id));
 
         // Уже приглашены
@@ -38206,11 +38234,11 @@ async function loadClubInviteList(q) {
 async function sendClubInvite(userId, btn) {
     if (btn) { btn.disabled = true; btn.textContent = '...'; }
     try {
-        // Проверим, не в клубе ли уже
+        // Проверим, не в Клане ли уже
         const { data: membership } = await sb.from('club_members')
             .select('club_id').eq('telegram_id', userId).maybeSingle();
         if (membership) {
-            showToast('Игрок уже в клубе');
+            showToast('Игрок уже в Клане');
             if (btn) { btn.disabled = false; btn.textContent = 'Пригласить'; }
             return;
         }
@@ -38223,7 +38251,7 @@ async function sendClubInvite(userId, btn) {
         }, { onConflict: 'club_id,to_id' });
 
         await notify(userId,
-            `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в клуб <b>${escapeHtml(myClub.club.name)}</b> [${escapeHtml(myClub.club.tag)}]. Открой приложение!`,
+            `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в Клан <b>${escapeHtml(myClub.club.name)}</b> [${escapeHtml(myClub.club.tag)}]. Открой приложение!`,
             'club'
         );
 
@@ -38235,7 +38263,7 @@ async function sendClubInvite(userId, btn) {
     }
 }
 
-// Realtime-обработчик входящих приглашений в клуб
+// Realtime-обработчик входящих приглашений в Клан
 function subscribeClubInvitesRealtime() {
     if (window._clubInvitesChannel) sb.removeChannel(window._clubInvitesChannel);
     window._clubInvitesChannel = sb.channel('club_invites_' + currentUser.telegram_id)
@@ -45481,7 +45509,7 @@ function renderClanItemPreview(item) {
 }
 
 async function openClanShop() {
-    if (!myClub?.club) { showToast('Ты не в клубе'); return; }
+    if (!myClub?.club) { showToast('Ты не в Клане'); return; }
 
     const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
     const canBuy = myRole === 'owner' || myRole === 'elder'
@@ -45647,7 +45675,7 @@ function closeClanShop() {
 // 💰 ВЗНОС В КАЗНУ КЛАНА
 // ============================================================
 async function openClanDonateSheet() {
-    if (!myClub?.club) { showToast('Ты не в клубе'); return; }
+    if (!myClub?.club) { showToast('Ты не в Клане'); return; }
 
     // Проверка прав
     const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
@@ -45961,7 +45989,7 @@ async function equipClanItem(itemId) {
         // Перезагружаем кэш товаров клана
         await loadClanShopCache(true);
 
-        // Обновляем кэш для всех участников клуба
+        // Обновляем кэш для всех участников Клана
         myClub.members.forEach(m => {
             if (clubTagCache[m.telegram_id]) {
                 clubTagCache[m.telegram_id].equipped = equipped;
@@ -46879,7 +46907,7 @@ async function drawProfileCard(ctx, W, data, colors) {
         curY += 55;
     }
 
-    // ---- Клуб-тег + ник ----
+    // ---- Клан-тег + ник ----
     const club = (typeof clubTagCache !== 'undefined') ? clubTagCache[user.telegram_id] : null;
     const clubTag = club ? `[${club.tag}] ` : '';
 
@@ -47312,7 +47340,7 @@ async function openSharePreview(userId) {
             }
         }
 
-        // Догружаем клуб-тег
+        // Догружаем Клан-тег
         if (typeof clubTagCache !== 'undefined' && !clubTagCache[user.telegram_id]) {
             if (typeof loadClubTagsForUsers === 'function') {
                 await loadClubTagsForUsers([user.telegram_id]);
@@ -47834,7 +47862,7 @@ const ACHIEVEMENTS = [
     { id: 'wr50',           name: 'Winrate 50%+',       desc: 'Побеждать в половине матчей (10+ игр)',         check: (u) => (u.matches_played ?? 0) >= 10 && ((u.wins ?? 0) / u.matches_played) >= 0.5 },
     { id: 'wr60',           name: 'Winrate 60%+',       desc: 'Побеждать в 60% матчей (20+ игр)',              check: (u) => (u.matches_played ?? 0) >= 20 && ((u.wins ?? 0) / u.matches_played) >= 0.6 },
     { id: 'wr70',           name: 'Winrate 70%+',       desc: 'Побеждать в 70% матчей (30+ игр)',              check: (u) => (u.matches_played ?? 0) >= 30 && ((u.wins ?? 0) / u.matches_played) >= 0.7 },
-    { id: 'in_club',        name: 'В клане',            desc: 'Вступить в любой клуб Faceit',                  check: (u) => !!u.club_id },
+    { id: 'in_club',        name: 'В клане',            desc: 'Вступить в любой Клан Faceit',                  check: (u) => !!u.club_id },
     { id: 'top10',          name: 'Топ-10 лидерборд',   desc: 'Войти в топ-10 игроков по DXP',                 check: (u) => (u.rank ?? 999) <= 10 },
     { id: 'dev_tag',        name: 'Разработчик',        desc: 'Особая метка разработчика Faceit',              check: (u) => !!u.is_dev },
 ];
