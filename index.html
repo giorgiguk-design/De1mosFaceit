@@ -19977,6 +19977,39 @@ html.lite-mode .case-open-reel { filter: none !important; }
 }
 
     /* ============================================================ */
+/* 🏷️ ПРЕВЬЮ ТЕГА В МАГАЗИНЕ                                     */
+/* ============================================================ */
+.shop-tag-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    min-height: 36px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.shop-tag-preview .ctb-text {
+    display: inline-block;
+}
+
+/* Если нет данных — показываем placeholder */
+.shop-tag-empty {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.6;
+}
+
+    /* ============================================================ */
 /* 🛒 СОРТИРОВКА                                                */
 /* ============================================================ */
 .shop-sort-wrap {
@@ -20025,6 +20058,8 @@ html.lite-mode .case-open-reel { filter: none !important; }
         flex: 1;
     }
 }
+
+    
     
 </style>
 </head>
@@ -45206,18 +45241,52 @@ function closeClanInventory() {
     document.getElementById('clanInventorySheet')?.remove();
 }
 
+// ============================================================
+// 🎒 Превью товара в инвентаре клана
+// ============================================================
 function renderClanItemPreview(item) {
     const val = item.value || {};
-    if (item.category === 'tag_color' && val.color) {
-        return `<span style="color: ${val.color}; text-shadow: 0 0 10px ${val.color}; font-weight: 900; font-size: 16px;">[TAG]</span>`;
+
+    // 🎨 Цвет
+    if (item.category === 'tag_color') {
+        if (val.color) {
+            return `<span class="ctb-text" style="color: ${val.color}; text-shadow: 0 0 10px ${val.color}; font-weight: 900; font-size: 16px; letter-spacing: 1px;">[TAG]</span>`;
+        }
+        return `<span class="shop-tag-empty">—</span>`;
     }
-    if (item.category === 'tag_gradient' && val.gradient) {
-        return `<span style="background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; font-size: 16px;">[TAG]</span>`;
+
+    // 🌈 Градиент
+    if (item.category === 'tag_gradient') {
+        if (Array.isArray(val.gradient) && val.gradient.length) {
+            return `<span class="ctb-text" style="
+                background: linear-gradient(90deg, ${val.gradient.join(',')});
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+                color: transparent;
+                font-weight: 900;
+                font-size: 16px;
+                letter-spacing: 1px;
+            ">[TAG]</span>`;
+        }
+        return `<span class="shop-tag-empty">—</span>`;
     }
-    if (item.category === 'clan_badge' && val.emoji) {
-        return `<span style="font-size: 24px;">${val.emoji}</span>`;
+
+    // ✨ Эффект — используем классы .ctb-*
+    if (item.category === 'tag_effect') {
+        const style = val.style || 'neon';
+        const color = val.color || '#00e08a';
+        return `<span class="ctb-text ctb-${style}" style="--ctb-c: ${color}; font-size: 16px; letter-spacing: 1px;">[TAG]</span>`;
     }
-    return '📦';
+
+    // 🏅 Значок клана
+    if (item.category === 'clan_badge') {
+        if (val.emoji) return `<span style="font-size: 24px;">${val.emoji}</span>`;
+        if (val.url) return `<img src="${val.url}" style="width:24px;height:24px;object-fit:contain;">`;
+        return `<span style="font-size: 24px;">🏅</span>`;
+    }
+
+    return `<span style="font-size: 20px; opacity: 0.5;">📦</span>`;
 }
 
 async function openClanShop() {
@@ -45460,25 +45529,87 @@ function switchClanShopCategory(cat) {
     openClanShop();
 }
 
+// ============================================================
+// 🎴 Карточка товара в магазине клана
+// Поддерживает: tag_color, tag_gradient, tag_effect, clan_badge
+// ============================================================
 function renderClanShopItem(item, isOwned, isEquipped, canBuy) {
     const val = item.value || {};
     let previewHTML = '';
     let previewStyle = '';
 
+    // ============================================================
+    // 🎨 ЦВЕТ ТЕГА
+    // ============================================================
     if (item.category === 'tag_color') {
         if (val.color) {
-            previewStyle = `color: ${val.color}; text-shadow: 0 0 12px ${val.color}; font-weight: 900; font-size: 18px;`;
-            previewHTML = `[TAG]`;
+            previewHTML = `
+                <span class="shop-tag-preview">
+                    <span class="ctb-text" style="
+                        color: ${val.color};
+                        text-shadow: 0 0 10px ${val.color};
+                    ">[TAG]</span>
+                </span>`;
+        } else {
+            previewHTML = `<span class="shop-tag-empty">нет цвета</span>`;
         }
-    } else if (item.category === 'tag_gradient') {
-        if (val.gradient) {
-            previewStyle = `background: linear-gradient(90deg, ${val.gradient.join(',')}); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; font-weight: 900; font-size: 18px;`;
-            previewHTML = `[TAG]`;
-        }
-    } else if (item.category === 'clan_badge') {
-        previewHTML = `<span style="font-size: 38px;">${val.emoji || '🏅'}</span>`;
     }
 
+    // ============================================================
+    // 🌈 ГРАДИЕНТ ТЕГА
+    // ============================================================
+    else if (item.category === 'tag_gradient') {
+        if (Array.isArray(val.gradient) && val.gradient.length) {
+            previewHTML = `
+                <span class="shop-tag-preview">
+                    <span class="ctb-text" style="
+                        background: linear-gradient(90deg, ${val.gradient.join(',')});
+                        -webkit-background-clip: text;
+                        background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        color: transparent;
+                    ">[TAG]</span>
+                </span>`;
+        } else {
+            previewHTML = `<span class="shop-tag-empty">нет градиента</span>`;
+        }
+    }
+
+    // ============================================================
+    // ✨ ЭФФЕКТ ТЕГА — используем классы .ctb-*
+    // ============================================================
+    else if (item.category === 'tag_effect') {
+        const style = val.style || 'neon';
+        const color = val.color || '#00e08a';
+        previewHTML = `
+            <span class="shop-tag-preview">
+                <span class="ctb-text ctb-${style}" style="--ctb-c: ${color};">[TAG]</span>
+            </span>`;
+    }
+
+    // ============================================================
+    // 🏅 ЗНАЧОК КЛАНА
+    // ============================================================
+    else if (item.category === 'clan_badge') {
+        if (val.emoji) {
+            previewHTML = `<span style="font-size: 38px;">${val.emoji}</span>`;
+        } else if (val.url) {
+            previewHTML = `<img src="${val.url}" style="width:48px;height:48px;object-fit:contain;">`;
+        } else {
+            previewHTML = `<span style="font-size: 38px;">🏅</span>`;
+        }
+    }
+
+    // ============================================================
+    // FALLBACK
+    // ============================================================
+    else {
+        previewHTML = `<span style="font-size: 32px; opacity: 0.5;">📦</span>`;
+    }
+
+    // ============================================================
+    // Кнопка действия
+    // ============================================================
     let actionBtn;
     if (isEquipped) {
         actionBtn = `<button class="shop-btn equipped" disabled>✓ НАДЕТО</button>`;
@@ -45490,7 +45621,9 @@ function renderClanShopItem(item, isOwned, isEquipped, canBuy) {
         actionBtn = `<button class="shop-btn buy" onclick="buyClanItem('${item.id}', ${item.price})">💰 ${item.price}</button>`;
     }
 
-    const rarityLabel = { common: 'Обычный', rare: 'Редкий', epic: 'Эпик', legendary: 'Легенда' }[item.rarity] || 'Обычный';
+    const rarityLabel = {
+        common: 'Обычный', rare: 'Редкий', epic: 'Эпик', legendary: 'Легенда'
+    }[item.rarity] || 'Обычный';
 
     return `
         <div class="shop-item ${isOwned ? 'owned' : ''} ${isEquipped ? 'equipped' : ''}"
