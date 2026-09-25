@@ -20023,63 +20023,53 @@ html.lite-mode .case-open-reel { filter: none !important; }
 }
 
 /* ============================================================ */
-/* ✨ ЭФФЕКТЫ В СПИСКАХ — только чистый цвет + мягкая тень      */
+/* 🏷️ ТЕГ КЛАНА В СПИСКАХ — УПРОЩЁННЫЕ ЭФФЕКТЫ                  */
+/* Без animation, без filter: drop-shadow, без многослойных     */
+/* text-shadow с большим blur — они дают размытие в WebView.    */
 /* ============================================================ */
 
-/* neon — оставляем одно свечение, убираем многослойность */
+.clan-tag {
+    display: inline-block;
+    vertical-align: middle;
+    font-weight: 900;
+    letter-spacing: 0.4px;
+}
+
 .clan-tag.ctb-neon {
     color: var(--ctb-c, #00e08a);
     text-shadow: 0 0 4px var(--ctb-c, #00e08a);
 }
-
-/* glass — без blur, только чёткая тень-обводка */
 .clan-tag.ctb-glass {
     color: var(--ctb-c, #a78bfa);
     text-shadow: 0 1px 0 rgba(255,255,255,0.3), 0 0 3px var(--ctb-c, #a78bfa);
 }
-
-/* gold — оставляем gradient, но БЕЗ drop-shadow */
 .clan-tag.ctb-gold {
     background: linear-gradient(180deg, #fff5cc 0%, #ffd700 40%, #b8860b 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    /* ❌ убираем filter: drop-shadow */
 }
-
-/* blood — без пульсации, только красный цвет + лёгкая тень */
 .clan-tag.ctb-blood {
     color: #ff2e4d;
     text-shadow: 0 0 4px #ff2e4d;
-    /* ❌ убираем animation: ctbBlood */
 }
-
-/* ice — один слой свечения */
 .clan-tag.ctb-ice {
     color: #7dd3fc;
     text-shadow: 0 0 4px #7dd3fc;
 }
-
-/* fire — градиент БЕЗ анимации фона и БЕЗ drop-shadow */
 .clan-tag.ctb-fire {
     background: linear-gradient(90deg, #ff1f00, #ff8c00, #ffe066, #ff8c00, #ff1f00);
-    background-size: 100% 100%;   /* статичный, не бегущий */
+    background-size: 100% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    /* ❌ без animation и filter */
 }
-
-/* electric — без мерцания, только холодный цвет */
 .clan-tag.ctb-electric {
     color: #7dd3fc;
     text-shadow: 0 0 4px #7dd3fc;
-    /* ❌ без animation: ctbElectric */
 }
-
-/* shimmer — статичный градиент БЕЗ бегущего блика */
 .clan-tag.ctb-shimmer {
     background: linear-gradient(90deg, var(--ctb-c, #ffd700), #fff 50%, var(--ctb-c, #ffd700));
     background-size: 100% 100%;
@@ -20087,17 +20077,11 @@ html.lite-mode .case-open-reel { filter: none !important; }
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    /* ❌ без animation и drop-shadow */
 }
-
-/* pulse — без скалирования, только цвет */
 .clan-tag.ctb-pulse {
     color: var(--ctb-c, #ff2e6d);
     text-shadow: 0 0 4px var(--ctb-c, #ff2e6d);
-    /* ❌ без animation: ctbPulse */
 }
-
-/* rainbow — статичный градиент, не бегущий */
 .clan-tag.ctb-rainbow {
     background: linear-gradient(90deg, #ff2e6d, #ff7a2e, #ffd700, #8ce65a, #4fc3f7, #a78bfa);
     background-size: 100% 100%;
@@ -20105,10 +20089,7 @@ html.lite-mode .case-open-reel { filter: none !important; }
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    /* ❌ без animation */
 }
-
-/* hologram — статичный градиент */
 .clan-tag.ctb-hologram {
     background: linear-gradient(135deg, #4fc3f7, #a78bfa, #ff2e6d, #ffd700);
     background-size: 100% 100%;
@@ -20116,24 +20097,15 @@ html.lite-mode .case-open-reel { filter: none !important; }
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    /* ❌ без animation и drop-shadow */
 }
-
-/* cyber — просто зелёный, без hue-rotate */
 .clan-tag.ctb-cyber {
     color: #00e08a;
     text-shadow: 0 0 4px #00e08a;
-    /* ❌ без animation: ctbCyber */
 }
-
-/* outline — обводка БЕЗ свечения (свечение даёт блюр) */
 .clan-tag.ctb-outline {
     color: transparent;
     -webkit-text-stroke: 1px var(--ctb-c, #fff);
-    /* ❌ без text-shadow */
 }
-
-/* galaxy — статичный градиент */
 .clan-tag.ctb-galaxy {
     background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 30%, #7c3aed 60%, #4c1d95 100%);
     background-size: 100% 100%;
@@ -20141,8 +20113,9 @@ html.lite-mode .case-open-reel { filter: none !important; }
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    /* ❌ без animation и drop-shadow */
 }
+
+/* Lite-mode — тег уже статичный, ничего дополнительно не нужно */
 
 /* ============================================================ */
 /* 🚀 LITE MODE — отключаем анимации, но оставляем цвет/свечение */
@@ -24620,72 +24593,51 @@ function myClubTagHTML(telegramId) {
     const eq = club.equipped || {};
     const cache = (typeof CLAN_SHOP_CACHE !== 'undefined') ? CLAN_SHOP_CACHE : {};
 
-    let style = 'color: var(--hint); opacity: 0.7; font-weight: 700;';
-    let extraCls = 'clan-tag';
-    let tagText = `[${escapeHtml(club.tag)}]`;
-
     // ============================================================
-    // ✨ ЭФФЕКТ — приоритет 1
+    // ✨ ЭФФЕКТ ТЕГА
     // ============================================================
     if (eq.tag_effect && cache[eq.tag_effect]) {
         const val = cache[eq.tag_effect].value || {};
         const effStyle = val.style || 'neon';
         const color = val.color || '#00e08a';
 
-        // Inline-стили: цвет/градиент/тень — всегда видны
-        // Анимации применяет CSS-класс .ctb-XXX (там же отключаются в lite-mode)
-        const effectInline = {
-            neon:     `color:${color};text-shadow:0 0 4px ${color},0 0 8px ${color},0 0 16px ${color};`,
-            glass:    `color:${color};text-shadow:0 1px 0 rgba(255,255,255,0.4),0 -1px 0 rgba(0,0,0,0.6),0 0 8px ${color};`,
-            gold:     `background:linear-gradient(180deg,#fff5cc,#ffd700 40%,#b8860b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
-            blood:    `color:#ff2e4d;text-shadow:0 0 6px #ff2e4d,0 0 14px #7f1d1d,0 1px 2px #000;`,
-            ice:      `color:#7dd3fc;text-shadow:0 0 6px #7dd3fc,0 0 14px #4fc3f7,0 0 22px #0369a1;`,
-            fire:     `background:linear-gradient(90deg,#ff1f00,#ff8c00,#ffe066,#ff8c00,#ff1f00);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
-            electric: `color:#7dd3fc;text-shadow:0 0 4px #7dd3fc,0 0 12px #4c1d95,0 0 20px #4c1d95;`,
-            shimmer:  `background:linear-gradient(90deg,${color},${color} 40%,#fff 50%,${color} 60%,${color});background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
-            pulse:    `color:${color};text-shadow:0 0 8px ${color},0 0 18px ${color};`,
-            rainbow:  `background:linear-gradient(90deg,#ff2e6d,#ff7a2e,#ffd700,#8ce65a,#4fc3f7,#a78bfa,#ff2e6d);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
-            hologram: `background:linear-gradient(135deg,#4fc3f7,#a78bfa,#ff2e6d,#ffd700,#4fc3f7);background-size:300% 300%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
-            cyber:    `color:#00e08a;text-shadow:0 0 6px #00e08a,0 0 14px #00e08a;`,
-            outline:  `color:transparent;-webkit-text-stroke:1px ${color};text-shadow:0 0 6px ${color};`,
-            galaxy:   `background:linear-gradient(135deg,#1e1b4b,#7c3aed,#4c1d95,#1e1b4b);background-size:300% 300%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;`,
-        };
-
-        style = (effectInline[effStyle] || effectInline.neon) + ' font-weight: 900; letter-spacing: 0.4px;';
-        extraCls = `clan-tag clan-tag-effect ctb-${effStyle}`;
-
-        return `<span class="${extraCls}" data-ctb-c="${color}" style="${style}">${tagText}</span>`;
+        return `<span class="clan-tag clan-tag-effect ctb-${effStyle}"
+                      style="--ctb-c: ${color};">[${escapeHtml(club.tag)}]</span>`;
     }
 
     // ============================================================
-    // 🌈 ГРАДИЕНТ — приоритет 2
+    // 🌈 ГРАДИЕНТ
     // ============================================================
     if (eq.tag_gradient && cache[eq.tag_gradient]) {
         const val = cache[eq.tag_gradient].value || {};
         if (Array.isArray(val.gradient) && val.gradient.length) {
-            const stops = val.gradient.join(',');
-            style = `background:linear-gradient(90deg,${stops});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900;letter-spacing:0.4px;`;
-            extraCls = 'clan-tag clan-tag-gradient';
-            return `<span class="${extraCls}" style="${style}">${tagText}</span>`;
+            return `<span class="clan-tag clan-tag-gradient"
+                          style="background:linear-gradient(90deg,${val.gradient.join(',')});
+                                 -webkit-background-clip:text;
+                                 background-clip:text;
+                                 -webkit-text-fill-color:transparent;
+                                 color:transparent;
+                                 font-weight:900;
+                                 letter-spacing:0.4px;">[${escapeHtml(club.tag)}]</span>`;
         }
     }
 
     // ============================================================
-    // 🎨 ЦВЕТ — приоритет 3
+    // 🎨 ЦВЕТ
     // ============================================================
     if (eq.tag_color && cache[eq.tag_color]) {
         const val = cache[eq.tag_color].value || {};
         if (val.color) {
-            style = `color:${val.color};text-shadow:0 0 8px ${val.color};font-weight:900;letter-spacing:0.4px;`;
-            extraCls = 'clan-tag clan-tag-color';
-            return `<span class="${extraCls}" style="${style}">${tagText}</span>`;
+            return `<span class="clan-tag clan-tag-color"
+                          style="color:${val.color};text-shadow:0 0 8px ${val.color};
+                                 font-weight:900;letter-spacing:0.4px;">[${escapeHtml(club.tag)}]</span>`;
         }
     }
 
     // ============================================================
     // Дефолт
     // ============================================================
-    return `<span class="${extraCls}" style="${style}">${tagText}</span>`;
+    return `<span class="clan-tag" style="color:var(--hint);opacity:0.7;font-weight:700;">[${escapeHtml(club.tag)}]</span>`;
 }
 
             // ============================================================
