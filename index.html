@@ -369,12 +369,6 @@ body::after {
     min-height: 130px;
 }
 
-.leaderboard-champion .champ-avatar {
-    width: 96px !important;
-    height: 96px !important;
-    font-size: 38px !important;
-}
-
 .leaderboard-champion .champ-name {
     font-size: 26px !important;
 }
@@ -438,23 +432,87 @@ body::after {
     50%      { transform: translateY(-4px) rotate(5deg); }
 }
 
+/* Обёртка аватара чемпиона — держит SVG-рамку */
+.champ-avatar-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    min-width: 120px;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    isolation: isolate;
+}
+
 .champ-avatar {
-    width: 80px;
-    height: 80px;
+    position: relative;
+    width: 92px;
+    height: 92px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ffd700, #b8860b);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 900;
     color: #04140e;
     overflow: hidden;
-    flex-shrink: 0;
-    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.5),
-                0 0 30px rgba(255, 215, 0, 0.4);
-    position: relative;
     z-index: 2;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.4),
+                0 0 24px rgba(255, 215, 0, 0.35);
+}
+
+.champ-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 🔥 SVG-рамка чемпиона — крупнее, поверх аватара */
+.champ-frame-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 168px;
+    height: 168px;
+    max-width: 168px;
+    max-height: 168px;
+    pointer-events: none;
+    z-index: 3;
+    overflow: visible;
+}
+
+.champ-frame-overlay svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+}
+
+/* На ПК — ещё больше */
+@media (min-width: 1024px) {
+    .champ-avatar-wrap {
+        width: 140px;
+        height: 140px;
+        min-width: 140px;
+        min-height: 140px;
+    }
+
+    .champ-avatar {
+        width: 110px;
+        height: 110px;
+        font-size: 44px;
+    }
+
+    .champ-frame-overlay {
+        width: 200px;
+        height: 200px;
+        max-width: 200px;
+        max-height: 200px;
+    }
 }
 
 .champ-avatar img {
@@ -29346,57 +29404,74 @@ async function loadLeaderboard() {
         // 3. HTML: чемпион + топ-9
         let html = '';
 
-        // Чемпион — отдельная большая карточка
-        if (champion) {
-            const champSrc = champion.custom_avatar || champion.photo_url;
-            const champInitial = (champion.display_name || 'U')[0].toUpperCase();
-            const champAv = champSrc ? `<img src="${champSrc}" alt="">` : champInitial;
-            const champLvl = eloToLevel(champion.elo);
-            const champEmblem = getRankEmblem(champLvl, 40, true);
-            const champIsMe = champion.telegram_id === me;
+// Чемпион — отдельная большая карточка со SVG-рамкой
+if (champion) {
+    const champSrc = champion.custom_avatar || champion.photo_url;
+    const champInitial = (champion.display_name || 'U')[0].toUpperCase();
+    const champAv = champSrc ? `<img src="${champSrc}" alt="">` : champInitial;
+    const champLvl = eloToLevel(champion.elo);
+    const champIsMe = champion.telegram_id === me;
 
-            html += `
-                <div class="leaderboard-champion" data-user-id="${champion.telegram_id}"
-                     onclick="openPlayerProfile(${champion.telegram_id})">
-                    <div class="champ-crown">👑</div>
-                    <div class="champ-avatar">${champAv}</div>
-                    <div class="champ-info">
-                        <div class="champ-label">
-                            <span>ЧЕМПИОН</span>
-                            ${champIsMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
-                        </div>
-<div class="champ-name">${escapeHtml(champion.display_name || 'Игрок')}</div>
-<div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
-    <div style="
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 6px 12px;
-        background: rgba(0,0,0,0.5);
-        border: 1px solid ${RANK_CONFIG.LEVELS[champLvl-1].color}66;
-        border-radius: 999px;
-        cursor: pointer;
-    " onclick="event.stopPropagation(); openRankInfoSheet(${champLvl});">
-        <span style="width: 24px; height: 24px; display: inline-flex; flex-shrink: 0;">
-            ${getRankEmblem(champLvl, 24, true)}
-        </span>
-        <span style="
-            font-family: 'Orbitron', sans-serif;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 1.5px;
-            color: ${RANK_CONFIG.LEVELS[champLvl-1].color};
-            text-transform: uppercase;
-            text-shadow: 0 0 8px ${RANK_CONFIG.LEVELS[champLvl-1].color}88;
-        ">${RANK_CONFIG.LEVELS[champLvl-1].name}</span>
-    </div>
-    <div class="champ-stat">
-        <span class="champ-stat-value">${champion.elo ?? 1000}</span>
-        <span class="champ-stat-label">DXP</span>
-    </div>
-</div>
+    // 🔥 Проверяем есть ли специальная SVG-рамка
+    const champEq = champion.equipped_items || {};
+    const frameId = champEq.avatar_frame;
+    const frameItem = frameId ? SHOP_ITEMS_CACHE[frameId] : null;
+    const frameVal = frameItem?.value || {};
+    const isSpecialFrame = frameVal.special === true;
+    const frameColor = frameVal.color || '#ffd700';
+
+    // SVG-рамка чемпиона (оверлей)
+    const frameOverlayHTML = isSpecialFrame
+        ? `<div class="champ-frame-overlay">${getSpecialFrameHTML(frameVal.special_type || 'default', frameColor)}</div>`
+        : '';
+
+    html += `
+        <div class="leaderboard-champion" data-user-id="${champion.telegram_id}"
+             onclick="openPlayerProfile(${champion.telegram_id})">
+            <div class="champ-crown">👑</div>
+
+            <div class="champ-avatar-wrap">
+                <div class="champ-avatar" data-list-avatar data-champion-avatar>${champAv}</div>
+                ${frameOverlayHTML}
+            </div>
+
+            <div class="champ-info">
+                <div class="champ-label">
+                    <span>ЧЕМПИОН</span>
+                    ${champIsMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
+                </div>
+                <div class="champ-name">${escapeHtml(champion.display_name || 'Игрок')}</div>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+                    <div style="
+                        display: inline-flex; align-items: center; gap: 8px;
+                        padding: 6px 12px;
+                        background: rgba(0,0,0,0.5);
+                        border: 1px solid ${RANK_CONFIG.LEVELS[champLvl-1].color}66;
+                        border-radius: 999px;
+                        cursor: pointer;
+                    " onclick="event.stopPropagation(); openRankInfoSheet(${champLvl});">
+                        <span style="width: 24px; height: 24px; display: inline-flex; flex-shrink: 0;">
+                            ${getRankEmblem(champLvl, 24, true)}
+                        </span>
+                        <span style="
+                            font-family: 'Orbitron', sans-serif;
+                            font-size: 11px;
+                            font-weight: 900;
+                            letter-spacing: 1.5px;
+                            color: ${RANK_CONFIG.LEVELS[champLvl-1].color};
+                            text-transform: uppercase;
+                            text-shadow: 0 0 8px ${RANK_CONFIG.LEVELS[champLvl-1].color}88;
+                        ">${RANK_CONFIG.LEVELS[champLvl-1].name}</span>
+                    </div>
+                    <div class="champ-stat">
+                        <span class="champ-stat-value">${champion.elo ?? 1000}</span>
+                        <span class="champ-stat-label">DXP</span>
                     </div>
                 </div>
-            `;
-        }
+            </div>
+        </div>
+    `;
+}
 
         // Топ-9
         if (top9.length) {
@@ -45081,20 +45156,23 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
 }
 
 // ============================================================
-// 🎨 ПРИМЕНЕНИЕ КАСТОМИЗАЦИИ К АВАТАРУ + НИКУ + ФОНУ (для списков)
+// 🎨 КАСТОМИЗАЦИЯ В СПИСКАХ (лидерборд, чат, комната, клан, матчи)
+// Применяет: цвет ника, рамку аватара, значок, фон профиля
 // ============================================================
 function applyListCustomization(scopeEl, user) {
     if (!scopeEl || !user) return;
 
     const eq = user.equipped_items || {};
 
-    // --- Ник ---
+    // ============================================================
+    // 1. ЦВЕТ / ГРАДИЕНТ НИКА
+    // ============================================================
     const colorId = eq.nickname_color;
     const nickEls = scopeEl.querySelectorAll('[data-list-nick]');
     if (colorId && SHOP_ITEMS_CACHE[colorId]) {
         const val = SHOP_ITEMS_CACHE[colorId].value || {};
         nickEls.forEach(el => {
-            if (val.gradient) {
+            if (val.gradient && Array.isArray(val.gradient) && val.gradient.length) {
                 el.style.background = `linear-gradient(90deg, ${val.gradient.join(',')})`;
                 el.style.webkitBackgroundClip = 'text';
                 el.style.backgroundClip = 'text';
@@ -45110,10 +45188,19 @@ function applyListCustomization(scopeEl, user) {
                 el.style.textShadow = `0 0 10px ${val.color}`;
             }
         });
+    } else {
+        nickEls.forEach(el => {
+            el.style.background = '';
+            el.style.webkitBackgroundClip = '';
+            el.style.backgroundClip = '';
+            el.style.webkitTextFillColor = '';
+            el.style.color = '';
+            el.style.textShadow = '';
+        });
     }
 
     // ============================================================
-    // РАМКА АВАТАРА
+    // 2. РАМКА АВАТАРА
     // ============================================================
     const frameId = eq.avatar_frame;
     const avEls = scopeEl.querySelectorAll('[data-list-avatar]');
@@ -45125,14 +45212,23 @@ function applyListCustomization(scopeEl, user) {
         const color = val.color || '#fff';
 
         if (val.special === true) {
-            // 🔥 СПЕЦ-РАМКА — создаём обёртку вокруг аватара
+            // 🔥 СПЕЦ-РАМКА (SVG поверх аватара)
             avEls.forEach(el => {
+                // 🛡️ ПРОПУСК: если это чемпион — у него своя логика
+                if (el.hasAttribute('data-champion-avatar') ||
+                    el.closest('.champ-avatar-wrap')) {
+                    return;
+                }
+
+                // Создаём обёртку .avatar-frame-wrap если её нет
                 let wrap = el.parentElement;
                 if (!wrap.classList.contains('avatar-frame-wrap')) {
                     const newWrap = document.createElement('div');
                     newWrap.className = 'avatar-frame-wrap';
+
                     const w = el.offsetWidth || 34;
                     const h = el.offsetHeight || 34;
+
                     newWrap.style.cssText = `
                         position: relative;
                         display: inline-flex;
@@ -45143,6 +45239,7 @@ function applyListCustomization(scopeEl, user) {
                         height: ${h}px;
                         isolation: isolate;
                     `;
+
                     el.parentNode.insertBefore(newWrap, el);
                     newWrap.appendChild(el);
                     wrap = newWrap;
@@ -45156,47 +45253,74 @@ function applyListCustomization(scopeEl, user) {
                 // Убираем старый overlay
                 wrap.querySelectorAll('.list-frame-overlay').forEach(o => o.remove());
 
-                // 🔥 Размер оверлея — 2× от аватара (как в профиле)
+                // Размер оверлея — 1.75× от аватара
                 const avatarSize = el.offsetWidth || 34;
                 const overlaySize = Math.max(56, avatarSize * 1.75);
 
-                // Создаём новый
+                // Создаём новый overlay
                 const overlay = document.createElement('div');
                 overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
-overlay.style.cssText = `
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: ${overlaySize}px;
-    height: ${overlaySize}px;
-    min-width: ${overlaySize}px;
-    min-height: ${overlaySize}px;
-    pointer-events: none;
-    z-index: 5;
-    overflow: visible;
-`;
-overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
-syncFrameAnimation(overlay);
+                overlay.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: ${overlaySize}px;
+                    height: ${overlaySize}px;
+                    min-width: ${overlaySize}px;
+                    min-height: ${overlaySize}px;
+                    pointer-events: none;
+                    z-index: 5;
+                    overflow: visible;
+                `;
+                overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
 
-// 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
-wrap.appendChild(overlay);
+                if (typeof syncFrameAnimation === 'function') {
+                    syncFrameAnimation(overlay);
+                }
+
+                // 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
+                wrap.appendChild(overlay);
             });
         } else if (frameStyle === 'ring') {
+            // Кольцо
             avEls.forEach(el => {
+                if (el.hasAttribute('data-champion-avatar') ||
+                    el.closest('.champ-avatar-wrap')) return;
                 el.style.boxShadow = `0 0 0 2px ${color}, 0 0 14px ${color}, inset 0 0 8px ${color}`;
             });
         } else if (frameStyle === 'double') {
+            // Двойное кольцо
             avEls.forEach(el => {
+                if (el.hasAttribute('data-champion-avatar') ||
+                    el.closest('.champ-avatar-wrap')) return;
                 el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 0 3px rgba(0,0,0,0.7), 0 0 0 4px ${color}, 0 0 14px ${color}`;
             });
         } else if (val.color) {
+            // Обычное свечение
             avEls.forEach(el => {
+                if (el.hasAttribute('data-champion-avatar') ||
+                    el.closest('.champ-avatar-wrap')) return;
                 el.style.boxShadow = `0 0 0 2px ${color}, 0 0 12px ${color}`;
             });
         }
+    } else {
+        // Рамки нет — убираем у всех (кроме чемпиона)
+        avEls.forEach(el => {
+            if (el.hasAttribute('data-champion-avatar') ||
+                el.closest('.champ-avatar-wrap')) return;
+
+            el.style.boxShadow = '';
+            const wrap = el.closest('.avatar-frame-wrap');
+            if (wrap) {
+                wrap.querySelectorAll('.list-frame-overlay').forEach(o => o.remove());
+            }
+        });
     }
 
-    // --- Значок ---
+    // ============================================================
+    // 3. ЗНАЧОК
+    // ============================================================
     const badgeId = eq.badge;
     const badgeEls = scopeEl.querySelectorAll('[data-list-badge]');
     if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
@@ -45211,19 +45335,24 @@ wrap.appendChild(overlay);
             }
             el.style.display = 'inline-flex';
         });
+    } else {
+        badgeEls.forEach(el => {
+            el.innerHTML = '';
+            el.style.display = 'none';
+        });
     }
 
     // ============================================================
-    // 🌄 ФОН ПРОФИЛЯ — на всю плашку
+    // 4. ФОН ПРОФИЛЯ — на всю плашку
     // ============================================================
-    const bgId2 = eq.profile_bg;
+    const bgId = eq.profile_bg;
     const itemEl = scopeEl;
     const oldBg = itemEl.querySelector('.list-item-bg');
 
-    if (bgId2 && SHOP_ITEMS_CACHE[bgId2]) {
-        const bgVal = SHOP_ITEMS_CACHE[bgId2].value || {};
+    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
+        const bgVal = SHOP_ITEMS_CACHE[bgId].value || {};
         if (bgVal.url) {
-            // Создаём слой с фоном (если его нет)
+            // Создаём слой фона, если его нет
             let bgLayer = oldBg;
             if (!bgLayer) {
                 bgLayer = document.createElement('div');
