@@ -55501,7 +55501,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         currentId: null,
         playing: false,
         shuffle: false,
-        repeat: 'off',           // off | all | one
+        repeat: 'off',
         shuffleOrder: [],
         volume: parseFloat(localStorage.getItem('musicVolume')) || 0.35,
     };
@@ -55510,7 +55510,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     let ytApiReady = false;
     let audioEl = null;
     let progressTimer = null;
-    let _eqTimer = null;
     let _studioChannel = null;
 
     // ============================================================
@@ -55549,19 +55548,17 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // ПЛАВАЮЩИЙ ВИДЖЕТ
+    // ПЛАВАЮЩИЙ ВИДЖЕТ С НАУШНИКАМИ (адаптив ПК/мобилка)
     // ============================================================
     function ensureWidget() {
         let w = document.getElementById('musicFloatingWidget');
         if (w) return w;
 
-        // 🔥 Адаптивный размер
         const isMobile = window.innerWidth < 768;
         const SIZE = isMobile ? 46 : 60;
-        const BOTTOM_SAFE = isMobile ? 90 : 40;   // место под нижнюю навигацию
+        const BOTTOM_SAFE = isMobile ? 90 : 40;
         const TOP_SAFE = 70;
 
-        // Стартовая позиция: правый низ
         const defaultX = window.innerWidth - SIZE - 16;
         const defaultY = window.innerHeight - SIZE - BOTTOM_SAFE;
 
@@ -55598,10 +55595,8 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const iconSize = isMobile ? 24 : 30;
 
         w.innerHTML = `
-            <!-- Обложка -->
             <div id="musicWidgetCover" style="position:absolute;inset:0;background:linear-gradient(135deg,var(--emerald),var(--emerald-2));display:flex;align-items:center;justify-content:center;font-size:${isMobile ? 18 : 22}px;color:#04140e;border-radius:50%;overflow:hidden;z-index:1;"></div>
 
-            <!-- Наушники -->
             <div id="musicWidgetOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;background:radial-gradient(circle at center, rgba(0,0,0,0.62), rgba(0,0,0,0.82));">
                 <svg id="musicWidgetIcon" width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none"
                      stroke="url(#mwGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
@@ -55618,20 +55613,16 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 </svg>
             </div>
 
-            <!-- Пульс -->
             <div id="musicWidgetPulse" style="position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(var(--emerald-rgb),0.7);opacity:0;pointer-events:none;z-index:0;"></div>
         `;
-
         document.body.appendChild(w);
 
-        // Восстановление позиции
         const savedX = parseFloat(localStorage.getItem('musicWidgetX'));
         const savedY = parseFloat(localStorage.getItem('musicWidgetY'));
 
         let px = Number.isFinite(savedX) ? savedX : defaultX;
         let py = Number.isFinite(savedY) ? savedY : defaultY;
 
-        // Клампим в границы
         px = Math.max(6, Math.min(window.innerWidth - SIZE - 6, px));
         py = Math.max(TOP_SAFE, Math.min(window.innerHeight - SIZE - 6, py));
 
@@ -55663,62 +55654,42 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     function makeDraggable(el) {
         let startX = 0, startY = 0, startLeft = 0, startTop = 0, moved = false, pid = null;
 
-        // 🔥 Единый обработчик для мыши и тача
         const onDown = (e) => {
-            // Игнорируем правую кнопку мыши
             if (e.pointerType === 'mouse' && e.button !== 0) return;
-
             pid = e.pointerId;
             el._dragging = false;
             moved = false;
             startX = e.clientX;
             startY = e.clientY;
-
             const rect = el.getBoundingClientRect();
             startLeft = rect.left;
             startTop = rect.top;
-
             try { el.setPointerCapture(pid); } catch (err) {}
-
             el.style.cursor = 'grabbing';
             el.style.transition = 'none';
             el.style.opacity = '1';
             el.style.transform = 'scale(1.05)';
-
-            // Вибрация при захвате на мобилке
-            if (e.pointerType === 'touch' && typeof haptic === 'function') {
-                haptic('light');
-            }
+            if (e.pointerType === 'touch' && typeof haptic === 'function') haptic('light');
         };
 
         const onMove = (e) => {
             if (pid === null || e.pointerId !== pid) return;
-
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
-            // Порог 6px — чтобы не путать тап и перетаскивание
             if (!moved && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
                 moved = true;
                 el._dragging = true;
             }
             if (!moved) return;
-
-            // Предотвращаем скролл страницы на тач
             if (e.cancelable) e.preventDefault();
 
             const w = el.offsetWidth;
             const h = el.offsetHeight;
-
-            // Границы с учётом safe-area
             const topLimit = 60;
             const bottomLimit = window.innerHeight - h - 6;
 
-            let nx = startLeft + dx;
-            let ny = startTop + dy;
-
-            nx = Math.max(6, Math.min(window.innerWidth - w - 6, nx));
-            ny = Math.max(topLimit, Math.min(bottomLimit, ny));
+            let nx = Math.max(6, Math.min(window.innerWidth - w - 6, startLeft + dx));
+            let ny = Math.max(topLimit, Math.min(bottomLimit, startTop + dy));
 
             el.style.left = nx + 'px';
             el.style.top = ny + 'px';
@@ -55727,28 +55698,23 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const onUp = (e) => {
             if (pid === null) return;
             if (e && e.pointerId !== undefined && e.pointerId !== pid) return;
-
             try { el.releasePointerCapture(pid); } catch (err) {}
             pid = null;
 
             if (!moved) {
-                // Это был тап — открываем панель
                 if (typeof haptic === 'function') haptic('medium');
                 openMusicPanel();
             } else {
-                // Сохраняем финальную позицию
                 const rect = el.getBoundingClientRect();
                 localStorage.setItem('musicWidgetX', rect.left);
                 localStorage.setItem('musicWidgetY', rect.top);
             }
-
             el.style.transition = '';
             el.style.cursor = 'grab';
             el._dragging = false;
             startX = startY = 0;
             el.style.transform = 'scale(1)';
 
-            // Возврат к обычной прозрачности
             if (!isTouchDevice() && !el.matches(':hover')) {
                 el.style.opacity = '0.78';
                 el.style.boxShadow = '0 6px 20px rgba(0,0,0,0.55), 0 0 22px rgba(var(--emerald-rgb),0.4), inset 0 1px 0 rgba(255,255,255,0.1)';
@@ -55776,32 +55742,10 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         el.addEventListener('pointerup', onUp);
         el.addEventListener('pointercancel', onCancel);
     }
-    // ============================================================
-    // ЭКВАЛАЙЗЕР
-    // ============================================================
-    function startEQAnimation() {
-        stopEQAnimation();
-        const bars = document.querySelectorAll('#musicWidgetBars .mw-bar');
-        if (!bars.length) return;
-        _eqTimer = setInterval(() => {
-            bars.forEach((b) => {
-                const h = 6 + Math.random() * 18;
-                b.style.height = h.toFixed(0) + 'px';
-            });
-        }, 220);
-    }
 
-    function stopEQAnimation() {
-        if (_eqTimer) {
-            clearInterval(_eqTimer);
-            _eqTimer = null;
-        }
-        const bars = document.querySelectorAll('#musicWidgetBars .mw-bar');
-        bars.forEach((b, i) => {
-            b.style.height = (8 + i * 3) + 'px';
-        });
-    }
-
+    // ============================================================
+    // ОБНОВЛЕНИЕ ВИДЖЕТА
+    // ============================================================
     function updateWidget() {
         const w = document.getElementById('musicFloatingWidget');
         if (!w) return;
@@ -55813,7 +55757,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const track = state.tracks.find(t => t.id === state.currentId);
         if (!track) return;
 
-        // Обложка
         const cover = document.getElementById('musicWidgetCover');
         if (cover) {
             if (track.cover_url) {
@@ -55827,7 +55770,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             }
         }
 
-        // Иконка наушников: пульсирует при воспроизведении
         const icon = document.getElementById('musicWidgetIcon');
         if (icon) {
             icon.style.transform = state.playing ? 'scale(1.15)' : 'scale(1)';
@@ -55840,9 +55782,9 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             pulse.style.animation = state.playing ? 'widgetPulse 2s ease-out infinite' : 'none';
         }
 
-        // Заголовок виджета (для тултипа)
         w.title = (track.title || 'Музыка') + (state.playing ? ' · играет' : ' · пауза');
     }
+
     function showWidget() { ensureWidget(); updateWidget(); }
     function hideWidget() { const w = document.getElementById('musicFloatingWidget'); if (w) w.style.display = 'none'; }
 
@@ -55926,7 +55868,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
         renderMusicPanel(panel);
 
-        // Свайп вниз на мобилке
         if (!isDesktop) {
             let startY = 0, curY = 0, dragging = false;
             panel.addEventListener('touchstart', (e) => {
@@ -55969,7 +55910,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     function closeMusicPanel() {
         stopProgressTimer();
         document.getElementById('musicPanelOverlay')?.remove();
-        // Музыка НЕ останавливается
     }
 
     // ============================================================
@@ -56027,7 +55967,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
         const cur = getCurrentTime();
         const dur = getDuration();
-
         if (dur > 0) slider.value = Math.min(100, (cur / dur) * 100);
         curEl.textContent = formatTime(cur);
         durEl.textContent = formatTime(dur);
@@ -56121,7 +56060,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             <button id="mpClose" style="width:100%;padding:14px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--hint);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">СВЕРНУТЬ</button>
         `;
 
-        // ---- Обработчики ----
         panel.querySelector('#mpPlay').onclick = togglePlayPause;
         panel.querySelector('#mpPrev').onclick = () => playPrev();
         panel.querySelector('#mpNext').onclick = () => playNext();
@@ -56243,7 +56181,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     async function loadPlayerFor(track) {
-        // MP3 / direct
         if (track.service === 'direct' && track.original_url) {
             return new Promise((resolve) => {
                 audioEl = new Audio(track.original_url);
@@ -56255,7 +56192,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             });
         }
 
-        // YouTube
         if (track.service === 'youtube' && track.track_id) {
             return new Promise((resolve) => {
                 loadYTAPI(() => {
@@ -56299,10 +56235,8 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             });
         }
 
-        // SoundCloud / Яндекс — iframe
         return new Promise((resolve) => {
             let embedUrl = '';
-
             if (track.service === 'soundcloud') {
                 const params = new URLSearchParams({
                     url: track.original_url,
@@ -56497,10 +56431,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         container.innerHTML = html;
     }
 
-    // Экспорт парсера для использования в "Предложить музыку"
-    window.detectMusicService = detectService;
-    window.fetchMusicMetadata = fetchMetadata;
-
     window.playStudioTrack = playTrack;
     window.openMusicLibrary = openMusicLibrary;
 
@@ -56529,10 +56459,8 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const idx = state.tracks.indexOf(track);
         const other = state.tracks[idx + dir];
         if (!other) return;
-
         const a = track.sort_order || 0;
         const b = other.sort_order || 0;
-
         try {
             await sb.from('music_studio_tracks').update({ sort_order: b }).eq('id', track.id);
             await sb.from('music_studio_tracks').update({ sort_order: a }).eq('id', other.id);
@@ -56543,7 +56471,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     window.moveTrack = moveTrack;
 
     // ============================================================
-    // ДОБАВЛЕНИЕ ТРЕКА
+    // ПАРСИНГ СЕРВИСОВ
     // ============================================================
     function detectService(url) {
         if (!url) return null;
@@ -56583,6 +56511,13 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         return { title: 'Трек', artist: '', cover_url: '' };
     }
 
+    // Экспорт для "Предложить музыку"
+    window.detectMusicService = detectService;
+    window.fetchMusicMetadata = fetchMetadata;
+
+    // ============================================================
+    // ДОБАВЛЕНИЕ ТРЕКА (только админ)
+    // ============================================================
     function openAddStudioTrackSheet() {
         if (typeof isCurrentUserAdmin === 'function' && !isCurrentUserAdmin()) return;
 
@@ -56739,18 +56674,16 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         }
     });
 
-    // Обработка ресайза окна
+    // Ресайз окна — пересоздание виджета при смене адаптива
     window.addEventListener('resize', () => {
         const w = document.getElementById('musicFloatingWidget');
         if (!w) return;
 
-        // 🔥 Пересоздаём виджет для нового размера, если сменилась ширина (мобилка ↔ ПК)
         const isMobileNow = window.innerWidth < 768;
-        const sizeNow = w.offsetWidth;
         const expectedSize = isMobileNow ? 46 : 60;
+        const sizeNow = w.offsetWidth;
 
         if (Math.abs(sizeNow - expectedSize) > 4) {
-            // Сохраняем позицию
             const rect = w.getBoundingClientRect();
             localStorage.setItem('musicWidgetX', rect.left);
             localStorage.setItem('musicWidgetY', rect.top);
@@ -56760,12 +56693,18 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             return;
         }
 
-        // Иначе просто клампим в границы
         const rect = w.getBoundingClientRect();
         const nx = Math.max(6, Math.min(window.innerWidth - rect.width - 6, rect.left));
         const ny = Math.max(60, Math.min(window.innerHeight - rect.height - 6, rect.top));
         w.style.left = nx + 'px';
         w.style.top = ny + 'px';
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
 })();
 </script>
 
