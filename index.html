@@ -55671,7 +55671,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
 
 <!-- ============================================================ -->
-<!-- 🎛️ MUSIC STUDIO — треки из любых сервисов                    -->
+<!-- 🎛️ MUSIC STUDIO v2 — постоянное воспроизведение              -->
 <!-- ============================================================ -->
 <script>
 (function() {
@@ -55680,25 +55680,273 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     let cachedTracks = [];
     let _studioChannel = null;
     let currentPlayingId = null;
-    let _ytPlayer = null;         // YouTube IFrame API
-    let _ytApiReady = false;
-    let _ytApiLoading = false;
 
     // ============================================================
-    // ЗАГРУЗКА YOUTUBE IFRAME API (для автоплея следующего трека)
+    // ПОСТОЯННЫЙ DOCK — плеер живёт вне оверлея
     // ============================================================
-    function loadYoutubeAPI() {
-        if (_ytApiReady || _ytApiLoading) return;
-        _ytApiLoading = true;
+    function ensureDock() {
+        let dock = document.getElementById('musicPersistentDock');
+        if (dock) return dock;
 
-        window.onYouTubeIframeAPIReady = () => {
-            _ytApiReady = true;
-            console.log('▶️ YouTube API готов');
-        };
+        dock = document.createElement('div');
+        dock.id = 'musicPersistentDock';
+        dock.style.cssText = `
+            position: fixed;
+            right: 16px;
+            bottom: 88px;
+            z-index: 9990;
+            width: 340px;
+            max-width: calc(100vw - 32px);
+            background: linear-gradient(180deg, rgba(10,20,16,0.98), rgba(5,10,8,0.98));
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(var(--emerald-rgb),0.25);
+            display: none;
+            animation: dockIn 0.35s cubic-bezier(0.34, 1.3, 0.64, 1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        `;
+        dock.innerHTML = `
+            <div style="padding: 8px 10px; background: rgba(0,0,0,0.4); display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border);">
+                <div id="musicDockCover" style="width: 36px; height: 36px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #04140e;">🎵</div>
+                <div style="flex: 1; min-width: 0;">
+                    <div id="musicDockTitle" style="font-size: 12px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">—</div>
+                    <div id="musicDockArtist" style="font-size: 10px; color: var(--hint); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">—</div>
+                </div>
+                <button onclick="openMusicDockOverlay()" title="Развернуть" style="width: 30px; height: 30px; border-radius: 8px; background: rgba(var(--emerald-rgb),0.1); border: 1px solid var(--border-strong); color: var(--emerald); font-size: 13px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                    </svg>
+                </button>
+                <button onclick="stopStudioPlayback()" title="Закрыть" style="width: 30px; height: 30px; border-radius: 8px; background: rgba(255,84,112,0.1); border: 1px solid rgba(255,84,112,0.3); color: var(--red); font-size: 15px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">×</button>
+            </div>
+            <div id="musicDockBody" style="width: 100%; aspect-ratio: 16/9; background: #000; position: relative;"></div>
+        `;
+        document.body.appendChild(dock);
+        return dock;
+    }
 
-        const s = document.createElement('script');
-        s.src = 'https://www.youtube.com/iframe_api';
-        document.head.appendChild(s);
+    // ============================================================
+    // ГЕНЕРАЦИЯ EMBED URL С ПРАВИЛЬНЫМИ ПАРАМЕТРАМИ
+    // ============================================================
+    function buildSafeEmbed(track) {
+        if (!track) return null;
+
+        // Прямая ссылка на аудио
+        if (track.service === 'direct' && track.direct_url) {
+            return { type: 'audio', url: track.direct_url };
+        }
+
+        // YouTube — используем nocookie + modestbranding + rel=0
+        if (track.service === 'youtube' && track.track_id) {
+            const params = new URLSearchParams({
+                autoplay: '1',
+                modestbranding: '1',
+                rel: '0',
+                playsinline: '1',
+                iv_load_policy: '3',
+                fs: '1',
+            });
+            return {
+                type: 'iframe',
+                url: `https://www.youtube-nocookie.com/embed/${track.track_id}?${params.toString()}`,
+            };
+        }
+
+        // SoundCloud — правильный embed
+        if (track.service === 'soundcloud') {
+            const params = new URLSearchParams({
+                url: track.original_url,
+                color: '%2300e08a',
+                auto_play: 'true',
+                hide_related: 'true',
+                show_comments: 'false',
+                show_user: 'true',
+                show_reposts: 'false',
+                show_teaser: 'false',
+                visual: 'false',
+            });
+            return {
+                type: 'iframe',
+                url: `https://w.soundcloud.com/player/?${params.toString()}`,
+            };
+        }
+
+        // Яндекс
+        if (track.service === 'yandex') {
+            const am = track.original_url.match(/\/album\/(\d+)/);
+            const tm = track.original_url.match(/\/track\/(\d+)/);
+            if (tm && am) {
+                return {
+                    type: 'iframe',
+                    url: `https://music.yandex.ru/iframe/#track/${tm[1]}/${am[1]}`,
+                };
+            }
+        }
+
+        // Fallback — используем сохранённый embed_url
+        if (track.embed_url) {
+            return { type: 'iframe', url: track.embed_url };
+        }
+
+        return null;
+    }
+
+    // ============================================================
+    // ЗАГРУЗКА ТРЕКА В DOCK
+    // ============================================================
+    function loadTrackToDock(track) {
+        if (!track) return;
+
+        const dock = ensureDock();
+        const body = document.getElementById('musicDockBody');
+        const titleEl = document.getElementById('musicDockTitle');
+        const artistEl = document.getElementById('musicDockArtist');
+        const coverEl = document.getElementById('musicDockCover');
+
+        // Инфа
+        titleEl.textContent = track.title || 'Трек';
+        artistEl.textContent = track.artist || '—';
+
+        const serviceIcon = {
+            youtube: '▶️',
+            soundcloud: '🟠',
+            yandex: '🟡',
+            vk: '🔵',
+            bandcamp: '🟣',
+            direct: '🎵',
+        }[track.service] || '🎵';
+
+        coverEl.innerHTML = track.cover_url
+            ? `<img src="${escapeHtml(track.cover_url)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.textContent='${serviceIcon}';">`
+            : serviceIcon;
+
+        // Плеер
+        body.innerHTML = '';
+        const safe = buildSafeEmbed(track);
+
+        if (!safe) {
+            body.innerHTML = `
+                <div style="padding:20px; text-align:center; color:var(--hint); font-size:12px;">
+                    Не удалось создать плеер
+                </div>
+            `;
+            dock.style.display = 'block';
+            return;
+        }
+
+        if (safe.type === 'audio') {
+            const audio = document.createElement('audio');
+            audio.src = safe.url;
+            audio.autoplay = true;
+            audio.controls = true;
+            audio.id = 'musicDockAudio';
+            audio.style.cssText = 'width: 100%; height: 100%; display: block; background: #000;';
+            audio.onended = () => playAdjacent(1);
+            body.appendChild(audio);
+        } else {
+            const iframe = document.createElement('iframe');
+            iframe.src = safe.url;
+            iframe.id = 'musicDockIframe';
+            iframe.allow = 'autoplay *; encrypted-media *; clipboard-write; fullscreen; picture-in-picture';
+            iframe.allowFullscreen = true;
+            iframe.style.cssText = 'width: 100%; height: 100%; border: none; display: block;';
+            body.appendChild(iframe);
+        }
+
+        dock.style.display = 'block';
+    }
+
+    // ============================================================
+    // ОСТАНОВКА И ОЧИСТКА
+    // ============================================================
+    function stopStudioPlayback() {
+        const dock = document.getElementById('musicPersistentDock');
+        if (dock) dock.style.display = 'none';
+
+        const body = document.getElementById('musicDockBody');
+        if (body) body.innerHTML = '';    // это уничтожит iframe → остановит музыку
+
+        // Закрываем оверлей, если открыт
+        document.getElementById('musicDockOverlay')?.remove();
+
+        currentPlayingId = null;
+        if (typeof renderStudio === 'function') renderStudio();
+        if (typeof haptic === 'function') haptic('light');
+    }
+
+    // ============================================================
+    // РАЗВЁРНУТЫЙ ОВЕРЛЕЙ (информация, без плеера)
+    // ============================================================
+    function openMusicDockOverlay() {
+        const track = cachedTracks.find(t => t.id === currentPlayingId);
+        if (!track) return;
+
+        document.getElementById('musicDockOverlay')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'musicDockOverlay';
+        overlay.style.cssText = `
+            position: fixed; inset: 0; z-index: 9995;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.25s ease;
+        `;
+        overlay.onclick = (e) => { if (e.target === overlay) closeMusicDockOverlay(); };
+
+        const cover = track.cover_url
+            ? `<img src="${escapeHtml(track.cover_url)}" style="width:100%;height:100%;object-fit:cover;">`
+            : '🎵';
+
+        overlay.innerHTML = `
+            <div style="
+                width: 100%; max-width: 420px;
+                background: linear-gradient(180deg, var(--bg-2), var(--bg));
+                border: 1px solid var(--border-strong);
+                border-radius: 20px;
+                padding: 24px;
+                text-align: center;
+                animation: bounceIn 0.4s cubic-bezier(0.34, 1.3, 0.64, 1);
+            ">
+                <div style="width: 140px; height: 140px; margin: 0 auto 16px; border-radius: 16px; overflow: hidden; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-size: 56px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);">
+                    ${cover}
+                </div>
+                <div style="font-size: 18px; font-weight: 900; color: var(--text); margin-bottom: 6px; line-height: 1.2; word-break: break-word;">
+                    ${escapeHtml(track.title || 'Трек')}
+                </div>
+                <div style="font-size: 13px; color: var(--hint); font-weight: 600; margin-bottom: 20px;">
+                    ${escapeHtml(track.artist || '—')}
+                </div>
+                <div style="font-size: 11px; color: var(--hint); margin-bottom: 20px; line-height: 1.5;">
+                    🎵 Плеер работает внизу экрана.<br>
+                    Можешь свернуть это окно — музыка продолжит играть.
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <button onclick="playAdjacent(-1)" style="padding: 12px; border-radius: 12px; background: rgba(var(--emerald-rgb),0.08); border: 1px solid var(--border-strong); color: var(--emerald); font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer;">
+                        ⏮ ПРЕД.
+                    </button>
+                    <button onclick="playAdjacent(1)" style="padding: 12px; border-radius: 12px; background: rgba(var(--emerald-rgb),0.08); border: 1px solid var(--border-strong); color: var(--emerald); font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer;">
+                        СЛЕД. ⏭
+                    </button>
+                </div>
+                <a href="${escapeHtml(track.original_url)}" target="_blank" onclick="event.preventDefault(); openExternalLink('${escapeHtml(track.original_url)}')" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: rgba(var(--emerald-rgb),0.10); border: 1px solid var(--border-strong); border-radius: 12px; color: var(--emerald); font-family: inherit; font-size: 12px; font-weight: 800; text-decoration: none; margin-bottom: 8px;">
+                    🔗 Открыть в оригинале
+                </a>
+                <button onclick="closeMusicDockOverlay()" style="width: 100%; padding: 14px; background: transparent; border: 1px solid var(--border); border-radius: 12px; color: var(--hint); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;">
+                    СВЕРНУТЬ
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        if (typeof haptic === 'function') haptic('light');
+    }
+
+    function closeMusicDockOverlay() {
+        document.getElementById('musicDockOverlay')?.remove();
     }
 
     // ============================================================
@@ -55708,35 +55956,17 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         if (!url) return null;
         const u = url.trim();
 
-        // YouTube
         if (/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/i.test(u)) {
             const m = u.match(/(?:v=|\/embed\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
             if (m) return { service: 'youtube', track_id: m[1] };
         }
-
-        // SoundCloud
         if (/soundcloud\.com\//i.test(u)) {
             return { service: 'soundcloud', track_id: u.split('?')[0] };
         }
-
-        // Яндекс.Музыка
         if (/music\.yandex\.(ru|com|kz|by|uz)/i.test(u)) {
             const tm = u.match(/\/track\/(\d+)/);
-            const am = u.match(/\/album\/(\d+)/);
-            if (tm) return { service: 'yandex', track_id: tm[1], album_id: am ? am[1] : null };
+            if (tm) return { service: 'yandex', track_id: tm[1] };
         }
-
-        // VK Музыка
-        if (/(?:vk\.com|vk\.ru)\/(?:audio|music)/i.test(u) || /vk\.com\/.*[?&]z=audio/i.test(u)) {
-            return { service: 'vk', track_id: u };
-        }
-
-        // Bandcamp
-        if (/\.bandcamp\.com\/(track|album)\//i.test(u)) {
-            return { service: 'bandcamp', track_id: u.split('?')[0] };
-        }
-
-        // Прямая ссылка на аудио
         if (/\.(mp3|ogg|m4a|wav|aac|flac)(\?|$)/i.test(u)) {
             return { service: 'direct', track_id: u };
         }
@@ -55745,22 +55975,14 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // МЕТАДАННЫЕ — через noembed.com (универсальный API)
+    // МЕТАДАННЫЕ ЧЕРЕЗ noembed.com
     // ============================================================
     async function fetchMetadata(url, service) {
-        // Direct — просто используем имя файла
         if (service === 'direct') {
             const name = decodeURIComponent(url.split('/').pop().split('?')[0].replace(/\.[^.]+$/, ''));
-            return {
-                title: name || 'Аудио',
-                artist: '',
-                cover_url: '',
-                embed_url: null,
-                direct_url: url,
-            };
+            return { title: name || 'Аудио', artist: '', cover_url: '' };
         }
 
-        // Пробуем через noembed
         try {
             const apiUrl = `https://noembed.com/embed?url=${encodeURIComponent(url)}`;
             const res = await fetch(apiUrl);
@@ -55771,58 +55993,13 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                         title: data.title || 'Трек',
                         artist: data.author_name || '',
                         cover_url: data.thumbnail_url || '',
-                        embed_url: extractEmbedSrc(data.html) || buildEmbedUrl(url, service),
-                        direct_url: null,
                     };
                 }
             }
         } catch (e) {
-            console.warn('noembed fail:', e);
+            console.warn('noembed:', e);
         }
-
-        // Fallback — только из URL
-        return {
-            title: 'Трек',
-            artist: '',
-            cover_url: '',
-            embed_url: buildEmbedUrl(url, service),
-            direct_url: null,
-        };
-    }
-
-    function extractEmbedSrc(html) {
-        if (!html) return null;
-        const m = html.match(/src="([^"]+)"/);
-        return m ? m[1] : null;
-    }
-
-    function buildEmbedUrl(url, service) {
-        // YouTube
-        if (service === 'youtube') {
-            const m = url.match(/(?:v=|\/embed\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
-            if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0`;
-        }
-
-        // SoundCloud
-        if (service === 'soundcloud') {
-            return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%2300e08a&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`;
-        }
-
-        // Яндекс
-        if (service === 'yandex') {
-            const tm = url.match(/\/track\/(\d+)/);
-            const am = url.match(/\/album\/(\d+)/);
-            if (tm && am) {
-                return `https://music.yandex.ru/iframe/#track/${tm[1]}/${am[1]}`;
-            }
-        }
-
-        // Bandcamp
-        if (service === 'bandcamp') {
-            return null; // нет универсального embed
-        }
-
-        return null;
+        return { title: 'Трек', artist: '', cover_url: '' };
     }
 
     // ============================================================
@@ -55845,12 +56022,11 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     async function deleteTrack(id) {
-        if (!confirm('Удалить трек из плейлиста?')) return;
+        if (!confirm('Удалить трек?')) return;
         try {
             await sb.from('music_studio_tracks').delete().eq('id', id);
+            if (currentPlayingId === id) stopStudioPlayback();
             if (typeof showToast === 'function') showToast('🗑️ Удалено');
-            if (typeof haptic === 'function') haptic('light');
-            if (currentPlayingId === id) closePlayTrack();
             await renderStudio();
         } catch (e) {
             if (typeof showToast === 'function') showToast('❌ ' + e.message);
@@ -55861,10 +56037,9 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const track = cachedTracks.find(t => t.id === id);
         if (!track) return;
         const idx = cachedTracks.indexOf(track);
-        const newIdx = idx + dir;
-        if (newIdx < 0 || newIdx >= cachedTracks.length) return;
+        const other = cachedTracks[idx + dir];
+        if (!other) return;
 
-        const other = cachedTracks[newIdx];
         const a = track.sort_order || 0;
         const b = other.sort_order || 0;
 
@@ -55872,7 +56047,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             await sb.from('music_studio_tracks').update({ sort_order: b }).eq('id', track.id);
             await sb.from('music_studio_tracks').update({ sort_order: a }).eq('id', other.id);
             await renderStudio();
-            if (typeof haptic === 'function') haptic('light');
         } catch (e) {
             if (typeof showToast === 'function') showToast('❌ ' + e.message);
         }
@@ -55889,21 +56063,13 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const tracks = await loadTracks();
 
         const serviceIcon = {
-            youtube: '▶️',
-            soundcloud: '🟠',
-            yandex: '🟡',
-            vk: '🔵',
-            bandcamp: '🟣',
-            direct: '🎵',
+            youtube: '▶️', soundcloud: '🟠', yandex: '🟡',
+            vk: '🔵', bandcamp: '🟣', direct: '🎵',
         };
-
         const serviceLabel = {
-            youtube: 'YouTube',
-            soundcloud: 'SoundCloud',
-            yandex: 'Яндекс.Музыка',
-            vk: 'VK Музыка',
-            bandcamp: 'Bandcamp',
-            direct: 'Аудио',
+            youtube: 'YouTube', soundcloud: 'SoundCloud',
+            yandex: 'Яндекс.Музыка', vk: 'VK Музыка',
+            bandcamp: 'Bandcamp', direct: 'Аудио',
         };
 
         let html = `
@@ -55920,7 +56086,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                     <div class="phc-sub">${tracks.length} ${pluralTracks(tracks.length)} · Студия</div>
                 </div>
                 ${isAdmin ? `
-                    <button class="phc-icon-btn" onclick="openAddStudioTrackSheet()" title="Добавить трек" style="width:40px;height:40px;">
+                    <button class="phc-icon-btn" onclick="openAddStudioTrackSheet()" title="Добавить" style="width:40px;height:40px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
                             <path d="M12 5v14M5 12h14"/>
                         </svg>
@@ -55933,13 +56099,9 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             html += `
                 <div style="padding: 40px 20px; text-align: center; background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.06), rgba(0,0,0,0.4)); border: 1px dashed var(--border-strong); border-radius: 16px;">
                     <div style="font-size: 56px; margin-bottom: 12px; opacity: 0.5;">🎛️</div>
-                    <div style="font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 6px;">
-                        Студия пуста
-                    </div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 6px;">Студия пуста</div>
                     <div style="font-size: 12px; color: var(--hint); line-height: 1.5;">
-                        ${isAdmin
-                            ? 'Нажми ➕ вверху и вставь ссылку на трек из YouTube, SoundCloud, Яндекс.Музыки и др.'
-                            : 'Админ ещё не добавил ни одного трека. Заходи позже!'}
+                        ${isAdmin ? 'Нажми ➕ и вставь ссылку на трек из YouTube, SoundCloud и др.' : 'Админ пока не добавил ни одного трека'}
                     </div>
                 </div>
             `;
@@ -55955,12 +56117,9 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 const isPlaying = currentPlayingId === t.id;
 
                 html += `
-                    <div class="music-studio-row" data-id="${t.id}" style="
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                        padding: 10px 12px;
-                        margin-bottom: 6px;
+                    <div style="
+                        display: flex; align-items: center; gap: 12px;
+                        padding: 10px 12px; margin-bottom: 6px;
                         background: ${isPlaying
                             ? 'linear-gradient(180deg, rgba(var(--emerald-rgb),0.18) 0%, rgba(0,0,0,0.4) 100%)'
                             : 'linear-gradient(180deg, rgba(var(--emerald-rgb),0.04) 0%, rgba(0,0,0,0.4) 100%)'};
@@ -55968,50 +56127,33 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                         border-radius: 12px;
                         cursor: pointer;
                         position: relative;
-                        transition: border-color 0.2s ease, background 0.2s ease;
+                        transition: border-color 0.2s, background 0.2s;
                     "
                     onclick="playStudioTrack(${t.id})"
-                    onmouseover="if(!this.dataset.playing) this.style.borderColor='var(--border-strong)'"
-                    onmouseout="if(!this.dataset.playing) this.style.borderColor='var(--border)'"
-                    ${isPlaying ? 'data-playing="1"' : ''}>
-
+                    onmouseover="if(this.style.borderColor !== 'var(--emerald)') this.style.borderColor='var(--border-strong)'"
+                    onmouseout="if(this.style.borderColor !== 'var(--emerald)') this.style.borderColor='var(--border)'">
                         <div style="width: 48px; height: 48px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-size: 22px; color: #04140e; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
                             ${cover}
                         </div>
-
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 13.5px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;">
                                 ${escapeHtml(t.title || 'Трек')}
                             </div>
                             <div style="font-size: 11px; color: var(--hint); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                ${escapeHtml(t.artist || serviceLabel[svc] || '—')} · ${serviceLabel[svc] || ''}
+                                ${escapeHtml(t.artist || '—')} · ${serviceLabel[svc] || ''}
                             </div>
                         </div>
-
                         <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; color: #04140e; flex-shrink: 0; box-shadow: 0 2px 8px rgba(var(--emerald-rgb), 0.4);">
                             ${isPlaying
                                 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`
                                 : `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`}
                         </div>
-
                         ${isAdmin ? `
                             <div style="display: flex; flex-direction: column; gap: 2px; margin-left: 4px;" onclick="event.stopPropagation();">
-                                ${i > 0 ? `<button onclick="moveTrack(${t.id}, -1)" style="width:20px;height:20px;border:none;background:rgba(255,255,255,0.06);border-radius:4px;color:var(--hint);font-size:10px;cursor:pointer;font-family:inherit;padding:0;line-height:1;">▲</button>` : ''}
-                                ${i < tracks.length - 1 ? `<button onclick="moveTrack(${t.id}, 1)" style="width:20px;height:20px;border:none;background:rgba(255,255,255,0.06);border-radius:4px;color:var(--hint);font-size:10px;cursor:pointer;font-family:inherit;padding:0;line-height:1;">▼</button>` : ''}
+                                ${i > 0 ? `<button onclick="moveTrack(${t.id}, -1)" style="width:20px;height:20px;border:none;background:rgba(255,255,255,0.06);border-radius:4px;color:var(--hint);font-size:10px;cursor:pointer;padding:0;">▲</button>` : ''}
+                                ${i < tracks.length - 1 ? `<button onclick="moveTrack(${t.id}, 1)" style="width:20px;height:20px;border:none;background:rgba(255,255,255,0.06);border-radius:4px;color:var(--hint);font-size:10px;cursor:pointer;padding:0;">▼</button>` : ''}
                             </div>
-                            <button onclick="event.stopPropagation(); deleteTrack(${t.id})" style="
-                                width: 24px; height: 24px;
-                                border-radius: 50%;
-                                background: rgba(255,84,112,0.15);
-                                border: 1px solid rgba(255,84,112,0.4);
-                                color: var(--red);
-                                font-size: 14px;
-                                cursor: pointer;
-                                display: flex; align-items: center; justify-content: center;
-                                font-family: inherit;
-                                padding: 0;
-                                flex-shrink: 0;
-                            ">×</button>
+                            <button onclick="event.stopPropagation(); deleteTrack(${t.id})" style="width:24px;height:24px;border-radius:50%;background:rgba(255,84,112,0.15);border:1px solid rgba(255,84,112,0.4);color:var(--red);font-size:14px;cursor:pointer;padding:0;flex-shrink:0;">×</button>
                         ` : ''}
                     </div>
                 `;
@@ -56029,124 +56171,25 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // ПРОИГРЫВАНИЕ ТРЕКА
+    // КЛИК ПО ТРЕКУ — воспроизведение в доке
     // ============================================================
     async function playStudioTrack(id) {
         const track = cachedTracks.find(t => t.id === id);
         if (!track) return;
 
         if (currentPlayingId === id) {
-            closePlayTrack();
+            // Тот же трек — открываем оверлей с информацией
+            openMusicDockOverlay();
             return;
         }
 
         currentPlayingId = id;
         if (typeof haptic === 'function') haptic('light');
 
-        document.getElementById('playStudioOverlay')?.remove();
-
-        const overlay = document.createElement('div');
-        overlay.className = 'sheet-overlay active';
-        overlay.id = 'playStudioOverlay';
-        overlay.style.zIndex = '10000';
-        overlay.onclick = (e) => { if (e.target === overlay) closePlayTrack(); };
-
-        const sheet = document.createElement('div');
-        sheet.className = 'sheet active';
-        sheet.id = 'playStudioSheet';
-        sheet.style.zIndex = '10001';
-        sheet.style.paddingBottom = '20px';
-
-        const cover = track.cover_url
-            ? `<img src="${escapeHtml(track.cover_url)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">`
-            : '🎵';
-
-        // Медиа-плеер
-        let playerHTML = '';
-        if (track.service === 'direct' && track.direct_url) {
-            // Прямая ссылка на аудио — используем native <audio>
-            playerHTML = `
-                <audio controls autoplay style="width: 100%; margin-bottom: 12px; border-radius: 12px; background: #000;" src="${escapeHtml(track.direct_url)}"></audio>
-            `;
-        } else if (track.embed_url) {
-            // iframe для YouTube / SoundCloud / Яндекс
-            const height = track.service === 'soundcloud' ? 180 : 180;
-            playerHTML = `
-                <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-strong); background: #000; margin-bottom: 12px;">
-                    <iframe
-                        frameborder="0"
-                        style="display:block;width:100%;height:${height}px;"
-                        width="100%"
-                        height="${height}"
-                        src="${escapeHtml(track.embed_url)}"
-                        allow="autoplay *; encrypted-media *; clipboard-write; fullscreen"
-                        allowfullscreen
-                    ></iframe>
-                </div>
-            `;
-        } else {
-            playerHTML = `
-                <div style="padding: 20px; text-align: center; background: rgba(255,84,112,0.08); border: 1px solid rgba(255,84,112,0.3); border-radius: 12px; margin-bottom: 12px;">
-                    <div style="font-size: 13px; color: var(--red); font-weight: 800; margin-bottom: 4px;">⚠️ Не удалось создать плеер</div>
-                    <div style="font-size: 11px; color: var(--hint);">Открой по кнопке ниже в оригинальном сервисе</div>
-                </div>
-            `;
-        }
-
-        sheet.innerHTML = `
-            <div class="sheet-title">🎵 Сейчас играет</div>
-
-            <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">
-                <div style="width: 72px; height: 72px; border-radius: 12px; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);">
-                    ${cover}
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;line-height:1.2;word-break:break-word;">
-                        ${escapeHtml(track.title || 'Трек')}
-                    </div>
-                    <div style="font-size:12px;color:var(--hint);font-weight:600;">
-                        ${escapeHtml(track.artist || '—')}
-                    </div>
-                </div>
-            </div>
-
-            ${playerHTML}
-
-            <a href="${escapeHtml(track.original_url)}" target="_blank"
-               onclick="event.preventDefault(); openExternalLink('${escapeHtml(track.original_url)}')"
-               style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; background: rgba(var(--emerald-rgb),0.10); border: 1px solid var(--border-strong); border-radius: 12px; color: var(--emerald); font-family: inherit; font-size: 13px; font-weight: 800; text-decoration: none; letter-spacing: 0.5px; margin-bottom: 10px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                    <path d="M15 3h6v6M10 14 21 3"/>
-                </svg>
-                Открыть в оригинале
-            </a>
-
-            ${currentPlayingId ? (() => {
-                const idx = cachedTracks.findIndex(t => t.id === currentPlayingId);
-                const hasPrev = idx > 0;
-                const hasNext = idx < cachedTracks.length - 1;
-                if (!hasPrev && !hasNext) return '';
-                return `
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-                        <button ${hasPrev ? '' : 'disabled'} onclick="playAdjacent(-1)" style="padding:12px;border-radius:12px;background:rgba(var(--emerald-rgb),0.08);border:1px solid var(--border-strong);color:var(--emerald);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;opacity:${hasPrev ? 1 : 0.4};">
-                            ⏮ ПРЕДЫДУЩИЙ
-                        </button>
-                        <button ${hasNext ? '' : 'disabled'} onclick="playAdjacent(1)" style="padding:12px;border-radius:12px;background:rgba(var(--emerald-rgb),0.08);border:1px solid var(--border-strong);color:var(--emerald);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;opacity:${hasNext ? 1 : 0.4};">
-                            СЛЕДУЮЩИЙ ⏭
-                        </button>
-                    </div>
-                `;
-            })() : ''}
-
-            <button class="sheet-cancel" onclick="closePlayTrack()">ЗАКРЫТЬ</button>
-        `;
-
-        document.body.appendChild(overlay);
-        document.body.appendChild(sheet);
-
-        // Перерисовываем список (подсветить активный)
+        loadTrackToDock(track);
         renderStudio();
+
+        if (typeof showToast === 'function') showToast('🎵 ' + (track.title || 'Играет'));
     }
 
     function playAdjacent(dir) {
@@ -56154,16 +56197,9 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         if (idx < 0) return;
         const next = cachedTracks[idx + dir];
         if (next) {
-            closePlayTrack();
-            setTimeout(() => playStudioTrack(next.id), 200);
+            closeMusicDockOverlay();
+            playStudioTrack(next.id);
         }
-    }
-
-    function closePlayTrack() {
-        document.getElementById('playStudioOverlay')?.remove();
-        document.getElementById('playStudioSheet')?.remove();
-        currentPlayingId = null;
-        renderStudio();
     }
 
     function openExternalLink(url) {
@@ -56203,11 +56239,11 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             <div class="sheet-title">➕ Добавить трек</div>
 
             <div style="font-size:12px;color:var(--hint);line-height:1.7;margin-bottom:14px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;">
-                <b style="color:var(--text);">Поддерживаются:</b><br>
-                ▶️ <b>YouTube</b> — играет полностью бесплатно<br>
+                <b style="color:var(--text);">Поддерживается:</b><br>
+                ▶️ <b>YouTube</b> — играет бесплатно, без регистрации<br>
                 🟠 <b>SoundCloud</b> — играет бесплатно<br>
                 🟡 <b>Яндекс.Музыка</b> — 30 сек без Плюса<br>
-                🔵 <b>VK</b> · 🟣 <b>Bandcamp</b> · 🎵 <b>mp3-ссылки</b>
+                🎵 <b>Прямые mp3-ссылки</b>
                 <br><br>
                 <b style="color:var(--emerald);">Примеры:</b><br>
                 <code style="font-size:10px;word-break:break-all;">https://youtu.be/dQw4w9WgXcQ</code><br>
@@ -56218,7 +56254,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             <input type="text"
                    class="field-input"
                    id="studioTrackInput"
-                   placeholder="Вставь любую ссылку..."
+                   placeholder="Вставь ссылку..."
                    style="margin-bottom: 12px; font-size: 12px; font-family: 'Courier New', monospace;">
 
             <div id="studioTrackPreview" style="display:none;margin-bottom:12px;"></div>
@@ -56254,22 +56290,17 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             return;
         }
 
-        // Определяем сервис
         const detected = detectService(url);
         if (!detected) {
-            if (typeof showToast === 'function') showToast('⚠️ Неизвестный сервис. Проверь ссылку.');
+            if (typeof showToast === 'function') showToast('⚠️ Неизвестный сервис');
             return;
         }
 
         // Проверка дубля
         const { data: existing } = await sb.from('music_studio_tracks')
-            .select('id')
-            .eq('service', detected.service)
-            .eq('track_id', String(detected.track_id))
-            .maybeSingle();
-
+            .select('id').eq('service', detected.service).eq('track_id', String(detected.track_id)).maybeSingle();
         if (existing) {
-            if (typeof showToast === 'function') showToast('⚠️ Этот трек уже в плейлисте');
+            if (typeof showToast === 'function') showToast('⚠️ Такой трек уже есть');
             return;
         }
 
@@ -56280,7 +56311,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         try {
             const meta = await fetchMetadata(url, detected.service);
 
-            // Превью
             const cover = meta.cover_url
                 ? `<img src="${escapeHtml(meta.cover_url)}" style="width:100%;height:100%;object-fit:cover;">`
                 : '🎵';
@@ -56296,7 +56326,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 </div>
             `;
 
-            // Максимальный sort_order
             const { data: maxOrder } = await sb.from('music_studio_tracks')
                 .select('sort_order').order('sort_order', { ascending: false }).limit(1).maybeSingle();
             const nextOrder = (maxOrder?.sort_order || 0) + 1;
@@ -56304,8 +56333,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             const { error } = await sb.from('music_studio_tracks').insert({
                 service: detected.service,
                 original_url: url,
-                embed_url: meta.embed_url,
-                direct_url: meta.direct_url,
                 track_id: String(detected.track_id),
                 title: meta.title,
                 artist: meta.artist,
@@ -56323,7 +56350,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 renderStudio();
             }, 700);
         } catch (e) {
-            console.error('previewAndAddStudioTrack:', e);
+            console.error(e);
             if (typeof showToast === 'function') showToast('❌ ' + e.message);
             btn.disabled = false;
             btn.textContent = '🔍 ПРОВЕРИТЬ И ДОБАВИТЬ';
@@ -56331,7 +56358,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // ГЛАВНАЯ ФУНКЦИЯ СТРАНИЦЫ
+    // ГЛАВНАЯ ФУНКЦИЯ
     // ============================================================
     async function openMusicStudioScreen() {
         if (!currentUser) {
@@ -56349,7 +56376,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         if (_studioChannel) {
             try { sb.removeChannel(_studioChannel); } catch (e) {}
         }
-        _studioChannel = sb.channel('music_studio_rt')
+        _studioChannel = sb.channel('music_studio_rt_v2')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'music_studio_tracks' }, () => {
                 if (document.getElementById('musicContent')?.innerHTML) {
                     renderStudio();
@@ -56359,13 +56386,12 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // ИНЪЕКЦИЯ КНОПКИ В НАВИГАЦИЮ
+    // ИНЪЕКЦИЯ КНОПКИ
     // ============================================================
     function injectMusicNavButton() {
         const nav = document.querySelector('.bottom-nav');
         if (!nav) return false;
         if (nav.querySelector('[data-page="music"]')) return true;
-
         const shopBtn = nav.querySelector('[data-page="shop"]');
         if (!shopBtn) return false;
 
@@ -56391,7 +56417,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const menuList = document.querySelector('.menu-drawer-list');
         if (!menuList) return;
         if (menuList.querySelector('[data-menu="music"]')) return;
-
         const shopMenuBtn = menuList.querySelector('[data-menu="shop"]');
         if (!shopMenuBtn) return;
 
@@ -56418,7 +56443,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         musicPage.className = 'container page';
         musicPage.id = 'page-music';
         musicPage.innerHTML = `<div id="musicContent"></div>`;
-
         const dashboardPage = document.getElementById('page-dashboard');
         if (dashboardPage && dashboardPage.parentNode) {
             dashboardPage.parentNode.insertBefore(musicPage, dashboardPage.nextSibling);
@@ -56429,8 +56453,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     // BOOT
     // ============================================================
     function boot() {
-        loadYoutubeAPI();
-
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
@@ -56442,18 +56464,27 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
         if (typeof sb !== 'undefined' && sb) subscribeRealtime();
 
-        console.log('🎛️ Music Studio готов');
+        // Горячая клавиша: Esc закрывает оверлей, но НЕ останавливает музыку
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('musicDockOverlay')) {
+                closeMusicDockOverlay();
+            }
+        });
+
+        console.log('🎛️ Music Studio v2 готов (постоянное воспроизведение)');
     }
 
-    // Экспорт в window
+    // Экспорт
     window.openMusicStudioScreen = openMusicStudioScreen;
-    window.openMusicPlaylistScreen = openMusicStudioScreen; // совместимость
+    window.openMusicPlaylistScreen = openMusicStudioScreen;
     window.openAddStudioTrackSheet = openAddStudioTrackSheet;
     window.closeAddStudioTrackSheet = closeAddStudioTrackSheet;
     window.previewAndAddStudioTrack = previewAndAddStudioTrack;
     window.playStudioTrack = playStudioTrack;
     window.playAdjacent = playAdjacent;
-    window.closePlayTrack = closePlayTrack;
+    window.stopStudioPlayback = stopStudioPlayback;
+    window.openMusicDockOverlay = openMusicDockOverlay;
+    window.closeMusicDockOverlay = closeMusicDockOverlay;
     window.deleteTrack = deleteTrack;
     window.moveTrack = moveTrack;
     window.openExternalLink = openExternalLink;
