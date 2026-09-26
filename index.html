@@ -15394,17 +15394,29 @@ html.lite-mode .list-frame-overlay svg * {
     background-repeat: no-repeat !important;
     min-height: 200px;
 }
+/* 🌑 ТЁМНЫЙ СЛОЙ ПОВЕРХ КАСТОМНОГО ФОНА */
 .profile-hero-compact.has-custom-bg::after {
     content: '';
     position: absolute;
     inset: 0;
+    top: 0; right: 0; bottom: 0; left: 0;
+    width: auto;
+    height: auto;
     background:
+        /* Основное затемнение — УСИЛЕНО */
         linear-gradient(
             180deg,
-            rgba(0, 0, 0, 0.55) 0%,
-            rgba(0, 0, 0, 0.72) 50%,
-            rgba(0, 0, 0, 0.88) 100%
+            rgba(0, 0, 0, 0.75) 0%,
+            rgba(0, 0, 0, 0.85) 45%,
+            rgba(0, 0, 0, 0.96) 100%
         ),
+        /* Акцентный отблеск темы */
+        radial-gradient(
+            ellipse 80% 60% at 15% 0%,
+            rgba(var(--emerald-rgb), 0.12) 0%,
+            transparent 60%
+        ),
+        /* Кибер-паттерн */
         repeating-linear-gradient(
             135deg,
             transparent 0px,
@@ -15414,6 +15426,13 @@ html.lite-mode .list-frame-overlay svg * {
         );
     pointer-events: none;
     z-index: 1;
+
+    /* 🔥 ГЛАВНОЕ — сбрасываем всё, что «протекло» из базового правила */
+    filter: none !important;
+    animation: none !important;
+    transform: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 /* Scan-line сверху вниз */
@@ -17808,8 +17827,8 @@ html.lite-mode .list-frame-overlay svg * {
     pointer-events: none;
 }
 
-/* Пульсирующее свечение в углу */
-.profile-hero-compact::after {
+/* Пульсирующее свечение в углу (только для дефолтного фона) */
+.profile-hero-compact:not(.has-custom-bg)::after {
     content: '';
     position: absolute;
     top: -30%;
