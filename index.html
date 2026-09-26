@@ -20536,6 +20536,175 @@ html.lite-mode .ctb-text.ctb-neon {
     color: var(--hint);
     font-weight: 500;
 }
+
+    /* ============================================================
+   🎫 BATTLE PASS — улучшенная сетка
+   ============================================================ */
+
+/* На ПК — сетка в 5 колонок вместо горизонтального скролла */
+@media (min-width: 900px) {
+    .bp-levels-scroll {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        overflow: visible;
+        padding: 0;
+        scroll-snap-type: none;
+    }
+    .bp-level-card {
+        flex: none;
+        width: 100%;
+    }
+}
+
+@media (min-width: 1280px) {
+    .bp-levels-scroll {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+/* Уровни с наградами — заметнее */
+.bp-level-card.has-rewards {
+    border-color: var(--border-strong);
+    box-shadow: 0 0 0 1px rgba(var(--emerald-rgb), 0.15);
+}
+
+/* Точка-индикатор на карточке уровня, где обе награды заданы */
+.bp-level-card.has-both-rewards .bp-level-header::after {
+    content: '★';
+    color: #ffd700;
+    margin-left: 4px;
+    font-size: 10px;
+    text-shadow: 0 0 6px #ffd700;
+}
+
+/* Превью предмета в ячейке — картинка вместо эмодзи */
+.bp-reward-cell .bp-item-preview {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.bp-reward-cell .bp-item-preview svg {
+    width: 100%;
+    height: 100%;
+}
+.bp-reward-cell .bp-item-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Тултип при клике на ячейку */
+.bp-cell-tooltip {
+    position: fixed;
+    z-index: 9999;
+    padding: 10px 12px;
+    background: rgba(10, 20, 16, 0.98);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text);
+    max-width: 220px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.bp-cell-tooltip.show { opacity: 1; }
+.bp-cell-tooltip .tt-name {
+    font-weight: 900;
+    margin-bottom: 4px;
+    color: #fff;
+}
+.bp-cell-tooltip .tt-desc {
+    font-size: 11px;
+    color: var(--hint);
+    line-height: 1.4;
+}
+
+    /* ============================================================
+   🖱️ FIX: Клики на ПК (WebView2 / Telegram Desktop)
+   SVG и декоративные слои не должны перехватывать клики
+   ============================================================ */
+
+/* Все SVG всегда пропускают клик — иконки не должны ловить клики */
+svg,
+svg *,
+svg use,
+svg path,
+svg circle,
+svg line,
+svg rect,
+svg polygon,
+svg ellipse {
+    pointer-events: none !important;
+}
+
+/* Дочерние элементы внутри кликабельных родителей — не перехватывают клик */
+[onclick] > *:not([onclick]):not(button):not(a):not(input):not(textarea):not(select),
+button > *:not([onclick]):not(button):not(a),
+a > *:not([onclick]):not(button):not(a) {
+    pointer-events: none !important;
+}
+
+/* Все интерактивные элементы остаются кликабельными */
+button,
+a,
+[onclick]:not([onclick=""]),
+[role="button"],
+input,
+textarea,
+select {
+    pointer-events: auto !important;
+}
+
+/* Кликабельные элементы внутри родителя с onclick тоже работают */
+[onclick] button,
+[onclick] a,
+[onclick] [onclick],
+button button,
+button a,
+button [onclick] {
+    pointer-events: auto !important;
+}
+
+/* Декоративные элементы-иконки не перехватывают клики */
+.cy-icon,
+.cy-icon *,
+.pbc-icon,
+.pbc-arrow,
+.sc-icon,
+.mode-icon,
+.rv-ico,
+.lb-avatar,
+.lb-info-compact,
+.tz-avatar,
+.tz-info,
+.ig-mini-avatar,
+.ig-mini-info,
+.result-mini-avatar,
+.result-mini-info,
+.menu-item-icon,
+.menu-item-content,
+.menu-item-glow,
+.online-dot,
+.hri-dot,
+.nav-badge,
+.club-logo-edit,
+.shop-preview,
+.shop-item-info {
+    pointer-events: none !important;
+}
+
+/* Но элемент внутри них с onclick снова работает */
+.cy-icon [onclick],
+.menu-item-icon [onclick],
+.tz-avatar [onclick],
+.tz-info [onclick] {
+    pointer-events: auto !important;
+}
     
 </style>
 </head>
@@ -44002,71 +44171,71 @@ async function openSeason() {
 }
 
 // ============================================================
-// 🎫 РЕНДЕР ЭКРАНА
+// 🎫 РЕНДЕР ЭКРАНА ПРОПУСКА
 // ============================================================
 function renderBattlePass(container) {
     const season = currentSeason;
     const progress = currentBpProgress;
-
-    if (!season) return;
+    if (!season || !container) return;
 
     const points = progress.points || 0;
     const level = progress.level || 1;
     const currentLevelProgress = points % 100;
     const isPremium = progress.premium_unlocked === true;
 
-    // Таймер до конца сезона
+    // Находим максимальный уровень среди всех наград ИЛИ из настроек сезона
+    let maxLevel = season.max_level || 50;
+    Object.keys(currentBpRewards).forEach(key => {
+        const lvl = parseInt(key.split('-')[1], 10);
+        if (lvl > maxLevel) maxLevel = lvl;
+    });
+
     const endTime = new Date(season.ends_at).getTime();
     const now = Date.now();
     const diff = Math.max(0, endTime - now);
     const days = Math.floor(diff / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
 
-    // Собираем массив наград для рендера
-    const maxLevel = season.max_level || 50;
+    // Собираем карточки уровней
     const rewardCells = [];
-
     for (let lvl = 1; lvl <= maxLevel; lvl++) {
-        const freeReward = currentBpRewards[`free-${lvl}`];
-        const premiumReward = currentBpRewards[`premium-${lvl}`];
+        const free = currentBpRewards[`free-${lvl}`];
+        const prem = currentBpRewards[`premium-${lvl}`];
         const isReached = lvl <= level;
         const isCurrent = lvl === level;
         const freeClaimed = (progress.claimed_free || []).includes(lvl);
-        const premiumClaimed = (progress.claimed_premium || []).includes(lvl);
+        const premClaimed = (progress.claimed_premium || []).includes(lvl);
+
+        const hasAny = free || prem;
+        const hasBoth = free && prem;
 
         rewardCells.push(`
-            <div class="bp-level-card ${isReached ? 'reached' : ''} ${isCurrent ? 'current' : ''}">
+            <div class="bp-level-card
+                        ${isReached ? 'reached' : ''}
+                        ${isCurrent ? 'current' : ''}
+                        ${hasAny ? 'has-rewards' : ''}
+                        ${hasBoth ? 'has-both-rewards' : ''}">
                 <div class="bp-level-header">LV ${lvl}</div>
 
                 ${renderRewardCell({
-                    tier: 'premium',
-                    level: lvl,
-                    reward: premiumReward,
-                    reached: isReached,
-                    claimed: premiumClaimed,
-                    hasPremium: isPremium
+                    tier: 'premium', level: lvl, reward: prem,
+                    reached: isReached, claimed: premClaimed, hasPremium: isPremium
                 })}
 
                 ${renderRewardCell({
-                    tier: 'free',
-                    level: lvl,
-                    reward: freeReward,
-                    reached: isReached,
-                    claimed: freeClaimed,
-                    hasPremium: isPremium
+                    tier: 'free', level: lvl, reward: free,
+                    reached: isReached, claimed: freeClaimed, hasPremium: isPremium
                 })}
             </div>
         `);
     }
 
-    // Кнопка админа
     const adminBtn = currentUser.is_admin ? `
         <button class="profile-action-btn cancel" style="margin-top: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;" onclick="openBpAdminEditor()">
             👑 Настроить награды пропуска
         </button>
     ` : '';
 
-    // Premium CTA
     const premiumBlock = isPremium
         ? `<div class="bp-premium-active">⭐ PREMIUM АКТИВЕН</div>`
         : `<button class="bp-premium-btn" onclick="buyBpPremium()">
@@ -44076,9 +44245,7 @@ function renderBattlePass(container) {
     container.innerHTML = `
         <div class="bp-hero">
             <div class="bp-season-name">${escapeHtml(season.name)}</div>
-            <div class="bp-season-timer">
-                ⏰ Осталось ${days} дн ${hours} ч
-            </div>
+            <div class="bp-season-timer">⏰ Осталось ${days} дн ${hours} ч</div>
 
             <div class="bp-level-row">
                 <div class="bp-level-num">${level}</div>
@@ -44094,7 +44261,7 @@ function renderBattlePass(container) {
             ${premiumBlock}
         </div>
 
-        <div class="section-title">🎁 Награды за уровни</div>
+        <div class="section-title">🎁 Награды за уровни (всего ${maxLevel})</div>
         <div class="bp-levels-scroll">
             ${rewardCells.join('')}
         </div>
@@ -44105,22 +44272,22 @@ function renderBattlePass(container) {
         </button>
     `;
 
-    // Автоскролл к текущему уровню
-    setTimeout(() => {
-        const currentCard = container.querySelector('.bp-level-card.current');
-        if (currentCard) {
-            currentCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }
-    }, 300);
+    // Автоскролл к текущему уровню (только на мобилке, где скролл горизонтальный)
+    if (window.innerWidth < 900) {
+        setTimeout(() => {
+            const cur = container.querySelector('.bp-level-card.current');
+            if (cur) cur.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }, 300);
+    }
 }
 
 // ============================================================
-// 🎁 Ячейка награды
+// 🎁 Ячейка награды — с превью предмета
 // ============================================================
 function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium }) {
     const isPremium = tier === 'premium';
 
-    // Premium + не куплен = жёлтый замочек
+    // Premium + не куплен — жёлтый замочек
     if (isPremium && !hasPremium) {
         return `
             <div class="bp-reward-cell premium locked-premium" onclick="buyBpPremium()">
@@ -44131,7 +44298,7 @@ function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium })
         `;
     }
 
-    // Нет награды в БД
+    // Нет награды
     if (!reward) {
         return `
             <div class="bp-reward-cell ${tier}">
@@ -44142,31 +44309,162 @@ function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium })
     }
 
     const val = reward.reward_value || {};
-    let icon = '🎁';
-    let amountText = '';
+    let iconHTML = '🎁';
+    let displayText = '';
 
     if (reward.reward_type === 'coins') {
-        icon = '💰';
-        amountText = val.amount || 0;
+        iconHTML = '💰';
+        displayText = String(val.amount || 0);
     } else if (reward.reward_type === 'item') {
-        icon = '🎨';
-        const itemName = SHOP_ITEMS_CACHE[val.item_id]?.name || 'Награда';
-        amountText = itemName.length > 12 ? itemName.slice(0, 11) + '…' : itemName;
+        const item = SHOP_ITEMS_CACHE[val.item_id];
+        displayText = item?.name || 'Предмет';
+        if (displayText.length > 10) displayText = displayText.slice(0, 9) + '…';
+
+        // Превью предмета
+        if (item) {
+            iconHTML = renderBpItemIcon(item);
+        }
     }
 
-    // Статус: not-reached, ready (можно забрать), claimed
     const cls = !reached ? 'locked' : (claimed ? 'claimed' : '');
     const onClick = reached && !claimed
         ? `onclick="claimBpReward(${level}, '${tier}')"`
-        : '';
+        : (reward && !claimed
+            ? `onclick="showBpCellTooltip(event, ${level}, '${tier}')"`
+            : '');
 
     return `
         <div class="bp-reward-cell ${tier} ${cls}" ${onClick}>
             <div class="bp-tier-label">${isPremium ? 'PREMIUM' : 'FREE'}</div>
-            <div class="bp-reward-icon">${icon}</div>
-            <div class="bp-reward-amount">${typeof amountText === 'number' ? amountText : escapeHtml(amountText)}</div>
+            <div class="bp-reward-icon">${iconHTML}</div>
+            <div class="bp-reward-amount">${escapeHtml(displayText)}</div>
         </div>
     `;
+}
+
+// ============================================================
+// 🎨 Превью предмета для ячейки
+// ============================================================
+function renderBpItemIcon(item) {
+    const val = item.value || {};
+    const isSpecial = val.special === true;
+
+    // Рамка
+    if (item.category === 'avatar_frame') {
+        if (isSpecial && typeof getSpecialFrameHTML === 'function') {
+            const svg = getSpecialFrameHTML(val.special_type || 'default', val.color || '#fff');
+            return `<div class="bp-item-preview">${svg}</div>`;
+        }
+        return `<div class="bp-item-preview" style="
+            border-radius:50%;
+            box-shadow:0 0 0 2px ${val.color || '#fff'}, 0 0 10px ${val.color || '#fff'};
+            background: linear-gradient(135deg, #2e4a3d, #0f1a15);
+            font-size:12px;
+            font-weight:900;
+            color:#fff;
+        ">A</div>`;
+    }
+
+    // Значок
+    if (item.category === 'badge') {
+        if (val.url) return `<div class="bp-item-preview"><img src="${val.url}" alt=""></div>`;
+        if (val.svg) return `<div class="bp-item-preview">${uniquifySvgIds(val.svg)}</div>`;
+        if (val.emoji) return `<div class="bp-item-preview" style="font-size:20px;">${val.emoji}</div>`;
+    }
+
+    // Цвет ника
+    if (item.category === 'nickname_color') {
+        if (val.gradient && Array.isArray(val.gradient)) {
+            return `<div class="bp-item-preview" style="
+                font-family:'Orbitron',sans-serif;
+                font-size:11px;
+                font-weight:900;
+                background:linear-gradient(90deg, ${val.gradient.join(',')});
+                -webkit-background-clip:text;
+                background-clip:text;
+                -webkit-text-fill-color:transparent;
+            ">Aa</div>`;
+        }
+        if (val.color) return `<div class="bp-item-preview" style="
+            font-family:'Orbitron',sans-serif;
+            font-size:11px;
+            font-weight:900;
+            color:${val.color};
+            text-shadow: 0 0 8px ${val.color};
+        ">Aa</div>`;
+    }
+
+    // Титул
+    if (item.category === 'title') {
+        return `<div class="bp-item-preview" style="
+            font-family:'Orbitron',sans-serif;
+            font-size:9px;
+            font-weight:900;
+            letter-spacing:0.5px;
+            color:${val.color || '#ffd700'};
+            text-shadow: 0 0 6px ${val.color || '#ffd700'};
+        ">${escapeHtml((val.text || 'T').slice(0, 4))}</div>`;
+    }
+
+    // Фон
+    if (item.category === 'profile_bg' || item.category === 'dxp_chart_bg') {
+        if (val.url) return `<div class="bp-item-preview" style="
+            background: url('${val.url}') center/cover;
+            border-radius: 6px;
+        "></div>`;
+        return `<div class="bp-item-preview" style="font-size:18px;">🖼</div>`;
+    }
+
+    return `<div class="bp-item-preview" style="font-size:18px;">🎁</div>`;
+}
+
+// ============================================================
+// 💬 Тултип — показать что за награда, если ещё нельзя забрать
+// ============================================================
+function showBpCellTooltip(e, level, tier) {
+    e.stopPropagation();
+
+    const reward = currentBpRewards[`${tier}-${level}`];
+    if (!reward) return;
+
+    const val = reward.reward_value || {};
+    let name = '';
+    let desc = '';
+    let icon = '🎁';
+
+    if (reward.reward_type === 'coins') {
+        name = '💰 ' + (val.amount || 0) + ' монет';
+        desc = `Награда ${tier === 'premium' ? 'Premium' : 'Free'} трека, уровень ${level}`;
+    } else if (reward.reward_type === 'item') {
+        const item = SHOP_ITEMS_CACHE[val.item_id];
+        icon = '🎨';
+        name = item?.name || 'Предмет';
+        desc = `Награда ${tier === 'premium' ? 'Premium' : 'Free'} трека, уровень ${level}`;
+    }
+
+    // Убираем старый
+    document.getElementById('bpCellTooltip')?.remove();
+
+    const tip = document.createElement('div');
+    tip.className = 'bp-cell-tooltip show';
+    tip.id = 'bpCellTooltip';
+    tip.innerHTML = `
+        <div class="tt-name">${icon} ${escapeHtml(name)}</div>
+        <div class="tt-desc">${escapeHtml(desc)}</div>
+    `;
+
+    document.body.appendChild(tip);
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    tip.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
+    tip.style.top = (rect.top - tip.offsetHeight - 8) + 'px';
+
+    haptic('light');
+
+    setTimeout(() => {
+        tip.classList.remove('show');
+        setTimeout(() => tip.remove(), 200);
+    }, 2000);
 }
 
 // ============================================================
@@ -44271,18 +44569,12 @@ async function buyBpPremium() {
     }
 }
 
-            // ============================================================
+// ============================================================
 // 👑 АДМИН: РЕДАКТОР НАГРАД ПРОПУСКА
 // ============================================================
 async function openBpAdminEditor() {
-    if (!currentUser.is_admin) {
-        showToast('Только админ');
-        return;
-    }
-    if (!currentSeason) {
-        showToast('Нет активного сезона');
-        return;
-    }
+    if (!currentUser.is_admin) { showToast('Только админ'); return; }
+    if (!currentSeason) { showToast('Нет активного сезона'); return; }
 
     document.getElementById('bpAdminOverlay')?.remove();
 
@@ -44299,23 +44591,24 @@ async function openBpAdminEditor() {
     sheet.style.overflowY = 'auto';
 
     const maxLevel = currentSeason.max_level || 50;
-
-    // Собираем строки
     let rowsHTML = '';
+
     for (let lvl = 1; lvl <= maxLevel; lvl++) {
         const free = currentBpRewards[`free-${lvl}`];
         const prem = currentBpRewards[`premium-${lvl}`];
 
         rowsHTML += `
-            <div class="bp-admin-row">
+            <div class="bp-admin-row" data-bp-row="${lvl}">
                 <div class="bp-admin-lvl">${lvl}</div>
 
                 <div class="bp-admin-cell free ${free ? '' : 'empty'}"
+                     data-bp-cell="free-${lvl}"
                      onclick="editBpReward(${lvl}, 'free')">
                     ${free ? formatAdminReward(free) : '+ Free'}
                 </div>
 
                 <div class="bp-admin-cell premium ${prem ? '' : 'empty'}"
+                     data-bp-cell="premium-${lvl}"
                      onclick="editBpReward(${lvl}, 'premium')">
                     ${prem ? formatAdminReward(prem) : '+ Premium'}
                 </div>
@@ -44332,10 +44625,10 @@ async function openBpAdminEditor() {
 
         <div style="padding: 10px 12px; margin-bottom: 12px; background: rgba(var(--emerald-rgb),0.06); border: 1px solid var(--border); border-radius: 10px; font-size: 11px; line-height: 1.5; color: var(--hint);">
             <b style="color: var(--emerald-3);">Слева — Free, справа — Premium.</b><br>
-            Нажми на ячейку чтобы задать награду. Пустые ячейки = нет награды на этом уровне.
+            Пустые ячейки = нет награды на этом уровне.
         </div>
 
-        <div style="max-height: 55vh; overflow-y: auto; padding-right: 4px;">
+        <div id="bpAdminList" style="max-height: 55vh; overflow-y: auto; padding-right: 4px;">
             ${rowsHTML}
         </div>
 
@@ -44352,11 +44645,19 @@ function closeBpAdminEditor() {
     document.getElementById('bpAdminSheet')?.remove();
 }
 
+// 🔥 Обновляем ОДНУ ячейку без перерисовки всего
+function updateBpAdminCell(level, tier) {
+    const cell = document.querySelector(`[data-bp-cell="${tier}-${level}"]`);
+    if (!cell) return;
+
+    const reward = currentBpRewards[`${tier}-${level}`];
+    cell.classList.toggle('empty', !reward);
+    cell.innerHTML = reward ? formatAdminReward(reward) : `+ ${tier === 'premium' ? 'Premium' : 'Free'}`;
+}
+
 function formatAdminReward(reward) {
     const val = reward.reward_value || {};
-    if (reward.reward_type === 'coins') {
-        return `💰 ${val.amount || 0}`;
-    }
+    if (reward.reward_type === 'coins') return `💰 ${val.amount || 0}`;
     if (reward.reward_type === 'item') {
         const name = SHOP_ITEMS_CACHE[val.item_id]?.name || 'Предмет';
         return `🎨 ${escapeHtml(name.slice(0, 8))}`;
@@ -44367,7 +44668,7 @@ function formatAdminReward(reward) {
 // ============================================================
 // 👑 РЕДАКТОР ОДНОЙ НАГРАДЫ
 // ============================================================
-let _bpEditContext = null; // { level, tier }
+let _bpEditContext = null;
 
 async function editBpReward(level, tier) {
     _bpEditContext = { level, tier };
@@ -44396,16 +44697,16 @@ async function editBpReward(level, tier) {
         </div>
 
         <button class="sheet-option" onclick="showBpCoinsInput()">
-            💰 Монеты
+            <span style="font-size: 18px;">💰</span> Монеты
         </button>
 
         <button class="sheet-option" onclick="showBpItemPicker()">
-            🎨 Предмет из магазина
+            <span style="font-size: 18px;">🎨</span> Предмет из магазина
         </button>
 
         ${existing ? `
             <button class="sheet-option danger" onclick="deleteBpReward()">
-                🗑️ Удалить награду
+                <span style="font-size: 18px;">🗑️</span> Удалить награду
             </button>
         ` : ''}
 
@@ -44422,25 +44723,80 @@ function closeBpEdit() {
     document.getElementById('bpEditSheet')?.remove();
 }
 
-async function showBpCoinsInput() {
+// ============================================================
+// 💰 ВВОД КОЛИЧЕСТВА МОНЕТ (без prompt)
+// ============================================================
+function showBpCoinsInput() {
     const { level, tier } = _bpEditContext;
     const existing = currentBpRewards[`${tier}-${level}`];
     const currentAmount = existing?.reward_value?.amount || 100;
 
-    const amount = prompt('Сколько монет?', currentAmount);
-    if (!amount) return;
-
-    const num = parseInt(amount, 10);
-    if (!num || num <= 0) { showToast('Введи число > 0'); return; }
-
-    await saveBpReward(level, tier, 'coins', { amount: num });
     closeBpEdit();
+
+    document.getElementById('bpCoinsOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'bpCoinsOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'bpCoinsSheet';
+    sheet.style.zIndex = '814';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">💰 Количество монет</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+            Уровень ${level} · ${tier === 'premium' ? 'Premium' : 'Free'}
+        </div>
+
+        <label class="field-label">Сколько монет выдать?</label>
+        <input type="number" class="field-input" id="bpCoinsAmount"
+               value="${currentAmount}" min="1" max="999999" inputmode="numeric"
+               style="text-align: center; font-size: 22px; font-weight: 900; margin-bottom: 14px;">
+
+        <button class="profile-action-btn save" onclick="submitBpCoins()">
+            ✅ СОХРАНИТЬ
+        </button>
+        <button class="sheet-cancel" onclick="document.getElementById('bpCoinsOverlay').remove()">
+            ОТМЕНА
+        </button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    setTimeout(() => {
+        const input = document.getElementById('bpCoinsAmount');
+        if (input) { input.focus(); input.select(); }
+    }, 200);
 }
 
+async function submitBpCoins() {
+    const input = document.getElementById('bpCoinsAmount');
+    if (!input) return;
+
+    const num = parseInt(input.value, 10);
+    if (!num || num <= 0) { showToast('⚠️ Введи число > 0'); return; }
+
+    const { level, tier } = _bpEditContext;
+
+    // Блокируем кнопку
+    const btn = document.querySelector('#bpCoinsSheet .profile-action-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'СОХРАНЕНИЕ...'; }
+
+    await saveBpReward(level, tier, 'coins', { amount: num });
+
+    document.getElementById('bpCoinsOverlay')?.remove();
+}
+
+// ============================================================
+// 🎨 ПИКЕР ПРЕДМЕТА
+// ============================================================
 async function showBpItemPicker() {
     const { level, tier } = _bpEditContext;
 
-    // Открываем модалку со списком всех shop_items
     document.getElementById('bpItemPickOverlay')?.remove();
 
     const overlay = document.createElement('div');
@@ -44455,44 +44811,72 @@ async function showBpItemPicker() {
     sheet.style.maxHeight = '85vh';
     sheet.style.overflowY = 'auto';
 
-    // Загружаем все товары
-    const { data: items } = await sb.from('shop_items')
-        .select('id, name, category, rarity, value')
-        .eq('is_available', true)
-        .order('category')
-        .order('sort_order');
-
-    (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
-
-    const catLabel = {
-        nickname_color: '🎨 Цвет ника',
-        avatar_frame: '🖼 Рамка',
-        badge: '🏅 Значок',
-        title: '👑 Титул',
-        profile_bg: '🌄 Фон',
-        dxp_chart_bg: '📈 Фон графика',
-    };
-
     sheet.innerHTML = `
         <div class="sheet-title">🎨 Выбери предмет</div>
         <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 12px;">
             Уровень ${level} · ${tier === 'premium' ? 'Premium' : 'Free'}
         </div>
-        ${(!items || !items.length) ? '<div class="empty">Магазин пуст</div>' : ''}
-        ${(items || []).map(item => `
-            <button class="sheet-option" onclick="pickBpItem('${item.id}')">
-                <span style="font-size: 14px;">${catLabel[item.category] || '🎁'}</span>
-                <div style="flex: 1; text-align: left; min-width: 0;">
-                    <div style="font-weight: 800; color: var(--text);">${escapeHtml(item.name)}</div>
-                    <div style="font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.5px;">${item.rarity}</div>
-                </div>
-            </button>
-        `).join('')}
-        <button class="sheet-cancel" onclick="document.getElementById('bpItemPickOverlay').remove()">ОТМЕНА</button>
+        <div class="empty">Загрузка...</div>
     `;
 
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
+
+    try {
+        const { data: items } = await sb.from('shop_items')
+            .select('id, name, category, rarity, value')
+            .eq('is_available', true)
+            .order('category')
+            .order('sort_order');
+
+        (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+        const catLabel = {
+            nickname_color: '🎨 Цвет',
+            avatar_frame: '🖼 Рамка',
+            badge: '🏅 Значок',
+            title: '👑 Титул',
+            profile_bg: '🌄 Фон',
+            dxp_chart_bg: '📈 График',
+        };
+
+        if (!items?.length) {
+            sheet.innerHTML += `<div class="empty">Магазин пуст</div>`;
+            return;
+        }
+
+        // Группируем по категориям
+        const grouped = {};
+        items.forEach(i => (grouped[i.category] ||= []).push(i));
+
+        let html = `
+            <div class="sheet-title">🎨 Выбери предмет</div>
+            <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 12px;">
+                Уровень ${level} · ${tier === 'premium' ? 'Premium' : 'Free'}
+            </div>
+        `;
+
+        Object.entries(grouped).forEach(([cat, list]) => {
+            html += `<div class="section-title" style="margin-top: 12px;">${catLabel[cat] || cat}</div>`;
+            html += list.map(item => `
+                <button class="sheet-option" onclick="pickBpItem('${item.id}')">
+                    <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        ${renderBpItemIcon(item)}
+                    </div>
+                    <div style="flex: 1; text-align: left; min-width: 0;">
+                        <div style="font-weight: 800; color: var(--text); font-size: 13px;">${escapeHtml(item.name)}</div>
+                        <div style="font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.5px;">${item.rarity}</div>
+                    </div>
+                </button>
+            `).join('');
+        });
+
+        html += `<button class="sheet-cancel" onclick="document.getElementById('bpItemPickOverlay').remove()" style="margin-top: 12px;">ОТМЕНА</button>`;
+
+        sheet.innerHTML = html;
+    } catch (e) {
+        sheet.innerHTML += `<div class="empty" style="color: var(--red);">Ошибка: ${e.message}</div>`;
+    }
 }
 
 async function pickBpItem(itemId) {
@@ -44500,9 +44884,11 @@ async function pickBpItem(itemId) {
     document.getElementById('bpItemPickOverlay')?.remove();
 
     await saveBpReward(level, tier, 'item', { item_id: itemId });
-    closeBpEdit();
 }
 
+// ============================================================
+// 💾 СОХРАНИТЬ НАГРАДУ
+// ============================================================
 async function saveBpReward(level, tier, rewardType, rewardValue) {
     try {
         const { data, error } = await sb.rpc('admin_set_bp_reward', {
@@ -44519,19 +44905,27 @@ async function saveBpReward(level, tier, rewardType, rewardValue) {
 
         // Обновляем локальный кэш
         currentBpRewards[`${tier}-${level}`] = {
-            level,
-            tier,
-            reward_type: rewardType,
-            reward_value: rewardValue
+            level, tier, reward_type: rewardType, reward_value: rewardValue
         };
 
         showToast('✅ Сохранено');
         haptic('medium');
 
-        // Перерисовываем админ-панель
-        if (document.getElementById('bpAdminSheet')) {
-            closeBpAdminEditor();
-            setTimeout(() => openBpAdminEditor(), 250);
+        // 🔥 Обновляем ТОЛЬКО одну ячейку в админке
+        updateBpAdminCell(level, tier);
+
+        // 🔥 И перерисовываем основной экран пропуска
+        if (document.getElementById('seasonContent') && document.getElementById('page-season')?.classList.contains('active')) {
+            renderBattlePass(document.getElementById('seasonContent'));
+        }
+
+        // Если max_level меньше нового уровня — предложить увеличить
+        if (level > (currentSeason.max_level || 50)) {
+            setTimeout(() => {
+                if (confirm(`Уровень ${level} выше максимума (${currentSeason.max_level}). Увеличить максимум?`)) {
+                    updateSeasonMaxLevel(level);
+                }
+            }, 500);
         }
     } catch (e) {
         console.error('saveBpReward:', e);
@@ -44539,6 +44933,23 @@ async function saveBpReward(level, tier, rewardType, rewardValue) {
     }
 }
 
+// ============================================================
+// 📈 Увеличить max_level сезона
+// ============================================================
+async function updateSeasonMaxLevel(newMax) {
+    try {
+        await sb.from('seasons').update({ max_level: newMax }).eq('id', currentSeason.id);
+        currentSeason.max_level = newMax;
+        showToast(`✅ Максимум уровней: ${newMax}`);
+        renderBattlePass(document.getElementById('seasonContent'));
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+// ============================================================
+// 🗑️ УДАЛИТЬ НАГРАДУ
+// ============================================================
 async function deleteBpReward() {
     const { level, tier } = _bpEditContext;
     if (!confirm(`Удалить награду ${tier} с уровня ${level}?`)) return;
@@ -44558,9 +44969,12 @@ async function deleteBpReward() {
         showToast('🗑️ Удалено');
         closeBpEdit();
 
-        if (document.getElementById('bpAdminSheet')) {
-            closeBpAdminEditor();
-            setTimeout(() => openBpAdminEditor(), 250);
+        // 🔥 Обновляем только эту ячейку
+        updateBpAdminCell(level, tier);
+
+        // Перерисовываем основной экран
+        if (document.getElementById('seasonContent')) {
+            renderBattlePass(document.getElementById('seasonContent'));
         }
     } catch (e) {
         console.error('deleteBpReward:', e);
