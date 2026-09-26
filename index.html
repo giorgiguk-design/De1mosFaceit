@@ -32345,6 +32345,43 @@ async function subscribeMatchRealtime() {
                     return;
                 }
 
+                // ==== READY_CHECK ====
+if (fresh.status === 'ready_check') {
+    // Обновляем данные
+    const dataChanged = JSON.stringify(fresh.ready_check_data || {}) !==
+                        JSON.stringify(currentMatch?.ready_check_data || {});
+
+    currentMatch = fresh;
+
+    // Если я на этом экране — обновляем
+    const onReadyScreen = document.querySelector('#vetoContent .veto-wrap') &&
+                          document.body.innerHTML.includes('Проверка готовности');
+
+    if (!onReadyScreen) {
+        // Первый раз вижу этот матч — открываю экран
+        showReadyCheckScreen();
+    } else if (dataChanged) {
+        // Обновились данные о готовности — перерисовываю
+        renderReadyCheck();
+    }
+
+    // Если все готовы — финализируем
+    const readyData = fresh.ready_check_data || {};
+    const allIds = [
+        ...(fresh.team_a_players || []),
+        ...(fresh.team_b_players || [])
+    ].map(p => String(p.telegram_id));
+
+    const allReady = allIds.length > 0 &&
+                     allIds.every(id => readyData[id] === true);
+
+    if (allReady && fresh.status === 'ready_check') {
+        await finishReadyCheck(true);
+    }
+
+    return;
+}
+
                 // ==== VETO ====
                 if (fresh.status === 'veto') {
                     if (document.getElementById('page-veto')?.classList.contains('active')) {
@@ -32398,16 +32435,14 @@ async function subscribeMatchRealtime() {
                     return;
                 }
 
-                // ==== CANCELLED ====
-                if (fresh.status === 'cancelled') {
-                    stopVetoPolling();
-                    if (_readyCheckTimer) {
-                        clearInterval(_readyCheckTimer);
-                        _readyCheckTimer = null;
-                    }
-                    showVetoCancelledScreen(fresh.cancelled_reason);
-                    return;
-                }
+// ==== CANCELLED ====
+if (fresh.status === 'cancelled') {
+    stopVetoPolling();
+    if (_readyCheckTimer) { clearInterval(_readyCheckTimer); _readyCheckTimer = null; }
+    if (_readyCheckRefreshTimer) { clearInterval(_readyCheckRefreshTimer); _readyCheckRefreshTimer = null; }
+    showVetoCancelledScreen(fresh.cancelled_reason);
+    return;
+}
             }, 200);
         })
         .subscribe((status) => {
@@ -32695,12 +32730,17 @@ function showVetoScreen() {
 }
 
 // ============================================================
-// ✅ READY CHECK — подтверждение готовности (15 сек)
+// ✅ READY CHECK — экран подтверждения (2 минуты)
 // ============================================================
+const READY_CHECK_DURATION = 120; // 2 минуты в секундах
+
 let _readyCheckTimer = null;
+let _readyCheckRefreshTimer = null;
 
 function showReadyCheckScreen() {
-    if (_readyCheckTimer) clearInterval(_readyCheckTimer);
+    // Очищаем старые таймеры
+    if (_readyCheckTimer) { clearInterval(_readyCheckTimer); _readyCheckTimer = null; }
+    if (_readyCheckRefreshTimer) { clearInterval(_readyCheckRefreshTimer); _readyCheckRefreshTimer = null; }
 
     const screen = document.getElementById('playScreen');
     if (screen) screen.classList.remove('active');
@@ -32711,6 +32751,29 @@ function showReadyCheckScreen() {
     switchPage('veto');
     renderReadyCheck();
     startReadyCheckCountdown();
+
+    // 🔥 Периодический рефреш из БД — на случай если realtime пропустит
+    _readyCheckRefreshTimer = setInterval(async () => {
+        if (!currentMatch || currentMatch.status !== 'ready_check') return;
+
+        try {
+            const { data } = await sb.from('game_matches')
+                .select('ready_check_data, status')
+                .eq('id', currentMatch.id)
+                .maybeSingle();
+
+            if (!data) return;
+
+            // Если realtime пропустил — обновляем вручную
+            const oldData = JSON.stringify(currentMatch.ready_check_data || {});
+            const newData = JSON.stringify(data.ready_check_data || {});
+
+            if (oldData !== newData) {
+                currentMatch.ready_check_data = data.ready_check_data || {};
+                renderReadyCheck();
+            }
+        } catch (e) {}
+    }, 2000); // каждые 2 секунды
 }
 
 async function renderReadyCheck() {
@@ -32722,7 +32785,6 @@ async function renderReadyCheck() {
     const teamB = currentMatch.team_b_players || [];
     const allIds = [...teamA, ...teamB].map(p => Number(p.telegram_id));
 
-    // Готовность из match.ready_check_data
     const readyData = currentMatch.ready_check_data || {};
     const meReady = readyData[String(me)] === true;
     const readyCount = Object.values(readyData).filter(v => v === true).length;
@@ -32738,7 +32800,12 @@ async function renderReadyCheck() {
     // Таймер
     const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
     const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-    const timeLeft = Math.max(0, 15 - elapsed);
+    const timeLeft = Math.max(0, READY_CHECK_DURATION - elapsed);
+
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    const timeText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    const isWarning = timeLeft <= 30;
 
     const renderTeam = (team, list) => {
         const teamColor = team === 'A' ? 'var(--emerald)' : '#ff5470';
@@ -32753,27 +32820,37 @@ async function renderReadyCheck() {
                         const u = userMap[Number(p.telegram_id)] || {};
                         const src = u.custom_avatar || u.photo_url;
                         const initial = (u.display_name || 'U')[0].toUpperCase();
-                        const av = src ? `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;">` : initial;
+                        const av = src
+                            ? `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+                            : initial;
                         const isReady = readyData[String(p.telegram_id)] === true;
                         const isMe = Number(p.telegram_id) === me;
                         return `
                             <div style="
                                 display: flex; align-items: center; gap: 8px;
-                                padding: 6px 8px;
-                                background: ${isReady ? `rgba(${teamRgb}, 0.15)` : 'rgba(0,0,0,0.3)'};
-                                border: 1px solid ${isReady ? `rgba(${teamRgb}, 0.5)` : 'var(--border)'};
+                                padding: 8px;
+                                background: ${isReady ? `rgba(${teamRgb}, 0.18)` : 'rgba(0,0,0,0.3)'};
+                                border: 1px solid ${isReady ? `rgba(${teamRgb}, 0.55)` : 'var(--border)'};
                                 border-radius: 10px;
-                                transition: all 0.3s ease;
+                                transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+                                transform: ${isReady ? 'scale(1)' : 'scale(1)'};
                             ">
-                                <div style="width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); color: #04140e; flex-shrink: 0;">
-                                    ${av}
-                                </div>
+                                <div style="
+                                    width: 30px; height: 30px; border-radius: 50%;
+                                    overflow: hidden; display: flex; align-items: center;
+                                    justify-content: center; font-size: 11px; font-weight: 900;
+                                    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                                    color: #04140e; flex-shrink: 0;
+                                ">${av}</div>
                                 <div style="flex: 1; min-width: 0;">
-                                    <div style="font-size: 11px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <div style="
+                                        font-size: 11px; font-weight: 700; color: var(--text);
+                                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                                    ">
                                         ${escapeHtml(u.display_name || 'Игрок')}${isMe ? ' <span style="color:var(--hint); font-size:9px;">(ты)</span>' : ''}
                                     </div>
                                 </div>
-                                <div style="font-size: 16px; flex-shrink: 0;">
+                                <div style="font-size: 16px; flex-shrink: 0; transition: transform 0.3s ease;">
                                     ${isReady ? '✅' : '⏳'}
                                 </div>
                             </div>
@@ -32789,28 +32866,65 @@ async function renderReadyCheck() {
             <div class="veto-header-v2" style="text-align: center;">
                 <div class="veto-header-top" style="justify-content: center;">
                     <div style="text-align: center;">
-                        <div class="veto-phase-label">ГОТОВНОСТЬ</div>
+                        <div class="veto-phase-label">ПОДТВЕРЖДЕНИЕ</div>
                         <div class="veto-phase-title" style="justify-content: center; margin-top: 6px;">
-                            Проверка игроков
+                            Проверка готовности
                         </div>
                     </div>
                 </div>
+
                 <div style="
-                    margin-top: 16px;
+                    margin-top: 20px;
                     font-family: 'Orbitron', sans-serif;
-                    font-size: 42px;
+                    font-size: 48px;
                     font-weight: 900;
-                    color: ${timeLeft <= 5 ? 'var(--red)' : 'var(--emerald)'};
+                    color: ${isWarning ? 'var(--red)' : 'var(--emerald)'};
                     font-variant-numeric: tabular-nums;
-                    text-shadow: 0 0 20px ${timeLeft <= 5 ? 'rgba(255,84,112,0.6)' : 'rgba(var(--emerald-rgb),0.6)'};
-                    animation: ${timeLeft <= 5 ? 'pulseRed 0.6s ease-in-out infinite' : 'pulseText 2s ease-in-out infinite'};
-                ">${timeLeft}s</div>
+                    letter-spacing: 2px;
+                    text-shadow: 0 0 24px ${isWarning ? 'rgba(255,84,112,0.6)' : 'rgba(var(--emerald-rgb),0.6)'};
+                    ${isWarning ? 'animation: pulseRed 0.6s ease-in-out infinite;' : 'animation: pulseText 2s ease-in-out infinite;'}
+                ">${timeText}</div>
+
                 <div style="
-                    margin-top: 8px;
+                    margin-top: 10px;
                     font-size: 13px;
                     color: var(--hint);
                     font-weight: 700;
-                ">${readyCount} / ${totalCount} готовы</div>
+                    letter-spacing: 0.5px;
+                ">
+                    <b style="color: var(--emerald); font-size: 16px;">${readyCount}</b>
+                    <span> / ${totalCount} игроков готовы</span>
+                </div>
+
+                ${!meReady ? `
+                    <div style="
+                        margin-top: 14px;
+                        padding: 10px 14px;
+                        background: rgba(217, 171, 90, 0.12);
+                        border: 1px solid rgba(217, 171, 90, 0.4);
+                        border-radius: 10px;
+                        font-size: 12px;
+                        color: var(--gold);
+                        line-height: 1.4;
+                        font-weight: 700;
+                    ">
+                        ⚠️ Нажми <b>«Я готов»</b> ниже, чтобы подтвердить участие
+                    </div>
+                ` : `
+                    <div style="
+                        margin-top: 14px;
+                        padding: 10px 14px;
+                        background: rgba(var(--emerald-rgb), 0.12);
+                        border: 1px solid rgba(var(--emerald-rgb), 0.4);
+                        border-radius: 10px;
+                        font-size: 12px;
+                        color: var(--emerald-3);
+                        line-height: 1.4;
+                        font-weight: 700;
+                    ">
+                        ✅ Ты подтвердил готовность. Ждём остальных...
+                    </div>
+                `}
             </div>
 
             <div style="
@@ -32826,19 +32940,25 @@ async function renderReadyCheck() {
             ${meReady ? `
                 <button class="profile-action-btn" style="
                     margin-top: 16px;
-                    background: rgba(var(--emerald-rgb), 0.15);
+                    background: rgba(var(--emerald-rgb), 0.08);
                     color: var(--emerald);
-                    border: 1px solid var(--emerald);
+                    border: 1px solid var(--border-strong);
                     cursor: default;
+                    opacity: 0.7;
                 " disabled>
                     ✅ ТЫ ГОТОВ
                 </button>
             ` : `
-                <button class="profile-action-btn save" style="margin-top: 16px;"
+                <button class="profile-action-btn save" style="margin-top: 16px; font-size: 16px; padding: 18px;"
                         onclick="confirmReady()" id="readyBtn">
                     ✅ Я ГОТОВ
                 </button>
             `}
+
+            <button class="profile-action-btn cancel" style="margin-top: 8px;"
+                    onclick="cancelReadyCheck()">
+                ❌ ОТКАЗАТЬСЯ
+            </button>
         </div>
     `;
 }
@@ -32851,22 +32971,45 @@ async function confirmReady() {
 
     if (readyData[String(me)] === true) return;
 
+    // Блокируем кнопку
+    const btn = document.getElementById('readyBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
     haptic('medium');
 
-    // Обновляем локально
-    readyData[String(me)] = true;
-    currentMatch.ready_check_data = readyData;
-
-    // Сохраняем в БД
     try {
-        await sb.from('game_matches')
-            .update({ ready_check_data: readyData })
-            .eq('id', currentMatch.id);
+        // 🔥 Атомарный RPC
+        const { data, error } = await sb.rpc('ready_check_confirm', {
+            p_match_id: currentMatch.id,
+            p_user_id: me
+        });
 
+        if (error) throw error;
+
+        if (!data?.ok) {
+            showToast('⚠️ ' + (data?.error || 'Ошибка'));
+            if (btn) { btn.disabled = false; btn.textContent = '✅ Я ГОТОВ'; }
+            return;
+        }
+
+        // Обновляем локально
+        currentMatch.ready_check_data = {
+            ...(currentMatch.ready_check_data || {}),
+            [String(me)]: true
+        };
+
+        showToast('✅ Готовность подтверждена');
         renderReadyCheck();
+
+        // Если все готовы — завершаем немедленно
+        if (data.all_ready === true) {
+            await finishReadyCheck(true);
+        }
+
     } catch (e) {
-        console.warn('confirmReady:', e);
-        showToast('Ошибка');
+        console.error('confirmReady:', e);
+        showToast('Ошибка: ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = '✅ Я ГОТОВ'; }
     }
 }
 
@@ -32882,24 +33025,23 @@ function startReadyCheckCountdown() {
 
         const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
         const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-        const timeLeft = Math.max(0, 15 - elapsed);
+        const timeLeft = Math.max(0, READY_CHECK_DURATION - elapsed);
 
-        // Проверяем, все ли готовы
-        const readyData = currentMatch.ready_check_data || {};
-        const allIds = [
-            ...(currentMatch.team_a_players || []),
-            ...(currentMatch.team_b_players || [])
-        ].map(p => String(p.telegram_id));
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        const timeText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-        const allReady = allIds.length > 0 && allIds.every(id => readyData[id] === true);
-
-        if (allReady) {
-            clearInterval(_readyCheckTimer);
-            _readyCheckTimer = null;
-            await finishReadyCheck(true);
-            return;
+        // Обновляем только цифру таймера
+        const timerEl = document.querySelector('#vetoContent [style*="Orbitron"]');
+        if (timerEl) {
+            timerEl.textContent = timeText;
+            if (timeLeft <= 30) {
+                timerEl.style.color = 'var(--red)';
+                timerEl.style.textShadow = '0 0 24px rgba(255,84,112,0.6)';
+            }
         }
 
+        // Время вышло
         if (timeLeft <= 0) {
             clearInterval(_readyCheckTimer);
             _readyCheckTimer = null;
@@ -32907,25 +33049,44 @@ function startReadyCheckCountdown() {
             return;
         }
 
-        // Обновляем только цифру таймера без полного рендера
-        const timerEl = document.querySelector('.veto-header-v2 [style*="Orbitron"]');
-        if (timerEl) timerEl.textContent = `${timeLeft}s`;
     }, 1000);
 }
 
 async function finishReadyCheck(success) {
     if (!currentMatch) return;
 
+    if (_readyCheckTimer) { clearInterval(_readyCheckTimer); _readyCheckTimer = null; }
+    if (_readyCheckRefreshTimer) { clearInterval(_readyCheckRefreshTimer); _readyCheckRefreshTimer = null; }
+
+    const matchId = currentMatch.id;
+    const roomId = currentMatch.room_id;
+
     try {
         if (!success) {
-            // Не все готовы — отменяем
+            // ============================================================
+            // Отмена — не все готовы
+            // ============================================================
             await sb.from('game_matches').update({
                 status: 'cancelled',
                 cancelled_reason: 'ready_check_failed',
                 cancelled_at: new Date().toISOString()
-            }).eq('id', currentMatch.id);
+            }).eq('id', matchId);
 
-            await cancelMatch(currentMatch.room_id, 'ready_check_failed');
+            await cancelMatch(roomId, 'ready_check_failed');
+
+            // Уведомляем всех
+            const allIds = [
+                ...(currentMatch.team_a_players || []),
+                ...(currentMatch.team_b_players || [])
+            ].map(p => Number(p.telegram_id));
+
+            try {
+                await notifyMany(allIds,
+                    `⏰ <b>Матч отменён</b>\n\n` +
+                    `Не все игроки подтвердили готовность за 2 минуты.`,
+                    'party'
+                );
+            } catch (e) {}
 
             showToast('⏰ Не все подтвердили готовность');
             haptic('heavy');
@@ -32935,25 +33096,22 @@ async function finishReadyCheck(success) {
                 unlockNav();
                 switchPage('dashboard');
                 checkActiveRoom();
-            }, 800);
+            }, 1000);
             return;
         }
 
-        // Все готовы — переходим к veto
-        await sb.from('game_matches').update({
-            status: 'veto',
-            veto_started_at: new Date().toISOString(),
-            last_action_at: new Date().toISOString()
-        }).eq('id', currentMatch.id);
+        // ============================================================
+        // Все готовы — переход в veto
+        // ============================================================
+        const { data, error } = await sb.rpc('ready_check_finish', {
+            p_match_id: matchId
+        });
 
-        await sb.from('rooms').update({
-            status: 'veto',
-            veto_started_at: new Date().toISOString()
-        }).eq('id', currentMatch.room_id);
-        await touchRoom(currentMatch.room_id);
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Ошибка финализации');
 
         const { data: fresh } = await sb.from('game_matches')
-            .select('*').eq('id', currentMatch.id).single();
+            .select('*').eq('id', matchId).single();
 
         if (fresh) {
             currentMatch = fresh;
@@ -32967,6 +33125,19 @@ async function finishReadyCheck(success) {
         showToast('Ошибка: ' + e.message);
     }
 }
+
+// ============================================================
+// ❌ ОТКАЗ ОТ МАТЧА
+// ============================================================
+async function cancelReadyCheck() {
+    if (!currentMatch) return;
+
+    const ok = await tgConfirm('Ты уверен, что хочешь отказаться? Матч будет отменён.');
+    if (!ok) return;
+
+    haptic('heavy');
+    await finishReadyCheck(false);
+}            
             
 // ============================================================
 // РЕНДЕР VETO
@@ -35255,6 +35426,13 @@ async function checkActiveMatch() {
                     subscribeMatchRealtime();
                     return;
                 }
+
+                if (m.status === 'ready_check') {
+                    showReadyCheckScreen();
+                    subscribeMatchRealtime();
+                return;
+                }
+                
                 if (m.status === 'veto') {
                     showVetoScreen();   // ← внутри сам подпишется
                     subscribeMatchRealtime();
@@ -35325,6 +35503,23 @@ async function restoreRoomScreen(room, player) {
     }
     break;
 }
+
+          case 'ready_check': {
+    const { data: match } = await sb.from('game_matches')
+        .select('*')
+        .eq('room_id', room.id)
+        .order('created_at', { ascending: false })
+        .limit(1).maybeSingle();
+    if (match) {
+        currentMatch = match;
+        showReadyCheckScreen();
+        subscribeMatchRealtime();
+    } else {
+        showToast('Матч потерян');
+        closePlayScreen();
+    }
+    break;
+}  
 
         case 'veto':
         case 'side_pick': {
@@ -36789,6 +36984,31 @@ function subscribeRoomRealtime(roomId) {
                 return;
             }
 
+            if (room.status === 'ready_check') {
+    killUI();
+
+    const { data: match } = await sb.from('game_matches')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (match) {
+        currentMatch = match;
+
+        // Если я уже на ready_check — не переключаю
+        const onReadyScreen = document.body.innerHTML.includes('Проверка готовности');
+
+        if (!onReadyScreen) {
+            haptic('heavy');
+            showReadyCheckScreen();
+            subscribeMatchRealtime();
+        }
+    }
+    return;
+}
+
             if (room.status === 'veto' || room.status === 'side_pick') {
                 killUI();
                 const { data: match } = await sb.from('game_matches')
@@ -37063,7 +37283,7 @@ async function closeRoom(roomId) {
 }
 
 // ============================================================
-// 🎮 ЗАПУСК МАТЧА — с баланс-чеком и ready_check
+// 🎮 ЗАПУСК МАТЧА — с баланс-чеком, ready_check (2 мин) + notify
 // ============================================================
 async function startMatch(roomId) {
     haptic('heavy');
@@ -37088,7 +37308,7 @@ async function startMatch(roomId) {
         }
 
         // ============================================================
-        // 🔥 НОВОЕ: Проверка баланса DXP
+        // Баланс-чек DXP
         // ============================================================
         const idsA = teamA.map(p => Number(p.telegram_id));
         const idsB = teamB.map(p => Number(p.telegram_id));
@@ -37110,30 +37330,23 @@ async function startMatch(roomId) {
                 `Разница: ${diff}\n\n` +
                 `Всё равно запустить матч?`
             );
-            if (!ok) {
-                haptic('medium');
-                return;
-            }
+            if (!ok) { haptic('medium'); return; }
         }
 
-        // ============================================================
-        // Прогноз на матч
-        // ============================================================
+        // Прогноз
         const predTeamA = teamA.map(p => ({ telegram_id: p.telegram_id }));
         const predTeamB = teamB.map(p => ({ telegram_id: p.telegram_id }));
-
         await new Promise((resolve) => {
             showMatchPrediction(predTeamA, predTeamB, resolve);
         });
 
         // ============================================================
-        // 🔥 СОЗДАЁМ МАТЧ со статусом 'ready_check'
+        // Создаём матч со статусом ready_check
         // ============================================================
         const captainA = teamA[0].telegram_id;
         const captainB = teamB[0].telegram_id;
         const host = room.leader_id;
 
-        // 50/50 — кто первый банит
         const vetoFirstTeam = Math.random() < 0.5 ? 'A' : 'B';
         const sidePickerTeam = vetoFirstTeam === 'A' ? 'B' : 'A';
 
@@ -37156,33 +37369,45 @@ async function startMatch(roomId) {
 
         if (error) throw error;
 
-        // ============================================================
         // Обновляем комнату
-        // ============================================================
         await sb.from('rooms').update({
             status: 'ready_check',
-            game_match_id: match.id,
-            veto_log: [],
-            current_turn: vetoFirstTeam
+            game_match_id: match.id
         }).eq('id', roomId);
         await touchRoom(roomId);
 
         currentMatch = match;
 
-        // Гасим баннеры и индикаторы
+        // Гасим всё
         activeRoomId = null;
         hideActiveRoomBanner();
-
         const _ind = document.getElementById('headerRoomIndicator');
         if (_ind) _ind.style.display = 'none';
-
         const _flt = document.getElementById('playEnterFloat');
         if (_flt) _flt.classList.remove('active');
-
         const _screen = document.getElementById('playScreen');
         if (_screen) _screen.classList.remove('active');
 
-        showToast('🎯 Проверка готовности · 15 сек');
+        // ============================================================
+        // 🔥 УВЕДОМЛЕНИЯ: все игроки получают пинг в бот
+        // ============================================================
+        const allPlayerIds = [...idsA, ...idsB];
+
+        try {
+            // Первый notify — сразу
+            await notifyMany(allPlayerIds,
+                `🎯 <b>Матч начинается!</b>\n\n` +
+                `Режим: <b>${escapeHtml(match.mode)}</b>\n` +
+                `Соперник: ${escapeHtml(teamA.length)} на ${escapeHtml(teamB.length)}\n\n` +
+                `⏰ У тебя <b>2 минуты</b>, чтобы нажать «Готов» в приложении.\n\n` +
+                `👉 <b>Открой De1mos Faceit и подтверди участие!</b>`,
+                'party'
+            );
+        } catch (e) {
+            console.warn('notify ready_check:', e);
+        }
+
+        showToast('🎯 Проверка готовности · 2 мин');
         haptic('heavy');
 
         showReadyCheckScreen();
