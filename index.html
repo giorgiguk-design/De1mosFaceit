@@ -55667,96 +55667,171 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         boot();
     }
 })();
-</script>                                              ← ← ← ДОБАВИЛ ЭТУ СТРОКУ
+</script>
+
 
 <!-- ============================================================ -->
-<!-- 🎵 MUSIC v3 — красивый плейлист + предложения треков         -->
+<!-- 🎛️ MUSIC STUDIO — треки из любых сервисов                    -->
 <!-- ============================================================ -->
 <script>
 (function() {
     'use strict';
-    const SETTINGS_KEY = 'music_playlist_url';
+
     let cachedTracks = [];
-    let _tracksChannel = null;
-    let _sugChannel = null;
+    let _studioChannel = null;
+    let currentPlayingId = null;
+    let _ytPlayer = null;         // YouTube IFrame API
+    let _ytApiReady = false;
+    let _ytApiLoading = false;
 
     // ============================================================
-    // OEmbed — получаем метаданные трека из Яндекс.Музыки
+    // ЗАГРУЗКА YOUTUBE IFRAME API (для автоплея следующего трека)
     // ============================================================
-    async function fetchTrackMetadata(url) {
-        try {
-            const apiUrl = `https://music.yandex.ru/oembed?url=${encodeURIComponent(url)}&format=json`;
-            const res = await fetch(apiUrl);
-            if (!res.ok) throw new Error('OEmbed недоступен');
-            const data = await res.json();
+    function loadYoutubeAPI() {
+        if (_ytApiReady || _ytApiLoading) return;
+        _ytApiLoading = true;
 
-            // Извлекаем ID
-            const albumMatch = url.match(/\/album\/(\d+)/);
-            const trackMatch = url.match(/\/track\/(\d+)/);
-            const albumId = albumMatch ? albumMatch[1] : null;
-            const trackId = trackMatch ? trackMatch[1] : null;
+        window.onYouTubeIframeAPIReady = () => {
+            _ytApiReady = true;
+            console.log('▶️ YouTube API готов');
+        };
 
-            // Извлекаем embed src
-            let embedSrc = '';
-            if (data.html) {
-                const m = data.html.match(/src="([^"]+)"/);
-                if (m) embedSrc = m[1];
-            }
+        const s = document.createElement('script');
+        s.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(s);
+    }
 
+    // ============================================================
+    // ОПРЕДЕЛЕНИЕ СЕРВИСА
+    // ============================================================
+    function detectService(url) {
+        if (!url) return null;
+        const u = url.trim();
+
+        // YouTube
+        if (/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/i.test(u)) {
+            const m = u.match(/(?:v=|\/embed\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+            if (m) return { service: 'youtube', track_id: m[1] };
+        }
+
+        // SoundCloud
+        if (/soundcloud\.com\//i.test(u)) {
+            return { service: 'soundcloud', track_id: u.split('?')[0] };
+        }
+
+        // Яндекс.Музыка
+        if (/music\.yandex\.(ru|com|kz|by|uz)/i.test(u)) {
+            const tm = u.match(/\/track\/(\d+)/);
+            const am = u.match(/\/album\/(\d+)/);
+            if (tm) return { service: 'yandex', track_id: tm[1], album_id: am ? am[1] : null };
+        }
+
+        // VK Музыка
+        if (/(?:vk\.com|vk\.ru)\/(?:audio|music)/i.test(u) || /vk\.com\/.*[?&]z=audio/i.test(u)) {
+            return { service: 'vk', track_id: u };
+        }
+
+        // Bandcamp
+        if (/\.bandcamp\.com\/(track|album)\//i.test(u)) {
+            return { service: 'bandcamp', track_id: u.split('?')[0] };
+        }
+
+        // Прямая ссылка на аудио
+        if (/\.(mp3|ogg|m4a|wav|aac|flac)(\?|$)/i.test(u)) {
+            return { service: 'direct', track_id: u };
+        }
+
+        return null;
+    }
+
+    // ============================================================
+    // МЕТАДАННЫЕ — через noembed.com (универсальный API)
+    // ============================================================
+    async function fetchMetadata(url, service) {
+        // Direct — просто используем имя файла
+        if (service === 'direct') {
+            const name = decodeURIComponent(url.split('/').pop().split('?')[0].replace(/\.[^.]+$/, ''));
             return {
-                title: data.title || 'Трек',
-                artist: data.author_name || '',
-                cover_url: data.thumbnail_url || '',
-                album_id: albumId,
-                track_id: trackId,
-                embed_html: data.html || '',
-                embed_src: embedSrc,
-            };
-        } catch (e) {
-            console.warn('fetchTrackMetadata:', e);
-            // Fallback — только из URL
-            const albumMatch = url.match(/\/album\/(\d+)/);
-            const trackMatch = url.match(/\/track\/(\d+)/);
-            return {
-                title: 'Трек',
+                title: name || 'Аудио',
                 artist: '',
                 cover_url: '',
-                album_id: albumMatch ? albumMatch[1] : null,
-                track_id: trackMatch ? trackMatch[1] : null,
-                embed_html: '',
-                embed_src: '',
+                embed_url: null,
+                direct_url: url,
             };
         }
-    }
 
-    // ============================================================
-    // ПАРСИНГ
-    // ============================================================
-    function extractUrl(input) {
-        let url = (input || '').trim();
-        if (!url) return '';
-        if (url.includes('src="')) {
-            const m = url.match(/src="([^"]+)"/);
-            if (m) url = m[1];
+        // Пробуем через noembed
+        try {
+            const apiUrl = `https://noembed.com/embed?url=${encodeURIComponent(url)}`;
+            const res = await fetch(apiUrl);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && !data.error) {
+                    return {
+                        title: data.title || 'Трек',
+                        artist: data.author_name || '',
+                        cover_url: data.thumbnail_url || '',
+                        embed_url: extractEmbedSrc(data.html) || buildEmbedUrl(url, service),
+                        direct_url: null,
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('noembed fail:', e);
         }
-        if (url.includes('href="')) {
-            const m = url.match(/href="([^"]+)"/);
-            if (m) url = m[1];
-        }
-        return url;
+
+        // Fallback — только из URL
+        return {
+            title: 'Трек',
+            artist: '',
+            cover_url: '',
+            embed_url: buildEmbedUrl(url, service),
+            direct_url: null,
+        };
     }
 
-    function isYandexTrackUrl(url) {
-        return /music\.yandex\.(ru|com|kz|by|uz)/i.test(url) && /\/track\//i.test(url);
+    function extractEmbedSrc(html) {
+        if (!html) return null;
+        const m = html.match(/src="([^"]+)"/);
+        return m ? m[1] : null;
+    }
+
+    function buildEmbedUrl(url, service) {
+        // YouTube
+        if (service === 'youtube') {
+            const m = url.match(/(?:v=|\/embed\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+            if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0`;
+        }
+
+        // SoundCloud
+        if (service === 'soundcloud') {
+            return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%2300e08a&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`;
+        }
+
+        // Яндекс
+        if (service === 'yandex') {
+            const tm = url.match(/\/track\/(\d+)/);
+            const am = url.match(/\/album\/(\d+)/);
+            if (tm && am) {
+                return `https://music.yandex.ru/iframe/#track/${tm[1]}/${am[1]}`;
+            }
+        }
+
+        // Bandcamp
+        if (service === 'bandcamp') {
+            return null; // нет универсального embed
+        }
+
+        return null;
     }
 
     // ============================================================
-    // ЗАГРУЗКА ТРЕКОВ
+    // ЗАГРУЗКА / СОХРАНЕНИЕ
     // ============================================================
     async function loadTracks() {
         try {
             const { data, error } = await sb
-                .from('music_tracks')
+                .from('music_studio_tracks')
                 .select('*')
                 .order('sort_order', { ascending: true })
                 .order('added_at', { ascending: false });
@@ -55769,17 +55844,68 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         }
     }
 
+    async function deleteTrack(id) {
+        if (!confirm('Удалить трек из плейлиста?')) return;
+        try {
+            await sb.from('music_studio_tracks').delete().eq('id', id);
+            if (typeof showToast === 'function') showToast('🗑️ Удалено');
+            if (typeof haptic === 'function') haptic('light');
+            if (currentPlayingId === id) closePlayTrack();
+            await renderStudio();
+        } catch (e) {
+            if (typeof showToast === 'function') showToast('❌ ' + e.message);
+        }
+    }
+
+    async function moveTrack(id, dir) {
+        const track = cachedTracks.find(t => t.id === id);
+        if (!track) return;
+        const idx = cachedTracks.indexOf(track);
+        const newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= cachedTracks.length) return;
+
+        const other = cachedTracks[newIdx];
+        const a = track.sort_order || 0;
+        const b = other.sort_order || 0;
+
+        try {
+            await sb.from('music_studio_tracks').update({ sort_order: b }).eq('id', track.id);
+            await sb.from('music_studio_tracks').update({ sort_order: a }).eq('id', other.id);
+            await renderStudio();
+            if (typeof haptic === 'function') haptic('light');
+        } catch (e) {
+            if (typeof showToast === 'function') showToast('❌ ' + e.message);
+        }
+    }
+
     // ============================================================
-    // РЕНДЕР СПИСКА ТРЕКОВ
+    // РЕНДЕР СТРАНИЦЫ
     // ============================================================
-    async function renderMusicPage() {
+    async function renderStudio() {
         const container = document.getElementById('musicContent');
         if (!container) return;
 
         const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
         const tracks = await loadTracks();
 
-        // Основной HTML
+        const serviceIcon = {
+            youtube: '▶️',
+            soundcloud: '🟠',
+            yandex: '🟡',
+            vk: '🔵',
+            bandcamp: '🟣',
+            direct: '🎵',
+        };
+
+        const serviceLabel = {
+            youtube: 'YouTube',
+            soundcloud: 'SoundCloud',
+            yandex: 'Яндекс.Музыка',
+            vk: 'VK Музыка',
+            bandcamp: 'Bandcamp',
+            direct: 'Аудио',
+        };
+
         let html = `
             <div class="play-hero-compact" style="padding-bottom: 8px;">
                 <div class="phc-icon">
@@ -55791,147 +55917,108 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 </div>
                 <div class="phc-text">
                     <div class="phc-title">Музыка</div>
-                    <div class="phc-sub">${tracks.length} ${pluralTracks(tracks.length)} в плейлисте</div>
+                    <div class="phc-sub">${tracks.length} ${pluralTracks(tracks.length)} · Студия</div>
                 </div>
                 ${isAdmin ? `
-                    <button class="phc-icon-btn" onclick="openAddTrackSheet()" title="Добавить трек" style="width:40px;height:40px;">
+                    <button class="phc-icon-btn" onclick="openAddStudioTrackSheet()" title="Добавить трек" style="width:40px;height:40px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
                             <path d="M12 5v14M5 12h14"/>
                         </svg>
                     </button>
                 ` : ''}
             </div>
-
-            <!-- Кнопки действий -->
-            <div style="display:grid;grid-template-columns:1fr ${isAdmin ? '1fr' : ''};gap:8px;margin-bottom:14px;">
-                <button class="profile-action-btn save" onclick="openSuggestTrackSheet()" style="margin-top:0;padding:12px;">
-                    💡 Предложить трек
-                </button>
-                ${isAdmin ? `
-                    <button class="profile-action-btn cancel" id="adminSuggestionsBtn"
-                            onclick="openAdminSuggestions()"
-                            style="margin-top:0;padding:12px;position:relative;">
-                        📥 Предложения
-                    </button>
-                ` : ''}
-            </div>
         `;
 
-        // Список треков
         if (!tracks.length) {
             html += `
-                <div style="
-                    padding: 40px 20px;
-                    text-align: center;
-                    background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.06), rgba(0,0,0,0.4));
-                    border: 1px dashed var(--border-strong);
-                    border-radius: 16px;
-                ">
-                    <div style="font-size: 56px; margin-bottom: 12px; opacity: 0.5;">🎵</div>
+                <div style="padding: 40px 20px; text-align: center; background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.06), rgba(0,0,0,0.4)); border: 1px dashed var(--border-strong); border-radius: 16px;">
+                    <div style="font-size: 56px; margin-bottom: 12px; opacity: 0.5;">🎛️</div>
                     <div style="font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 6px;">
-                        Плейлист пуст
+                        Студия пуста
                     </div>
                     <div style="font-size: 12px; color: var(--hint); line-height: 1.5;">
                         ${isAdmin
-                            ? 'Нажми ➕ вверху, чтобы добавить первый трек'
-                            : 'Админ пока не добавил ни одного трека'}
+                            ? 'Нажми ➕ вверху и вставь ссылку на трек из YouTube, SoundCloud, Яндекс.Музыки и др.'
+                            : 'Админ ещё не добавил ни одного трека. Заходи позже!'}
                     </div>
                 </div>
             `;
         } else {
             html += `<div class="section-title">🎧 Плейлист (${tracks.length})</div>`;
-            html += `<div id="musicTrackList">`;
 
             tracks.forEach((t, i) => {
+                const svc = t.service || 'youtube';
+                const icon = serviceIcon[svc] || '🎵';
                 const cover = t.cover_url
-                    ? `<img src="${escapeHtml(t.cover_url)}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.textContent='🎵';">`
-                    : '🎵';
+                    ? `<img src="${escapeHtml(t.cover_url)}" alt="" loading="lazy" onerror="this.style.display='none';this.parentElement.textContent='${icon}';">`
+                    : icon;
+                const isPlaying = currentPlayingId === t.id;
+
                 html += `
-                    <div class="music-track-row" data-track-id="${t.id}"
-                         onclick="playTrack(${t.id})"
-                         style="
-                             display: flex;
-                             align-items: center;
-                             gap: 12px;
-                             padding: 10px 12px;
-                             margin-bottom: 6px;
-                             background: linear-gradient(180deg, rgba(var(--emerald-rgb),0.04) 0%, rgba(0,0,0,0.4) 100%);
-                             border: 1px solid var(--border);
-                             border-radius: 12px;
-                             cursor: pointer;
-                             transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
-                             position: relative;
-                         "
-                         onmouseover="this.style.borderColor='var(--border-strong)';this.style.background='linear-gradient(180deg, rgba(var(--emerald-rgb),0.10) 0%, rgba(0,0,0,0.4) 100%)'"
-                         onmouseout="this.style.borderColor='var(--border)';this.style.background='linear-gradient(180deg, rgba(var(--emerald-rgb),0.04) 0%, rgba(0,0,0,0.4) 100%)'">
-                        <div style="
-                            width: 48px; height: 48px;
-                            border-radius: 8px;
-                            overflow: hidden;
-                            flex-shrink: 0;
-                            background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-                            display: flex; align-items: center; justify-content: center;
-                            font-size: 22px;
-                            color: #04140e;
-                            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-                        ">${cover}</div>
+                    <div class="music-studio-row" data-id="${t.id}" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 10px 12px;
+                        margin-bottom: 6px;
+                        background: ${isPlaying
+                            ? 'linear-gradient(180deg, rgba(var(--emerald-rgb),0.18) 0%, rgba(0,0,0,0.4) 100%)'
+                            : 'linear-gradient(180deg, rgba(var(--emerald-rgb),0.04) 0%, rgba(0,0,0,0.4) 100%)'};
+                        border: 1px solid ${isPlaying ? 'var(--emerald)' : 'var(--border)'};
+                        border-radius: 12px;
+                        cursor: pointer;
+                        position: relative;
+                        transition: border-color 0.2s ease, background 0.2s ease;
+                    "
+                    onclick="playStudioTrack(${t.id})"
+                    onmouseover="if(!this.dataset.playing) this.style.borderColor='var(--border-strong)'"
+                    onmouseout="if(!this.dataset.playing) this.style.borderColor='var(--border)'"
+                    ${isPlaying ? 'data-playing="1"' : ''}>
+
+                        <div style="width: 48px; height: 48px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-size: 22px; color: #04140e; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+                            ${cover}
+                        </div>
+
                         <div style="flex: 1; min-width: 0;">
-                            <div style="
-                                font-size: 13.5px;
-                                font-weight: 800;
-                                color: var(--text);
-                                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-                                margin-bottom: 3px;
-                            ">${escapeHtml(t.title || 'Трек')}</div>
-                            <div style="
-                                font-size: 11px;
-                                color: var(--hint);
-                                font-weight: 600;
-                                white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-                            ">${escapeHtml(t.artist || '—')}</div>
+                            <div style="font-size: 13.5px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px;">
+                                ${escapeHtml(t.title || 'Трек')}
+                            </div>
+                            <div style="font-size: 11px; color: var(--hint); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${escapeHtml(t.artist || serviceLabel[svc] || '—')} · ${serviceLabel[svc] || ''}
+                            </div>
                         </div>
-                        <div style="
-                            width: 36px; height: 36px;
-                            border-radius: 50%;
-                            background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-                            display: flex; align-items: center; justify-content: center;
-                            color: #04140e;
-                            flex-shrink: 0;
-                            box-shadow: 0 2px 8px rgba(var(--emerald-rgb), 0.4);
-                        ">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                <path d="M8 5v14l11-7z"/>
-                            </svg>
+
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; color: #04140e; flex-shrink: 0; box-shadow: 0 2px 8px rgba(var(--emerald-rgb), 0.4);">
+                            ${isPlaying
+                                ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`
+                                : `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`}
                         </div>
+
                         ${isAdmin ? `
+                            <div style="display: flex; flex-direction: column; gap: 2px; margin-left: 4px;" onclick="event.stopPropagation();">
+                                ${i > 0 ? `<button onclick="moveTrack(${t.id}, -1)" style="width:20px;height:20px;border:none;background:rgba(255,255,255,0.06);border-radius:4px;color:var(--hint);font-size:10px;cursor:pointer;font-family:inherit;padding:0;line-height:1;">▲</button>` : ''}
+                                ${i < tracks.length - 1 ? `<button onclick="moveTrack(${t.id}, 1)" style="width:20px;height:20px;border:none;background:rgba(255,255,255,0.06);border-radius:4px;color:var(--hint);font-size:10px;cursor:pointer;font-family:inherit;padding:0;line-height:1;">▼</button>` : ''}
+                            </div>
                             <button onclick="event.stopPropagation(); deleteTrack(${t.id})" style="
-                                position: absolute;
-                                top: 6px; right: 6px;
-                                width: 22px; height: 22px;
+                                width: 24px; height: 24px;
                                 border-radius: 50%;
                                 background: rgba(255,84,112,0.15);
                                 border: 1px solid rgba(255,84,112,0.4);
                                 color: var(--red);
-                                font-size: 12px;
+                                font-size: 14px;
                                 cursor: pointer;
                                 display: flex; align-items: center; justify-content: center;
                                 font-family: inherit;
                                 padding: 0;
+                                flex-shrink: 0;
                             ">×</button>
                         ` : ''}
                     </div>
                 `;
             });
-
-            html += `</div>`;
         }
 
         container.innerHTML = html;
-
-        // Бейдж админа
-        if (isAdmin) {
-            updateAdminBadge();
-        }
     }
 
     function pluralTracks(n) {
@@ -55942,55 +56029,77 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // ПРОИГРЫВАНИЕ ТРЕКА (модалка с компактным iframe)
+    // ПРОИГРЫВАНИЕ ТРЕКА
     // ============================================================
-    async function playTrack(trackId) {
-        const track = cachedTracks.find(t => t.id === trackId);
+    async function playStudioTrack(id) {
+        const track = cachedTracks.find(t => t.id === id);
         if (!track) return;
 
+        if (currentPlayingId === id) {
+            closePlayTrack();
+            return;
+        }
+
+        currentPlayingId = id;
         if (typeof haptic === 'function') haptic('light');
 
-        document.getElementById('playTrackOverlay')?.remove();
+        document.getElementById('playStudioOverlay')?.remove();
 
         const overlay = document.createElement('div');
         overlay.className = 'sheet-overlay active';
-        overlay.id = 'playTrackOverlay';
+        overlay.id = 'playStudioOverlay';
         overlay.style.zIndex = '10000';
         overlay.onclick = (e) => { if (e.target === overlay) closePlayTrack(); };
 
-        // Строим iframe src для одного трека
-        let iframeSrc = '';
-        if (track.album_id && track.track_id) {
-            iframeSrc = `https://music.yandex.ru/iframe/#track/${track.track_id}/${track.album_id}`;
-        } else if (track.yandex_url) {
-            // Fallback — просто открываем плеер плейлиста рядом
-            iframeSrc = track.yandex_url;
-        }
+        const sheet = document.createElement('div');
+        sheet.className = 'sheet active';
+        sheet.id = 'playStudioSheet';
+        sheet.style.zIndex = '10001';
+        sheet.style.paddingBottom = '20px';
 
         const cover = track.cover_url
             ? `<img src="${escapeHtml(track.cover_url)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';">`
             : '🎵';
 
-        const sheet = document.createElement('div');
-        sheet.className = 'sheet active';
-        sheet.id = 'playTrackSheet';
-        sheet.style.zIndex = '10001';
-        sheet.style.paddingBottom = '20px';
+        // Медиа-плеер
+        let playerHTML = '';
+        if (track.service === 'direct' && track.direct_url) {
+            // Прямая ссылка на аудио — используем native <audio>
+            playerHTML = `
+                <audio controls autoplay style="width: 100%; margin-bottom: 12px; border-radius: 12px; background: #000;" src="${escapeHtml(track.direct_url)}"></audio>
+            `;
+        } else if (track.embed_url) {
+            // iframe для YouTube / SoundCloud / Яндекс
+            const height = track.service === 'soundcloud' ? 180 : 180;
+            playerHTML = `
+                <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border-strong); background: #000; margin-bottom: 12px;">
+                    <iframe
+                        frameborder="0"
+                        style="display:block;width:100%;height:${height}px;"
+                        width="100%"
+                        height="${height}"
+                        src="${escapeHtml(track.embed_url)}"
+                        allow="autoplay *; encrypted-media *; clipboard-write; fullscreen"
+                        allowfullscreen
+                    ></iframe>
+                </div>
+            `;
+        } else {
+            playerHTML = `
+                <div style="padding: 20px; text-align: center; background: rgba(255,84,112,0.08); border: 1px solid rgba(255,84,112,0.3); border-radius: 12px; margin-bottom: 12px;">
+                    <div style="font-size: 13px; color: var(--red); font-weight: 800; margin-bottom: 4px;">⚠️ Не удалось создать плеер</div>
+                    <div style="font-size: 11px; color: var(--hint);">Открой по кнопке ниже в оригинальном сервисе</div>
+                </div>
+            `;
+        }
 
         sheet.innerHTML = `
             <div class="sheet-title">🎵 Сейчас играет</div>
 
             <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;">
-                <div style="
-                    width: 72px; height: 72px;
-                    border-radius: 12px;
-                    overflow: hidden;
-                    flex-shrink: 0;
-                    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-                    display: flex; align-items: center; justify-content: center;
-                    font-size: 32px;
-                    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-                ">${cover}</div>
+                <div style="width: 72px; height: 72px; border-radius: 12px; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);">
+                    ${cover}
+                </div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;line-height:1.2;word-break:break-word;">
                         ${escapeHtml(track.title || 'Трек')}
@@ -56001,214 +56110,207 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 </div>
             </div>
 
-            ${iframeSrc ? `
-                <div style="
-                    border-radius: 12px;
-                    overflow: hidden;
-                    border: 1px solid var(--border-strong);
-                    background: #000;
-                    margin-bottom: 12px;
-                ">
-                    <iframe
-                        frameborder="0"
-                        style="display:block;width:100%;height:180px;"
-                        width="100%"
-                        height="180"
-                        src="${escapeHtml(iframeSrc)}"
-                        allow="autoplay *; encrypted-media *; clipboard-write"
-                        loading="lazy"
-                    ></iframe>
-                </div>
-            ` : ''}
+            ${playerHTML}
 
-            <a href="${escapeHtml(track.yandex_url)}" target="_blank"
-               onclick="event.preventDefault(); openYandexLink('${escapeHtml(track.yandex_url)}')"
-               style="
-                   display: flex; align-items: center; justify-content: center; gap: 8px;
-                   width: 100%; padding: 14px;
-                   background: rgba(var(--emerald-rgb),0.10);
-                   border: 1px solid var(--border-strong);
-                   border-radius: 12px;
-                   color: var(--emerald);
-                   font-family: inherit;
-                   font-size: 13px;
-                   font-weight: 800;
-                   text-decoration: none;
-                   letter-spacing: 0.5px;
-                   margin-bottom: 10px;
-               ">
+            <a href="${escapeHtml(track.original_url)}" target="_blank"
+               onclick="event.preventDefault(); openExternalLink('${escapeHtml(track.original_url)}')"
+               style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; background: rgba(var(--emerald-rgb),0.10); border: 1px solid var(--border-strong); border-radius: 12px; color: var(--emerald); font-family: inherit; font-size: 13px; font-weight: 800; text-decoration: none; letter-spacing: 0.5px; margin-bottom: 10px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                     <path d="M15 3h6v6M10 14 21 3"/>
                 </svg>
-                Открыть в Яндекс.Музыке
+                Открыть в оригинале
             </a>
+
+            ${currentPlayingId ? (() => {
+                const idx = cachedTracks.findIndex(t => t.id === currentPlayingId);
+                const hasPrev = idx > 0;
+                const hasNext = idx < cachedTracks.length - 1;
+                if (!hasPrev && !hasNext) return '';
+                return `
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                        <button ${hasPrev ? '' : 'disabled'} onclick="playAdjacent(-1)" style="padding:12px;border-radius:12px;background:rgba(var(--emerald-rgb),0.08);border:1px solid var(--border-strong);color:var(--emerald);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;opacity:${hasPrev ? 1 : 0.4};">
+                            ⏮ ПРЕДЫДУЩИЙ
+                        </button>
+                        <button ${hasNext ? '' : 'disabled'} onclick="playAdjacent(1)" style="padding:12px;border-radius:12px;background:rgba(var(--emerald-rgb),0.08);border:1px solid var(--border-strong);color:var(--emerald);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;opacity:${hasNext ? 1 : 0.4};">
+                            СЛЕДУЮЩИЙ ⏭
+                        </button>
+                    </div>
+                `;
+            })() : ''}
 
             <button class="sheet-cancel" onclick="closePlayTrack()">ЗАКРЫТЬ</button>
         `;
 
         document.body.appendChild(overlay);
         document.body.appendChild(sheet);
+
+        // Перерисовываем список (подсветить активный)
+        renderStudio();
+    }
+
+    function playAdjacent(dir) {
+        const idx = cachedTracks.findIndex(t => t.id === currentPlayingId);
+        if (idx < 0) return;
+        const next = cachedTracks[idx + dir];
+        if (next) {
+            closePlayTrack();
+            setTimeout(() => playStudioTrack(next.id), 200);
+        }
     }
 
     function closePlayTrack() {
-        document.getElementById('playTrackOverlay')?.remove();
-        document.getElementById('playTrackSheet')?.remove();
+        document.getElementById('playStudioOverlay')?.remove();
+        document.getElementById('playStudioSheet')?.remove();
+        currentPlayingId = null;
+        renderStudio();
     }
 
-    function openYandexLink(url) {
+    function openExternalLink(url) {
         try {
             if (tg?.openLink) tg.openLink(url);
             else window.open(url, '_blank');
         } catch (e) {
             window.open(url, '_blank');
         }
-        closePlayTrack();
     }
 
     // ============================================================
     // АДМИН: ДОБАВИТЬ ТРЕК
     // ============================================================
-    function openAddTrackSheet() {
+    function openAddStudioTrackSheet() {
         if (typeof isCurrentUserAdmin === 'function' && !isCurrentUserAdmin()) {
             if (typeof showToast === 'function') showToast('Только админ');
             return;
         }
 
-        document.getElementById('addTrackOverlay')?.remove();
-        document.getElementById('addTrackSheet')?.remove();
+        document.getElementById('addStudioOverlay')?.remove();
+        document.getElementById('addStudioSheet')?.remove();
 
         const overlay = document.createElement('div');
         overlay.className = 'sheet-overlay active';
-        overlay.id = 'addTrackOverlay';
-        overlay.onclick = (e) => { if (e.target === overlay) closeAddTrackSheet(); };
+        overlay.id = 'addStudioOverlay';
+        overlay.onclick = (e) => { if (e.target === overlay) closeAddStudioTrackSheet(); };
 
         const sheet = document.createElement('div');
         sheet.className = 'sheet active';
-        sheet.id = 'addTrackSheet';
+        sheet.id = 'addStudioSheet';
         sheet.style.zIndex = '10000';
+        sheet.style.maxHeight = '90vh';
+        sheet.style.overflowY = 'auto';
 
         sheet.innerHTML = `
             <div class="sheet-title">➕ Добавить трек</div>
 
             <div style="font-size:12px;color:var(--hint);line-height:1.7;margin-bottom:14px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;">
-                <b style="color:var(--text);">Как получить ссылку:</b><br>
-                1️⃣ Открой <b>Яндекс.Музыку</b><br>
-                2️⃣ Найди песню<br>
-                3️⃣ <b>Поделиться</b> → <b>Скопировать ссылку</b><br>
-                4️⃣ Вставь сюда
+                <b style="color:var(--text);">Поддерживаются:</b><br>
+                ▶️ <b>YouTube</b> — играет полностью бесплатно<br>
+                🟠 <b>SoundCloud</b> — играет бесплатно<br>
+                🟡 <b>Яндекс.Музыка</b> — 30 сек без Плюса<br>
+                🔵 <b>VK</b> · 🟣 <b>Bandcamp</b> · 🎵 <b>mp3-ссылки</b>
                 <br><br>
-                <b style="color:var(--emerald);">Пример:</b><br>
-                <code style="font-size:10px;word-break:break-all;">https://music.yandex.ru/album/12345/track/67890</code>
+                <b style="color:var(--emerald);">Примеры:</b><br>
+                <code style="font-size:10px;word-break:break-all;">https://youtu.be/dQw4w9WgXcQ</code><br>
+                <code style="font-size:10px;word-break:break-all;">https://soundcloud.com/artist/track</code>
             </div>
 
+            <label class="field-label">Ссылка на трек</label>
             <input type="text"
                    class="field-input"
-                   id="addTrackInput"
-                   placeholder="https://music.yandex.ru/album/.../track/..."
+                   id="studioTrackInput"
+                   placeholder="Вставь любую ссылку..."
                    style="margin-bottom: 12px; font-size: 12px; font-family: 'Courier New', monospace;">
 
-            <div id="addTrackPreview" style="display:none;margin-bottom:12px;"></div>
+            <div id="studioTrackPreview" style="display:none;margin-bottom:12px;"></div>
 
-            <button class="profile-action-btn save"
-                    id="addTrackBtn"
-                    onclick="previewAndAddTrack()">
+            <button class="profile-action-btn save" id="studioTrackAddBtn" onclick="previewAndAddStudioTrack()">
                 🔍 ПРОВЕРИТЬ И ДОБАВИТЬ
             </button>
 
-            <button class="sheet-cancel" onclick="closeAddTrackSheet()">ОТМЕНА</button>
+            <button class="sheet-cancel" onclick="closeAddStudioTrackSheet()">ОТМЕНА</button>
         `;
 
         document.body.appendChild(overlay);
         document.body.appendChild(sheet);
 
-        setTimeout(() => {
-            document.getElementById('addTrackInput')?.focus();
-        }, 250);
+        setTimeout(() => document.getElementById('studioTrackInput')?.focus(), 250);
         if (typeof haptic === 'function') haptic('medium');
     }
 
-    function closeAddTrackSheet() {
-        document.getElementById('addTrackOverlay')?.remove();
-        document.getElementById('addTrackSheet')?.remove();
+    function closeAddStudioTrackSheet() {
+        document.getElementById('addStudioOverlay')?.remove();
+        document.getElementById('addStudioSheet')?.remove();
     }
 
-    async function previewAndAddTrack() {
-        const input = document.getElementById('addTrackInput');
-        const btn = document.getElementById('addTrackBtn');
-        const preview = document.getElementById('addTrackPreview');
+    async function previewAndAddStudioTrack() {
+        const input = document.getElementById('studioTrackInput');
+        const btn = document.getElementById('studioTrackAddBtn');
+        const preview = document.getElementById('studioTrackPreview');
         if (!input || !btn) return;
 
-        const url = extractUrl(input.value);
-        if (!isYandexTrackUrl(url)) {
-            if (typeof showToast === 'function') showToast('⚠️ Нужна ссылка на КОНКРЕТНЫЙ трек');
+        const url = input.value.trim();
+        if (!url) {
+            if (typeof showToast === 'function') showToast('⚠️ Вставь ссылку');
             return;
         }
 
-        // Извлекаем ID для антидубля
-        const trackMatch = url.match(/\/track\/(\d+)/);
-        const trackId = trackMatch ? trackMatch[1] : null;
-
-        if (!trackId) {
-            if (typeof showToast === 'function') showToast('⚠️ Не удалось определить ID трека');
+        // Определяем сервис
+        const detected = detectService(url);
+        if (!detected) {
+            if (typeof showToast === 'function') showToast('⚠️ Неизвестный сервис. Проверь ссылку.');
             return;
         }
 
         // Проверка дубля
-        const { data: existing } = await sb.from('music_tracks')
-            .select('id').eq('track_id', trackId).maybeSingle();
+        const { data: existing } = await sb.from('music_studio_tracks')
+            .select('id')
+            .eq('service', detected.service)
+            .eq('track_id', String(detected.track_id))
+            .maybeSingle();
+
         if (existing) {
             if (typeof showToast === 'function') showToast('⚠️ Этот трек уже в плейлисте');
             return;
         }
 
         btn.disabled = true;
-        btn.textContent = '⏳ ЗАГРУЗКА МЕТАДАННЫХ...';
+        btn.textContent = '⏳ ЗАГРУЗКА...';
         preview.style.display = 'none';
 
         try {
-            const meta = await fetchTrackMetadata(url);
+            const meta = await fetchMetadata(url, detected.service);
 
-            // Показываем превью
+            // Превью
             const cover = meta.cover_url
                 ? `<img src="${escapeHtml(meta.cover_url)}" style="width:100%;height:100%;object-fit:cover;">`
                 : '🎵';
 
             preview.style.display = 'block';
             preview.innerHTML = `
-                <div style="
-                    display:flex;gap:12px;align-items:center;
-                    padding:12px;
-                    background:rgba(var(--emerald-rgb),0.06);
-                    border:1px solid var(--border-strong);
-                    border-radius:12px;
-                ">
-                    <div style="
-                        width:56px;height:56px;border-radius:8px;overflow:hidden;
-                        background:linear-gradient(135deg,var(--emerald),var(--emerald-2));
-                        display:flex;align-items:center;justify-content:center;
-                        font-size:24px;color:#04140e;flex-shrink:0;
-                    ">${cover}</div>
+                <div style="display:flex;gap:12px;align-items:center;padding:12px;background:rgba(var(--emerald-rgb),0.06);border:1px solid var(--border-strong);border-radius:12px;">
+                    <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;background:linear-gradient(135deg,var(--emerald),var(--emerald-2));display:flex;align-items:center;justify-content:center;font-size:24px;color:#04140e;flex-shrink:0;">${cover}</div>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px;">
-                            ${escapeHtml(meta.title)}
-                        </div>
-                        <div style="font-size:11px;color:var(--hint);font-weight:600;">
-                            ${escapeHtml(meta.artist)}
-                        </div>
+                        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px;">${escapeHtml(meta.title)}</div>
+                        <div style="font-size:11px;color:var(--hint);font-weight:600;">${escapeHtml(meta.artist || detected.service)}</div>
                     </div>
                 </div>
             `;
 
-            // Сохраняем
-            const { error } = await sb.from('music_tracks').insert({
-                yandex_url: url,
-                album_id: meta.album_id,
-                track_id: meta.track_id,
+            // Максимальный sort_order
+            const { data: maxOrder } = await sb.from('music_studio_tracks')
+                .select('sort_order').order('sort_order', { ascending: false }).limit(1).maybeSingle();
+            const nextOrder = (maxOrder?.sort_order || 0) + 1;
+
+            const { error } = await sb.from('music_studio_tracks').insert({
+                service: detected.service,
+                original_url: url,
+                embed_url: meta.embed_url,
+                direct_url: meta.direct_url,
+                track_id: String(detected.track_id),
                 title: meta.title,
                 artist: meta.artist,
                 cover_url: meta.cover_url,
-                embed_html: meta.embed_html,
+                sort_order: nextOrder,
                 added_by: currentUser.telegram_id,
             });
             if (error) throw error;
@@ -56217,490 +56319,40 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             if (typeof haptic === 'function') haptic('medium');
 
             setTimeout(() => {
-                closeAddTrackSheet();
-                renderMusicPage();
+                closeAddStudioTrackSheet();
+                renderStudio();
             }, 700);
-
         } catch (e) {
-            console.error('previewAndAddTrack:', e);
+            console.error('previewAndAddStudioTrack:', e);
             if (typeof showToast === 'function') showToast('❌ ' + e.message);
             btn.disabled = false;
             btn.textContent = '🔍 ПРОВЕРИТЬ И ДОБАВИТЬ';
         }
     }
 
-    async function deleteTrack(trackId) {
-        if (!confirm('Удалить трек из плейлиста?')) return;
-        try {
-            await sb.from('music_tracks').delete().eq('id', trackId);
-            if (typeof showToast === 'function') showToast('🗑️ Удалено');
-            if (typeof haptic === 'function') haptic('light');
-            renderMusicPage();
-        } catch (e) {
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-        }
-    }
-
-    // ============================================================
-    // ПРЕДЛОЖИТЬ ТРЕК (для игроков)
-    // ============================================================
-    async function openSuggestTrackSheet() {
-        if (!currentUser) return;
-
-        document.getElementById('suggestTrackOverlay')?.remove();
-        document.getElementById('suggestTrackSheet')?.remove();
-
-        const { data: mySuggestions } = await sb
-            .from('music_suggestions')
-            .select('id').eq('user_id', currentUser.telegram_id).eq('status', 'pending');
-
-        const pendingCount = (mySuggestions || []).length;
-        const MAX_PENDING = 5;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'sheet-overlay active';
-        overlay.id = 'suggestTrackOverlay';
-        overlay.onclick = (e) => { if (e.target === overlay) closeSuggestTrackSheet(); };
-
-        const sheet = document.createElement('div');
-        sheet.className = 'sheet active';
-        sheet.id = 'suggestTrackSheet';
-        sheet.style.zIndex = '10000';
-        sheet.style.maxHeight = '88vh';
-        sheet.style.overflowY = 'auto';
-
-        sheet.innerHTML = `
-            <div class="sheet-title">💡 Предложить трек</div>
-
-            <div style="font-size:12px;color:var(--hint);line-height:1.7;margin-bottom:14px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;">
-                <b style="color:var(--text);">Как это работает:</b><br>
-                1️⃣ Найди песню в <b>Яндекс.Музыке</b><br>
-                2️⃣ <b>Поделиться</b> → <b>Скопировать ссылку</b><br>
-                3️⃣ Вставь ссылку сюда<br>
-                4️⃣ Админ проверит и добавит в плейлист
-                <br><br>
-                <b style="color:var(--gold);">Лимит:</b> до ${MAX_PENDING} активных
-                ${pendingCount > 0 ? ` · у тебя <b>${pendingCount}</b>` : ''}
-            </div>
-
-            ${pendingCount >= MAX_PENDING ? `
-                <div style="
-                    padding: 16px; text-align: center;
-                    background: rgba(217,171,90,0.08);
-                    border: 1px solid rgba(217,171,90,0.35);
-                    border-radius: 12px;
-                    color: var(--gold);
-                    font-size: 13px;
-                    font-weight: 700;
-                ">
-                    ⏳ У тебя уже ${pendingCount} активных предложений
-                </div>
-            ` : `
-                <input type="text"
-                       class="field-input"
-                       id="suggestTrackInput"
-                       placeholder="https://music.yandex.ru/album/.../track/..."
-                       style="margin-bottom: 12px; font-size: 12px; font-family: 'Courier New', monospace;">
-
-                <button class="profile-action-btn save"
-                        id="suggestTrackBtn"
-                        onclick="submitTrackSuggestion()">
-                    📤 ОТПРАВИТЬ АДМИНУ
-                </button>
-            `}
-
-            <button class="sheet-cancel" onclick="closeSuggestTrackSheet()">ОТМЕНА</button>
-        `;
-
-        document.body.appendChild(overlay);
-        document.body.appendChild(sheet);
-
-        setTimeout(() => {
-            document.getElementById('suggestTrackInput')?.focus();
-        }, 250);
-        if (typeof haptic === 'function') haptic('medium');
-    }
-
-    function closeSuggestTrackSheet() {
-        document.getElementById('suggestTrackOverlay')?.remove();
-        document.getElementById('suggestTrackSheet')?.remove();
-    }
-
-    async function submitTrackSuggestion() {
-        const input = document.getElementById('suggestTrackInput');
-        const btn = document.getElementById('suggestTrackBtn');
-        if (!input || !btn) return;
-
-        const url = extractUrl(input.value);
-        if (!isYandexTrackUrl(url)) {
-            if (typeof showToast === 'function') showToast('⚠️ Нужна ссылка на трек');
-            return;
-        }
-
-        const trackMatch = url.match(/\/track\/(\d+)/);
-        const trackId = trackMatch ? trackMatch[1] : null;
-        if (!trackId) {
-            if (typeof showToast === 'function') showToast('⚠️ Не удалось определить ID');
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = '⏳ ЗАГРУЗКА...';
-
-        try {
-            // Проверка дубля среди своих
-            const { data: existing } = await sb
-                .from('music_suggestions')
-                .select('id').eq('user_id', currentUser.telegram_id)
-                .eq('track_id', trackId).eq('status', 'pending');
-
-            if (existing?.length) {
-                if (typeof showToast === 'function') showToast('⚠️ Ты уже предлагал этот трек');
-                btn.disabled = false;
-                btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
-                return;
-            }
-
-            // Проверка что трек уже в плейлисте
-            const { data: inPlaylist } = await sb
-                .from('music_tracks')
-                .select('id').eq('track_id', trackId).maybeSingle();
-
-            if (inPlaylist) {
-                if (typeof showToast === 'function') showToast('ℹ️ Этот трек уже есть в плейлисте');
-                btn.disabled = false;
-                btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
-                return;
-            }
-
-            // Получаем метаданные
-            const meta = await fetchTrackMetadata(url);
-
-            const { error } = await sb.from('music_suggestions').insert({
-                user_id: currentUser.telegram_id,
-                track_url: url,
-                track_id: trackId,
-                album_id: meta.album_id,
-                title: meta.title,
-                artist: meta.artist,
-                cover_url: meta.cover_url,
-                status: 'pending'
-            });
-            if (error) throw error;
-
-            if (typeof showToast === 'function') showToast('✅ Трек предложен!');
-            if (typeof haptic === 'function') haptic('medium');
-
-            // Уведомление админу
-            try {
-                const { data: admins } = await sb.from('users')
-                    .select('telegram_id')
-                    .or('is_admin.eq.true,username.eq.mark1zell');
-
-                for (const admin of admins || []) {
-                    if (Number(admin.telegram_id) === Number(currentUser.telegram_id)) continue;
-                    await notify(admin.telegram_id,
-                        `💡 <b>${escapeHtml(currentUser.display_name || 'Игрок')}</b> предложил трек:\n\n` +
-                        `<b>${escapeHtml(meta.title)}</b> — ${escapeHtml(meta.artist)}`,
-                        'party'
-                    ).catch(() => {});
-                }
-            } catch (e) {}
-
-            closeSuggestTrackSheet();
-        } catch (e) {
-            console.error('submitTrackSuggestion:', e);
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-            btn.disabled = false;
-            btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
-        }
-    }
-
-    // ============================================================
-    // АДМИН: СПИСОК ПРЕДЛОЖЕНИЙ
-    // ============================================================
-    async function openAdminSuggestions() {
-        if (typeof isCurrentUserAdmin === 'function' && !isCurrentUserAdmin()) return;
-
-        document.getElementById('adminSuggestionsOverlay')?.remove();
-        document.getElementById('adminSuggestionsSheet')?.remove();
-
-        const overlay = document.createElement('div');
-        overlay.className = 'sheet-overlay active';
-        overlay.id = 'adminSuggestionsOverlay';
-        overlay.onclick = (e) => { if (e.target === overlay) closeAdminSuggestions(); };
-
-        const sheet = document.createElement('div');
-        sheet.className = 'sheet active';
-        sheet.id = 'adminSuggestionsSheet';
-        sheet.style.zIndex = '10000';
-        sheet.style.maxHeight = '90vh';
-        sheet.style.overflowY = 'auto';
-
-        sheet.innerHTML = `
-            <div class="sheet-title">💡 Предложения треков</div>
-            <div id="adminSuggestionsList"><div class="empty">Загрузка...</div></div>
-            <button class="sheet-cancel" onclick="closeAdminSuggestions()">ЗАКРЫТЬ</button>
-        `;
-
-        document.body.appendChild(overlay);
-        document.body.appendChild(sheet);
-        await renderAdminSuggestions();
-        if (typeof haptic === 'function') haptic('medium');
-    }
-
-    function closeAdminSuggestions() {
-        document.getElementById('adminSuggestionsOverlay')?.remove();
-        document.getElementById('adminSuggestionsSheet')?.remove();
-    }
-
-    async function renderAdminSuggestions() {
-        const el = document.getElementById('adminSuggestionsList');
-        if (!el) return;
-
-        el.innerHTML = '<div class="empty">Загрузка...</div>';
-
-        try {
-            const { data: suggestions } = await sb
-                .from('music_suggestions').select('*')
-                .order('created_at', { ascending: false }).limit(100);
-
-            if (!suggestions?.length) {
-                el.innerHTML = '<div class="empty">Нет предложений</div>';
-                return;
-            }
-
-            const userIds = [...new Set(suggestions.map(s => Number(s.user_id)))];
-            const { data: users } = await sb.from('users')
-                .select('telegram_id, display_name, custom_avatar, photo_url')
-                .in('telegram_id', userIds);
-            const userMap = {};
-            (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
-
-            const pending = suggestions.filter(s => s.status === 'pending');
-            const approved = suggestions.filter(s => s.status === 'approved');
-            const rejected = suggestions.filter(s => s.status === 'rejected');
-
-            const renderCard = (s) => {
-                const u = userMap[Number(s.user_id)] || { display_name: 'Игрок' };
-                const av = typeof renderAvatar === 'function' ? renderAvatar(u) : (u.display_name?.[0] || '?');
-                const cover = s.cover_url
-                    ? `<img src="${escapeHtml(s.cover_url)}" style="width:100%;height:100%;object-fit:cover;">`
-                    : '🎵';
-                const ago = typeof formatTimeAgo === 'function'
-                    ? formatTimeAgo(s.created_at)
-                    : new Date(s.created_at).toLocaleDateString('ru-RU');
-
-                let badge = '';
-                if (s.status === 'pending') badge = '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;background:rgba(217,171,90,0.15);color:var(--gold);border:1px solid rgba(217,171,90,0.4);">⏳</span>';
-                if (s.status === 'approved') badge = '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;background:rgba(0,224,138,0.15);color:var(--emerald);border:1px solid rgba(0,224,138,0.4);">✓</span>';
-                if (s.status === 'rejected') badge = '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;background:rgba(255,84,112,0.15);color:var(--red);border:1px solid rgba(255,84,112,0.4);">✕</span>';
-
-                return `
-                    <div style="padding:12px;margin-bottom:10px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:12px;">
-                        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-                            <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--emerald),var(--emerald-2));display:flex;align-items:center;justify-content:center;font-size:20px;color:#04140e;">${cover}</div>
-                            <div style="flex:1;min-width:0;">
-                                <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                    ${escapeHtml(s.title || 'Трек')}
-                                </div>
-                                <div style="font-size:11px;color:var(--hint);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                    ${escapeHtml(s.artist || '—')}
-                                </div>
-                            </div>
-                            ${badge}
-                        </div>
-
-                        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;padding:6px 10px;background:rgba(0,0,0,0.25);border-radius:8px;">
-                            <div style="width:22px;height:22px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--emerald),var(--emerald-2));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#04140e;flex-shrink:0;">${av}</div>
-                            <div style="font-size:11px;color:var(--hint);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                <b style="color:var(--text);">${escapeHtml(u.display_name || 'Игрок')}</b> · ${ago}
-                            </div>
-                        </div>
-
-                        ${s.status === 'pending' ? `
-                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-                                <button onclick="window.open('${escapeHtml(s.track_url)}','_blank')" style="padding:9px;border-radius:8px;font-size:11px;font-weight:800;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);cursor:pointer;font-family:inherit;">🔗</button>
-                                <button onclick="approveSuggestion(${s.id})" style="padding:9px;border-radius:8px;font-size:11px;font-weight:800;background:rgba(0,224,138,0.15);border:1px solid rgba(0,224,138,0.5);color:var(--emerald);cursor:pointer;font-family:inherit;">✓ Принять</button>
-                                <button onclick="rejectSuggestion(${s.id})" style="padding:9px;border-radius:8px;font-size:11px;font-weight:800;background:rgba(255,84,112,0.15);border:1px solid rgba(255,84,112,0.5);color:var(--red);cursor:pointer;font-family:inherit;">✕ Отклонить</button>
-                            </div>
-                        ` : `
-                            <button onclick="deleteSuggestion(${s.id})" style="width:100%;padding:8px;border-radius:8px;font-size:11px;font-weight:800;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--hint);cursor:pointer;font-family:inherit;">🗑️ Удалить из истории</button>
-                        `}
-                    </div>
-                `;
-            };
-
-            let html = '';
-            if (pending.length) {
-                html += `<div class="section-title" style="margin-top:4px;">⏳ На рассмотрении (${pending.length})</div>`;
-                html += pending.map(renderCard).join('');
-            }
-            if (approved.length) {
-                html += `<div class="section-title" style="margin-top:14px;">✓ Принятые (${approved.length})</div>`;
-                html += approved.slice(0, 10).map(renderCard).join('');
-            }
-            if (rejected.length) {
-                html += `<div class="section-title" style="margin-top:14px;">✕ Отклонённые (${rejected.length})</div>`;
-                html += rejected.slice(0, 10).map(renderCard).join('');
-            }
-
-            el.innerHTML = html;
-        } catch (e) {
-            el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка: ' + escapeHtml(e.message) + '</div>';
-        }
-    }
-
-    async function approveSuggestion(id) {
-        try {
-            const { data: sugg } = await sb.from('music_suggestions').select('*').eq('id', id).single();
-            if (!sugg) return;
-
-            // Проверяем, нет ли уже такого в плейлисте
-            const { data: existing } = await sb.from('music_tracks')
-                .select('id').eq('track_id', sugg.track_id).maybeSingle();
-
-            if (!existing) {
-                await sb.from('music_tracks').insert({
-                    yandex_url: sugg.track_url,
-                    album_id: sugg.album_id,
-                    track_id: sugg.track_id,
-                    title: sugg.title,
-                    artist: sugg.artist,
-                    cover_url: sugg.cover_url,
-                    added_by: currentUser.telegram_id,
-                });
-            }
-
-            await sb.from('music_suggestions').update({
-                status: 'approved',
-                reviewed_at: new Date().toISOString(),
-                reviewed_by: currentUser.telegram_id
-            }).eq('id', id);
-
-            if (sugg.user_id) {
-                await notify(sugg.user_id,
-                    `✅ <b>Твой трек одобрен!</b>\n\n<b>${escapeHtml(sugg.title || '')}</b> — ${escapeHtml(sugg.artist || '')}\n\nДобавлен в плейлист De1mos Faceit 🎵`,
-                    'party'
-                ).catch(() => {});
-            }
-
-            if (typeof showToast === 'function') showToast('✅ Трек добавлен в плейлист');
-            if (typeof haptic === 'function') haptic('medium');
-
-            await renderAdminSuggestions();
-            updateAdminBadge();
-        } catch (e) {
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-        }
-    }
-
-    async function rejectSuggestion(id) {
-        const reason = prompt('Причина отклонения (необязательно):', '');
-        if (reason === null) return;
-
-        try {
-            const { data: sugg } = await sb.from('music_suggestions').select('*').eq('id', id).single();
-            await sb.from('music_suggestions').update({
-                status: 'rejected',
-                reviewed_at: new Date().toISOString(),
-                reviewed_by: currentUser.telegram_id,
-                admin_comment: reason || null
-            }).eq('id', id);
-
-            if (sugg?.user_id) {
-                await notify(sugg.user_id,
-                    `❌ <b>Твой трек отклонён</b>\n\n` +
-                    (reason ? `Причина: ${escapeHtml(reason)}` : ''),
-                    'party'
-                ).catch(() => {});
-            }
-
-            if (typeof showToast === 'function') showToast('Трек отклонён');
-            await renderAdminSuggestions();
-            updateAdminBadge();
-        } catch (e) {
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-        }
-    }
-
-    async function deleteSuggestion(id) {
-        if (!confirm('Удалить из истории?')) return;
-        try {
-            await sb.from('music_suggestions').delete().eq('id', id);
-            if (typeof showToast === 'function') showToast('🗑️ Удалено');
-            await renderAdminSuggestions();
-        } catch (e) {
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-        }
-    }
-
-    // ============================================================
-    // СЧЁТЧИК PENDING
-    // ============================================================
-    async function updateAdminBadge() {
-        if (typeof isCurrentUserAdmin !== 'function' || !isCurrentUserAdmin()) return;
-        const btn = document.getElementById('adminSuggestionsBtn');
-        if (!btn) return;
-
-        try {
-            const { count } = await sb.from('music_suggestions')
-                .select('id', { count: 'exact', head: true })
-                .eq('status', 'pending');
-
-            let badge = btn.querySelector('.notif-badge');
-            if (count > 0) {
-                if (!badge) {
-                    badge = document.createElement('span');
-                    badge.className = 'notif-badge';
-                    btn.appendChild(badge);
-                }
-                badge.textContent = count > 99 ? '99+' : count;
-                badge.style.display = 'flex';
-            } else if (badge) {
-                badge.style.display = 'none';
-            }
-        } catch (e) {}
-    }
-
     // ============================================================
     // ГЛАВНАЯ ФУНКЦИЯ СТРАНИЦЫ
     // ============================================================
-    async function openMusicPlaylistScreen() {
+    async function openMusicStudioScreen() {
         if (!currentUser) {
             if (typeof showToast === 'function') showToast('⚠️ Профиль не загружен');
             return;
         }
-
         switchPage('music');
-        await renderMusicPage();
+        await renderStudio();
     }
 
     // ============================================================
     // REALTIME
     // ============================================================
     function subscribeRealtime() {
-        if (_tracksChannel) {
-            try { sb.removeChannel(_tracksChannel); } catch (e) {}
+        if (_studioChannel) {
+            try { sb.removeChannel(_studioChannel); } catch (e) {}
         }
-        _tracksChannel = sb.channel('music_tracks_rt')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'music_tracks' }, () => {
+        _studioChannel = sb.channel('music_studio_rt')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'music_studio_tracks' }, () => {
                 if (document.getElementById('musicContent')?.innerHTML) {
-                    renderMusicPage();
-                }
-            })
-            .subscribe();
-
-        if (_sugChannel) {
-            try { sb.removeChannel(_sugChannel); } catch (e) {}
-        }
-        _sugChannel = sb.channel('music_suggestions_rt_v3')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'music_suggestions' }, () => {
-                if (typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin()) {
-                    updateAdminBadge();
-                    if (document.getElementById('adminSuggestionsOverlay')) {
-                        renderAdminSuggestions();
-                    }
+                    renderStudio();
                 }
             })
             .subscribe();
@@ -56720,7 +56372,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const musicBtn = document.createElement('button');
         musicBtn.className = 'nav-item';
         musicBtn.dataset.page = 'music';
-        musicBtn.setAttribute('onclick', 'openMusicPlaylistScreen()');
+        musicBtn.setAttribute('onclick', 'openMusicStudioScreen()');
         musicBtn.innerHTML = `
             <span class="nav-icon">
                 <svg class="cy-icon cy-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -56746,7 +56398,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const musicMenuBtn = document.createElement('button');
         musicMenuBtn.className = 'menu-drawer-btn';
         musicMenuBtn.dataset.menu = 'music';
-        musicMenuBtn.setAttribute('onclick', "closeMenuDrawer(); setTimeout(() => openMusicPlaylistScreen(), 260);");
+        musicMenuBtn.setAttribute('onclick', "closeMenuDrawer(); setTimeout(() => openMusicStudioScreen(), 260);");
         musicMenuBtn.innerHTML = `
             <span class="menu-drawer-icon">
                 <svg class="cy-icon cy-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -56777,6 +56429,8 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     // BOOT
     // ============================================================
     function boot() {
+        loadYoutubeAPI();
+
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
@@ -56786,32 +56440,24 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             if (attempts > 60) clearInterval(interval);
         }, 300);
 
-        if (typeof sb !== 'undefined' && sb) {
-            subscribeRealtime();
-        }
+        if (typeof sb !== 'undefined' && sb) subscribeRealtime();
 
-        console.log('🎵 Music v3 готов');
+        console.log('🎛️ Music Studio готов');
     }
 
-    // Экспорт
-    window.openMusicPlaylistScreen = openMusicPlaylistScreen;
-    window.openAddTrackSheet = openAddTrackSheet;
-    window.closeAddTrackSheet = closeAddTrackSheet;
-    window.previewAndAddTrack = previewAndAddTrack;
-    window.deleteTrack = deleteTrack;
-    window.playTrack = playTrack;
+    // Экспорт в window
+    window.openMusicStudioScreen = openMusicStudioScreen;
+    window.openMusicPlaylistScreen = openMusicStudioScreen; // совместимость
+    window.openAddStudioTrackSheet = openAddStudioTrackSheet;
+    window.closeAddStudioTrackSheet = closeAddStudioTrackSheet;
+    window.previewAndAddStudioTrack = previewAndAddStudioTrack;
+    window.playStudioTrack = playStudioTrack;
+    window.playAdjacent = playAdjacent;
     window.closePlayTrack = closePlayTrack;
-    window.openYandexLink = openYandexLink;
-    window.openSuggestTrackSheet = openSuggestTrackSheet;
-    window.closeSuggestTrackSheet = closeSuggestTrackSheet;
-    window.submitTrackSuggestion = submitTrackSuggestion;
-    window.openAdminSuggestions = openAdminSuggestions;
-    window.closeAdminSuggestions = closeAdminSuggestions;
-    window.renderAdminSuggestions = renderAdminSuggestions;
-    window.approveSuggestion = approveSuggestion;
-    window.rejectSuggestion = rejectSuggestion;
-    window.deleteSuggestion = deleteSuggestion;
-    window.renderMusicPage = renderMusicPage;
+    window.deleteTrack = deleteTrack;
+    window.moveTrack = moveTrack;
+    window.openExternalLink = openExternalLink;
+    window.renderStudio = renderStudio;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);
@@ -56821,638 +56467,5 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 })();
 </script>
 
-<!-- ============================================================ -->
-<!-- 💡 MUSIC SUGGESTIONS — предложения треков                     -->
-<!-- ============================================================ -->
-<script>
-(function() {
-    'use strict';
-
-    // ============================================================
-    // ПАРСИНГ ССЫЛКИ
-    // ============================================================
-    function extractTrackId(url) {
-        if (!url) return null;
-
-        // https://music.yandex.ru/album/123/track/456
-        let m = url.match(/\/track\/(\d+)/);
-        if (m) return m[1];
-
-        // https://music.yandex.ru/track/456
-        m = url.match(/track\/(\d+)/);
-        if (m) return m[1];
-
-        return null;
-    }
-
-    function isValidTrackUrl(url) {
-        if (!url) return false;
-        return /music\.yandex\.(ru|com|kz|by|uz)/i.test(url) && /track/i.test(url);
-    }
-
-    // ============================================================
-    // ПРЕДЛОЖИТЬ ТРЕК
-    // ============================================================
-    async function openSuggestTrackSheet() {
-        if (!currentUser) {
-            if (typeof showToast === 'function') showToast('⚠️ Профиль не загружен');
-            return;
-        }
-
-        document.getElementById('suggestTrackOverlay')?.remove();
-        document.getElementById('suggestTrackSheet')?.remove();
-
-        // Считаем сколько уже предложил
-        const { data: mySuggestions } = await sb
-            .from('music_suggestions')
-            .select('id')
-            .eq('user_id', currentUser.telegram_id)
-            .eq('status', 'pending');
-
-        const pendingCount = (mySuggestions || []).length;
-        const MAX_PENDING = 5;
-
-        const overlay = document.createElement('div');
-        overlay.className = 'sheet-overlay active';
-        overlay.id = 'suggestTrackOverlay';
-        overlay.onclick = (e) => { if (e.target === overlay) closeSuggestTrackSheet(); };
-
-        const sheet = document.createElement('div');
-        sheet.className = 'sheet active';
-        sheet.id = 'suggestTrackSheet';
-        sheet.style.zIndex = '10000';
-        sheet.style.maxHeight = '88vh';
-        sheet.style.overflowY = 'auto';
-
-        sheet.innerHTML = `
-            <div class="sheet-title">💡 Предложить трек</div>
-
-            <div style="font-size: 12px; color: var(--hint); line-height: 1.7; margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px;">
-                <b style="color: var(--text);">Как предложить трек:</b><br>
-                1️⃣ Открой песню в <b>Яндекс.Музыке</b><br>
-                2️⃣ Нажми <b>Поделиться</b> → <b>Скопировать ссылку</b><br>
-                3️⃣ Вставь ссылку сюда
-                <br><br>
-                <b style="color: var(--emerald);">Пример ссылки:</b><br>
-                <code style="font-size:10px;word-break:break-all;">https://music.yandex.ru/album/12345/track/67890</code>
-                <br><br>
-                <b style="color: var(--gold);">Лимит:</b> до ${MAX_PENDING} активных предложений
-                ${pendingCount > 0 ? ` · у тебя уже <b>${pendingCount}</b>` : ''}
-            </div>
-
-            ${pendingCount >= MAX_PENDING ? `
-                <div style="
-                    padding: 16px; text-align: center;
-                    background: rgba(217,171,90,0.08);
-                    border: 1px solid rgba(217,171,90,0.35);
-                    border-radius: 12px;
-                    color: var(--gold);
-                    font-size: 13px;
-                    font-weight: 700;
-                    line-height: 1.5;
-                ">
-                    ⏳ У тебя уже ${pendingCount} активных предложений.<br>
-                    Подожди, пока админ их рассмотрит.
-                </div>
-            ` : `
-                <label class="field-label">Ссылка на трек в Яндекс.Музыке</label>
-                <input type="text"
-                       class="field-input"
-                       id="suggestTrackInput"
-                       placeholder="https://music.yandex.ru/album/.../track/..."
-                       style="margin-bottom: 12px; font-size: 12px; font-family: 'Courier New', monospace;">
-
-                <button class="profile-action-btn save"
-                        id="suggestTrackBtn"
-                        onclick="submitTrackSuggestion()">
-                    📤 ОТПРАВИТЬ АДМИНУ
-                </button>
-            `}
-
-            <button class="sheet-cancel" onclick="closeSuggestTrackSheet()">ОТМЕНА</button>
-        `;
-
-        document.body.appendChild(overlay);
-        document.body.appendChild(sheet);
-
-        setTimeout(() => {
-            const inp = document.getElementById('suggestTrackInput');
-            if (inp) inp.focus();
-        }, 250);
-
-        if (typeof haptic === 'function') haptic('medium');
-    }
-
-    function closeSuggestTrackSheet() {
-        document.getElementById('suggestTrackOverlay')?.remove();
-        document.getElementById('suggestTrackSheet')?.remove();
-    }
-
-    async function submitTrackSuggestion() {
-        const input = document.getElementById('suggestTrackInput');
-        const btn = document.getElementById('suggestTrackBtn');
-        if (!input || !btn) return;
-
-        let url = input.value.trim();
-        if (!url) {
-            if (typeof showToast === 'function') showToast('⚠️ Вставь ссылку на трек');
-            return;
-        }
-
-        if (url.includes('src="')) {
-            const m = url.match(/src="([^"]+)"/);
-            if (m) url = m[1];
-        }
-        if (url.includes('href="')) {
-            const m = url.match(/href="([^"]+)"/);
-            if (m) url = m[1];
-        }
-
-        if (!isValidTrackUrl(url)) {
-            if (typeof showToast === 'function') showToast('⚠️ Нужна ссылка на КОНКРЕТНЫЙ трек (со словом track)');
-            return;
-        }
-
-        const trackId = extractTrackId(url);
-        if (!trackId) {
-            if (typeof showToast === 'function') showToast('⚠️ Не удалось распознать ID трека в ссылке');
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'ОТПРАВКА...';
-
-        try {
-            // Проверка на дубликаты среди СВОИХ pending
-            const { data: existing } = await sb
-                .from('music_suggestions')
-                .select('id, track_id')
-                .eq('user_id', currentUser.telegram_id)
-                .eq('status', 'pending');
-
-            if ((existing || []).some(e => e.track_id === trackId)) {
-                if (typeof showToast === 'function') showToast('⚠️ Ты уже предлагал этот трек');
-                btn.disabled = false;
-                btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
-                return;
-            }
-
-            const { error } = await sb.from('music_suggestions').insert({
-                user_id: currentUser.telegram_id,
-                track_url: url,
-                track_id: trackId,
-                status: 'pending'
-            });
-
-            if (error) throw error;
-
-            if (typeof showToast === 'function') showToast('✅ Трек предложен!');
-            if (typeof haptic === 'function') haptic('medium');
-
-            // Уведомляем админа
-            try {
-                const { data: admins } = await sb.from('users')
-                    .select('telegram_id')
-                    .or('is_admin.eq.true,username.eq.mark1zell');
-
-                for (const admin of admins || []) {
-                    if (Number(admin.telegram_id) === Number(currentUser.telegram_id)) continue;
-                    await notify(admin.telegram_id,
-                        `💡 <b>${escapeHtml(currentUser.display_name || 'Игрок')}</b> предложил трек!\n\n` +
-                        `Проверь раздел: <b>Музыка → Предложения</b>`,
-                        'party'
-                    ).catch(() => {});
-                }
-            } catch (e) {
-                console.warn('notify admin:', e);
-            }
-
-            closeSuggestTrackSheet();
-
-            // Если админ открыл свой список — обновим
-            if (document.getElementById('adminSuggestionsOverlay')) {
-                renderAdminSuggestions();
-            }
-        } catch (e) {
-            console.error('submitTrackSuggestion:', e);
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-            btn.disabled = false;
-            btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
-        }
-    }
-
-    // ============================================================
-    // АДМИН: СПИСОК ПРЕДЛОЖЕНИЙ
-    // ============================================================
-    async function openAdminSuggestions() {
-        if (typeof isCurrentUserAdmin === 'function' && !isCurrentUserAdmin()) {
-            if (typeof showToast === 'function') showToast('Только админ');
-            return;
-        }
-
-        document.getElementById('adminSuggestionsOverlay')?.remove();
-        document.getElementById('adminSuggestionsSheet')?.remove();
-
-        const overlay = document.createElement('div');
-        overlay.className = 'sheet-overlay active';
-        overlay.id = 'adminSuggestionsOverlay';
-        overlay.onclick = (e) => { if (e.target === overlay) closeAdminSuggestions(); };
-
-        const sheet = document.createElement('div');
-        sheet.className = 'sheet active';
-        sheet.id = 'adminSuggestionsSheet';
-        sheet.style.zIndex = '10000';
-        sheet.style.maxHeight = '90vh';
-        sheet.style.overflowY = 'auto';
-
-        sheet.innerHTML = `
-            <div class="sheet-title">💡 Предложения треков</div>
-            <div id="adminSuggestionsList">
-                <div class="empty">Загрузка...</div>
-            </div>
-            <button class="sheet-cancel" onclick="closeAdminSuggestions()">ЗАКРЫТЬ</button>
-        `;
-
-        document.body.appendChild(overlay);
-        document.body.appendChild(sheet);
-
-        await renderAdminSuggestions();
-        if (typeof haptic === 'function') haptic('medium');
-    }
-
-    function closeAdminSuggestions() {
-        document.getElementById('adminSuggestionsOverlay')?.remove();
-        document.getElementById('adminSuggestionsSheet')?.remove();
-    }
-
-    async function renderAdminSuggestions() {
-        const el = document.getElementById('adminSuggestionsList');
-        if (!el) return;
-
-        el.innerHTML = '<div class="empty">Загрузка...</div>';
-
-        try {
-            const { data: suggestions } = await sb
-                .from('music_suggestions')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(100);
-
-            if (!suggestions?.length) {
-                el.innerHTML = '<div class="empty">Нет предложений</div>';
-                return;
-            }
-
-            // Подгружаем юзеров
-            const userIds = [...new Set(suggestions.map(s => Number(s.user_id)))];
-            const { data: users } = await sb.from('users')
-                .select('telegram_id, display_name, custom_avatar, photo_url')
-                .in('telegram_id', userIds);
-
-            const userMap = {};
-            (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
-
-            // Считаем по статусам
-            const pending = suggestions.filter(s => s.status === 'pending');
-            const approved = suggestions.filter(s => s.status === 'approved');
-            const rejected = suggestions.filter(s => s.status === 'rejected');
-
-            const renderCard = (s) => {
-                const u = userMap[Number(s.user_id)] || { display_name: 'Игрок' };
-                const av = typeof renderAvatar === 'function' ? renderAvatar(u) : (u.display_name?.[0] || '?');
-                const ago = typeof formatTimeAgo === 'function'
-                    ? formatTimeAgo(s.created_at)
-                    : new Date(s.created_at).toLocaleDateString('ru-RU');
-
-                let statusBadge = '';
-                if (s.status === 'pending') {
-                    statusBadge = '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;background:rgba(217,171,90,0.15);color:var(--gold);border:1px solid rgba(217,171,90,0.4);">⏳ НА РАССМОТРЕНИИ</span>';
-                } else if (s.status === 'approved') {
-                    statusBadge = '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;background:rgba(0,224,138,0.15);color:var(--emerald);border:1px solid rgba(0,224,138,0.4);">✓ ПРИНЯТ</span>';
-                } else if (s.status === 'rejected') {
-                    statusBadge = '<span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;background:rgba(255,84,112,0.15);color:var(--red);border:1px solid rgba(255,84,112,0.4);">✕ ОТКЛОНЁН</span>';
-                }
-
-                return `
-                    <div style="
-                        padding: 12px;
-                        margin-bottom: 10px;
-                        background: rgba(0,0,0,0.3);
-                        border: 1px solid var(--border);
-                        border-radius: 12px;
-                    ">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                            <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--emerald),var(--emerald-2));display:flex;align-items:center;justify-content:center;color:#04140e;font-weight:900;font-size:13px;flex-shrink:0;">
-                                ${av}
-                            </div>
-                            <div style="flex:1;min-width:0;">
-                                <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                    ${escapeHtml(u.display_name || 'Игрок')}
-                                </div>
-                                <div style="font-size:10px;color:var(--hint);">${ago}</div>
-                            </div>
-                            ${statusBadge}
-                        </div>
-
-                        <div style="
-                            padding: 8px 10px;
-                            background: rgba(0,0,0,0.3);
-                            border-radius: 8px;
-                            font-size: 10px;
-                            color: var(--hint);
-                            font-family: 'Courier New', monospace;
-                            word-break: break-all;
-                            margin-bottom: 10px;
-                        ">${escapeHtml(s.track_url)}</div>
-
-                        ${s.status === 'pending' ? `
-                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-                                <button onclick="window.open('${escapeHtml(s.track_url)}','_blank')" style="
-                                    padding:9px;border-radius:8px;font-size:11px;font-weight:800;
-                                    background:rgba(255,255,255,0.06);border:1px solid var(--border);
-                                    color:var(--text);cursor:pointer;font-family:inherit;
-                                ">🔗 Открыть</button>
-                                <button onclick="approveSuggestion(${s.id})" style="
-                                    padding:9px;border-radius:8px;font-size:11px;font-weight:800;
-                                    background:rgba(0,224,138,0.15);border:1px solid rgba(0,224,138,0.5);
-                                    color:var(--emerald);cursor:pointer;font-family:inherit;
-                                ">✓ Принять</button>
-                                <button onclick="rejectSuggestion(${s.id})" style="
-                                    padding:9px;border-radius:8px;font-size:11px;font-weight:800;
-                                    background:rgba(255,84,112,0.15);border:1px solid rgba(255,84,112,0.5);
-                                    color:var(--red);cursor:pointer;font-family:inherit;
-                                ">✕ Отклонить</button>
-                            </div>
-                        ` : s.status === 'approved' ? `
-                            <button onclick="deleteSuggestion(${s.id})" style="
-                                width:100%;padding:8px;border-radius:8px;font-size:11px;font-weight:800;
-                                background:rgba(255,84,112,0.1);border:1px solid rgba(255,84,112,0.3);
-                                color:var(--red);cursor:pointer;font-family:inherit;
-                            ">🗑️ Удалить из истории</button>
-                        ` : `
-                            <button onclick="deleteSuggestion(${s.id})" style="
-                                width:100%;padding:8px;border-radius:8px;font-size:11px;font-weight:800;
-                                background:rgba(255,255,255,0.05);border:1px solid var(--border);
-                                color:var(--hint);cursor:pointer;font-family:inherit;
-                            ">🗑️ Удалить</button>
-                        `}
-                    </div>
-                `;
-            };
-
-            let html = '';
-
-            if (pending.length) {
-                html += `<div class="section-title" style="margin-top:4px;">⏳ На рассмотрении (${pending.length})</div>`;
-                html += pending.map(renderCard).join('');
-            }
-
-            if (approved.length) {
-                html += `<div class="section-title" style="margin-top:14px;">✓ Принятые (${approved.length})</div>`;
-                html += approved.slice(0, 10).map(renderCard).join('');
-            }
-
-            if (rejected.length) {
-                html += `<div class="section-title" style="margin-top:14px;">✕ Отклонённые (${rejected.length})</div>`;
-                html += rejected.slice(0, 10).map(renderCard).join('');
-            }
-
-            el.innerHTML = html;
-        } catch (e) {
-            console.error('renderAdminSuggestions:', e);
-            el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка: ' + escapeHtml(e.message) + '</div>';
-        }
-    }
-
-    async function approveSuggestion(id) {
-        try {
-            const { data: sugg } = await sb.from('music_suggestions')
-                .select('*').eq('id', id).single();
-
-            const { error } = await sb.from('music_suggestions')
-                .update({
-                    status: 'approved',
-                    reviewed_at: new Date().toISOString(),
-                    reviewed_by: currentUser.telegram_id
-                })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            if (sugg?.user_id) {
-                await notify(sugg.user_id,
-                    `✅ <b>Твой трек одобрен!</b>\n\n` +
-                    `Админ добавил его в плейлист De1mos Faceit. Спасибо за вклад! 🎵`,
-                    'party'
-                ).catch(() => {});
-            }
-
-            if (typeof showToast === 'function') showToast('✅ Трек принят');
-            if (typeof haptic === 'function') haptic('medium');
-            await renderAdminSuggestions();
-        } catch (e) {
-            console.error('approveSuggestion:', e);
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-        }
-    }
-
-    async function rejectSuggestion(id) {
-        const reason = prompt('Причина отклонения (необязательно):', '');
-        if (reason === null) return; // пользователь отменил
-
-        try {
-            const { data: sugg } = await sb.from('music_suggestions')
-                .select('*').eq('id', id).single();
-
-            const { error } = await sb.from('music_suggestions')
-                .update({
-                    status: 'rejected',
-                    reviewed_at: new Date().toISOString(),
-                    reviewed_by: currentUser.telegram_id,
-                    admin_comment: reason || null
-                })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            if (sugg?.user_id) {
-                await notify(sugg.user_id,
-                    `❌ <b>Твой трек отклонён</b>\n\n` +
-                    (reason ? `Причина: ${escapeHtml(reason)}` : 'Без объяснения причины.'),
-                    'party'
-                ).catch(() => {});
-            }
-
-            if (typeof showToast === 'function') showToast('Трек отклонён');
-            await renderAdminSuggestions();
-        } catch (e) {
-            console.error('rejectSuggestion:', e);
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-        }
-    }
-
-    async function deleteSuggestion(id) {
-        if (!confirm('Удалить из истории?')) return;
-        try {
-            await sb.from('music_suggestions').delete().eq('id', id);
-            if (typeof showToast === 'function') showToast('🗑️ Удалено');
-            await renderAdminSuggestions();
-        } catch (e) {
-            if (typeof showToast === 'function') showToast('❌ ' + e.message);
-        }
-    }
-
-    // ============================================================
-    // СЧЁТЧИК PENDING ДЛЯ АДМИНА
-    // ============================================================
-    async function getPendingSuggestionsCount() {
-        try {
-            const { count } = await sb
-                .from('music_suggestions')
-                .select('id', { count: 'exact', head: true })
-                .eq('status', 'pending');
-            return count || 0;
-        } catch (e) {
-            return 0;
-        }
-    }
-
-    async function updateAdminBadge() {
-        if (typeof isCurrentUserAdmin !== 'function' || !isCurrentUserAdmin()) return;
-        const btn = document.getElementById('adminSuggestionsBtn');
-        if (!btn) return;
-
-        const count = await getPendingSuggestionsCount();
-
-        let badge = btn.querySelector('.notif-badge');
-        if (count > 0) {
-            if (!badge) {
-                badge = document.createElement('span');
-                badge.className = 'notif-badge';
-                btn.appendChild(badge);
-            }
-            badge.textContent = count > 99 ? '99+' : count;
-            badge.style.display = 'flex';
-        } else if (badge) {
-            badge.style.display = 'none';
-        }
-    }
-
-    // ============================================================
-    // ВНЕДРЕНИЕ КНОПОК В СТРАНИЦУ МУЗЫКИ
-    // ============================================================
-    function injectSuggestButtons() {
-        const musicContent = document.getElementById('musicContent');
-        if (!musicContent) return;
-        if (musicContent.querySelector('.music-action-row')) return;
-        if (!musicContent.querySelector('.play-hero-compact')) return;
-
-        const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
-
-        const actionRow = document.createElement('div');
-        actionRow.className = 'music-action-row';
-        actionRow.style.cssText = `
-            display: grid;
-            grid-template-columns: 1fr ${isAdmin ? '1fr' : ''};
-            gap: 8px;
-            margin-bottom: 14px;
-        `;
-
-        actionRow.innerHTML = `
-            <button class="profile-action-btn save" onclick="openSuggestTrackSheet()" style="margin-top:0;padding:12px;">
-                💡 Предложить трек
-            </button>
-            ${isAdmin ? `
-                <button class="profile-action-btn cancel" id="adminSuggestionsBtn"
-                        onclick="openAdminSuggestions()"
-                        style="margin-top:0;padding:12px;position:relative;">
-                    📥 Предложения
-                </button>
-            ` : ''}
-        `;
-
-        // Вставляем после заголовка "🎧 Плейлист" или перед контейнером плеера
-        const playlistContainer = musicContent.querySelector('#playlistPlayerContainer');
-        if (playlistContainer && playlistContainer.parentNode) {
-            playlistContainer.parentNode.insertBefore(actionRow, playlistContainer);
-        } else {
-            musicContent.appendChild(actionRow);
-        }
-
-        if (isAdmin) updateAdminBadge();
-    }
-
-    // Патчим openMusicPlaylistScreen чтобы вставлять кнопки после отрисовки
-    if (typeof window.openMusicPlaylistScreen === 'function') {
-        const origOpen = window.openMusicPlaylistScreen;
-        window.openMusicPlaylistScreen = async function() {
-            const result = await origOpen.apply(this, arguments);
-            setTimeout(injectSuggestButtons, 300);
-            return result;
-        };
-    }
-
-    // ============================================================
-    // REALTIME — обновление бейджа
-    // ============================================================
-    let _sugChannel = null;
-    function subscribeSuggestionsRealtime() {
-        if (_sugChannel) {
-            try { sb.removeChannel(_sugChannel); } catch (e) {}
-        }
-        _sugChannel = sb.channel('music_suggestions_rt')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'music_suggestions'
-            }, () => {
-                if (typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin()) {
-                    updateAdminBadge();
-                    if (document.getElementById('adminSuggestionsOverlay')) {
-                        renderAdminSuggestions();
-                    }
-                }
-            })
-            .subscribe();
-    }
-
-    // ============================================================
-    // BOOT
-    // ============================================================
-    function boot() {
-        // Вставляем кнопки при загрузке/переходах
-        let attempts = 0;
-        const interval = setInterval(() => {
-            attempts++;
-            injectSuggestButtons();
-            if (attempts > 40) clearInterval(interval);
-        }, 400);
-
-        if (typeof sb !== 'undefined' && sb) {
-            subscribeSuggestionsRealtime();
-            setTimeout(updateAdminBadge, 1500);
-        }
-
-        console.log('💡 Music Suggestions готов');
-    }
-
-    // Экспорт
-    window.openSuggestTrackSheet = openSuggestTrackSheet;
-    window.closeSuggestTrackSheet = closeSuggestTrackSheet;
-    window.submitTrackSuggestion = submitTrackSuggestion;
-    window.openAdminSuggestions = openAdminSuggestions;
-    window.closeAdminSuggestions = closeAdminSuggestions;
-    window.renderAdminSuggestions = renderAdminSuggestions;
-    window.approveSuggestion = approveSuggestion;
-    window.rejectSuggestion = rejectSuggestion;
-    window.deleteSuggestion = deleteSuggestion;
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', boot);
-    } else {
-        boot();
-    }
-})();
-</script>
 </body>
 </html>
