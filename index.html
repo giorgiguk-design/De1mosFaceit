@@ -69,6 +69,12 @@
     --grid-line: rgba(0,224,138,0.03);
 }
 
+    :root {
+    --font-display: 'Orbitron', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+    --font-ui: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 :root[data-theme="purple"] {
     --bg: #06040d;
     --bg-2: #100820;
@@ -22997,28 +23003,28 @@ try {
     const _origSet = localStorage.setItem.bind(localStorage);
     const _origRemove = localStorage.removeItem.bind(localStorage);
 
-    Object.defineProperty(window, 'localStorage', {
-        configurable: true,
-        get() {
-            return {
-                getItem: (k) => {
-                    try { return _origGet(k); } catch (e) { return _memStore[k] ?? null; }
-                },
-                setItem: (k, v) => {
-                    try { _origSet(k, v); } catch (e) {}
-                    _memStore[k] = String(v);
-                },
-                removeItem: (k) => {
-                    try { _origRemove(k); } catch (e) {}
-                    delete _memStore[k];
-                },
-                clear: () => {
-                    try { localStorage.clear(); } catch (e) {}
-                    Object.keys(_memStore).forEach(k => delete _memStore[k]);
-                }
-            };
-        }
-    });
+const _storageProxy = {
+    getItem: (k) => {
+        try { return _origGet(k); } catch (e) { return _memStore[k] ?? null; }
+    },
+    setItem: (k, v) => {
+        try { _origSet(k, v); } catch (e) {}
+        _memStore[k] = String(v);
+    },
+    removeItem: (k) => {
+        try { _origRemove(k); } catch (e) {}
+        delete _memStore[k];
+    },
+    clear: () => {
+        try { _origRemove; window.__realLS?.clear?.(); } catch (e) {}
+        Object.keys(_memStore).forEach(k => delete _memStore[k]);
+    }
+};
+
+Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    get() { return _storageProxy; }
+});
 } catch (e) {
     console.warn('localStorage shim failed:', e);
 }
@@ -26836,7 +26842,12 @@ async function renderProfileView(user, options = {}) {
         return html;
     }
 
-    container.innerHTML = html;
+if (inModal) {
+    // Ничего не делаем — вызывающий код сам вставит в modal
+} else {
+    const target = document.getElementById('profileContent');
+    if (target) target.innerHTML = html;
+}
 
     // Применяем кастомизацию сразу (DOM уже вставлен)
     await applyCustomizationToElement(container, user);
@@ -28177,9 +28188,6 @@ async function renderClubEventsSheet() {
         `).join('');
     } catch (e) { el.innerHTML = '<div class="empty">Ошибка</div>'; }
 }
-
-// Оставляем старую функцию, чтобы ничего не сломалось — она теперь не вызывается
-async function loadClubEvents() { /* deprecated */ }
 
         // ============================================================
         // REQUESTS & BANS
@@ -29592,12 +29600,6 @@ function renderParty() {
                 addBtn.style.display = 'block';
             }
         }
-
-function selectMode(mode) {
-    selectedMode = mode;
-    haptic();
-    renderPlayList();
-}
 
         async function kickFromParty(userId) {
             if (!myParty) return;
@@ -31241,14 +31243,20 @@ async function tryCancelByTimeout() {
         // 🔥 Правильная причина в зависимости от фазы
         const reason = data.status === 'side_pick' ? 'side_timeout' : 'veto_timeout';
 
-        const { error } = await sb.from('game_matches')
-            .update({
-                status: 'cancelled',
-                cancelled_reason: reason,
-                cancelled_at: new Date().toISOString()
-            })
-            .eq('id', data.id)
-            .in('status', ['veto', 'side_pick']);
+const { error, count } = await sb.from('game_matches')
+    .update({
+        status: 'cancelled',
+        cancelled_reason: reason,
+        cancelled_at: new Date().toISOString()
+    }, { count: 'exact' })
+    .eq('id', data.id)
+    .in('status', ['veto', 'side_pick'])
+    .is('cancelled_at', null);
+
+if (count === 0) {
+    // Кто-то уже отменил — не дублируем
+    return;
+}
 
         if (error) console.warn('tryCancelByTimeout update:', error);
 
@@ -32767,11 +32775,10 @@ async function renderFinishedScreen() {
     // ============================================================
     // Перерисовываем график DXP (если он есть на странице)
     // ============================================================
-    setTimeout(() => {
-        if (document.getElementById('eloChartCard')) {
-            renderEloChart(currentUser.telegram_id);
-        }
-    }, 300);
+setTimeout(() => {
+    const card = document.getElementById(`eloChartCard_${currentUser.telegram_id}`);
+    if (card) renderEloChart(currentUser.telegram_id, card);
+}, 300);
 }
 
 function returnToDashboard() {
@@ -32969,7 +32976,7 @@ async function restoreRoomScreen(room, player) {
         }
     }
 }
-                    // ============================================================
+        // ============================================================
         // ADMIN PANEL
         // ============================================================
         async function openAdminPanel() {
@@ -33080,49 +33087,6 @@ async function renderAdminPanel() {
 
     html += `<button class="profile-action-btn cancel" style="margin-top:20px;" onclick="switchPage('dashboard')">◀ Назад</button>`;
     container.innerHTML = html;
-}
-
-// ============================================================
-// MODERATOR ACTIONS
-// ============================================================
-async function makeModerator() {
-    const val = document.getElementById('modInput').value.trim();
-    if (!val) { showToast('Введи @username или ID'); return; }
-
-    const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
-    const query = field === 'username' ? val.replace('@', '') : Number(val);
-
-    try {
-        // 1. Находим пользователя
-        const { data: userData, error: findErr } = await sb.from('users')
-            .select('telegram_id, display_name')
-            .eq(field, query)
-            .limit(1);
-
-        if (findErr) throw findErr;
-        if (!userData?.length) { showToast('Игрок не найден'); return; }
-
-        const targetId = userData[0].telegram_id;
-
-        // 2. Через RPC (обходит триггер protect_user_fields)
-        const { data: roleResult, error: roleErr } = await sb.rpc('mod_set_role', {
-            p_user_id: targetId,
-            p_is_mod: true
-        });
-
-        if (roleErr) throw roleErr;
-        if (!roleResult?.ok) throw new Error('Не удалось назначить');
-
-        showToast('✅ Модератор назначен');
-        await notify(targetId, `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`);
-
-        const input = document.getElementById('modInput');
-        if (input) input.value = '';
-        await renderAdminPanel();
-    } catch (e) {
-        console.error('makeModerator:', e);
-        showToast('Ошибка: ' + e.message);
-    }
 }
 
 async function revokeModerator(userId) {
@@ -36704,10 +36668,10 @@ async function reopenActiveRoom() {
 
 // Запускаем проверку при старте и периодически
 // (после init — через 2 секунды и каждые 15 сек)
-// Запускаем сразу и часто
+// Первая проверка после старта (2 раза для надёжности)
 setTimeout(checkActiveRoom, 500);
 setTimeout(checkActiveRoom, 3000);
-setInterval(checkActiveRoom, 8000);   // каждые 8 сек
+// Дальше — каждые 8 сек через единый тикер (registerTicker ниже)
 // 🔥 Раз в минуту сбрасываем залипшие блокировки покупок
 setInterval(() => {
     if (_buyInProgress && _buyInProgress.size > 0) {
@@ -38794,12 +38758,6 @@ function subscribeChatsRealtime() {
             haptic('light');
         })
         .subscribe();
-
-    // Раз в 30 сек обновляем на всякий случай (fallback)
-    if (chatBadgeInterval) clearInterval(chatBadgeInterval);
-    chatBadgeInterval = setInterval(() => {
-        if (!document.hidden) updateChatsBadge();
-    }, 30000);
 }
 
             // ============================================================
@@ -38819,11 +38777,11 @@ function subscribeDxpHistoryRealtime() {
             const row = payload.new;
             if (!row) return;
 
-            if (document.getElementById('page-profile')?.classList.contains('active')
-                && Number(row.telegram_id) === Number(currentUser.telegram_id)) {
-                const card = document.getElementById('eloChartCardMe');
-                if (card) renderEloChart(row.telegram_id, card);
-            }
+if (document.getElementById('page-profile')?.classList.contains('active')
+    && Number(row.telegram_id) === Number(currentUser.telegram_id)) {
+    const card = document.getElementById(`eloChartCard_${currentUser.telegram_id}`);
+    if (card) renderEloChart(row.telegram_id, card);
+}
 
             const playerModal = document.getElementById('playerModal');
             if (playerModal?.classList.contains('active')
@@ -40783,19 +40741,20 @@ function isDesktopTelegram() {
     const tg = window.Telegram?.WebApp;
     const platform = tg?.platform || '';
 
-    // Надёжные платформы Telegram
+    // Явные десктопные платформы
     if (['tdesktop', 'macos', 'web', 'weba'].includes(platform)) return true;
 
-    // Fallback: webview2/electron только на больших экранах
-    if (window.innerWidth < 1024) return false;
-
+    // AyuGram на Android/Windows
     const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes('ayugram')) return true;
     if (ua.includes('electron')) return true;
     if (ua.includes('telegramdesktop')) return true;
     if (window.TelegramWebviewProxy) return true;
     if (window.external?.notify) return true;
 
-    return false;
+    // Фолбэк по ширине экрана (только для web)
+    if (platform === 'android' || platform === 'ios') return false;
+    return window.innerWidth >= 1024;
 }
 
 async function joinVoiceChat(roomId, team) {
@@ -46973,18 +46932,6 @@ async function openAddDxpChartBackgroundSheet() {
 function closeAddDxpBackgroundSheet() {
     const ov = document.getElementById('addDxpBgOverlay');
     const sh = document.getElementById('addDxpBgSheet');
-    if (ov) ov.classList.remove('active');
-    if (sh) sh.classList.remove('active');
-    setTimeout(() => {
-        ov?.remove();
-        sh?.remove();
-        AppState.newDxpBgBlob = null;
-    }, 400);
-}
-
-function closeAddDxpBackgroundSheet() {
-    const ov = document.getElementById('addDxpBgOverlay');
-    const sh = document.getElementById('addDxpBgSheet');
 
     if (sh) {
         sh.style.transform = 'translateY(100%)';
@@ -51396,6 +51343,28 @@ function runClickDiagnostics() {
 }
 
 runClickDiagnostics();
+
+// ============================================================
+// 🧹 ОЧИСТКА ПРИ ЗАКРЫТИИ MINI APP
+// ============================================================
+window.addEventListener('beforeunload', () => {
+    try {
+        // Отписываемся от ВСЕХ Supabase-каналов
+        if (typeof sb !== 'undefined' && sb) {
+            const channels = [
+                notifChannel, clubChannel, chatChannel, mmChannel,
+                currentMatchChannel, roomRealtimeChannel, roomChatChannel,
+                inGameChannel, waitingLinkChannel, vetoRtChannel,
+                playRoomsChannel, allClubsSheetChannel, shopItemsChannel,
+                clanShopItemsChannel, dxpHistoryChannel, usersRealtimeChannel,
+                friendshipsChannel, clubsRealtimeChannel, matchesHistoryChannel,
+                messagesListChannel, userInventoryChannel, clubRealtimeChannel,
+                coversChannel,
+            ];
+            channels.forEach(ch => { try { ch && sb.removeChannel(ch); } catch (e) {} });
+        }
+    } catch (e) {}
+});
 
 // ============================================================
 // 🖱️ ПРАВЫЙ КЛИК ПО ИГРОКУ (только ПК)
