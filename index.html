@@ -54664,7 +54664,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             
     </script>
 <!-- ============================================================ -->
-<!-- 🔊 SOUND SYSTEM v2 — звуки + своя музыка                    -->
+<!-- 🔊 SOUND SYSTEM v3 — звуковые эффекты (без фоновой музыки)    -->
 <!-- ============================================================ -->
 <script>
 (function() {
@@ -54674,96 +54674,22 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     // КОНФИГ
     // ============================================================
     const K = {
-        SFX:      'appSfxEnabled',
-        MUSIC:    'appMusicEnabled',
-        SFX_V:    'appSfxVolume',
-        MUS_V:    'appMusicVolume',
-        CUSTOM:   'appCustomMusicActive',
+        SFX:    'appSfxEnabled',
+        MUSIC:  'appMusicEnabled',   // флаг "музыка разрешена" (для Music Studio v3)
+        SFX_V:  'appSfxVolume',
+        MUS_V:  'appMusicVolume',    // громкость для Music Studio v3
     };
 
     let sfxEnabled   = localStorage.getItem(K.SFX)   !== '0';
     let musicEnabled = localStorage.getItem(K.MUSIC) === '1';
     let sfxVolume    = parseFloat(localStorage.getItem(K.SFX_V)) || 0.35;
     let musicVolume  = parseFloat(localStorage.getItem(K.MUS_V)) || 0.35;
-    let customActive = localStorage.getItem(K.CUSTOM) === '1';
 
-    let audioCtx  = null;
-    let masterGain, sfxGain, musicGain;
-
-    let musicPlaying = false;
-    let musicTimer   = null;
-    let musicStart   = 0;
-
-    // Кастомный плеер (HTML5 Audio)
-    let customAudio  = null;    // HTMLAudioElement
-    let customBlobUrl = null;   // URL.createObjectURL
+    let audioCtx = null;
+    let masterGain, sfxGain;
 
     // ============================================================
-    // INDEXEDDB ДЛЯ ХРАНЕНИЯ МУЗЫКИ
-    // ============================================================
-    const DB_NAME  = 'De1mosMedia';
-    const DB_STORE = 'files';
-    const DB_KEY   = 'customMusic';
-
-    function openDB() {
-        return new Promise((resolve, reject) => {
-            const req = indexedDB.open(DB_NAME, 1);
-            req.onupgradeneeded = () => {
-                const db = req.result;
-                if (!db.objectStoreNames.contains(DB_STORE)) {
-                    db.createObjectStore(DB_STORE);
-                }
-            };
-            req.onsuccess = () => resolve(req.result);
-            req.onerror   = () => reject(req.error);
-        });
-    }
-
-    async function saveMusicBlob(blob, meta = {}) {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(DB_STORE, 'readwrite');
-            const store = tx.objectStore(DB_STORE);
-            const data = { blob, meta, savedAt: Date.now() };
-            const req = store.put(data, DB_KEY);
-            req.onsuccess = () => resolve(data);
-            req.onerror   = () => reject(req.error);
-        });
-    }
-
-    async function loadMusicBlob() {
-        try {
-            const db = await openDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(DB_STORE, 'readonly');
-                const store = tx.objectStore(DB_STORE);
-                const req = store.get(DB_KEY);
-                req.onsuccess = () => resolve(req.result || null);
-                req.onerror   = () => reject(req.error);
-            });
-        } catch (e) {
-            console.warn('loadMusicBlob:', e);
-            return null;
-        }
-    }
-
-    async function deleteMusicBlob() {
-        try {
-            const db = await openDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(DB_STORE, 'readwrite');
-                const store = tx.objectStore(DB_STORE);
-                const req = store.delete(DB_KEY);
-                req.onsuccess = () => resolve();
-                req.onerror   = () => reject(req.error);
-            });
-        } catch (e) {
-            console.warn('deleteMusicBlob:', e);
-        }
-    }
-
-    // ============================================================
-    // AUDIO CONTEXT (для SFX и процедурной музыки)
+    // AUDIO CONTEXT
     // ============================================================
     function initAudio() {
         if (audioCtx) return true;
@@ -54779,10 +54705,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             sfxGain = audioCtx.createGain();
             sfxGain.gain.value = sfxVolume;
             sfxGain.connect(masterGain);
-
-            musicGain = audioCtx.createGain();
-            musicGain.gain.value = 0;
-            musicGain.connect(masterGain);
 
             return true;
         } catch (e) {
@@ -54962,154 +54884,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     };
 
     // ============================================================
-    // ВСТРОЕННАЯ ЭМБИЕНТ-МУЗЫКА (процедурная)
-    // ============================================================
-    const CHORDS = [
-        [261.63, 329.63, 392.00, 523.25],
-        [220.00, 261.63, 329.63, 440.00],
-        [174.61, 220.00, 261.63, 349.23],
-        [196.00, 246.94, 293.66, 392.00],
-    ];
-    const CHORD_DUR = 9;
-
-    function playPad(freqs, t0, dur) {
-        freqs.forEach((freq, i) => {
-            const osc    = audioCtx.createOscillator();
-            const g      = audioCtx.createGain();
-            const filter = audioCtx.createBiquadFilter();
-            osc.type = i === 0 ? 'sine' : 'triangle';
-            osc.frequency.value = freq;
-            osc.detune.value = (Math.random() - 0.5) * 10;
-            filter.type = 'lowpass';
-            filter.frequency.value = 1100;
-            filter.Q.value = 1;
-            g.gain.setValueAtTime(0.0001, t0);
-            g.gain.linearRampToValueAtTime(0.075, t0 + 1.4);
-            g.gain.setValueAtTime(0.075, t0 + dur - 1.4);
-            g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
-            osc.connect(filter); filter.connect(g); g.connect(musicGain);
-            osc.start(t0); osc.stop(t0 + dur + 0.1);
-        });
-    }
-
-    function playBass(freq, t0, dur) {
-        const osc    = audioCtx.createOscillator();
-        const g      = audioCtx.createGain();
-        const filter = audioCtx.createBiquadFilter();
-        osc.type = 'sine';
-        osc.frequency.value = freq / 2;
-        filter.type = 'lowpass';
-        filter.frequency.value = 180;
-        g.gain.setValueAtTime(0.0001, t0);
-        g.gain.linearRampToValueAtTime(0.13, t0 + 0.6);
-        g.gain.setValueAtTime(0.13, t0 + dur - 0.6);
-        g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
-        osc.connect(filter); filter.connect(g); g.connect(musicGain);
-        osc.start(t0); osc.stop(t0 + dur + 0.1);
-    }
-
-    function scheduleAmbient() {
-        if (!audioCtx || !musicPlaying || customActive) return;
-        const now       = audioCtx.currentTime;
-        const lookahead = now + 6;
-        let t = musicStart;
-        while (t < lookahead) {
-            const idx   = Math.round((t - musicStart) / CHORD_DUR) % CHORDS.length;
-            const chord = CHORDS[idx];
-            if (t >= now - 0.05) {
-                playPad(chord, t, CHORD_DUR);
-                playBass(chord[0], t, CHORD_DUR);
-            }
-            t += CHORD_DUR;
-        }
-        musicStart = t;
-    }
-
-    // ============================================================
-    // ВОСПРОИЗВЕДЕНИЕ КАСТОМНОЙ МУЗЫКИ
-    // ============================================================
-    async function startCustomMusic() {
-        const record = await loadMusicBlob();
-        if (!record || !record.blob) {
-            showToast('⚠️ Своя музыка не загружена');
-            return false;
-        }
-
-        if (customBlobUrl) {
-            try { URL.revokeObjectURL(customBlobUrl); } catch (e) {}
-        }
-        customBlobUrl = URL.createObjectURL(record.blob);
-
-        if (customAudio) {
-            customAudio.pause();
-            customAudio = null;
-        }
-
-        customAudio = new Audio(customBlobUrl);
-        customAudio.loop   = true;
-        customAudio.volume = musicVolume;
-
-        try {
-            await customAudio.play();
-            return true;
-        } catch (e) {
-            console.warn('customAudio.play:', e);
-            return false;
-        }
-    }
-
-    function stopCustomMusic() {
-        if (customAudio) {
-            try { customAudio.pause(); } catch (e) {}
-            customAudio.currentTime = 0;
-            customAudio = null;
-        }
-    }
-
-    // ============================================================
-    // УПРАВЛЕНИЕ МУЗЫКОЙ
-    // ============================================================
-    async function startMusic() {
-        if (musicPlaying) return;
-
-        if (customActive) {
-            const ok = await startCustomMusic();
-            if (ok) musicPlaying = true;
-            return;
-        }
-
-        // Процедурная
-        if (!initAudio()) return;
-        resumeAudio();
-        musicPlaying = true;
-        musicStart   = audioCtx.currentTime + 0.15;
-
-        musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
-        musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
-        musicGain.gain.linearRampToValueAtTime(musicVolume, audioCtx.currentTime + 2.2);
-
-        scheduleAmbient();
-        musicTimer = setInterval(scheduleAmbient, 3500);
-    }
-
-    function stopMusic() {
-        if (!musicPlaying) return;
-        musicPlaying = false;
-
-        if (musicTimer) {
-            clearInterval(musicTimer);
-            musicTimer = null;
-        }
-        stopCustomMusic();
-
-        if (musicGain && audioCtx) {
-            musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
-            musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
-            musicGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 1.4);
-        }
-    }
-
-    // ============================================================
     // ПУБЛИЧНЫЙ API
     // ============================================================
     window.SFX = {
@@ -55136,123 +54910,38 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         getVolume() { return sfxVolume; },
     };
 
+    // Музыка — теперь только ФЛАГ + ГРОМКОСТЬ для Music Studio v3
     window.Music = {
-        async start() {
+        start() {
             musicEnabled = true;
             localStorage.setItem(K.MUSIC, '1');
-            await startMusic();
+            return Promise.resolve();
         },
         stop() {
             musicEnabled = false;
             localStorage.setItem(K.MUSIC, '0');
-            stopMusic();
+            // Останавливаем Music Player v3 (если есть)
+            if (typeof window.stopStudioPlayback === 'function') {
+                try { window.stopStudioPlayback(); } catch (e) {}
+            }
         },
         async toggle() {
-            if (musicPlaying) this.stop();
+            if (musicEnabled) this.stop();
             else await this.start();
-            return musicPlaying;
+            return musicEnabled;
         },
-        isPlaying() { return musicPlaying; },
         isEnabled() { return musicEnabled; },
+        isPlaying() { return musicEnabled; },   // совместимость
         setVolume(v) {
             musicVolume = Math.max(0, Math.min(1, v));
             localStorage.setItem(K.MUS_V, String(musicVolume));
-            if (customAudio) customAudio.volume = musicVolume;
-            if (musicGain && musicPlaying && !customActive) {
-                musicGain.gain.linearRampToValueAtTime(musicVolume, audioCtx.currentTime + 0.4);
-            }
         },
         getVolume() { return musicVolume; },
-
-        // === Кастомная музыка ===
-        async uploadCustomMusic(file) {
-            if (!file) throw new Error('Файл не выбран');
-            if (file.size > 30 * 1024 * 1024) {
-                throw new Error('Максимум 30 МБ');
-            }
-
-            // Проверяем, что браузер может проиграть этот файл
-            const testUrl = URL.createObjectURL(file);
-            const ok = await new Promise((resolve) => {
-                const testAudio = new Audio();
-                testAudio.preload = 'metadata';
-                testAudio.onloadedmetadata = () => resolve(true);
-                testAudio.onerror = () => resolve(false);
-                testAudio.src = testUrl;
-                setTimeout(() => resolve(false), 4000);
-            });
-            URL.revokeObjectURL(testUrl);
-
-            if (!ok) {
-                throw new Error('Не удалось прочитать аудио. Проверь формат (mp3, ogg, m4a, wav)');
-            }
-
-            await saveMusicBlob(file, {
-                name: file.name,
-                size: file.size,
-                type: file.type,
-            });
-
-            customActive = true;
-            localStorage.setItem(K.CUSTOM, '1');
-
-            // Если музыка играла — перезапускаем на новой
-            if (musicPlaying) {
-                stopMusic();
-                await startMusic();
-            }
-
-            return true;
-        },
-
-        async deleteCustomMusic() {
-            await deleteMusicBlob();
-            customActive = false;
-            localStorage.setItem(K.CUSTOM, '0');
-            stopCustomMusic();
-
-            // Если музыка была включена — перезапускаем процедурную
-            if (musicPlaying) {
-                stopMusic();
-                await startMusic();
-            }
-        },
-
-        async hasCustomMusic() {
-            const rec = await loadMusicBlob();
-            return !!rec;
-        },
-
-        async getCustomMusicInfo() {
-            const rec = await loadMusicBlob();
-            if (!rec) return null;
-            return {
-                name: rec.meta?.name || 'Моя музыка',
-                size: rec.meta?.size || 0,
-                savedAt: rec.savedAt,
-            };
-        },
-
-        isCustomActive() { return customActive; },
     };
 
     // ============================================================
-    // АВТОЗАПУСК
+    // АВТОЗАПУСК AUDIO CONTEXT
     // ============================================================
-    function bindFirstGesture() {
-        const startOnGesture = async () => {
-            if (musicEnabled && !musicPlaying) {
-                await startMusic();
-            }
-            document.removeEventListener('pointerdown', startOnGesture);
-            document.removeEventListener('keydown', startOnGesture);
-            document.removeEventListener('touchstart', startOnGesture);
-        };
-        document.addEventListener('pointerdown', startOnGesture, { passive: true });
-        document.addEventListener('keydown', startOnGesture, { passive: true });
-        document.addEventListener('touchstart', startOnGesture, { passive: true });
-    }
-
     document.addEventListener('pointerdown', () => {
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     }, { passive: true });
@@ -55415,7 +55104,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // ЕДИНЫЙ РАЗДЕЛ "ЗВУКИ И МУЗЫКА"
+    // РАЗДЕЛ "ЗВУКИ И МУЗЫКА" В НАСТРОЙКАХ
     // ============================================================
     async function injectSettingsToggles() {
         const sheet = document.getElementById('settingsSheet');
@@ -55461,7 +55150,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
         const renderContent = () => {
             const sfxOn = SFX.isEnabled();
-            const musicOn = window.Music ? Music.isEnabled() : false;
+            const musicOn = Music.isEnabled();
 
             sheet.innerHTML = `
                 <div class="sheet-title">🔊 Звуки и музыка</div>
@@ -55476,7 +55165,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
                 <button class="sheet-option" id="snmMusicBtn">
                     <span style="font-size: 18px;">🎵</span>
-                    Фоновая музыка
+                    Музыка
                     <span style="margin-left:auto;font-size:12px;color:${musicOn ? 'var(--emerald)' : 'var(--hint)'};font-weight:800;">
                         ${musicOn ? 'ВКЛ' : 'ВЫКЛ'}
                     </span>
@@ -55485,10 +55174,10 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 <div style="margin: 14px 0; padding: 12px 14px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <span style="font-size:12px;font-weight:700;color:var(--text);">🎚 Громкость музыки</span>
-                        <span id="snmVolLabel" style="font-size:11px;font-weight:800;color:var(--emerald);font-family:var(--font-mono);">${Math.round((window.Music?.getVolume?.() || 0.35) * 100)}%</span>
+                        <span id="snmVolLabel" style="font-size:11px;font-weight:800;color:var(--emerald);font-family:var(--font-mono);">${Math.round(Music.getVolume() * 100)}%</span>
                     </div>
                     <input type="range" id="snmVolSlider" min="0" max="100"
-                           value="${Math.round((window.Music?.getVolume?.() || 0.35) * 100)}"
+                           value="${Math.round(Music.getVolume() * 100)}"
                            style="width:100%;accent-color:var(--emerald);cursor:pointer;">
                 </div>
 
@@ -55522,7 +55211,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             };
 
             document.getElementById('snmMusicBtn').onclick = async () => {
-                if (!window.Music) return;
                 const on = !Music.isEnabled();
                 if (on) await Music.start();
                 else Music.stop();
@@ -55536,7 +55224,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             if (volSlider) {
                 volSlider.oninput = (e) => {
                     const v = parseInt(e.target.value, 10) / 100;
-                    if (window.Music) Music.setVolume(v);
+                    Music.setVolume(v);
                     document.getElementById('snmVolLabel').textContent = e.target.value + '%';
                 };
             }
@@ -55575,9 +55263,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     // ============================================================
     function boot() {
         installAutoHooks();
-        bindFirstGesture();
 
-        // Вставляем настройки с ретраями
         let attempts = 0;
         const tryInject = setInterval(() => {
             attempts++;
@@ -55586,7 +55272,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             }
         }, 200);
 
-        // И при каждом открытии настроек
         document.addEventListener('click', (e) => {
             const target = e.target.closest('[onclick*="openSettingsSheet"], [onclick*="settings"]');
             if (target) {
@@ -55594,7 +55279,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             }
         }, true);
 
-        console.log('🔊 Sound System v2 готов');
+        console.log('🔊 Sound System v3 готов (только эффекты)');
     }
 
     if (document.readyState === 'loading') {
@@ -55604,7 +55289,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 })();
 </script>
-
 <!-- ============================================================ -->
 <!-- 🎧 MUSIC PLAYER v3 — плавающий виджет + панель управления     -->
 <!-- ============================================================ -->
