@@ -21212,6 +21212,287 @@ a::before, a::after,
         font-size: 10px;
     }
 }
+
+    /* ============================================================ */
+/* 🎫 БОЕВОЙ ПРОПУСК — ПРЕВЬЮ НА ГЛАВНОЙ                        */
+/* ============================================================ */
+.dash-bp {
+    position: relative;
+    overflow: hidden;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    background: linear-gradient(160deg,
+        rgba(255, 215, 0, 0.12) 0%,
+        rgba(167, 139, 250, 0.08) 45%,
+        rgba(0, 0, 0, 0.55) 100%);
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    border-radius: 0;
+    clip-path: polygon(
+        14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px
+    );
+    cursor: pointer;
+    isolation: isolate;
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.25s ease,
+                box-shadow 0.25s ease;
+    animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.dash-bp::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #ffd700, transparent);
+    opacity: 0.85;
+    z-index: 3;
+    pointer-events: none;
+}
+.dash-bp:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 215, 0, 0.7);
+    box-shadow: 0 8px 28px rgba(255, 215, 0, 0.2),
+                0 0 0 1px rgba(255, 215, 0, 0.35);
+}
+.dash-bp:active { transform: scale(0.99); }
+
+.dash-bp-glow {
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.3), transparent 65%);
+    filter: blur(30px);
+    pointer-events: none;
+    z-index: 0;
+    animation: dashBpGlow 4s ease-in-out infinite alternate;
+}
+@keyframes dashBpGlow {
+    0%   { transform: translate(0, 0); opacity: 0.5; }
+    100% { transform: translate(-20px, 10px); opacity: 0.9; }
+}
+
+.dash-bp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
+}
+.dash-bp-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+.dash-bp-title svg {
+    width: 18px;
+    height: 18px;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+}
+.dash-bp-season {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+.dash-bp-premium-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg,
+        rgba(255, 215, 0, 0.28),
+        rgba(255, 215, 0, 0.08));
+    border: 1px solid rgba(255, 215, 0, 0.6);
+    border-radius: 999px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+    flex-shrink: 0;
+    animation: premiumPulse 2.4s ease-in-out infinite;
+}
+@keyframes premiumPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+    50%      { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+}
+.dash-bp-buy-btn {
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #ffd700, #b8860b);
+    color: #000;
+    border: none;
+    border-radius: 999px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(255, 215, 0, 0.4);
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+}
+.dash-bp-buy-btn:active { transform: scale(0.94); }
+
+.dash-bp-level-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 2;
+}
+.dash-bp-level-num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 36px;
+    font-weight: 900;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.6),
+                 0 2px 4px rgba(0, 0, 0, 0.6);
+    min-width: 50px;
+}
+.dash-bp-level-label {
+    font-size: 9.5px;
+    color: var(--hint);
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+.dash-bp-points {
+    margin-left: auto;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-align: right;
+}
+.dash-bp-points b {
+    color: #ffd700;
+    font-weight: 900;
+}
+
+.dash-bp-progress {
+    height: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    position: relative;
+    z-index: 2;
+}
+.dash-bp-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #b8860b, #ffd700, #fff5cc);
+    border-radius: 4px;
+    transition: width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+    position: relative;
+}
+.dash-bp-progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        transparent, rgba(255,255,255,0.5), transparent);
+    animation: bpShine 2.5s linear infinite;
+}
+@keyframes bpShine {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.dash-bp-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    position: relative;
+    z-index: 2;
+}
+.dash-bp-rewards-preview {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.dash-bp-reward-mini {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 7px;
+    font-size: 14px;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+}
+.dash-bp-reward-mini svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.dash-bp-reward-mini.premium {
+    border-color: rgba(255, 215, 0, 0.6);
+    background: linear-gradient(180deg,
+        rgba(255, 215, 0, 0.10),
+        rgba(0, 0, 0, 0.4));
+}
+.dash-bp-reward-mini.locked {
+    opacity: 0.35;
+    filter: grayscale(80%);
+}
+.dash-bp-arrow {
+    font-size: 22px;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+    transition: transform 0.2s ease;
+}
+.dash-bp:hover .dash-bp-arrow {
+    transform: translateX(4px);
+}
+
+/* Пустое состояние — когда сезона нет */
+.dash-bp-empty {
+    padding: 18px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--hint);
+    background: linear-gradient(160deg,
+        rgba(255, 215, 0, 0.06) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px dashed rgba(255, 215, 0, 0.3);
+    border-radius: 0;
+    clip-path: polygon(
+        14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px
+    );
+    margin-bottom: 14px;
+}
+.dash-bp-empty b { color: #ffd700; }
+
+/* Lite-mode — отключаем анимации */
+html.lite-mode .dash-bp-glow,
+html.lite-mode .dash-bp-premium-badge,
+html.lite-mode .dash-bp-progress-fill::after {
+    animation: none !important;
+}
     
 </style>
 </head>
@@ -21346,6 +21627,9 @@ a::before, a::after,
 </span>
     </button>
 </div>
+<!-- 🎫 БОЕВОЙ ПРОПУСК — превью на главной -->
+<div id="dashBattlePass" style="margin-bottom: 14px;"></div>
+
 <div id="leaderboardHeroWrap" style="margin-bottom: 14px;"></div>
 <div class="section-title" id="leaderboardTitle" style="display: none;">
     <svg class="cy-icon cy-xs cy-gold" viewBox="0 0 24 24" style="margin-right: 6px;">
@@ -25633,21 +25917,24 @@ function switchPage(page) {
             requestAnimationFrame(step);
         }
 
-        // ============================================================
-        // DASHBOARD
-        // ============================================================
+// ============================================================
+// DASHBOARD
+// ============================================================
 function renderDashboard(user) {
-    const winrate = user.matches_played > 0 
-        ? Math.round((user.wins / user.matches_played) * 100) 
+    const winrate = user.matches_played > 0
+        ? Math.round((user.wins / user.matches_played) * 100)
         : 0;
-        // Убираем "—", если есть
+
+    // Убираем "—", если есть
     const eloEl = document.getElementById('eloValue');
     if (eloEl && eloEl.textContent === '—') {
         eloEl.textContent = '...';  // Скелетон
     }
+
     animateNumber(document.getElementById('eloValue'), user.elo ?? 1000, 1000);
     document.getElementById('eloLevel').textContent = `Уровень ${eloToLevel(user.elo)}`;
 
+    // Анимированное обновление статистики с "bump"-эффектом
     function bumpStat(id, value) {
         const el = document.getElementById(id);
         if (!el) return;
@@ -25665,12 +25952,16 @@ function renderDashboard(user) {
     bumpStat('statWins', user.wins ?? 0);
     bumpStat('statWinrate', winrate + '%');
 
+    // Прогресс-бар ELO
     const progress = ((user.elo ?? 1000) % 250) / 250 * 100;
     setTimeout(() => {
-        document.getElementById('eloProgress').style.width = progress + '%';
+        const bar = document.getElementById('eloProgress');
+        if (bar) bar.style.width = progress + '%';
     }, 200);
 
-        // 🆕 Мини-виджеты (график + last match)
+    // ============================================================
+    // 🆕 МИНИ-ВИДЖЕТЫ (график + last match) — создаём при первом рендере
+    // ============================================================
     const dashWidgets = document.getElementById('dashWidgetsRow');
     if (!dashWidgets) {
         const widgetsHTML = `
@@ -25730,13 +26021,9 @@ function renderDashboard(user) {
         }
     }
 
-    // 🆕 Загружаем данные виджетов
-    setTimeout(() => {
-        renderDashMiniChart(user.telegram_id);
-        renderDashLastMatch(user.telegram_id);
-    }, 150);
-    
-    // 🆕 Подсказка новичку
+    // ============================================================
+    // 🆕 ПОДСКАЗКА НОВИЧКУ (если ещё нет матчей)
+    // ============================================================
     const hint = document.getElementById('dashboardHint');
     if (hint) {
         if ((user.matches_played ?? 0) === 0) {
@@ -25757,6 +26044,26 @@ function renderDashboard(user) {
             hint.style.display = 'none';
         }
     }
+
+    // ============================================================
+    // 🆕 ЗАГРУЖАЕМ ДАННЫЕ ВИДЖЕТОВ + БОЕВОЙ ПРОПУСК
+    // ============================================================
+    setTimeout(() => {
+        // Мини-график DXP (2 недели)
+        if (typeof renderDashMiniChart === 'function') {
+            renderDashMiniChart(user.telegram_id);
+        }
+
+        // Мини Last Match
+        if (typeof renderDashLastMatch === 'function') {
+            renderDashLastMatch(user.telegram_id);
+        }
+
+        // 🔥 Боевой пропуск перед лидербордом
+        if (typeof renderDashBattlePass === 'function') {
+            renderDashBattlePass();
+        }
+    }, 150);
 }
 
         // ============================================================
@@ -38487,10 +38794,11 @@ function subscribeUsersRealtime() {
             }
 
             if (eloChanged || statsChanged) {
-                if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-                    renderDashboard(currentUser);
-                    updatePlayBtnSub();
-                }
+if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+    renderDashboard(currentUser);
+    updatePlayBtnSub();
+    renderDashBattlePass();          // 🔥 НОВОЕ
+}
                 if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
                     renderProfileView(currentUser);
                 }
@@ -51012,6 +51320,166 @@ function showPlayerContextMenu(x, y, userId) {
         if (r.right > window.innerWidth) menu.style.left = (window.innerWidth - r.width - 8) + 'px';
         if (r.bottom > window.innerHeight) menu.style.top = (window.innerHeight - r.height - 8) + 'px';
     });
+}
+
+            // ============================================================
+// 🎫 ПРЕВЬЮ БОЕВОГО ПРОПУСКА НА ГЛАВНОЙ
+// ============================================================
+async function renderDashBattlePass() {
+    const el = document.getElementById('dashBattlePass');
+    if (!el) return;
+
+    try {
+        // 1. Активный сезон
+        const { data: seasonRes } = await sb.rpc('get_active_season');
+
+        // Нет сезона — показываем заглушку
+        if (!seasonRes?.ok || !seasonRes.season) {
+            el.innerHTML = `
+                <div class="dash-bp-empty" onclick="openSeason()">
+                    🎫 <b>Боевой пропуск</b><br>
+                    <span style="font-size: 11px;">Сезон скоро начнётся — загляни позже</span>
+                </div>
+            `;
+            return;
+        }
+
+        const season = seasonRes.season;
+
+        // 2. Прогресс игрока
+        const { data: progressRes } = await sb.rpc('get_bp_progress', {
+            p_user_id: currentUser.telegram_id,
+            p_season_id: season.id
+        });
+
+        const progress = progressRes?.ok ? progressRes : {
+            points: 0,
+            level: 1,
+            premium_unlocked: false
+        };
+
+        const points = progress.points || 0;
+        const level = progress.level || 1;
+        const currentLevelProgress = points % 100;
+        const isPremium = progress.premium_unlocked === true;
+
+        // 3. Превью наград: текущий уровень и 2 следующих
+        const maxLevel = season.max_level || 50;
+        const { data: rewards } = await sb.from('battle_pass_rewards')
+            .select('*')
+            .eq('season_id', season.id)
+            .gte('level', level)
+            .lte('level', Math.min(level + 2, maxLevel))
+            .order('level');
+
+        // Догружаем shop_items, если нужно
+        const itemIds = new Set();
+        (rewards || []).forEach(r => {
+            if (r.reward_type === 'item' && r.reward_value?.item_id) {
+                itemIds.add(r.reward_value.item_id);
+            }
+        });
+        const missing = [...itemIds].filter(id => !SHOP_ITEMS_CACHE[id]);
+        if (missing.length) {
+            const { data: items } = await sb.from('shop_items')
+                .select('id, category, value').in('id', missing);
+            (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+        }
+
+        // Собираем 3 мини-превью
+        const miniRewards = [];
+        for (let lvl = level; lvl <= Math.min(level + 2, maxLevel); lvl++) {
+            const reward = (rewards || []).find(r => r.level === lvl && r.tier === 'premium')
+                        || (rewards || []).find(r => r.level === lvl && r.tier === 'free');
+
+            if (!reward) {
+                miniRewards.push(`<div class="dash-bp-reward-mini locked">—</div>`);
+                continue;
+            }
+
+            const isLocked = (reward.tier === 'premium' && !isPremium) || lvl > level;
+
+            let previewHTML = '🎁';
+            if (reward.reward_type === 'coins') {
+                previewHTML = '💰';
+            } else if (reward.reward_type === 'item') {
+                const item = SHOP_ITEMS_CACHE[reward.reward_value?.item_id];
+                if (item) {
+                    previewHTML = renderBpItemIcon(item);
+                }
+            }
+
+            const tierCls = reward.tier === 'premium' ? 'premium' : '';
+            const lockCls = isLocked ? 'locked' : '';
+
+            miniRewards.push(`
+                <div class="dash-bp-reward-mini ${tierCls} ${lockCls}"
+                     title="Уровень ${lvl} · ${reward.tier === 'premium' ? 'Premium' : 'Free'}">
+                    ${previewHTML}
+                </div>
+            `);
+        }
+
+        // Иконка значка BP
+        const bpIcon = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/>
+                <path d="M7 5H4v2a4 4 0 0 0 4 4M17 5h3v2a4 4 0 0 1-4 4"/>
+                <path d="M9 20h6M12 13v7"/>
+            </svg>
+        `;
+
+        // Premium badge или кнопка "Купить"
+        const premiumBlock = isPremium
+            ? `<div class="dash-bp-premium-badge">⭐ PREMIUM</div>`
+            : `<button class="dash-bp-buy-btn"
+                       onclick="event.stopPropagation(); buyBpPremium();">
+                   💎 КУПИТЬ
+               </button>`;
+
+        el.innerHTML = `
+            <div class="dash-bp" onclick="openSeason()">
+                <div class="dash-bp-glow"></div>
+
+                <div class="dash-bp-header">
+                    <div>
+                        <div class="dash-bp-title">
+                            ${bpIcon}
+                            <span>БОЕВОЙ ПРОПУСК</span>
+                        </div>
+                        <div class="dash-bp-season">${escapeHtml(season.name)}</div>
+                    </div>
+                    ${premiumBlock}
+                </div>
+
+                <div class="dash-bp-level-row">
+                    <div class="dash-bp-level-num">${level}</div>
+                    <div>
+                        <div class="dash-bp-level-label">УРОВЕНЬ</div>
+                    </div>
+                    <div class="dash-bp-points">
+                        <b>${points}</b> очков
+                    </div>
+                </div>
+
+                <div class="dash-bp-progress">
+                    <div class="dash-bp-progress-fill" style="width: ${currentLevelProgress}%"></div>
+                </div>
+
+                <div class="dash-bp-footer">
+                    <div class="dash-bp-rewards-preview">
+                        ${miniRewards.join('')}
+                    </div>
+                    <div class="dash-bp-arrow">→</div>
+                </div>
+            </div>
+        `;
+
+    } catch (e) {
+        console.error('renderDashBattlePass:', e);
+        el.innerHTML = '';
+    }
 }
 
             // ============================================================
