@@ -45021,6 +45021,38 @@ async function buyBpPremium() {
     }
 }
 
+      // ============================================================
+// 📝 Форматирование награды для ячейки админ-редактора BP
+// ============================================================
+function formatAdminReward(reward) {
+    if (!reward) return '—';
+
+    const val = reward.reward_value || {};
+
+    // 💰 Монеты
+    if (reward.reward_type === 'coins') {
+        const amount = val.amount || 0;
+        return `💰 ${amount}`;
+    }
+
+    // 🎨 Предмет из магазина
+    if (reward.reward_type === 'item') {
+        const itemId = val.item_id;
+        if (!itemId) return '🎁 ?';
+
+        const item = (typeof SHOP_ITEMS_CACHE !== 'undefined')
+            ? SHOP_ITEMS_CACHE[itemId]
+            : null;
+
+        const name = item?.name || 'Предмет';
+        const short = name.length > 12 ? name.slice(0, 11) + '…' : name;
+
+        return `🎁 ${escapeHtml(short)}`;
+    }
+
+    return '🎁 ?';
+}      
+
 // ============================================================
 // 👑 АДМИН-РЕДАКТОР
 // ============================================================
