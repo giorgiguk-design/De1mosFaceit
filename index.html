@@ -981,11 +981,10 @@ body::after {
     display: none;
     align-items: flex-start;
     justify-content: center;
-    padding: 70px 20px 40px;   /* 🔥 верхний отступ = высота кнопки закрытия */
-    overflow-y: auto;
-    overflow-x: hidden;
+    padding: 40px 20px 40px;
+    overflow: hidden;              /* 🔥 было auto — теперь hidden */
+    overscroll-behavior: contain;  /* 🔥 не пробрасывать скролл наружу */
     transition: opacity 0.28s ease;
-    -webkit-overflow-scrolling: touch;
 }
 .player-modal.active {
     display: flex;
@@ -27072,6 +27071,38 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
+// ============================================================
+// 🔒 БЛОКИРОВКА СКРОЛЛА BODY (при открытых модалках)
+// ============================================================
+let _bodyScrollLockCount = 0;   // счётчик — если открыто несколько модалок
+
+function lockBodyScroll() {
+    _bodyScrollLockCount++;
+    if (_bodyScrollLockCount === 1) {
+        const scrollY = window.scrollY || window.pageYOffset;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function unlockBodyScroll() {
+    _bodyScrollLockCount = Math.max(0, _bodyScrollLockCount - 1);
+    if (_bodyScrollLockCount === 0) {
+        const scrollY = parseInt(document.body.style.top || '0', 10);
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, Math.abs(scrollY));
+    }
+}
+
  // ============================================================
 // 📱 TELEGRAM NATIVE DIALOGS
 // ============================================================
@@ -28929,6 +28960,8 @@ async function openPlayerProfile(userId) {
 
     content.innerHTML = '<div class="empty">Загрузка...</div>';
     modal.classList.add('active');
+    
+    lockBodyScroll();
 
     try {
         const { data: user, error } = await sb.from('users')
@@ -28994,7 +29027,11 @@ async function removeFriendFromProfile(relId, btn) {
         closePlayerModal();
     } catch (e) { showToast('Ошибка'); if (btn) { btn.disabled = false; } }
 }
-        function closePlayerModal() { document.getElementById('playerModal').classList.remove('active'); }
+        function closePlayerModal() {
+            document.getElementById('playerModal').classList.remove('active');
+            // 🔥 РАЗБЛОКИРУЕМ СКРОЛЛ BODY
+            unlockBodyScroll();
+        }
 
         // ============================================================
         // AVATAR
@@ -43539,7 +43576,14 @@ modal.innerHTML = `
 `;
 
     document.body.appendChild(modal);
+    lockBodyScroll();        // 🔥 добавили
     haptic('medium');
+}
+
+function closeShopCategory() {
+    const modal = document.getElementById('shopCatModal');
+    if (modal) modal.remove();
+    unlockBodyScroll();      // 🔥 добавили
 }
 
 function closeShopCategory() {
