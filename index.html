@@ -54663,27 +54663,29 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 }
             
     </script>
-        <!-- ============================================================ -->
-<!-- 🔊 SOUND SYSTEM — звуки + музыка                            -->
+<!-- ============================================================ -->
+<!-- 🔊 SOUND SYSTEM v2 — звуки + своя музыка                    -->
 <!-- ============================================================ -->
 <script>
 (function() {
     'use strict';
 
     // ============================================================
-    // КОНФИГ И СОСТОЯНИЕ
+    // КОНФИГ
     // ============================================================
     const K = {
-        SFX:   'appSfxEnabled',
-        MUSIC: 'appMusicEnabled',
-        SFX_V: 'appSfxVolume',
-        MUS_V: 'appMusicVolume',
+        SFX:      'appSfxEnabled',
+        MUSIC:    'appMusicEnabled',
+        SFX_V:    'appSfxVolume',
+        MUS_V:    'appMusicVolume',
+        CUSTOM:   'appCustomMusicActive',
     };
 
-    let sfxEnabled   = localStorage.getItem(K.SFX)   !== '0';   // по умолчанию ВКЛ
-    let musicEnabled = localStorage.getItem(K.MUSIC) === '1';   // по умолчанию ВЫКЛ
+    let sfxEnabled   = localStorage.getItem(K.SFX)   !== '0';
+    let musicEnabled = localStorage.getItem(K.MUSIC) === '1';
     let sfxVolume    = parseFloat(localStorage.getItem(K.SFX_V)) || 0.35;
-    let musicVolume  = parseFloat(localStorage.getItem(K.MUS_V)) || 0.18;
+    let musicVolume  = parseFloat(localStorage.getItem(K.MUS_V)) || 0.35;
+    let customActive = localStorage.getItem(K.CUSTOM) === '1';
 
     let audioCtx  = null;
     let masterGain, sfxGain, musicGain;
@@ -54692,8 +54694,76 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     let musicTimer   = null;
     let musicStart   = 0;
 
+    // Кастомный плеер (HTML5 Audio)
+    let customAudio  = null;    // HTMLAudioElement
+    let customBlobUrl = null;   // URL.createObjectURL
+
     // ============================================================
-    // ИНИЦИАЛИЗАЦИЯ AUDIO CONTEXT
+    // INDEXEDDB ДЛЯ ХРАНЕНИЯ МУЗЫКИ
+    // ============================================================
+    const DB_NAME  = 'De1mosMedia';
+    const DB_STORE = 'files';
+    const DB_KEY   = 'customMusic';
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(DB_STORE)) {
+                    db.createObjectStore(DB_STORE);
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror   = () => reject(req.error);
+        });
+    }
+
+    async function saveMusicBlob(blob, meta = {}) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(DB_STORE, 'readwrite');
+            const store = tx.objectStore(DB_STORE);
+            const data = { blob, meta, savedAt: Date.now() };
+            const req = store.put(data, DB_KEY);
+            req.onsuccess = () => resolve(data);
+            req.onerror   = () => reject(req.error);
+        });
+    }
+
+    async function loadMusicBlob() {
+        try {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(DB_STORE, 'readonly');
+                const store = tx.objectStore(DB_STORE);
+                const req = store.get(DB_KEY);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror   = () => reject(req.error);
+            });
+        } catch (e) {
+            console.warn('loadMusicBlob:', e);
+            return null;
+        }
+    }
+
+    async function deleteMusicBlob() {
+        try {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(DB_STORE, 'readwrite');
+                const store = tx.objectStore(DB_STORE);
+                const req = store.delete(DB_KEY);
+                req.onsuccess = () => resolve();
+                req.onerror   = () => reject(req.error);
+            });
+        } catch (e) {
+            console.warn('deleteMusicBlob:', e);
+        }
+    }
+
+    // ============================================================
+    // AUDIO CONTEXT (для SFX и процедурной музыки)
     // ============================================================
     function initAudio() {
         if (audioCtx) return true;
@@ -54728,7 +54798,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     }
 
     // ============================================================
-    // БАЗОВЫЕ ГЕНЕРАТОРЫ
+    // SFX — генераторы
     // ============================================================
     function tone(opt) {
         if (!audioCtx || !sfxEnabled) return;
@@ -54760,7 +54830,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
         osc.connect(g);
         g.connect(sfxGain);
-
         osc.start(t0);
         osc.stop(t0 + rel + 0.05);
     }
@@ -54787,34 +54856,22 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         src.stop(t0 + duration + 0.05);
     }
 
-    // ============================================================
-    // КОЛЛЕКЦИЯ ЗВУКОВ
-    // ============================================================
     const Sounds = {
-        // Базовые UI
         tap() {
             tone({ freq: 950, type: 'sine',     duration: 0.05, volume: 0.55, release: 0.06 });
             tone({ freq: 1400, type: 'sine',    duration: 0.03, volume: 0.25, release: 0.04, delay: 0.012 });
         },
-        click() {
-            tone({ freq: 720, type: 'triangle', duration: 0.06, volume: 0.45, release: 0.07 });
-        },
+        click() { tone({ freq: 720, type: 'triangle', duration: 0.06, volume: 0.45, release: 0.07 }); },
         nav() {
-            tone({ freq: 780, type: 'triangle', duration: 0.06, volume: 0.4 });
+            tone({ freq: 780,  type: 'triangle', duration: 0.06, volume: 0.4 });
             tone({ freq: 1040, type: 'triangle', duration: 0.08, volume: 0.35, delay: 0.05 });
         },
         open() {
             tone({ freq: 420, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 900 });
-            tone({ freq: 840, type: 'sine', duration: 0.1, volume: 0.25, delay: 0.1 });
+            tone({ freq: 840, type: 'sine', duration: 0.1,  volume: 0.25, delay: 0.1 });
         },
-        close() {
-            tone({ freq: 900, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 420 });
-        },
-        swipe() {
-            noise({ duration: 0.12, volume: 0.15, filter: 5500 });
-        },
-
-        // Статусы
+        close() { tone({ freq: 900, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 420 }); },
+        swipe() { noise({ duration: 0.12, volume: 0.15, filter: 5500 }); },
         success() {
             tone({ freq: 660,  type: 'sine', duration: 0.12, volume: 0.55 });
             tone({ freq: 880,  type: 'sine', duration: 0.14, volume: 0.55, delay: 0.08 });
@@ -54842,8 +54899,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             tone({ freq: 1300, type: 'sine', duration: 0.09, volume: 0.5, slideTo: 2300 });
             noise({ duration: 0.06, volume: 0.12, filter: 4500 });
         },
-
-        // Экономика
         coin() {
             tone({ freq: 1318, type: 'sine', duration: 0.09, volume: 0.5 });
             tone({ freq: 1760, type: 'sine', duration: 0.12, volume: 0.5, delay: 0.07 });
@@ -54854,8 +54909,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             tone({ freq: 659, type: 'triangle', duration: 0.13, volume: 0.5, delay: 0.09 });
             tone({ freq: 784, type: 'triangle', duration: 0.22, volume: 0.45, delay: 0.18 });
         },
-
-        // Игра
         matchFound() {
             [440, 554, 659, 880].forEach((f, i) =>
                 tone({ freq: f, type: 'triangle', duration: 0.45, volume: 0.4, delay: i * 0.06 })
@@ -54878,9 +54931,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             );
             tone({ freq: 220, type: 'sine', duration: 0.7, volume: 0.35, delay: 0.6 });
         },
-        countdown() {
-            tone({ freq: 880, type: 'sine', duration: 0.07, volume: 0.5 });
-        },
         achievement() {
             [784, 988, 1174, 1568].forEach((f, i) =>
                 tone({ freq: f, type: 'sine', duration: 0.28, volume: 0.5, delay: i * 0.075 })
@@ -54897,14 +54947,12 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             );
         },
         openCase() {
-            // Вращение барабана
             for (let i = 0; i < 10; i++) {
                 tone({
                     freq: 320 + i * 90, type: 'triangle',
                     duration: 0.05, volume: 0.25, delay: i * 0.11
                 });
             }
-            // Финальный аккорд
             setTimeout(() => {
                 [659, 880, 1319].forEach((f, i) =>
                     tone({ freq: f, type: 'sine', duration: 0.5, volume: 0.5, delay: i * 0.05 })
@@ -54914,13 +54962,13 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     };
 
     // ============================================================
-    // ФОНОВАЯ МУЗЫКА (эмбиент, 4 аккорда)
+    // ВСТРОЕННАЯ ЭМБИЕНТ-МУЗЫКА (процедурная)
     // ============================================================
     const CHORDS = [
-        [261.63, 329.63, 392.00, 523.25], // C
-        [220.00, 261.63, 329.63, 440.00], // Am
-        [174.61, 220.00, 261.63, 349.23], // F
-        [196.00, 246.94, 293.66, 392.00], // G
+        [261.63, 329.63, 392.00, 523.25],
+        [220.00, 261.63, 329.63, 440.00],
+        [174.61, 220.00, 261.63, 349.23],
+        [196.00, 246.94, 293.66, 392.00],
     ];
     const CHORD_DUR = 9;
 
@@ -54929,26 +54977,18 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             const osc    = audioCtx.createOscillator();
             const g      = audioCtx.createGain();
             const filter = audioCtx.createBiquadFilter();
-
             osc.type = i === 0 ? 'sine' : 'triangle';
             osc.frequency.value = freq;
             osc.detune.value = (Math.random() - 0.5) * 10;
-
             filter.type = 'lowpass';
             filter.frequency.value = 1100;
             filter.Q.value = 1;
-
             g.gain.setValueAtTime(0.0001, t0);
             g.gain.linearRampToValueAtTime(0.075, t0 + 1.4);
             g.gain.setValueAtTime(0.075, t0 + dur - 1.4);
             g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
-
-            osc.connect(filter);
-            filter.connect(g);
-            g.connect(musicGain);
-
-            osc.start(t0);
-            osc.stop(t0 + dur + 0.1);
+            osc.connect(filter); filter.connect(g); g.connect(musicGain);
+            osc.start(t0); osc.stop(t0 + dur + 0.1);
         });
     }
 
@@ -54956,33 +54996,23 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         const osc    = audioCtx.createOscillator();
         const g      = audioCtx.createGain();
         const filter = audioCtx.createBiquadFilter();
-
         osc.type = 'sine';
         osc.frequency.value = freq / 2;
-
         filter.type = 'lowpass';
         filter.frequency.value = 180;
-
         g.gain.setValueAtTime(0.0001, t0);
         g.gain.linearRampToValueAtTime(0.13, t0 + 0.6);
         g.gain.setValueAtTime(0.13, t0 + dur - 0.6);
         g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
-
-        osc.connect(filter);
-        filter.connect(g);
-        g.connect(musicGain);
-
-        osc.start(t0);
-        osc.stop(t0 + dur + 0.1);
+        osc.connect(filter); filter.connect(g); g.connect(musicGain);
+        osc.start(t0); osc.stop(t0 + dur + 0.1);
     }
 
-    function scheduleMusic() {
-        if (!audioCtx || !musicPlaying) return;
-
+    function scheduleAmbient() {
+        if (!audioCtx || !musicPlaying || customActive) return;
         const now       = audioCtx.currentTime;
         const lookahead = now + 6;
         let t = musicStart;
-
         while (t < lookahead) {
             const idx   = Math.round((t - musicStart) / CHORD_DUR) % CHORDS.length;
             const chord = CHORDS[idx];
@@ -54995,11 +55025,62 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         musicStart = t;
     }
 
-    function startMusic() {
+    // ============================================================
+    // ВОСПРОИЗВЕДЕНИЕ КАСТОМНОЙ МУЗЫКИ
+    // ============================================================
+    async function startCustomMusic() {
+        const record = await loadMusicBlob();
+        if (!record || !record.blob) {
+            showToast('⚠️ Своя музыка не загружена');
+            return false;
+        }
+
+        if (customBlobUrl) {
+            try { URL.revokeObjectURL(customBlobUrl); } catch (e) {}
+        }
+        customBlobUrl = URL.createObjectURL(record.blob);
+
+        if (customAudio) {
+            customAudio.pause();
+            customAudio = null;
+        }
+
+        customAudio = new Audio(customBlobUrl);
+        customAudio.loop   = true;
+        customAudio.volume = musicVolume;
+
+        try {
+            await customAudio.play();
+            return true;
+        } catch (e) {
+            console.warn('customAudio.play:', e);
+            return false;
+        }
+    }
+
+    function stopCustomMusic() {
+        if (customAudio) {
+            try { customAudio.pause(); } catch (e) {}
+            customAudio.currentTime = 0;
+            customAudio = null;
+        }
+    }
+
+    // ============================================================
+    // УПРАВЛЕНИЕ МУЗЫКОЙ
+    // ============================================================
+    async function startMusic() {
         if (musicPlaying) return;
+
+        if (customActive) {
+            const ok = await startCustomMusic();
+            if (ok) musicPlaying = true;
+            return;
+        }
+
+        // Процедурная
         if (!initAudio()) return;
         resumeAudio();
-
         musicPlaying = true;
         musicStart   = audioCtx.currentTime + 0.15;
 
@@ -55007,8 +55088,8 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
         musicGain.gain.linearRampToValueAtTime(musicVolume, audioCtx.currentTime + 2.2);
 
-        scheduleMusic();
-        musicTimer = setInterval(scheduleMusic, 3500);
+        scheduleAmbient();
+        musicTimer = setInterval(scheduleAmbient, 3500);
     }
 
     function stopMusic() {
@@ -55019,6 +55100,8 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             clearInterval(musicTimer);
             musicTimer = null;
         }
+        stopCustomMusic();
+
         if (musicGain && audioCtx) {
             musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
             musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
@@ -55054,19 +55137,19 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     };
 
     window.Music = {
-        start() {
+        async start() {
             musicEnabled = true;
             localStorage.setItem(K.MUSIC, '1');
-            startMusic();
+            await startMusic();
         },
         stop() {
             musicEnabled = false;
             localStorage.setItem(K.MUSIC, '0');
             stopMusic();
         },
-        toggle() {
+        async toggle() {
             if (musicPlaying) this.stop();
-            else this.start();
+            else await this.start();
             return musicPlaying;
         },
         isPlaying() { return musicPlaying; },
@@ -55074,19 +55157,93 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         setVolume(v) {
             musicVolume = Math.max(0, Math.min(1, v));
             localStorage.setItem(K.MUS_V, String(musicVolume));
-            if (musicGain && musicPlaying) {
+            if (customAudio) customAudio.volume = musicVolume;
+            if (musicGain && musicPlaying && !customActive) {
                 musicGain.gain.linearRampToValueAtTime(musicVolume, audioCtx.currentTime + 0.4);
             }
         },
         getVolume() { return musicVolume; },
+
+        // === Кастомная музыка ===
+        async uploadCustomMusic(file) {
+            if (!file) throw new Error('Файл не выбран');
+            if (file.size > 30 * 1024 * 1024) {
+                throw new Error('Максимум 30 МБ');
+            }
+
+            // Проверяем, что браузер может проиграть этот файл
+            const testUrl = URL.createObjectURL(file);
+            const ok = await new Promise((resolve) => {
+                const testAudio = new Audio();
+                testAudio.preload = 'metadata';
+                testAudio.onloadedmetadata = () => resolve(true);
+                testAudio.onerror = () => resolve(false);
+                testAudio.src = testUrl;
+                setTimeout(() => resolve(false), 4000);
+            });
+            URL.revokeObjectURL(testUrl);
+
+            if (!ok) {
+                throw new Error('Не удалось прочитать аудио. Проверь формат (mp3, ogg, m4a, wav)');
+            }
+
+            await saveMusicBlob(file, {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+            });
+
+            customActive = true;
+            localStorage.setItem(K.CUSTOM, '1');
+
+            // Если музыка играла — перезапускаем на новой
+            if (musicPlaying) {
+                stopMusic();
+                await startMusic();
+            }
+
+            return true;
+        },
+
+        async deleteCustomMusic() {
+            await deleteMusicBlob();
+            customActive = false;
+            localStorage.setItem(K.CUSTOM, '0');
+            stopCustomMusic();
+
+            // Если музыка была включена — перезапускаем процедурную
+            if (musicPlaying) {
+                stopMusic();
+                await startMusic();
+            }
+        },
+
+        async hasCustomMusic() {
+            const rec = await loadMusicBlob();
+            return !!rec;
+        },
+
+        async getCustomMusicInfo() {
+            const rec = await loadMusicBlob();
+            if (!rec) return null;
+            return {
+                name: rec.meta?.name || 'Моя музыка',
+                size: rec.meta?.size || 0,
+                savedAt: rec.savedAt,
+            };
+        },
+
+        isCustomActive() { return customActive; },
     };
 
     // ============================================================
     // АВТОЗАПУСК
     // ============================================================
     function bindFirstGesture() {
-        const startOnGesture = () => {
-            if (musicEnabled && !musicPlaying) startMusic();
+        const startOnGesture = async () => {
+            if (musicEnabled && !musicPlaying) {
+                await startMusic();
+            }
             document.removeEventListener('pointerdown', startOnGesture);
             document.removeEventListener('keydown', startOnGesture);
             document.removeEventListener('touchstart', startOnGesture);
@@ -55096,17 +55253,14 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         document.addEventListener('touchstart', startOnGesture, { passive: true });
     }
 
-    // Resume AudioContext при любом клике
     document.addEventListener('pointerdown', () => {
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     }, { passive: true });
 
     // ============================================================
-    // АВТОХУКИ
+    // АВТОХУКИ (звуки на события)
     // ============================================================
     function installAutoHooks() {
-
-        // ---- 1. Делегированный клик ----
         document.addEventListener('click', (e) => {
             const target = e.target.closest(
                 'button, [onclick], [role="button"], .nav-item, ' +
@@ -55119,92 +55273,36 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             if (!target) return;
             if (target.disabled) return;
 
-            const text = (target.textContent || '').toLowerCase();
-
-            // Кнопки закрытия / отмены
-            if (
-                text.includes('назад') || text.includes('закрыть') ||
-                text.includes('отмена') || text.includes('отменить') ||
-                text.includes('❌') || text.trim() === '✕' ||
-                target.querySelector('.cy-icon') && target.textContent.trim() === ''
-            ) {
-                // noop: навигацию обрабатываем отдельно
-            }
-
-            // ---- Навигация ----
-            if (target.classList.contains('nav-item')) {
-                SFX.play('nav');
-                return;
-            }
-
-            // ---- Меню-дровер ----
-            if (target.classList.contains('menu-drawer-btn')) {
-                SFX.play('click');
-                return;
-            }
-
-            // ---- Тема ----
+            if (target.classList.contains('nav-item')) { SFX.play('nav'); return; }
+            if (target.classList.contains('menu-drawer-btn')) { SFX.play('click'); return; }
             if (target.classList.contains('theme-option') ||
-                target.classList.contains('onboard-theme')) {
-                SFX.play('click');
-                return;
+                target.classList.contains('onboard-theme')) { SFX.play('click'); return; }
+            if (target.classList.contains('mode-card')) { SFX.play('tap'); return; }
+            if (target.classList.contains('shop-btn') && target.classList.contains('buy')) return;
+            if (target.classList.contains('sheet-cancel') ||
+                (target.classList.contains('profile-action-btn') && target.classList.contains('cancel'))) {
+                SFX.play('close'); return;
             }
-
-            // ---- Режим ----
-            if (target.classList.contains('mode-card') ||
-                target.classList.contains('mode-selector')) {
-                SFX.play('tap');
-                return;
+            if (target.classList.contains('profile-action-btn') &&
+                (target.classList.contains('save') || target.classList.contains('edit'))) {
+                SFX.play('click'); return;
             }
+            if (target.classList.contains('winner-btn')) { SFX.play('tap'); return; }
 
-            // ---- Покупка ----
-            if (target.classList.contains('shop-btn') && target.classList.contains('buy')) {
-                // звук проиграет при успехе через showToast
-                return;
-            }
-
-            // ---- Кнопки закрытия/назад ----
-            if (
-                target.classList.contains('sheet-cancel') ||
-                target.classList.contains('profile-action-btn') &&
-                (target.classList.contains('cancel'))
-            ) {
-                SFX.play('close');
-                return;
-            }
-
-            // ---- Кнопки сохранения / отправки ----
-            if (
-                target.classList.contains('profile-action-btn') &&
-                (target.classList.contains('save') || target.classList.contains('edit'))
-            ) {
-                SFX.play('click');
-                return;
-            }
-
-            // ---- Игровые кнопки ----
-            if (target.classList.contains('winner-btn')) {
-                SFX.play('tap');
-                return;
-            }
-
-            // Дефолтный tap
             SFX.play('tap');
         }, { passive: true });
 
-        // ---- 2. Перехват showToast ----
         if (typeof window.showToast === 'function') {
             const origToast = window.showToast;
             window.showToast = function(msg, type) {
                 const m = String(msg || '');
-                // Не играем на каждый пустяк — только на важное
                 if (/✅|готово|сохранено|успешно|куплено|принято|добавлено|надето|забрано|выполнен/i.test(m)) {
                     SFX.play('success');
                 } else if (/❌|🚫|ошибка|не удалось|запрещено|заполнен|забанен|нельзя/i.test(m)) {
                     SFX.play('error');
                 } else if (/⚠️|⏰|внимание|подожди|ещё рано|уже/i.test(m)) {
                     SFX.play('warning');
-                } else if ((/💰|монет|казна/i.test(m)) || (/[+]\d+\s*монет/i.test(m))) {
+                } else if (/💰|монет|казна/i.test(m) || /[+]\d+\s*монет/i.test(m)) {
                     SFX.play('coin');
                 } else if (/🏆|победа|выиграл|win/i.test(m)) {
                     SFX.play('victory');
@@ -55223,43 +55321,33 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             };
         }
 
-        // ---- 3. Перехват sendMessage ----
         if (typeof window.sendMessage === 'function') {
             const origSend = window.sendMessage;
             window.sendMessage = function() {
                 const input = document.getElementById('chatInput');
-                if (input && input.value.trim()) {
-                    SFX.play('send');
-                }
+                if (input && input.value.trim()) SFX.play('send');
                 return origSend.apply(this, arguments);
             };
         }
 
-        // ---- 4. Перехват sendRoomMessage ----
         if (typeof window.sendRoomMessage === 'function') {
             const origSendRoom = window.sendRoomMessage;
             window.sendRoomMessage = function() {
                 const input = document.getElementById('roomChatInput');
-                if (input && input.value.trim()) {
-                    SFX.play('send');
-                }
+                if (input && input.value.trim()) SFX.play('send');
                 return origSendRoom.apply(this, arguments);
             };
         }
 
-        // ---- 5. Перехват appendMessage (входящие) ----
         if (typeof window.appendMessage === 'function') {
             const origAppend = window.appendMessage;
             window.appendMessage = async function(m) {
                 const me = currentUser?.telegram_id;
-                if (m && m.sender_id !== me) {
-                    SFX.play('message');
-                }
+                if (m && m.sender_id !== me) SFX.play('message');
                 return origAppend.apply(this, arguments);
             };
         }
 
-        // ---- 6. Перехват finishMatch ----
         if (typeof window.finishMatch === 'function') {
             const origFinish = window.finishMatch;
             window.finishMatch = async function(matchId, result) {
@@ -55279,43 +55367,16 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             };
         }
 
-        // ---- 7. Перехват buyShopItem ----
-        if (typeof window.buyShopItem === 'function') {
-            const origBuy = window.buyShopItem;
-            window.buyShopItem = async function(itemId, price) {
-                SFX.play('tap');
-                return origBuy.apply(this, arguments);
-            };
-        }
+        ['buyShopItem', 'equipShopItem', 'claimQuestReward', 'openCase'].forEach(fnName => {
+            if (typeof window[fnName] === 'function') {
+                const orig = window[fnName];
+                window[fnName] = async function() {
+                    SFX.play('tap');
+                    return orig.apply(this, arguments);
+                };
+            }
+        });
 
-        // ---- 8. Перехват equipShopItem ----
-        if (typeof window.equipShopItem === 'function') {
-            const origEquip = window.equipShopItem;
-            window.equipShopItem = async function(itemId) {
-                SFX.play('click');
-                return origEquip.apply(this, arguments);
-            };
-        }
-
-        // ---- 9. Перехват claimQuestReward ----
-        if (typeof window.claimQuestReward === 'function') {
-            const origClaim = window.claimQuestReward;
-            window.claimQuestReward = async function() {
-                SFX.play('tap');
-                return origClaim.apply(this, arguments);
-            };
-        }
-
-        // ---- 10. Перехват openCase ----
-        if (typeof window.openCase === 'function') {
-            const origOpenCase = window.openCase;
-            window.openCase = async function() {
-                SFX.play('click');
-                return origOpenCase.apply(this, arguments);
-            };
-        }
-
-        // ---- 11. Перехват showCaseOpening ----
         if (typeof window.showCaseOpening === 'function') {
             const origShowCase = window.showCaseOpening;
             window.showCaseOpening = function() {
@@ -55324,12 +55385,9 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             };
         }
 
-        // ---- 12. Перехват открытия/закрытия шитов ----
-        const origOpenSheets = ['openShop', 'openSeason', 'openCasesScreen',
-            'openQuestsScreen', 'openNotificationsSheet', 'openSettingsSheet',
-            'openPrivacySheet', 'openThemeSheet', 'openFaqSheet',
-            'openCoverPickerSheet'];
-        origOpenSheets.forEach(fnName => {
+        ['openShop', 'openSeason', 'openCasesScreen', 'openQuestsScreen',
+         'openNotificationsSheet', 'openSettingsSheet', 'openPrivacySheet',
+         'openThemeSheet', 'openFaqSheet', 'openCoverPickerSheet'].forEach(fnName => {
             if (typeof window[fnName] === 'function') {
                 const orig = window[fnName];
                 window[fnName] = function() {
@@ -55339,7 +55397,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             }
         });
 
-        // ---- 13. Перехват match found ----
         if (typeof window.onMatchFound === 'function') {
             const origMF = window.onMatchFound;
             window.onMatchFound = function() {
@@ -55348,7 +55405,6 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             };
         }
 
-        // ---- 14. Ежедневная награда ----
         if (typeof window.showDailyRewardModal === 'function') {
             const origDR = window.showDailyRewardModal;
             window.showDailyRewardModal = function(streak, reward) {
@@ -55356,47 +55412,20 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 return origDR.apply(this, arguments);
             };
         }
-
-        // ---- 15. Достижения — победа в матче уже ловится, но подстрахуемся ----
-        // (нет прямого хука, но тост поймает)
-
-        // ---- 16. Уведомление в реальном времени ----
-        // (уже покрыто subscribeNotificationsRealtime, но добавим звук при бейдже)
-        const origUpdateNotifBadge = window.updateNotifBadge;
-        if (typeof origUpdateNotifBadge === 'function') {
-            let lastCount = 0;
-            window.updateNotifBadge = async function() {
-                const result = await origUpdateNotifBadge.apply(this, arguments);
-                try {
-                    const badge = document.getElementById('notifBadge');
-                    if (badge && badge.style.display !== 'none') {
-                        const count = parseInt(badge.textContent) || 0;
-                        if (count > lastCount && lastCount > 0) {
-                            SFX.play('notification');
-                        }
-                        lastCount = count;
-                    }
-                } catch (e) {}
-                return result;
-            };
-        }
     }
 
     // ============================================================
-    // ДОБАВЛЯЕМ ТУМБЛЕРЫ В ШИТ "НАСТРОЙКИ"
+    // НАСТРОЙКИ В ШИТЕ
     // ============================================================
-    function injectSettingsToggles() {
+    async function injectSettingsToggles() {
         const sheet = document.getElementById('settingsSheet');
         if (!sheet) return false;
-
-        // Уже вставили?
         if (document.getElementById('sfxToggleBtn')) return true;
 
-        // Находим кнопку "Тема оформления" — вставим перед ней
         const themeBtn = sheet.querySelector('[onclick*="openThemeSheet"]');
         if (!themeBtn || !themeBtn.parentNode) return false;
 
-        // ---- ТУМБЛЕР SFX ----
+        // --- ТУМБЛЕР ЗВУКА ---
         const sfxBtn = document.createElement('button');
         sfxBtn.className = 'sheet-option';
         sfxBtn.id = 'sfxToggleBtn';
@@ -55412,14 +55441,11 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             SFX.enable(on);
             const lbl = document.getElementById('sfxStateLabel');
             if (lbl) lbl.textContent = on ? 'ВКЛ' : 'ВЫКЛ';
-            if (on) {
-                // Пробный звук
-                setTimeout(() => SFX.play('success'), 60);
-            }
+            if (on) setTimeout(() => SFX.play('success'), 60);
             if (typeof haptic === 'function') haptic('light');
         };
 
-        // ---- ТУМБЛЕР MUSIC ----
+        // --- ТУМБЛЕР МУЗЫКИ ---
         const musicBtn = document.createElement('button');
         musicBtn.className = 'sheet-option';
         musicBtn.id = 'musicToggleBtn';
@@ -55430,9 +55456,9 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 ${Music.isEnabled() ? 'ВКЛ' : 'ВЫКЛ'}
             </span>
         `;
-        musicBtn.onclick = () => {
+        musicBtn.onclick = async () => {
             const on = !Music.isEnabled();
-            if (on) Music.start();
+            if (on) await Music.start();
             else Music.stop();
             const lbl = document.getElementById('musicStateLabel');
             if (lbl) lbl.textContent = on ? 'ВКЛ' : 'ВЫКЛ';
@@ -55440,25 +55466,182 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             if (typeof haptic === 'function') haptic('light');
         };
 
-        // Вставляем оба перед кнопкой темы
+        // --- ТУМБЛЕР СВОЕЙ МУЗЫКИ ---
+        const customBtn = document.createElement('button');
+        customBtn.className = 'sheet-option';
+        customBtn.id = 'customMusicBtn';
+        customBtn.innerHTML = `
+            <span style="font-size: 18px;">📁</span>
+            Своя музыка
+            <span id="customMusicStateLabel" style="margin-left:auto;font-size:12px;color:var(--hint);font-weight:700;">
+                ...
+            </span>
+        `;
+        customBtn.onclick = () => openCustomMusicSheet();
+        updateCustomMusicLabel();
+
+        // Вставляем все перед "Тема оформления"
         themeBtn.parentNode.insertBefore(sfxBtn, themeBtn);
         themeBtn.parentNode.insertBefore(musicBtn, themeBtn);
+        themeBtn.parentNode.insertBefore(customBtn, themeBtn);
 
-        console.log('🔊 Настройки звука добавлены в шит');
+        console.log('🔊 Настройки звука добавлены');
         return true;
     }
 
+    async function updateCustomMusicLabel() {
+        const lbl = document.getElementById('customMusicStateLabel');
+        if (!lbl) return;
+        const info = await Music.getCustomMusicInfo();
+        if (info) {
+            lbl.textContent = info.name.length > 14
+                ? info.name.slice(0, 12) + '…'
+                : info.name;
+            lbl.style.color = 'var(--emerald)';
+        } else {
+            lbl.textContent = 'не задана';
+            lbl.style.color = 'var(--hint)';
+        }
+    }
+
     // ============================================================
-    // ЗАПУСК
+    // ШИТ ЗАГРУЗКИ МУЗЫКИ
+    // ============================================================
+    async function openCustomMusicSheet() {
+        document.getElementById('customMusicOverlay')?.remove();
+        document.getElementById('customMusicSheet')?.remove();
+
+        const info = await Music.getCustomMusicInfo();
+        const hasCustom = !!info;
+        const sizeMB = hasCustom ? (info.size / 1024 / 1024).toFixed(1) : 0;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'sheet-overlay active';
+        overlay.id = 'customMusicOverlay';
+        overlay.onclick = (e) => { if (e.target === overlay) closeCustomMusicSheet(); };
+
+        const sheet = document.createElement('div');
+        sheet.className = 'sheet active';
+        sheet.id = 'customMusicSheet';
+        sheet.style.zIndex = '10000';
+        sheet.style.maxHeight = '88vh';
+        sheet.style.overflowY = 'auto';
+
+        sheet.innerHTML = `
+            <div class="sheet-title">🎵 Своя музыка</div>
+
+            <div style="font-size: 12px; color: var(--hint); text-align: center; margin-bottom: 16px; line-height: 1.5;">
+                Загрузи свой трек — он будет играть в фоне по кругу.<br>
+                Форматы: <b>mp3, ogg, m4a, wav</b> · до <b>30 МБ</b>
+            </div>
+
+            ${hasCustom ? `
+                <div style="padding: 14px; background: rgba(var(--emerald-rgb), 0.06); border: 1px solid var(--border-strong); border-radius: 12px; margin-bottom: 14px;">
+                    <div style="font-size: 10px; color: var(--hint); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 800; margin-bottom: 6px;">
+                        Текущий трек
+                    </div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;">
+                        🎵 ${escapeHtml(info.name)}
+                    </div>
+                    <div style="font-size: 11px; color: var(--hint); font-family: var(--font-mono);">
+                        ${sizeMB} МБ · загружено ${new Date(info.savedAt).toLocaleDateString('ru-RU')}
+                    </div>
+                </div>
+            ` : `
+                <div style="padding: 20px; background: rgba(0,0,0,0.3); border: 1px dashed var(--border); border-radius: 12px; margin-bottom: 14px; text-align: center;">
+                    <div style="font-size: 40px; margin-bottom: 8px; opacity: 0.5;">🎵</div>
+                    <div style="font-size: 12px; color: var(--hint);">Своя музыка ещё не загружена</div>
+                </div>
+            `}
+
+            <input type="file" id="customMusicFile" accept="audio/*" style="display: none;">
+
+            <button class="sheet-option" id="uploadMusicBtn">
+                <span style="font-size: 18px;">📤</span>
+                ${hasCustom ? 'Заменить трек' : 'Загрузить трек'}
+            </button>
+
+            ${hasCustom ? `
+                <button class="sheet-option danger" id="deleteMusicBtn">
+                    <span style="font-size: 18px;">🗑️</span>
+                    Удалить свою музыку
+                </button>
+            ` : ''}
+
+            <div style="margin-top: 16px; padding: 12px; background: rgba(var(--emerald-rgb), 0.04); border-left: 3px solid var(--emerald); border-radius: 8px; font-size: 11.5px; color: var(--hint); line-height: 1.5;">
+                💡 Когда своя музыка загружена — играет она, а не встроенный эмбиент.
+                Чтобы вернуть эмбиент — удали свой трек.
+            </div>
+
+            <button class="sheet-cancel" onclick="document.getElementById('customMusicOverlay')?.remove(); document.getElementById('customMusicSheet')?.remove();">
+                ЗАКРЫТЬ
+            </button>
+        `;
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(sheet);
+
+        // === ОБРАБОТЧИКИ ===
+        const fileInput = document.getElementById('customMusicFile');
+        const uploadBtn = document.getElementById('uploadMusicBtn');
+        const deleteBtn = document.getElementById('deleteMusicBtn');
+
+        uploadBtn.onclick = () => fileInput.click();
+
+        fileInput.onchange = async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+
+            const origText = uploadBtn.innerHTML;
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span style="font-size: 18px;">⏳</span> Загрузка...';
+
+            try {
+                await Music.uploadCustomMusic(file);
+                if (typeof showToast === 'function') showToast('✅ Музыка загружена');
+                if (typeof haptic === 'function') haptic('medium');
+
+                closeCustomMusicSheet();
+                await updateCustomMusicLabel();
+                await injectSettingsToggles();
+            } catch (err) {
+                console.error('uploadCustomMusic:', err);
+                if (typeof showToast === 'function') showToast('❌ ' + err.message);
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = origText;
+            }
+        };
+
+        if (deleteBtn) {
+            deleteBtn.onclick = async () => {
+                if (!confirm('Удалить свою музыку? Будет играть встроенная.')) return;
+                try {
+                    await Music.deleteCustomMusic();
+                    if (typeof showToast === 'function') showToast('🗑️ Удалено');
+                    closeCustomMusicSheet();
+                    await updateCustomMusicLabel();
+                    await injectSettingsToggles();
+                } catch (e) {
+                    if (typeof showToast === 'function') showToast('❌ ' + e.message);
+                }
+            };
+        }
+    }
+
+    function closeCustomMusicSheet() {
+        document.getElementById('customMusicOverlay')?.remove();
+        document.getElementById('customMusicSheet')?.remove();
+    }
+
+    // ============================================================
+    // BOOT
     // ============================================================
     function boot() {
-        // Установить автохуки
         installAutoHooks();
-
-        // Автозапуск музыки (если была включена)
         bindFirstGesture();
 
-        // Вставить тумблеры в настройки (с ретраями)
+        // Вставляем настройки с ретраями
         let attempts = 0;
         const tryInject = setInterval(() => {
             attempts++;
@@ -55467,7 +55650,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             }
         }, 200);
 
-        // Пробуем при первом открытии настроек
+        // И при каждом открытии настроек
         document.addEventListener('click', (e) => {
             const target = e.target.closest('[onclick*="openSettingsSheet"], [onclick*="settings"]');
             if (target) {
@@ -55475,8 +55658,477 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             }
         }, true);
 
-        console.log('🔊 Sound System готов');
+        console.log('🔊 Sound System v2 готов');
     }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+})();
+</script>
+    <!-- ============================================================ -->
+<!-- 🎵 YANDEX MUSIC — встроенный плеер плейлиста                -->
+<!-- ============================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    const SETTINGS_KEY = 'music_playlist_url';
+    let cachedPlaylistUrl = null;
+    let _playlistChannel = null;
+
+    // ============================================================
+    // ЗАГРУЗКА URL ИЗ SUPABASE
+    // ============================================================
+    async function loadPlaylistUrl() {
+        try {
+            const { data, error } = await sb
+                .from('app_settings')
+                .select('value')
+                .eq('key', SETTINGS_KEY)
+                .maybeSingle();
+
+            if (error) throw error;
+            cachedPlaylistUrl = data?.value || '';
+            return cachedPlaylistUrl;
+        } catch (e) {
+            console.warn('loadPlaylistUrl:', e);
+            return '';
+        }
+    }
+
+    // ============================================================
+    // СОХРАНЕНИЕ URL (только админ)
+    // ============================================================
+    async function savePlaylistUrl(url) {
+        if (typeof isCurrentUserAdmin === 'function' && !isCurrentUserAdmin()) {
+            throw new Error('Только админ может менять плейлист');
+        }
+
+        // Пустая — значит удалить
+        const cleanUrl = (url || '').trim();
+
+        if (cleanUrl && !cleanUrl.includes('music.yandex.ru/iframe')) {
+            throw new Error('Ссылка должна быть вида: https://music.yandex.ru/iframe/playlist/username/ID');
+        }
+
+        // Пробуем обновить, если не вышло — вставить
+        const { data: existing } = await sb
+            .from('app_settings')
+            .select('key')
+            .eq('key', SETTINGS_KEY)
+            .maybeSingle();
+
+        if (existing) {
+            const { error } = await sb.from('app_settings')
+                .update({
+                    value: cleanUrl,
+                    updated_at: new Date().toISOString(),
+                    updated_by: currentUser.telegram_id
+                })
+                .eq('key', SETTINGS_KEY);
+            if (error) throw error;
+        } else {
+            const { error } = await sb.from('app_settings')
+                .insert({
+                    key: SETTINGS_KEY,
+                    value: cleanUrl,
+                    updated_by: currentUser.telegram_id
+                });
+            if (error) throw error;
+        }
+
+        cachedPlaylistUrl = cleanUrl;
+        return true;
+    }
+
+    // ============================================================
+    // РЕНДЕР ПЛЕЕРА
+    // ============================================================
+    async function renderPlaylistPlayer(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const url = await loadPlaylistUrl();
+        const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
+
+        if (!url) {
+            container.innerHTML = `
+                <div style="
+                    padding: 40px 20px;
+                    text-align: center;
+                    background: linear-gradient(160deg, rgba(var(--emerald-rgb),0.06), rgba(0,0,0,0.4));
+                    border: 1px dashed var(--border-strong);
+                    border-radius: 16px;
+                ">
+                    <div style="font-size: 56px; margin-bottom: 12px; opacity: 0.5;">🎵</div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 6px;">
+                        Плейлист не настроен
+                    </div>
+                    <div style="font-size: 12px; color: var(--hint); line-height: 1.5; margin-bottom: 14px;">
+                        ${isAdmin
+                            ? 'Ты админ — добавь ссылку на плейлист Яндекс.Музыки'
+                            : 'Администратор ещё не добавил плейлист. Заходи позже!'}
+                    </div>
+                    ${isAdmin ? `
+                        <button class="profile-action-btn save" onclick="openYandexMusicAdminSheet()">
+                            ⚙️ Настроить плейлист
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="
+                border-radius: 16px;
+                overflow: hidden;
+                border: 1px solid var(--border-strong);
+                box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+                background: #000;
+            ">
+                <iframe
+                    frameborder="0"
+                    style="display:block;width:100%;height:450px;"
+                    width="100%"
+                    height="450"
+                    src="${escapeHtml(url)}?theme=dark"
+                    allow="autoplay *; encrypted-media *; clipboard-write"
+                    loading="lazy"
+                ></iframe>
+            </div>
+
+            ${isAdmin ? `
+                <button class="profile-action-btn cancel"
+                        style="margin-top: 12px;"
+                        onclick="openYandexMusicAdminSheet()">
+                    ⚙️ Изменить плейлист (админ)
+                </button>
+            ` : ''}
+        `;
+
+        if (typeof haptic === 'function') haptic('light');
+    }
+
+    // ============================================================
+    // СТРАНИЦА "МУЗЫКА"
+    // ============================================================
+    async function openMusicPlaylistScreen() {
+        if (!currentUser) {
+            if (typeof showToast === 'function') showToast('⚠️ Профиль ещё не загружен');
+            return;
+        }
+
+        switchPage('music');
+
+        const container = document.getElementById('musicContent');
+        if (!container) return;
+
+        const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
+
+        container.innerHTML = `
+            <div class="play-hero-compact">
+                <div class="phc-icon">
+                    <svg class="cy-icon cy-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                </div>
+                <div class="phc-text">
+                    <div class="phc-title">Музыка</div>
+                    <div class="phc-sub">Плейлист от администратора</div>
+                </div>
+                ${isAdmin ? `
+                    <button class="phc-icon-btn" onclick="openYandexMusicAdminSheet()" title="Настроить" style="width:40px;height:40px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+                        </svg>
+                    </button>
+                ` : ''}
+            </div>
+
+            <div class="section-title" style="margin-top: 16px;">🎧 Плейлист</div>
+            <div id="playlistPlayerContainer">
+                <div class="empty">Загрузка...</div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 14px; background: rgba(var(--emerald-rgb),0.04); border-left: 3px solid var(--emerald); border-radius: 10px; font-size: 12px; color: var(--hint); line-height: 1.5;">
+                💡 <b style="color: var(--text);">Совет:</b> если музыка не начинается сразу — нажми ▶ на плеере. Так работает политика безопасности браузера для всех сайтов.
+            </div>
+        `;
+
+        await renderPlaylistPlayer('playlistPlayerContainer');
+    }
+
+    // ============================================================
+    // АДМИН-ШИТ
+    // ============================================================
+    async function openYandexMusicAdminSheet() {
+        if (typeof isCurrentUserAdmin === 'function' && !isCurrentUserAdmin()) {
+            if (typeof showToast === 'function') showToast('Только админ');
+            return;
+        }
+
+        const currentUrl = await loadPlaylistUrl();
+
+        document.getElementById('ymAdminOverlay')?.remove();
+        document.getElementById('ymAdminSheet')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'sheet-overlay active';
+        overlay.id = 'ymAdminOverlay';
+        overlay.onclick = (e) => { if (e.target === overlay) closeYmAdminSheet(); };
+
+        const sheet = document.createElement('div');
+        sheet.className = 'sheet active';
+        sheet.id = 'ymAdminSheet';
+        sheet.style.zIndex = '10000';
+        sheet.style.maxHeight = '88vh';
+        sheet.style.overflowY = 'auto';
+
+        sheet.innerHTML = `
+            <div class="sheet-title">🎵 Плейлист Яндекс.Музыки</div>
+
+            <div style="font-size: 12px; color: var(--hint); line-height: 1.7; margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                <b style="color: var(--text);">Как получить ссылку:</b><br>
+                1️⃣ Открой плейлист в Яндекс.Музыке<br>
+                2️⃣ ПКМ → <b>Поделиться</b> → <b>HTML-код</b><br>
+                3️⃣ Скопируй строку из <code>src="..."</code><br>
+                4️⃣ Вставь её сюда
+                <br><br>
+                <b style="color: var(--emerald);">Пример правильной ссылки:</b><br>
+                <code style="font-size:10px;word-break:break-all;">https://music.yandex.ru/iframe/playlist/username/1001</code>
+            </div>
+
+            <label class="field-label">Ссылка на iframe плейлиста</label>
+            <input type="text"
+                   class="field-input"
+                   id="ymPlaylistInput"
+                   placeholder="https://music.yandex.ru/iframe/playlist/username/12345"
+                   value="${escapeHtml(currentUrl)}"
+                   style="margin-bottom: 12px; font-size: 12px; font-family: 'Courier New', monospace;">
+
+            <button class="profile-action-btn save"
+                    id="ymSaveBtn"
+                    onclick="saveYmPlaylist()">
+                ✅ СОХРАНИТЬ
+            </button>
+
+            ${currentUrl ? `
+                <button class="profile-action-btn cancel"
+                        style="margin-top: 8px; background: rgba(255,84,112,0.1); color: var(--red); border: 1px solid rgba(255,84,112,0.3);"
+                        onclick="clearYmPlaylist()">
+                    🗑️ Удалить плейлист
+                </button>
+            ` : ''}
+
+            <button class="sheet-cancel" onclick="closeYmAdminSheet()">ОТМЕНА</button>
+        `;
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(sheet);
+        if (typeof haptic === 'function') haptic('medium');
+    }
+
+    function closeYmAdminSheet() {
+        document.getElementById('ymAdminOverlay')?.remove();
+        document.getElementById('ymAdminSheet')?.remove();
+    }
+
+    async function saveYmPlaylist() {
+        const input = document.getElementById('ymPlaylistInput');
+        const btn = document.getElementById('ymSaveBtn');
+        if (!input || !btn) return;
+
+        let url = input.value.trim();
+
+        // Если вставили полный HTML — вытащим src
+        if (url.includes('src="')) {
+            const match = url.match(/src="([^"]+)"/);
+            if (match) url = match[1];
+        }
+
+        if (url && !url.includes('music.yandex.ru/iframe')) {
+            if (typeof showToast === 'function') showToast('⚠️ Ссылка должна содержать music.yandex.ru/iframe');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'СОХРАНЕНИЕ...';
+
+        try {
+            await savePlaylistUrl(url);
+            if (typeof showToast === 'function') showToast(url ? '✅ Плейлист сохранён' : '🗑️ Плейлист удалён');
+            if (typeof haptic === 'function') haptic('medium');
+            closeYmAdminSheet();
+
+            if (document.getElementById('playlistPlayerContainer')) {
+                await renderPlaylistPlayer('playlistPlayerContainer');
+            }
+        } catch (e) {
+            console.error('saveYmPlaylist:', e);
+            if (typeof showToast === 'function') showToast('❌ ' + e.message);
+            btn.disabled = false;
+            btn.textContent = '✅ СОХРАНИТЬ';
+        }
+    }
+
+    async function clearYmPlaylist() {
+        if (!confirm('Удалить плейлист? Он пропадёт у всех игроков.')) return;
+        try {
+            await savePlaylistUrl('');
+            if (typeof showToast === 'function') showToast('🗑️ Плейлист удалён');
+            if (typeof haptic === 'function') haptic('medium');
+            closeYmAdminSheet();
+            if (document.getElementById('playlistPlayerContainer')) {
+                await renderPlaylistPlayer('playlistPlayerContainer');
+            }
+        } catch (e) {
+            if (typeof showToast === 'function') showToast('❌ ' + e.message);
+        }
+    }
+
+    // ============================================================
+    // REALTIME — обновление у всех игроков
+    // ============================================================
+    function subscribePlaylistRealtime() {
+        if (_playlistChannel) {
+            try { sb.removeChannel(_playlistChannel); } catch (e) {}
+            _playlistChannel = null;
+        }
+
+        _playlistChannel = sb.channel('playlist_settings_rt')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'app_settings',
+                filter: `key=eq.${SETTINGS_KEY}`
+            }, (payload) => {
+                const newUrl = (payload.new && payload.new.value) || '';
+                cachedPlaylistUrl = newUrl;
+
+                if (document.getElementById('playlistPlayerContainer')) {
+                    renderPlaylistPlayer('playlistPlayerContainer');
+                    if (typeof showToast === 'function') showToast('🎵 Плейлист обновлён');
+                }
+            })
+            .subscribe();
+    }
+
+    // ============================================================
+    // ВНЕДРЕНИЕ КНОПКИ В НАВИГАЦИЮ
+    // ============================================================
+    function injectMusicNavButton() {
+        const nav = document.querySelector('.bottom-nav');
+        if (!nav) return false;
+        if (nav.querySelector('[data-page="music"]')) return true;
+
+        const shopBtn = nav.querySelector('[data-page="shop"]');
+        if (!shopBtn) return false;
+
+        const musicBtn = document.createElement('button');
+        musicBtn.className = 'nav-item';
+        musicBtn.dataset.page = 'music';
+        musicBtn.setAttribute('onclick', 'openMusicPlaylistScreen()');
+        musicBtn.innerHTML = `
+            <span class="nav-icon">
+                <svg class="cy-icon cy-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18V5l12-2v13"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <circle cx="18" cy="16" r="3"/>
+                </svg>
+            </span>
+            <span>Музыка</span>
+        `;
+        shopBtn.parentNode.insertBefore(musicBtn, shopBtn.nextSibling);
+        return true;
+    }
+
+    function injectMusicMenuButton() {
+        const menuList = document.querySelector('.menu-drawer-list');
+        if (!menuList) return;
+        if (menuList.querySelector('[data-menu="music"]')) return;
+
+        const shopMenuBtn = menuList.querySelector('[data-menu="shop"]');
+        if (!shopMenuBtn) return;
+
+        const musicMenuBtn = document.createElement('button');
+        musicMenuBtn.className = 'menu-drawer-btn';
+        musicMenuBtn.dataset.menu = 'music';
+        musicMenuBtn.setAttribute('onclick', "closeMenuDrawer(); setTimeout(() => openMusicPlaylistScreen(), 260);");
+        musicMenuBtn.innerHTML = `
+            <span class="menu-drawer-icon">
+                <svg class="cy-icon cy-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18V5l12-2v13"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <circle cx="18" cy="16" r="3"/>
+                </svg>
+            </span>
+            Музыка
+        `;
+        shopMenuBtn.parentNode.insertBefore(musicMenuBtn, shopMenuBtn.nextSibling);
+    }
+
+    // ============================================================
+    // ДОБАВЛЕНИЕ СТРАНИЦЫ page-music
+    // ============================================================
+    function injectMusicPage() {
+        if (document.getElementById('page-music')) return;
+
+        const musicPage = document.createElement('div');
+        musicPage.className = 'container page';
+        musicPage.id = 'page-music';
+        musicPage.innerHTML = `<div id="musicContent"></div>`;
+
+        const dashboardPage = document.getElementById('page-dashboard');
+        if (dashboardPage && dashboardPage.parentNode) {
+            dashboardPage.parentNode.insertBefore(musicPage, dashboardPage.nextSibling);
+        }
+    }
+
+    // ============================================================
+    // BOOT
+    // ============================================================
+    function boot() {
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            injectMusicNavButton();
+            injectMusicMenuButton();
+            injectMusicPage();
+            if (attempts > 60) clearInterval(interval);
+        }, 300);
+
+        // Также при каждом клике по меню/навигации — на всякий случай
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.menu-drawer-btn, .nav-item')) {
+                setTimeout(() => {
+                    injectMusicNavButton();
+                    injectMusicMenuButton();
+                }, 100);
+            }
+        }, true);
+
+        // Подписка на обновления
+        if (typeof sb !== 'undefined' && sb) {
+            subscribePlaylistRealtime();
+        }
+
+        console.log('🎵 Yandex Music Player готов');
+    }
+
+    // Экспорт в window
+    window.openMusicPlaylistScreen = openMusicPlaylistScreen;
+    window.openYandexMusicAdminSheet = openYandexMusicAdminSheet;
+    window.saveYmPlaylist = saveYmPlaylist;
+    window.clearYmPlaylist = clearYmPlaylist;
+    window.closeYmAdminSheet = closeYmAdminSheet;
+    window.renderPlaylistPlayer = renderPlaylistPlayer;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);
