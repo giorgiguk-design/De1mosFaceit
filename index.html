@@ -684,7 +684,14 @@ body::after {
         .chat-list-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-list-preview { font-size: 12px; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 
-        .chat-view { position: fixed; inset: 0; z-index: 400; background: var(--bg); display: none; flex-direction: column; }
+        .chat-view {
+    position: fixed;
+    inset: 0 0 calc(90px + env(safe-area-inset-bottom, 0px)) 0;  /* оставляем место под nav */
+    z-index: 400;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+}
         .chat-view.active { display: flex; }
         .chat-view-header { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(5,8,7,0.9); border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .chat-back-btn { background: none; border: none; color: var(--emerald); font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: inherit; }
@@ -5503,8 +5510,6 @@ body::after {
     flex: 1; height: 1px;
     background: linear-gradient(90deg, var(--border-strong), transparent);
 }
-
-.menu-item .btn-cover-bg { pointer-events: none !important; }
 .mini-stat,
 .stat-card {
     position: relative;
@@ -13035,19 +13040,6 @@ html.lite-mode .list-frame-overlay svg * {
     display: none !important;
 }
 
-    .btn-cover-bg {
-    pointer-events: none !important;
-    z-index: 0 !important;
-}
-
-    .menu-item::after,
-.chat-list-item::after,
-.play-room-card::after,
-.club-member-row::after,
-.leaderboard-item::after {
-    pointer-events: none !important;
-}
-
     /* ============================================================ */
 /* 🔧 УНИВЕРСАЛЬНЫЙ ФИКС КЛИКАБЕЛЬНОСТИ                          */
 /* ============================================================ */
@@ -13066,18 +13058,6 @@ button[disabled] {
 .shop-cat-btn,
 .mini-stat {
     isolation: isolate;
-}
-
-    /* Отключаем клики у неактивных fixed-слоёв */
-.sheet-overlay:not(.active),
-.menu-drawer-overlay:not(.active),
-.chat-view:not(.active),
-.play-screen:not(.active),
-.player-modal:not(.active),
-.msg-menu-overlay:not(.active),
-.voice-widget:not(.active) {
-    pointer-events: none !important;
-    visibility: hidden !important;
 }
 
 /* Оверлеи листов не должны перекрывать, пока скрыты */
@@ -14570,7 +14550,6 @@ html.lite-mode .list-frame-overlay svg * {
         min-width: 78px !important;
         min-height: 78px !important;
         z-index: 3 !important;
-        pointer-events: none !important;
         overflow: visible !important;
     }
     
@@ -14610,7 +14589,6 @@ html.lite-mode .list-frame-overlay svg * {
         min-width: 74px !important;
         min-height: 74px !important;
         z-index: 3 !important;
-        pointer-events: none !important;
         overflow: visible !important;
     }
     
@@ -15582,7 +15560,6 @@ html.lite-mode .list-frame-overlay svg * {
     min-width: 130px !important;
     min-height: 130px !important;
     z-index: 3 !important;
-    pointer-events: none !important;
     overflow: visible !important;
 }
 
@@ -16616,7 +16593,6 @@ html.lite-mode .list-frame-overlay svg * {
     stroke-width: 1.8 !important;
     stroke-linecap: round !important;
     stroke-linejoin: round !important;
-    pointer-events: none !important;
 }
 .phc-icon-btn:active { transform: scale(0.9) !important; }
 .phc-icon-btn:hover {
@@ -16684,7 +16660,6 @@ html.lite-mode .list-frame-overlay svg * {
     min-height: 95px !important;
     max-height: 95px !important;
     z-index: 3 !important;
-    pointer-events: none !important;
     overflow: visible !important;
     display: block !important;
     margin: 0 !important;
@@ -20673,14 +20648,12 @@ svg line,
 svg rect,
 svg polygon,
 svg ellipse {
-    pointer-events: none !important;
 }
 
 /* Дочерние элементы внутри кликабельных родителей — не перехватывают клик */
 [onclick] > *:not([onclick]):not(button):not(a):not(input):not(textarea):not(select),
 button > *:not([onclick]):not(button):not(a),
 a > *:not([onclick]):not(button):not(a) {
-    pointer-events: none !important;
 }
 
 /* Все интерактивные элементы остаются кликабельными */
@@ -20729,7 +20702,6 @@ button [onclick] {
 .club-logo-edit,
 .shop-preview,
 .shop-item-info {
-    pointer-events: none !important;
 }
 
 /* Но элемент внутри них с onclick снова работает */
@@ -20770,7 +20742,6 @@ button > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select
 a > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
 [onclick]:not([onclick=""]) > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
 [role="button"] > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label) {
-    pointer-events: none !important;
 }
 
 /* 3. Но если внутри есть кликабельный — он снова работает */
@@ -20804,7 +20775,6 @@ a [onclick] > *,
 [onclick] button > *,
 [onclick] a > *,
 [onclick] [onclick] > * {
-    pointer-events: none !important;
 }
 
 /* 5. SVG ВСЕГДА пропускает клики (кнопка-родитель ловит) */
@@ -20818,7 +20788,6 @@ line,
 polygon,
 ellipse,
 text {
-    pointer-events: none !important;
 }
 
 /* 6. Псевдоэлементы (shimmer, glow, скобки) не перехватывают */
@@ -20874,7 +20843,6 @@ a::after,
 .veto-map-v3::after,
 .veto-map::before,
 .veto-map::after {
-    pointer-events: none !important;
 }
 
 /* 7. Декоративные слои-обёртки — пропускают (клик идёт кнопке-родителю) */
@@ -20952,7 +20920,6 @@ a::after,
 .veto-player-mini-avatar,
 .veto-player-mini-name,
 .veto-player-mini-crown {
-    pointer-events: none !important;
 }
 
 /* 8. Но если у них ЕСТЬ свой onclick — работает */
@@ -20996,6 +20963,121 @@ a::after,
     .nav-item [onclick] {
         pointer-events: auto !important;
     }
+}
+
+    /* ============================================================ */
+/* 🖱️ ФИКС: КЛИКИ ВСЕГДА ПОПАДАЮТ В РОДИТЕЛЯ                    */
+/* ============================================================ */
+
+/* 1) Всё неинтерактивное внутри кликабельных — пропускает клики */
+button > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
+a > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
+[onclick]:not([onclick=""]) > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
+[role="button"] > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label) {
+    pointer-events: none !important;
+}
+
+/* 2) Но вложенные интерактивные — снова кликабельны */
+button button, button a, button [onclick], button input,
+button textarea, button select, button label, button [role="button"],
+a button, a a, a [onclick],
+[onclick] button, [onclick] a, [onclick] [onclick],
+[onclick] input, [onclick] textarea, [onclick] select, [onclick] label,
+[onclick] [role="button"] {
+    pointer-events: auto !important;
+}
+
+/* 3) SVG ВСЕГДА пропускает клик наверх (кнопка-родитель поймает) */
+svg,
+svg *,
+svg use,
+svg path,
+svg circle,
+svg rect,
+svg line,
+svg polygon,
+svg ellipse,
+svg text,
+.cy-icon,
+.cy-icon * {
+    pointer-events: none !important;
+}
+
+/* 4) Псевдоэлементы (glow, shimmer, скобки, сканы) не перехватывают */
+button::before, button::after,
+a::before, a::after,
+[onclick]::before, [onclick]::after,
+[role="button"]::before, [role="button"]::after,
+.menu-item::before, .menu-item::after,
+.leaderboard-item::before, .leaderboard-item::after,
+.chat-list-item::before, .chat-list-item::after,
+.play-room-card::before, .play-room-card::after,
+.stat-card::before, .stat-card::after,
+.shop-item::before, .shop-item::after,
+.mini-stat::before, .mini-stat::after,
+.shop-cat-btn::before, .shop-cat-btn::after,
+.mode-card::before,
+.mode-selector .mode-card::before,
+.veto-map-v2::before, .veto-map-v2::after,
+.veto-map-v3::after,
+.veto-map::before, .veto-map::after,
+.notif-btn::before, .notif-btn::after,
+.avatar::before, .avatar::after {
+    pointer-events: none !important;
+}
+
+/* 5) Декоративные обёртки внутри карточек — тоже пропускают */
+.menu-item-glow,
+.btn-cover-bg,
+.list-item-bg,
+.special-frame-overlay,
+.special-frame-overlay *,
+.list-frame-overlay,
+.list-frame-overlay *,
+.sc-glow, .sc-corner,
+.ech-corner, .ech-svg-wrap,
+.cth-corner, .cth-glow,
+.online-dot, .hri-dot,
+.nav-badge, .notif-badge,
+.pbc-scan, .pbc-corner, .pbc-icon, .pbc-arrow,
+.rv-badge,
+.lb-avatar, .lb-info-compact, .lb-row-top, .lb-row-bottom,
+.lb-nick-inline, .lb-lvl-chip, .lb-dxp-chip,
+.leaderboard-rank, .leaderboard-DXP-value,
+.dev-tag-mini,
+.menu-item-icon, .menu-item-content, .menu-item-title, .menu-item-sub,
+.mode-icon, .mode-info, .mode-name, .mode-capacity,
+.chat-list-avatar, .chat-list-info, .chat-list-name, .chat-list-preview,
+.prc-avatar, .prc-info, .prc-name, .prc-meta, .prc-badge,
+.prc-count, .prc-count-num, .prc-count-label, .prc-bar, .prc-bar-fill,
+.tz-avatar, .tz-info, .tz-name, .tz-stats,
+.ig-mini-avatar, .ig-mini-info, .ig-mini-name, .ig-mini-id,
+.result-mini-avatar, .result-mini-info, .result-mini-name, .result-mini-id,
+.shop-preview, .shop-item-info, .shop-item-name, .shop-item-rarity,
+.club-member-avatar, .club-member-info, .club-member-name, .club-member-sub,
+.notif-avatar, .notif-body, .notif-text, .notif-time,
+.report-player-av, .report-player-info, .report-player-name, .report-player-team,
+.dispute-mini-avatar, .dispute-mini-name,
+.veto-cap-avatar, .veto-cap-name, .veto-cap-bans, .veto-cap-label,
+.clan-inv-preview, .clan-inv-info, .clan-inv-name, .clan-inv-status {
+    pointer-events: none !important;
+}
+
+/* 6) Но если у них ЕСТЬ свой onclick — снова работают */
+[onclick].lb-avatar,
+[onclick].tz-avatar,
+[onclick].chat-list-avatar,
+[onclick].lb-info-compact,
+[onclick].prc-avatar,
+[onclick].tz-info,
+[onclick].ig-mini-avatar,
+[onclick].ig-mini-info,
+[onclick].shop-preview,
+[onclick].clan-inv-preview,
+[onclick].club-member-avatar,
+[onclick].club-member-info,
+[onclick].notif-avatar {
+    pointer-events: auto !important;
 }
     
 </style>
@@ -25336,6 +25418,19 @@ function applyHeaderAvatar(user) {
 }
 
 function switchPage(page) {
+    // 🔥 Если открыт чат — закрываем его при переходе на другую страницу
+    const chatViewEl = document.getElementById('chatView');
+    if (chatViewEl && chatViewEl.classList.contains('active')) {
+        chatViewEl.classList.remove('active');
+        if (chatChannel) {
+            try { sb.removeChannel(chatChannel); } catch (e) {}
+            chatChannel = null;
+        }
+        currentChat = null;
+        if (typeof cancelReply === 'function') cancelReply();
+        if (typeof markChatsAsRead === 'function') markChatsAsRead();
+    }
+
     if (page === 'dashboard') {
         cleanupClubTagCache();
     }
