@@ -510,8 +510,14 @@ body::after {
     transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
     max-height: 85vh; overflow-y: auto;
     scroll-behavior: smooth;
+    pointer-events: none;
+    visibility: hidden;
 }
-        .sheet.active { transform: translateY(0); }
+       .sheet.active {
+    transform: translateY(0);
+    pointer-events: auto;
+    visibility: visible;
+}
         .sheet-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--emerald); margin-bottom: 14px; text-align: center; }
         .sheet-option {
             width: 100%; padding: 15px;
@@ -12312,51 +12318,72 @@ html.lite-mode .has-list-bg {
 
     /* -------- МОДАЛКИ -------- */
 @media (min-width: 1024px) {
-    .player-modal {
-        padding: 80px 20px 40px;
-        align-items: flex-start;
+        .player-modal {
+            padding: 80px 20px 40px;
+            align-items: flex-start;
+        }
+        .player-modal-inner {
+            max-width: 520px;
+            padding: 22px;
+        }
     }
-    .player-modal-inner {
-        max-width: 520px;
-        padding: 22px;
-    }
-}
 
-    /* -------- SHEETS -------- */
+    /* -------- SHEETS — правый drawer -------- */
     .sheet {
-        left: 50%;
-        right: auto;
-        bottom: auto;
-        top: 50%;
-        transform: translate(-50%, -50%) scale(0.95);
-        max-width: 520px;
-        width: calc(100% - 40px);
-        border-radius: 22px;
-        border: 1px solid var(--border-strong);
-        max-height: 85vh;
-        opacity: 0;
+        left: auto;
+        right: 0;
+        top: 74px;
+        bottom: 0;
+        width: 420px;
+        max-width: 420px;
+        max-height: none;
+        border-radius: 0;
+        border-top: none;
+        border-right: none;
+        border-left: 1px solid var(--border-strong);
+        transform: translateX(100%);
+        opacity: 1;
+        pointer-events: none;
+        visibility: hidden;
+        overflow-y: auto;
+        box-shadow: -20px 0 40px rgba(0, 0, 0, 0.4);
         transition: transform 0.32s cubic-bezier(0.34, 1.3, 0.64, 1),
-                    opacity 0.25s ease;
+                    visibility 0s linear 0.32s;
     }
     .sheet.active {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+        visibility: visible;
+        transition-delay: 0s;
     }
     .sheet-title { font-size: 15px; letter-spacing: 2px; }
     .sheet-option { padding: 16px 18px; font-size: 14px; border-radius: 14px; }
 
-    /* -------- ЧАТ VIEW — ПОСЛЕ САЙДБАРА -------- */
+    /* -------- ЧАТ VIEW — правая панель ПК -------- */
     .chat-view {
         position: fixed !important;
-        left: 240px !important;
+        left: auto !important;
         right: 0 !important;
         top: 74px !important;
         bottom: 0 !important;
-        max-width: none !important;
-        margin: 0 !important;
-        transform: none !important;
+        width: 380px !important;
+        max-width: 380px !important;
+        transform: translateX(100%) !important;
+        transition: transform 0.32s cubic-bezier(0.34, 1.3, 0.64, 1) !important;
         border-left: 1px solid var(--border-strong);
-        border-right: none;
+        box-shadow: -20px 0 40px rgba(0, 0, 0, 0.5);
+        z-index: 350;
+        display: flex !important;
+        pointer-events: none;
+    }
+    .chat-view.active {
+        transform: translateX(0) !important;
+        pointer-events: auto;
+    }
+
+    /* Сдвигаем контент влево, когда чат открыт */
+    body.chat-open .container {
+        padding-right: 412px !important;
     }
 
     .chat-view-header { padding: 16px 20px; }
@@ -25524,11 +25551,15 @@ function applyHeaderAvatar(user) {
 }
 
 function switchPage(page) {
-    // 🔥 Если открыт чат — закрываем его при переходе на другую страницу
+    // ============================================================
+    // 🔥 ЗАКРЫВАЕМ ЧАТ ПРИ ПЕРЕХОДЕ НА ДРУГУЮ СТРАНИЦУ
+    // ============================================================
     const chatViewEl = document.getElementById('chatView');
     if (chatViewEl && chatViewEl.classList.contains('active')) {
         chatViewEl.classList.remove('active');
-        if (chatChannel) {
+        document.body.classList.remove('chat-open');
+
+        if (typeof chatChannel !== 'undefined' && chatChannel) {
             try { sb.removeChannel(chatChannel); } catch (e) {}
             chatChannel = null;
         }
@@ -25537,38 +25568,56 @@ function switchPage(page) {
         if (typeof markChatsAsRead === 'function') markChatsAsRead();
     }
 
+    // ============================================================
+    // 🧹 ОЧИСТКА КЭША КЛАН-ТЕГОВ
+    // ============================================================
     if (page === 'dashboard') {
         cleanupClubTagCache();
     }
 
-    // 🔥 Если переходим на главную — гасим UI комнаты
+    // ============================================================
+    // 🔥 ПЕРЕХОД НА ГЛАВНУЮ — ПРОВЕРЯЕМ АКТИВНУЮ КОМНАТУ
+    // ============================================================
     if (page === 'dashboard') {
-        const banner = document.getElementById('activeRoomBanner');
-        const indicator = document.getElementById('headerRoomIndicator');
-        const enterFloat = document.getElementById('playEnterFloat');
         // НЕ гасим тут — оно должно гаснуть только когда реально нет комнаты
         // Просто дёргаем проверку
         setTimeout(() => checkActiveRoom(), 100);
     }
 
-    // Показываем тонкую полоску сверху на время перехода
+    // ============================================================
+    // 📊 ТОНКАЯ ПОЛОСКА ЗАГРУЗКИ СВЕРХУ
+    // ============================================================
     const bar = document.getElementById('pageLoadingBar');
-            if (bar) {
-                bar.classList.add('active');
-                setTimeout(() => bar.classList.remove('active'), 600);
-            }
+    if (bar) {
+        bar.classList.add('active');
+        setTimeout(() => bar.classList.remove('active'), 600);
+    }
 
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            const target = document.getElementById('page-' + page);
-            if (target) {
-                // Небольшая задержка, чтобы анимация pageFade успела сработать
-                requestAnimationFrame(() => {
-                    target.classList.add('active');
-                });
-            }
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
-            haptic();
-        }
+    // ============================================================
+    // 🎬 ПЕРЕКЛЮЧАЕМ СТРАНИЦЫ
+    // ============================================================
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+    const target = document.getElementById('page-' + page);
+    if (target) {
+        // Через requestAnimationFrame, чтобы анимация pageFade успела сработать
+        requestAnimationFrame(() => {
+            target.classList.add('active');
+        });
+    }
+
+    // ============================================================
+    // 🧭 ПОДСВЕЧИВАЕМ АКТИВНЫЙ ПУНКТ НАВИГАЦИИ
+    // ============================================================
+    document.querySelectorAll('.nav-item').forEach(n =>
+        n.classList.toggle('active', n.dataset.page === page)
+    );
+
+    // ============================================================
+    // 📳 ТАКТИЛЬНЫЙ ОТКЛИК
+    // ============================================================
+    haptic();
+}
 
         function animateNumber(el, to, duration = 800) {
             const from = parseInt(el.textContent) || 0;
@@ -28656,6 +28705,7 @@ async function loadChatList() {
 
                 cancelReply();
                 document.getElementById('chatView').classList.add('active');
+                document.body.classList.add('chat-open');
                 document.getElementById('chatMessages').innerHTML = '';
                 await loadMessages();
                 subscribeChatRealtime();
@@ -28669,6 +28719,7 @@ async function closeChatView() {
     }
 
     document.getElementById('chatView').classList.remove('active');
+    document.body.classList.remove('chat-open');
     if (chatChannel) { sb.removeChannel(chatChannel); chatChannel = null; }
     currentChat = null;
     cancelReply();
@@ -50864,6 +50915,163 @@ function runClickDiagnostics() {
 }
 
 runClickDiagnostics();
+
+// ============================================================
+// 🖱️ ПРАВЫЙ КЛИК ПО ИГРОКУ (только ПК)
+// ============================================================
+if (window.innerWidth >= 1024) {
+    document.addEventListener('contextmenu', (e) => {
+        const playerEl = e.target.closest('[data-user-id]');
+        if (!playerEl) return;
+
+        const userId = Number(playerEl.dataset.userId);
+        if (!userId || userId === Number(currentUser?.telegram_id)) return;
+
+        e.preventDefault();
+        showPlayerContextMenu(e.clientX, e.clientY, userId);
+    });
+}
+
+function showPlayerContextMenu(x, y, userId) {
+    document.getElementById('ctxMenu')?.remove();
+
+    const menu = document.createElement('div');
+    menu.id = 'ctxMenu';
+    menu.style.cssText = `
+        position: fixed;
+        left: ${x}px;
+        top: ${y}px;
+        background: linear-gradient(180deg, var(--bg-2), var(--bg));
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        padding: 6px;
+        z-index: 99999;
+        min-width: 200px;
+        box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6);
+        animation: fadeInScale 0.15s ease;
+    `;
+
+    const items = [
+        { icon: '👤', label: 'Открыть профиль', action: () => openPlayerProfile(userId) },
+        { icon: '💬', label: 'Написать сообщение', action: () => { closePlayerModal(); openChatWithUser(userId); } },
+        { icon: '👥', label: 'Добавить в друзья', action: () => sendFriendRequest(userId) },
+        { icon: '📋', label: 'Скопировать ID', action: () => {
+            const id = String(userId);
+            if (navigator.clipboard) navigator.clipboard.writeText(id).then(() => showToast('📋 ID скопирован'));
+            else fallbackCopy(id);
+        }},
+    ];
+
+    menu.innerHTML = items.map((it, i) => `
+        <button data-ctx-i="${i}" style="
+            width: 100%;
+            padding: 10px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s ease;
+        " onmouseover="this.style.background='rgba(var(--emerald-rgb),0.12)'"
+           onmouseout="this.style.background='transparent'">
+            <span style="font-size: 15px;">${it.icon}</span>
+            <span>${it.label}</span>
+        </button>
+    `).join('');
+
+    document.body.appendChild(menu);
+
+    menu.querySelectorAll('[data-ctx-i]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            items[Number(btn.dataset.ctxI)].action();
+            menu.remove();
+        });
+    });
+
+    const close = (ev) => {
+        if (!menu.contains(ev.target)) {
+            menu.remove();
+            document.removeEventListener('click', close);
+            document.removeEventListener('contextmenu', close);
+        }
+    };
+    setTimeout(() => {
+        document.addEventListener('click', close);
+        document.addEventListener('contextmenu', close);
+    }, 50);
+
+    requestAnimationFrame(() => {
+        const r = menu.getBoundingClientRect();
+        if (r.right > window.innerWidth) menu.style.left = (window.innerWidth - r.width - 8) + 'px';
+        if (r.bottom > window.innerHeight) menu.style.top = (window.innerHeight - r.height - 8) + 'px';
+    });
+}
+
+            // ============================================================
+// ⌨️ ГОРЯЧИЕ КЛАВИШИ (только ПК)
+// ============================================================
+if (window.innerWidth >= 1024) {
+    document.addEventListener('keydown', (e) => {
+        // Не мешаем печатать
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+        // Alt + 1..6 — разделы
+        if (e.altKey && /^[1-6]$/.test(e.key)) {
+            e.preventDefault();
+            const pages = ['dashboard', 'chat', 'club', 'quests', 'shop', 'profile'];
+            const page = pages[Number(e.key) - 1];
+            if (page && typeof switchPage === 'function') switchPage(page);
+            return;
+        }
+
+        // Ctrl/Cmd + K — поиск игроков
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            if (typeof openFriendSearchSheet === 'function') openFriendSearchSheet();
+            return;
+        }
+
+        // Ctrl/Cmd + Enter — меню-дровер
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            if (typeof toggleMenuDrawer === 'function') toggleMenuDrawer();
+            return;
+        }
+
+        // Esc — закрыть всё по очереди
+        if (e.key === 'Escape') {
+            if (document.getElementById('chatView')?.classList.contains('active')) {
+                closeChatView();
+                return;
+            }
+            if (document.getElementById('playerModal')?.classList.contains('active')) {
+                closePlayerModal();
+                return;
+            }
+            if (document.querySelector('.sheet.active')) {
+                closeAllSheets();
+                return;
+            }
+            if (document.getElementById('menuDrawer')?.classList.contains('active')) {
+                closeMenuDrawer();
+                return;
+            }
+            if (document.getElementById('playScreen')?.classList.contains('active')) {
+                closePlayScreen();
+                return;
+            }
+        }
+    });
+
+    console.log('⌨️ Горячие клавиши активны: Alt+1..6, Ctrl+K, Ctrl+Enter, Esc');
+}
             
     </script>
 </body>
