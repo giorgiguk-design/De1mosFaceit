@@ -54662,5 +54662,827 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 }
             
     </script>
+        <!-- ============================================================ -->
+<!-- 🔊 SOUND SYSTEM — звуки + музыка                            -->
+<!-- ============================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // КОНФИГ И СОСТОЯНИЕ
+    // ============================================================
+    const K = {
+        SFX:   'appSfxEnabled',
+        MUSIC: 'appMusicEnabled',
+        SFX_V: 'appSfxVolume',
+        MUS_V: 'appMusicVolume',
+    };
+
+    let sfxEnabled   = localStorage.getItem(K.SFX)   !== '0';   // по умолчанию ВКЛ
+    let musicEnabled = localStorage.getItem(K.MUSIC) === '1';   // по умолчанию ВЫКЛ
+    let sfxVolume    = parseFloat(localStorage.getItem(K.SFX_V)) || 0.35;
+    let musicVolume  = parseFloat(localStorage.getItem(K.MUS_V)) || 0.18;
+
+    let audioCtx  = null;
+    let masterGain, sfxGain, musicGain;
+
+    let musicPlaying = false;
+    let musicTimer   = null;
+    let musicStart   = 0;
+
+    // ============================================================
+    // ИНИЦИАЛИЗАЦИЯ AUDIO CONTEXT
+    // ============================================================
+    function initAudio() {
+        if (audioCtx) return true;
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return false;
+            audioCtx = new AC();
+
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 1;
+            masterGain.connect(audioCtx.destination);
+
+            sfxGain = audioCtx.createGain();
+            sfxGain.gain.value = sfxVolume;
+            sfxGain.connect(masterGain);
+
+            musicGain = audioCtx.createGain();
+            musicGain.gain.value = 0;
+            musicGain.connect(masterGain);
+
+            return true;
+        } catch (e) {
+            console.warn('AudioContext init:', e);
+            return false;
+        }
+    }
+
+    function resumeAudio() {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+    }
+
+    // ============================================================
+    // БАЗОВЫЕ ГЕНЕРАТОРЫ
+    // ============================================================
+    function tone(opt) {
+        if (!audioCtx || !sfxEnabled) return;
+        const {
+            freq = 440, type = 'sine', duration = 0.15,
+            volume = 0.5, attack = 0.005, release = null,
+            delay = 0, slideTo = null, curve = 'exp'
+        } = opt;
+
+        const t0 = audioCtx.currentTime + delay;
+        const osc = audioCtx.createOscillator();
+        const g   = audioCtx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t0);
+
+        if (slideTo) {
+            if (curve === 'linear') {
+                osc.frequency.linearRampToValueAtTime(slideTo, t0 + duration);
+            } else {
+                osc.frequency.exponentialRampToValueAtTime(Math.max(slideTo, 1), t0 + duration);
+            }
+        }
+
+        const rel = release || duration;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(volume, t0 + attack);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + rel);
+
+        osc.connect(g);
+        g.connect(sfxGain);
+
+        osc.start(t0);
+        osc.stop(t0 + rel + 0.05);
+    }
+
+    function noise(opt) {
+        if (!audioCtx || !sfxEnabled) return;
+        const { duration = 0.1, volume = 0.25, filter = 3000, delay = 0 } = opt || {};
+        const t0 = audioCtx.currentTime + delay;
+        const size = Math.floor(audioCtx.sampleRate * duration);
+        const buf  = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < size; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / size);
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        const f = audioCtx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = filter;
+        const g = audioCtx.createGain();
+        g.gain.value = volume;
+        src.connect(f); f.connect(g); g.connect(sfxGain);
+        src.start(t0);
+        src.stop(t0 + duration + 0.05);
+    }
+
+    // ============================================================
+    // КОЛЛЕКЦИЯ ЗВУКОВ
+    // ============================================================
+    const Sounds = {
+        // Базовые UI
+        tap() {
+            tone({ freq: 950, type: 'sine',     duration: 0.05, volume: 0.55, release: 0.06 });
+            tone({ freq: 1400, type: 'sine',    duration: 0.03, volume: 0.25, release: 0.04, delay: 0.012 });
+        },
+        click() {
+            tone({ freq: 720, type: 'triangle', duration: 0.06, volume: 0.45, release: 0.07 });
+        },
+        nav() {
+            tone({ freq: 780, type: 'triangle', duration: 0.06, volume: 0.4 });
+            tone({ freq: 1040, type: 'triangle', duration: 0.08, volume: 0.35, delay: 0.05 });
+        },
+        open() {
+            tone({ freq: 420, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 900 });
+            tone({ freq: 840, type: 'sine', duration: 0.1, volume: 0.25, delay: 0.1 });
+        },
+        close() {
+            tone({ freq: 900, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 420 });
+        },
+        swipe() {
+            noise({ duration: 0.12, volume: 0.15, filter: 5500 });
+        },
+
+        // Статусы
+        success() {
+            tone({ freq: 660,  type: 'sine', duration: 0.12, volume: 0.55 });
+            tone({ freq: 880,  type: 'sine', duration: 0.14, volume: 0.55, delay: 0.08 });
+            tone({ freq: 1320, type: 'sine', duration: 0.22, volume: 0.45, delay: 0.16 });
+        },
+        error() {
+            tone({ freq: 240, type: 'sawtooth', duration: 0.16, volume: 0.4, slideTo: 110 });
+            tone({ freq: 180, type: 'square',   duration: 0.18, volume: 0.25, delay: 0.06 });
+            noise({ duration: 0.1, volume: 0.15, filter: 800 });
+        },
+        warning() {
+            tone({ freq: 520, type: 'square', duration: 0.14, volume: 0.35 });
+            tone({ freq: 520, type: 'square', duration: 0.14, volume: 0.35, delay: 0.2 });
+        },
+        notification() {
+            tone({ freq: 880,  type: 'sine', duration: 0.14, volume: 0.5 });
+            tone({ freq: 1174, type: 'sine', duration: 0.14, volume: 0.5, delay: 0.11 });
+            tone({ freq: 1568, type: 'sine', duration: 0.24, volume: 0.4, delay: 0.22 });
+        },
+        message() {
+            tone({ freq: 1200, type: 'sine', duration: 0.07, volume: 0.5 });
+            tone({ freq: 1600, type: 'sine', duration: 0.09, volume: 0.4, delay: 0.06 });
+        },
+        send() {
+            tone({ freq: 1300, type: 'sine', duration: 0.09, volume: 0.5, slideTo: 2300 });
+            noise({ duration: 0.06, volume: 0.12, filter: 4500 });
+        },
+
+        // Экономика
+        coin() {
+            tone({ freq: 1318, type: 'sine', duration: 0.09, volume: 0.5 });
+            tone({ freq: 1760, type: 'sine', duration: 0.12, volume: 0.5, delay: 0.07 });
+            tone({ freq: 2637, type: 'sine', duration: 0.22, volume: 0.3, delay: 0.16 });
+        },
+        purchase() {
+            tone({ freq: 523, type: 'triangle', duration: 0.13, volume: 0.5 });
+            tone({ freq: 659, type: 'triangle', duration: 0.13, volume: 0.5, delay: 0.09 });
+            tone({ freq: 784, type: 'triangle', duration: 0.22, volume: 0.45, delay: 0.18 });
+        },
+
+        // Игра
+        matchFound() {
+            [440, 554, 659, 880].forEach((f, i) =>
+                tone({ freq: f, type: 'triangle', duration: 0.45, volume: 0.4, delay: i * 0.06 })
+            );
+            noise({ duration: 0.35, volume: 0.15, filter: 3500 });
+            tone({ freq: 1318, type: 'sine', duration: 0.4, volume: 0.35, delay: 0.4 });
+        },
+        victory() {
+            [523, 659, 784, 1047].forEach((f, i) =>
+                tone({ freq: f, type: 'triangle', duration: 0.35, volume: 0.5, delay: i * 0.11 })
+            );
+            setTimeout(() => {
+                tone({ freq: 1319, type: 'triangle', duration: 0.55, volume: 0.5 });
+                tone({ freq: 1568, type: 'sine',     duration: 0.55, volume: 0.35, delay: 0.1 });
+            }, 460);
+        },
+        defeat() {
+            [440, 392, 330, 262].forEach((f, i) =>
+                tone({ freq: f, type: 'sine', duration: 0.32, volume: 0.4, delay: i * 0.14 })
+            );
+            tone({ freq: 220, type: 'sine', duration: 0.7, volume: 0.35, delay: 0.6 });
+        },
+        countdown() {
+            tone({ freq: 880, type: 'sine', duration: 0.07, volume: 0.5 });
+        },
+        achievement() {
+            [784, 988, 1174, 1568].forEach((f, i) =>
+                tone({ freq: f, type: 'sine', duration: 0.28, volume: 0.5, delay: i * 0.075 })
+            );
+            setTimeout(() => {
+                [1568, 1976].forEach((f, i) =>
+                    tone({ freq: f, type: 'sine', duration: 0.4, volume: 0.4, delay: i * 0.1 })
+                );
+            }, 350);
+        },
+        levelUp() {
+            [523, 659, 784, 1047, 1319].forEach((f, i) =>
+                tone({ freq: f, type: 'sine', duration: 0.32, volume: 0.5, delay: i * 0.085 })
+            );
+        },
+        openCase() {
+            // Вращение барабана
+            for (let i = 0; i < 10; i++) {
+                tone({
+                    freq: 320 + i * 90, type: 'triangle',
+                    duration: 0.05, volume: 0.25, delay: i * 0.11
+                });
+            }
+            // Финальный аккорд
+            setTimeout(() => {
+                [659, 880, 1319].forEach((f, i) =>
+                    tone({ freq: f, type: 'sine', duration: 0.5, volume: 0.5, delay: i * 0.05 })
+                );
+            }, 1200);
+        },
+    };
+
+    // ============================================================
+    // ФОНОВАЯ МУЗЫКА (эмбиент, 4 аккорда)
+    // ============================================================
+    const CHORDS = [
+        [261.63, 329.63, 392.00, 523.25], // C
+        [220.00, 261.63, 329.63, 440.00], // Am
+        [174.61, 220.00, 261.63, 349.23], // F
+        [196.00, 246.94, 293.66, 392.00], // G
+    ];
+    const CHORD_DUR = 9;
+
+    function playPad(freqs, t0, dur) {
+        freqs.forEach((freq, i) => {
+            const osc    = audioCtx.createOscillator();
+            const g      = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = i === 0 ? 'sine' : 'triangle';
+            osc.frequency.value = freq;
+            osc.detune.value = (Math.random() - 0.5) * 10;
+
+            filter.type = 'lowpass';
+            filter.frequency.value = 1100;
+            filter.Q.value = 1;
+
+            g.gain.setValueAtTime(0.0001, t0);
+            g.gain.linearRampToValueAtTime(0.075, t0 + 1.4);
+            g.gain.setValueAtTime(0.075, t0 + dur - 1.4);
+            g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+
+            osc.connect(filter);
+            filter.connect(g);
+            g.connect(musicGain);
+
+            osc.start(t0);
+            osc.stop(t0 + dur + 0.1);
+        });
+    }
+
+    function playBass(freq, t0, dur) {
+        const osc    = audioCtx.createOscillator();
+        const g      = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        osc.type = 'sine';
+        osc.frequency.value = freq / 2;
+
+        filter.type = 'lowpass';
+        filter.frequency.value = 180;
+
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(0.13, t0 + 0.6);
+        g.gain.setValueAtTime(0.13, t0 + dur - 0.6);
+        g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+
+        osc.connect(filter);
+        filter.connect(g);
+        g.connect(musicGain);
+
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.1);
+    }
+
+    function scheduleMusic() {
+        if (!audioCtx || !musicPlaying) return;
+
+        const now       = audioCtx.currentTime;
+        const lookahead = now + 6;
+        let t = musicStart;
+
+        while (t < lookahead) {
+            const idx   = Math.round((t - musicStart) / CHORD_DUR) % CHORDS.length;
+            const chord = CHORDS[idx];
+            if (t >= now - 0.05) {
+                playPad(chord, t, CHORD_DUR);
+                playBass(chord[0], t, CHORD_DUR);
+            }
+            t += CHORD_DUR;
+        }
+        musicStart = t;
+    }
+
+    function startMusic() {
+        if (musicPlaying) return;
+        if (!initAudio()) return;
+        resumeAudio();
+
+        musicPlaying = true;
+        musicStart   = audioCtx.currentTime + 0.15;
+
+        musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
+        musicGain.gain.linearRampToValueAtTime(musicVolume, audioCtx.currentTime + 2.2);
+
+        scheduleMusic();
+        musicTimer = setInterval(scheduleMusic, 3500);
+    }
+
+    function stopMusic() {
+        if (!musicPlaying) return;
+        musicPlaying = false;
+
+        if (musicTimer) {
+            clearInterval(musicTimer);
+            musicTimer = null;
+        }
+        if (musicGain && audioCtx) {
+            musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
+            musicGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 1.4);
+        }
+    }
+
+    // ============================================================
+    // ПУБЛИЧНЫЙ API
+    // ============================================================
+    window.SFX = {
+        play(name) {
+            if (!sfxEnabled) return;
+            if (!initAudio()) return;
+            resumeAudio();
+            const fn = Sounds[name];
+            if (typeof fn === 'function') {
+                try { fn(); } catch (e) { console.warn('SFX', name, e); }
+            }
+        },
+        enable(on) {
+            sfxEnabled = !!on;
+            localStorage.setItem(K.SFX, on ? '1' : '0');
+            if (on) { initAudio(); resumeAudio(); }
+        },
+        isEnabled() { return sfxEnabled; },
+        setVolume(v) {
+            sfxVolume = Math.max(0, Math.min(1, v));
+            localStorage.setItem(K.SFX_V, String(sfxVolume));
+            if (sfxGain) sfxGain.gain.value = sfxVolume;
+        },
+        getVolume() { return sfxVolume; },
+    };
+
+    window.Music = {
+        start() {
+            musicEnabled = true;
+            localStorage.setItem(K.MUSIC, '1');
+            startMusic();
+        },
+        stop() {
+            musicEnabled = false;
+            localStorage.setItem(K.MUSIC, '0');
+            stopMusic();
+        },
+        toggle() {
+            if (musicPlaying) this.stop();
+            else this.start();
+            return musicPlaying;
+        },
+        isPlaying() { return musicPlaying; },
+        isEnabled() { return musicEnabled; },
+        setVolume(v) {
+            musicVolume = Math.max(0, Math.min(1, v));
+            localStorage.setItem(K.MUS_V, String(musicVolume));
+            if (musicGain && musicPlaying) {
+                musicGain.gain.linearRampToValueAtTime(musicVolume, audioCtx.currentTime + 0.4);
+            }
+        },
+        getVolume() { return musicVolume; },
+    };
+
+    // ============================================================
+    // АВТОЗАПУСК
+    // ============================================================
+    function bindFirstGesture() {
+        const startOnGesture = () => {
+            if (musicEnabled && !musicPlaying) startMusic();
+            document.removeEventListener('pointerdown', startOnGesture);
+            document.removeEventListener('keydown', startOnGesture);
+            document.removeEventListener('touchstart', startOnGesture);
+        };
+        document.addEventListener('pointerdown', startOnGesture, { passive: true });
+        document.addEventListener('keydown', startOnGesture, { passive: true });
+        document.addEventListener('touchstart', startOnGesture, { passive: true });
+    }
+
+    // Resume AudioContext при любом клике
+    document.addEventListener('pointerdown', () => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }, { passive: true });
+
+    // ============================================================
+    // АВТОХУКИ
+    // ============================================================
+    function installAutoHooks() {
+
+        // ---- 1. Делегированный клик ----
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest(
+                'button, [onclick], [role="button"], .nav-item, ' +
+                '.menu-item, .menu-drawer-btn, .leaderboard-item, ' +
+                '.chat-list-item, .shop-item, .shop-cat-btn, ' +
+                '.play-room-card, .rv-icon-btn, .mode-card, .side-card, ' +
+                '.sheet-option, .winner-btn, .report-reason-btn, ' +
+                '.theme-option, .onboard-theme, .mode-selector .mode-card'
+            );
+            if (!target) return;
+            if (target.disabled) return;
+
+            const text = (target.textContent || '').toLowerCase();
+
+            // Кнопки закрытия / отмены
+            if (
+                text.includes('назад') || text.includes('закрыть') ||
+                text.includes('отмена') || text.includes('отменить') ||
+                text.includes('❌') || text.trim() === '✕' ||
+                target.querySelector('.cy-icon') && target.textContent.trim() === ''
+            ) {
+                // noop: навигацию обрабатываем отдельно
+            }
+
+            // ---- Навигация ----
+            if (target.classList.contains('nav-item')) {
+                SFX.play('nav');
+                return;
+            }
+
+            // ---- Меню-дровер ----
+            if (target.classList.contains('menu-drawer-btn')) {
+                SFX.play('click');
+                return;
+            }
+
+            // ---- Тема ----
+            if (target.classList.contains('theme-option') ||
+                target.classList.contains('onboard-theme')) {
+                SFX.play('click');
+                return;
+            }
+
+            // ---- Режим ----
+            if (target.classList.contains('mode-card') ||
+                target.classList.contains('mode-selector')) {
+                SFX.play('tap');
+                return;
+            }
+
+            // ---- Покупка ----
+            if (target.classList.contains('shop-btn') && target.classList.contains('buy')) {
+                // звук проиграет при успехе через showToast
+                return;
+            }
+
+            // ---- Кнопки закрытия/назад ----
+            if (
+                target.classList.contains('sheet-cancel') ||
+                target.classList.contains('profile-action-btn') &&
+                (target.classList.contains('cancel'))
+            ) {
+                SFX.play('close');
+                return;
+            }
+
+            // ---- Кнопки сохранения / отправки ----
+            if (
+                target.classList.contains('profile-action-btn') &&
+                (target.classList.contains('save') || target.classList.contains('edit'))
+            ) {
+                SFX.play('click');
+                return;
+            }
+
+            // ---- Игровые кнопки ----
+            if (target.classList.contains('winner-btn')) {
+                SFX.play('tap');
+                return;
+            }
+
+            // Дефолтный tap
+            SFX.play('tap');
+        }, { passive: true });
+
+        // ---- 2. Перехват showToast ----
+        if (typeof window.showToast === 'function') {
+            const origToast = window.showToast;
+            window.showToast = function(msg, type) {
+                const m = String(msg || '');
+                // Не играем на каждый пустяк — только на важное
+                if (/✅|готово|сохранено|успешно|куплено|принято|добавлено|надето|забрано|выполнен/i.test(m)) {
+                    SFX.play('success');
+                } else if (/❌|🚫|ошибка|не удалось|запрещено|заполнен|забанен|нельзя/i.test(m)) {
+                    SFX.play('error');
+                } else if (/⚠️|⏰|внимание|подожди|ещё рано|уже/i.test(m)) {
+                    SFX.play('warning');
+                } else if (/💰|монет|казна|+\\d+/i.test(m) && /монет/i.test(m)) {
+                    SFX.play('coin');
+                } else if (/🏆|победа|выиграл|win/i.test(m)) {
+                    SFX.play('victory');
+                } else if (/💀|поражение|проиграл|loss/i.test(m)) {
+                    SFX.play('defeat');
+                } else if (/🔔|📨|📬|уведомление|приглашение|пригласил/i.test(m)) {
+                    SFX.play('notification');
+                } else if (/💬|сообщение/i.test(m)) {
+                    SFX.play('message');
+                } else if (/🎁|кейс|открыт/i.test(m)) {
+                    SFX.play('openCase');
+                } else if (/⭐|уровень|level up/i.test(m)) {
+                    SFX.play('levelUp');
+                }
+                return origToast.apply(this, arguments);
+            };
+        }
+
+        // ---- 3. Перехват sendMessage ----
+        if (typeof window.sendMessage === 'function') {
+            const origSend = window.sendMessage;
+            window.sendMessage = function() {
+                const input = document.getElementById('chatInput');
+                if (input && input.value.trim()) {
+                    SFX.play('send');
+                }
+                return origSend.apply(this, arguments);
+            };
+        }
+
+        // ---- 4. Перехват sendRoomMessage ----
+        if (typeof window.sendRoomMessage === 'function') {
+            const origSendRoom = window.sendRoomMessage;
+            window.sendRoomMessage = function() {
+                const input = document.getElementById('roomChatInput');
+                if (input && input.value.trim()) {
+                    SFX.play('send');
+                }
+                return origSendRoom.apply(this, arguments);
+            };
+        }
+
+        // ---- 5. Перехват appendMessage (входящие) ----
+        if (typeof window.appendMessage === 'function') {
+            const origAppend = window.appendMessage;
+            window.appendMessage = async function(m) {
+                const me = currentUser?.telegram_id;
+                if (m && m.sender_id !== me) {
+                    SFX.play('message');
+                }
+                return origAppend.apply(this, arguments);
+            };
+        }
+
+        // ---- 6. Перехват finishMatch ----
+        if (typeof window.finishMatch === 'function') {
+            const origFinish = window.finishMatch;
+            window.finishMatch = async function(matchId, result) {
+                try {
+                    const me = Number(currentUser?.telegram_id);
+                    const { data: match } = await sb.from('game_matches')
+                        .select('team_a_players, team_b_players').eq('id', matchId).single();
+                    if (match) {
+                        const inA = (match.team_a_players || []).some(p => Number(p.telegram_id) === me);
+                        const inB = (match.team_b_players || []).some(p => Number(p.telegram_id) === me);
+                        const myTeam = inA ? 'A' : inB ? 'B' : null;
+                        if (myTeam === result.winner) SFX.play('victory');
+                        else if (myTeam) SFX.play('defeat');
+                    }
+                } catch (e) {}
+                return origFinish.apply(this, arguments);
+            };
+        }
+
+        // ---- 7. Перехват buyShopItem ----
+        if (typeof window.buyShopItem === 'function') {
+            const origBuy = window.buyShopItem;
+            window.buyShopItem = async function(itemId, price) {
+                SFX.play('tap');
+                return origBuy.apply(this, arguments);
+            };
+        }
+
+        // ---- 8. Перехват equipShopItem ----
+        if (typeof window.equipShopItem === 'function') {
+            const origEquip = window.equipShopItem;
+            window.equipShopItem = async function(itemId) {
+                SFX.play('click');
+                return origEquip.apply(this, arguments);
+            };
+        }
+
+        // ---- 9. Перехват claimQuestReward ----
+        if (typeof window.claimQuestReward === 'function') {
+            const origClaim = window.claimQuestReward;
+            window.claimQuestReward = async function() {
+                SFX.play('tap');
+                return origClaim.apply(this, arguments);
+            };
+        }
+
+        // ---- 10. Перехват openCase ----
+        if (typeof window.openCase === 'function') {
+            const origOpenCase = window.openCase;
+            window.openCase = async function() {
+                SFX.play('click');
+                return origOpenCase.apply(this, arguments);
+            };
+        }
+
+        // ---- 11. Перехват showCaseOpening ----
+        if (typeof window.showCaseOpening === 'function') {
+            const origShowCase = window.showCaseOpening;
+            window.showCaseOpening = function() {
+                setTimeout(() => SFX.play('openCase'), 200);
+                return origShowCase.apply(this, arguments);
+            };
+        }
+
+        // ---- 12. Перехват открытия/закрытия шитов ----
+        const origOpenSheets = ['openShop', 'openSeason', 'openCasesScreen',
+            'openQuestsScreen', 'openNotificationsSheet', 'openSettingsSheet',
+            'openPrivacySheet', 'openThemeSheet', 'openFaqSheet',
+            'openCoverPickerSheet'];
+        origOpenSheets.forEach(fnName => {
+            if (typeof window[fnName] === 'function') {
+                const orig = window[fnName];
+                window[fnName] = function() {
+                    SFX.play('open');
+                    return orig.apply(this, arguments);
+                };
+            }
+        });
+
+        // ---- 13. Перехват match found ----
+        if (typeof window.onMatchFound === 'function') {
+            const origMF = window.onMatchFound;
+            window.onMatchFound = function() {
+                SFX.play('matchFound');
+                return origMF.apply(this, arguments);
+            };
+        }
+
+        // ---- 14. Ежедневная награда ----
+        if (typeof window.showDailyRewardModal === 'function') {
+            const origDR = window.showDailyRewardModal;
+            window.showDailyRewardModal = function(streak, reward) {
+                SFX.play('levelUp');
+                return origDR.apply(this, arguments);
+            };
+        }
+
+        // ---- 15. Достижения — победа в матче уже ловится, но подстрахуемся ----
+        // (нет прямого хука, но тост поймает)
+
+        // ---- 16. Уведомление в реальном времени ----
+        // (уже покрыто subscribeNotificationsRealtime, но добавим звук при бейдже)
+        const origUpdateNotifBadge = window.updateNotifBadge;
+        if (typeof origUpdateNotifBadge === 'function') {
+            let lastCount = 0;
+            window.updateNotifBadge = async function() {
+                const result = await origUpdateNotifBadge.apply(this, arguments);
+                try {
+                    const badge = document.getElementById('notifBadge');
+                    if (badge && badge.style.display !== 'none') {
+                        const count = parseInt(badge.textContent) || 0;
+                        if (count > lastCount && lastCount > 0) {
+                            SFX.play('notification');
+                        }
+                        lastCount = count;
+                    }
+                } catch (e) {}
+                return result;
+            };
+        }
+    }
+
+    // ============================================================
+    // ДОБАВЛЯЕМ ТУМБЛЕРЫ В ШИТ "НАСТРОЙКИ"
+    // ============================================================
+    function injectSettingsToggles() {
+        const sheet = document.getElementById('settingsSheet');
+        if (!sheet) return false;
+
+        // Уже вставили?
+        if (document.getElementById('sfxToggleBtn')) return true;
+
+        // Находим кнопку "Тема оформления" — вставим перед ней
+        const themeBtn = sheet.querySelector('[onclick*="openThemeSheet"]');
+        if (!themeBtn || !themeBtn.parentNode) return false;
+
+        // ---- ТУМБЛЕР SFX ----
+        const sfxBtn = document.createElement('button');
+        sfxBtn.className = 'sheet-option';
+        sfxBtn.id = 'sfxToggleBtn';
+        sfxBtn.innerHTML = `
+            <span style="font-size: 18px;">🔊</span>
+            Звуковые эффекты
+            <span id="sfxStateLabel" style="margin-left:auto;font-size:12px;color:var(--hint);font-weight:700;">
+                ${SFX.isEnabled() ? 'ВКЛ' : 'ВЫКЛ'}
+            </span>
+        `;
+        sfxBtn.onclick = () => {
+            const on = !SFX.isEnabled();
+            SFX.enable(on);
+            const lbl = document.getElementById('sfxStateLabel');
+            if (lbl) lbl.textContent = on ? 'ВКЛ' : 'ВЫКЛ';
+            if (on) {
+                // Пробный звук
+                setTimeout(() => SFX.play('success'), 60);
+            }
+            if (typeof haptic === 'function') haptic('light');
+        };
+
+        // ---- ТУМБЛЕР MUSIC ----
+        const musicBtn = document.createElement('button');
+        musicBtn.className = 'sheet-option';
+        musicBtn.id = 'musicToggleBtn';
+        musicBtn.innerHTML = `
+            <span style="font-size: 18px;">🎵</span>
+            Фоновая музыка
+            <span id="musicStateLabel" style="margin-left:auto;font-size:12px;color:var(--hint);font-weight:700;">
+                ${Music.isEnabled() ? 'ВКЛ' : 'ВЫКЛ'}
+            </span>
+        `;
+        musicBtn.onclick = () => {
+            const on = !Music.isEnabled();
+            if (on) Music.start();
+            else Music.stop();
+            const lbl = document.getElementById('musicStateLabel');
+            if (lbl) lbl.textContent = on ? 'ВКЛ' : 'ВЫКЛ';
+            SFX.play(on ? 'success' : 'click');
+            if (typeof haptic === 'function') haptic('light');
+        };
+
+        // Вставляем оба перед кнопкой темы
+        themeBtn.parentNode.insertBefore(sfxBtn, themeBtn);
+        themeBtn.parentNode.insertBefore(musicBtn, themeBtn);
+
+        console.log('🔊 Настройки звука добавлены в шит');
+        return true;
+    }
+
+    // ============================================================
+    // ЗАПУСК
+    // ============================================================
+    function boot() {
+        // Установить автохуки
+        installAutoHooks();
+
+        // Автозапуск музыки (если была включена)
+        bindFirstGesture();
+
+        // Вставить тумблеры в настройки (с ретраями)
+        let attempts = 0;
+        const tryInject = setInterval(() => {
+            attempts++;
+            if (injectSettingsToggles() || attempts > 50) {
+                clearInterval(tryInject);
+            }
+        }, 200);
+
+        // Пробуем при первом открытии настроек
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('[onclick*="openSettingsSheet"], [onclick*="settings"]');
+            if (target) {
+                setTimeout(injectSettingsToggles, 250);
+            }
+        }, true);
+
+        console.log('🔊 Sound System готов');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+})();
+</script>
 </body>
 </html>
