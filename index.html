@@ -25546,31 +25546,64 @@ function renderAvatar(user) {
     return `<span class="av-fallback-letter">${initial}</span>`;
 }
 
+// ============================================================
+// 📬 NOTIFY — с кэшем настроек уведомлений
+// ============================================================
+const _notifySettingsCache = new Map();  // telegramId -> { ts, data }
+const _NOTIFY_CACHE_TTL = 30000;         // 30 секунд
+
 async function notify(telegramId, text, type = null) {
     if (!telegramId || !text) return;
+
+    // Не отправляем самому себе
     if (String(telegramId) === String(currentUser?.telegram_id || '')) return;
 
+    // ============================================================
+    // 1. Проверка настроек (с кэшем)
+    // ============================================================
     if (type) {
         try {
-            const { data: u } = await sb.from('users')
-                .select('notify_off, bot_notify_friend_requests, bot_notify_club_requests, bot_notify_party_invites, bot_notify_messages')
-                .eq('telegram_id', telegramId)
-                .maybeSingle();
+            const key = String(telegramId);
+            const now = Date.now();
+            let cached = _notifySettingsCache.get(key);
 
+            if (!cached || now - cached.ts > _NOTIFY_CACHE_TTL) {
+                const { data: u } = await sb.from('users')
+                    .select('notify_off, bot_notify_friend_requests, bot_notify_club_requests, bot_notify_party_invites, bot_notify_messages')
+                    .eq('telegram_id', telegramId)
+                    .maybeSingle();
+
+                cached = { ts: now, data: u };
+                _notifySettingsCache.set(key, cached);
+
+                // Чистим старые записи раз в минуту, чтобы Map не разрасталась
+                if (_notifySettingsCache.size > 500) {
+                    const cutoff = now - 5 * 60 * 1000;
+                    for (const [k, v] of _notifySettingsCache) {
+                        if (v.ts < cutoff) _notifySettingsCache.delete(k);
+                    }
+                }
+            }
+
+            const u = cached.data;
             if (u) {
                 if (u.notify_off === true) return;
-                if (type === 'friend' && u.bot_notify_friend_requests === false) return;
-                if (type === 'club' && u.bot_notify_club_requests === false) return;
-                if (type === 'party' && u.bot_notify_party_invites === false) return;
+                if (type === 'friend'  && u.bot_notify_friend_requests === false) return;
+                if (type === 'club'    && u.bot_notify_club_requests === false) return;
+                if (type === 'party'   && u.bot_notify_party_invites === false) return;
                 if (type === 'message' && u.bot_notify_messages === false) return;
             }
         } catch (e) {
             console.warn('notify flags check:', e);
+            // Не блокируем отправку при ошибке проверки
         }
     }
 
+    // ============================================================
+    // 2. Отправка через edge-функцию
+    // ============================================================
     try {
-        await fetch(NOTIFY_URL, {
+        const res = await fetch(NOTIFY_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -25579,6 +25612,10 @@ async function notify(telegramId, text, type = null) {
             },
             body: JSON.stringify({ telegram_id: telegramId, text })
         });
+
+        if (!res.ok) {
+            console.warn('notify HTTP error:', res.status, await res.text().catch(() => ''));
+        }
     } catch (e) {
         console.warn('notify fetch:', e);
     }
@@ -25685,84 +25722,68 @@ async function init() {
         return;
     }
 
-    // ============================================================
-    // ПОЛУЧАЕМ ПОЛЬЗОВАТЕЛЯ
-    // ============================================================
-    let user = tg?.initDataUnsafe?.user;
+// ============================================================
+// 🔐 Безопасное получение пользователя
+// ============================================================
+let user = null;
 
-    if (!user && tg?.initData) {
-        try {
-            const params = new URLSearchParams(tg.initData);
-            const userRaw = params.get('user');
-            if (userRaw) {
-                user = JSON.parse(userRaw);
-                console.log('✅ User получен через initData parse:', user);
-            }
-        } catch (e) {
-            console.warn('initData parse failed:', e);
+// 1) Основной путь: валидируем initData через сервер
+if (tg?.initData && tg.initData.length > 20) {
+    try {
+        const res = await sb.rpc('validate_init_data', { p_init_data: tg.initData });
+
+        if (res.error) {
+            console.error('❌ validate_init_data RPC error:', res.error);
+        } else if (!res.data?.ok) {
+            console.error('❌ initData не прошёл валидацию:', res.data?.error);
+        } else {
+            user = res.data.user;
+            console.log('✅ initData валидирован на сервере, user.id =', user.id);
         }
+    } catch (e) {
+        console.error('❌ validate_init_data exception:', e);
     }
+}
 
-    if (!user && location.hash.includes('tgWebAppData')) {
-        try {
-            const hash = location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            const userRaw = params.get('tgWebAppData');
-            if (userRaw) {
-                const decoded = decodeURIComponent(userRaw);
-                const innerParams = new URLSearchParams(decoded);
-                const u = innerParams.get('user');
-                if (u) user = JSON.parse(u);
-                console.log('✅ User получен через hash:', user);
-            }
-        } catch (e) {
-            console.warn('hash parse failed:', e);
-        }
-    }
+// 2) Dev-режим — ТОЛЬКО для localhost
+if (!user && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    const params = new URLSearchParams(location.search);
+    const devId = Number(params.get('id')) || 999999999;
+    const devName = params.get('name') || ('DevUser' + devId);
+    user = {
+        id: devId,
+        first_name: devName,
+        username: 'dev' + devId,
+        photo_url: null,
+    };
+    console.warn('⚠️ DEV MODE:', user);
+}
 
-    if (!user && (location.hostname === 'localhost' || location.search.includes('dev=1'))) {
-        const params = new URLSearchParams(location.search);
-        const devId = Number(params.get('id')) || 999999999;
-        const devName = params.get('name') || ('DevUser' + devId);
-        user = { id: devId, first_name: devName, username: 'dev' + devId, photo_url: null };
-        console.warn('⚠️ DEV MODE', user);
-    }
-
-    if (!user) {
-        console.warn('⚠️ Не удалось получить пользователя');
-
-        const isDesktop = !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const container = document.getElementById('profileContent');
-
-        if (container) {
-            container.innerHTML = `
-                <div class="profile-hero" style="text-align:center; padding: 40px 20px;">
-                    <div style="font-size: 64px; margin-bottom: 16px;">${isDesktop ? '💻' : '📡'}</div>
-                    <div style="font-size: 18px; font-weight: 800; margin-bottom: 10px;">
-                        ${isDesktop ? 'Открой с телефона' : 'Нет соединения'}
-                    </div>
-                    <div style="font-size: 13px; color: var(--hint); line-height: 1.6; margin-bottom: 20px;">
-                        ${isDesktop
-                            ? 'De1mos Faceit работает как <b>Telegram Mini App</b>.<br>Открой через официальный клиент Telegram на смартфоне.'
-                            : 'Не удалось загрузить Telegram SDK.<br>Проверь интернет и перезапусти приложение.'
-                        }
-                    </div>
-                    <button onclick="location.reload()" style="
-                        padding: 12px 28px;
-                        background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-                        color: #04140e;
-                        border: none;
-                        border-radius: 12px;
-                        font-weight: 800;
-                        font-size: 14px;
-                        cursor: pointer;
-                        font-family: inherit;
-                    ">🔄 ПЕРЕЗАГРУЗИТЬ</button>
+// 3) Если ничего не сработало — ошибка
+if (!user) {
+    console.warn('⚠️ Не удалось получить пользователя');
+    const isDesktop = !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const container = document.getElementById('profileContent');
+    if (container) {
+        container.innerHTML = `
+            <div class="profile-hero" style="text-align:center; padding: 40px 20px;">
+                <div style="font-size: 64px; margin-bottom: 16px;">${isDesktop ? '💻' : '📡'}</div>
+                <div style="font-size: 18px; font-weight: 800; margin-bottom: 10px;">
+                    ${isDesktop ? 'Открой с телефона' : 'Ошибка авторизации'}
                 </div>
-            `;
-        }
-        return;
+                <div style="font-size: 13px; color: var(--hint); line-height: 1.6; margin-bottom: 20px;">
+                    ${isDesktop
+                        ? 'De1mos Faceit работает только в Telegram Mini App.'
+                        : 'Не удалось проверить твои данные. Перезапусти приложение.'}
+                </div>
+                <button onclick="location.reload()" style="padding: 12px 28px; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); color: #04140e; border: none; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; font-family: inherit;">
+                    🔄 ПЕРЕЗАГРУЗИТЬ
+                </button>
+            </div>
+        `;
     }
+    return;
+}
 
     console.log('✅ init() запущен с user:', user);
 
