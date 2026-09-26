@@ -5505,19 +5505,6 @@ body::after {
 }
 
 .menu-item .btn-cover-bg { pointer-events: none !important; }
-.chat-list-item .chat-list-avatar,
-.chat-list-item .chat-list-info,
-.chat-list-item .chat-list-name,
-.chat-list-item .chat-list-preview {
-    pointer-events: none;
-}
-.club-member-row .club-member-avatar,
-.club-member-row .club-member-info,
-.club-member-row .club-member-name,
-.club-member-row .club-member-sub {
-    pointer-events: none;
-}
-.club-member-row .club-mini-dots { pointer-events: auto !important; }
 .mini-stat,
 .stat-card {
     position: relative;
@@ -13043,26 +13030,6 @@ html.lite-mode .list-frame-overlay svg * {
     cursor: pointer;
 }
 
-/* Внутренние декоративные элементы не перехватывают клик —
-   клик всплывает до родителя */
-.leaderboard-item > *:not(button):not(a) {
-    pointer-events: none;
-}
-
-/* Кнопки и ссылки внутри всегда работают */
-.leaderboard-item button,
-.leaderboard-item a,
-.leaderboard-item [onclick],
-.leaderboard-item .friend-action,
-.leaderboard-item .player-menu-btn,
-.leaderboard-item .club-mini-dots,
-.leaderboard-item .ig-report-btn,
-.leaderboard-item .ig-copy-mini-btn,
-.leaderboard-item .pm2-copy-inline {
-    pointer-events: auto;
-    cursor: pointer;
-}
-
 /* Убираем shimmer-псевдоэлемент, который может перекрывать клик */
 .leaderboard-item::after {
     display: none !important;
@@ -13085,86 +13052,6 @@ html.lite-mode .list-frame-overlay svg * {
 /* 🔧 УНИВЕРСАЛЬНЫЙ ФИКС КЛИКАБЕЛЬНОСТИ                          */
 /* ============================================================ */
 
-/* 1. Все декоративные слои-подложки не должны ловить клики */
-.btn-cover-bg,
-.list-item-bg,
-.special-frame-overlay,
-.list-frame-overlay,
-.sc-glow,
-.sc-corner,
-.pbc-corner,
-.pbc-scan,
-.ech-corner,
-.cth-corner,
-.cth-glow,
-.pbc-icon,
-.pbc-arrow,
-.pbc-text {
-    pointer-events: none !important;
-}
-
-/* 2. Псевдоэлементы (shimmer-эффекты) не должны ловить клики */
-.menu-item::before,
-.menu-item::after,
-.leaderboard-item::before,
-.leaderboard-item::after,
-.chat-list-item::before,
-.chat-list-item::after,
-.play-room-card::before,
-.play-room-card::after,
-.club-member-row::before,
-.club-member-row::after,
-.stat-card::before,
-.stat-card::after,
-.mini-stat::before,
-.mini-stat::after,
-.shop-item::before,
-.shop-item::after,
-.shop-cat-btn::before,
-.shop-cat-btn::after,
-.play-btn-cyber::before,
-.play-btn-cyber::after,
-.ig-v3-btn-primary::before,
-.ig-v3-btn-primary::after,
-.ig-v3-btn-secondary::before,
-.ig-v3-btn-secondary::after,
-.profile-action-btn::before,
-.profile-action-btn::after {
-    pointer-events: none !important;
-}
-
-/* 3. Кликабельные обёртки — принимаем клик на себя */
-.menu-item,
-.leaderboard-item,
-.chat-list-item,
-.play-room-card,
-.club-member-row,
-.stat-card,
-.mini-stat,
-.shop-item,
-.shop-cat-btn,
-.mode-selector .mode-card,
-.mode-card,
-.rv-icon-btn,
-.theme-option,
-.sheet-option,
-.play-btn-cyber,
-.nav-item {
-    pointer-events: auto !important;
-    cursor: pointer;
-}
-
-/* 4. Кнопки и ссылки — принимают клик всегда */
-button,
-a,
-[onclick],
-[role="button"],
-input,
-textarea,
-select {
-    pointer-events: auto;
-}
-
 button:disabled,
 button[disabled] {
     pointer-events: auto;
@@ -13179,18 +13066,6 @@ button[disabled] {
 .shop-cat-btn,
 .mini-stat {
     isolation: isolate;
-}
-
-    /* Перебиваем все старые .leaderboard-item * { pointer-events: none } */
-.leaderboard-item,
-.leaderboard-item * {
-    pointer-events: auto;
-}
-
-.leaderboard-item .btn-cover-bg,
-.leaderboard-item::before,
-.leaderboard-item::after {
-    pointer-events: none !important;
 }
 
     /* Отключаем клики у неактивных fixed-слоёв */
@@ -20863,6 +20738,264 @@ button [onclick] {
 .tz-avatar [onclick],
 .tz-info [onclick] {
     pointer-events: auto !important;
+}
+
+    /* ============================================================
+   🖱️ УНИВЕРСАЛЬНАЯ СИСТЕМА КЛИКОВ
+   Работает на ВСЕХ платформах: ПК, iOS, Android
+   Перебивает все старые правила pointer-events
+   ============================================================ */
+
+/* 1. Всё интерактивное — кликабельно и с курсором */
+button,
+a,
+[onclick]:not([onclick=""]),
+[role="button"],
+input,
+textarea,
+select,
+label,
+option,
+summary {
+    pointer-events: auto !important;
+    cursor: pointer;
+}
+
+input, textarea, select, option {
+    cursor: text;
+}
+
+/* 2. ВСЁ внутри кликабельного — НЕ перехватывает клик */
+button > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
+a > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
+[onclick]:not([onclick=""]) > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label):not([role="button"]),
+[role="button"] > *:not(button):not(a):not([onclick]):not(input):not(textarea):not(select):not(label) {
+    pointer-events: none !important;
+}
+
+/* 3. Но если внутри есть кликабельный — он снова работает */
+button button,
+button a,
+button [onclick],
+button input,
+button textarea,
+button select,
+button label,
+a button,
+a a,
+a [onclick],
+[onclick] button,
+[onclick] a,
+[onclick] [onclick],
+[onclick] input,
+[onclick] textarea,
+[onclick] select,
+[onclick] label {
+    pointer-events: auto !important;
+}
+
+/* 4. Дети вложенных кликабельных — снова пропускают */
+button button > *,
+button a > *,
+button [onclick] > *,
+a button > *,
+a a > *,
+a [onclick] > *,
+[onclick] button > *,
+[onclick] a > *,
+[onclick] [onclick] > * {
+    pointer-events: none !important;
+}
+
+/* 5. SVG ВСЕГДА пропускает клики (кнопка-родитель ловит) */
+svg,
+svg *,
+use,
+path,
+circle,
+rect,
+line,
+polygon,
+ellipse,
+text {
+    pointer-events: none !important;
+}
+
+/* 6. Псевдоэлементы (shimmer, glow, скобки) не перехватывают */
+button::before,
+button::after,
+a::before,
+a::after,
+[onclick]::before,
+[onclick]::after,
+.leaderboard-item::before,
+.leaderboard-item::after,
+.menu-item::before,
+.menu-item::after,
+.menu-item-glow,
+.chat-list-item::before,
+.chat-list-item::after,
+.play-room-card::before,
+.play-room-card::after,
+.stat-card::before,
+.stat-card::after,
+.shop-item::before,
+.shop-item::after,
+.mini-stat::before,
+.mini-stat::after,
+.btn-cover-bg,
+.list-item-bg,
+.special-frame-overlay,
+.list-frame-overlay,
+.sc-glow,
+.sc-corner,
+.ech-corner,
+.ech-svg-wrap,
+.cth-corner,
+.cth-glow,
+.online-dot,
+.hri-dot,
+.nav-badge,
+.notif-badge,
+.notif-btn::before,
+.avatar::before,
+.avatar::after,
+.pbc-scan,
+.pbc-corner,
+.pbc-icon,
+.pbc-arrow,
+.room-chat-btn .rv-badge,
+.rv-badge,
+.shop-cat-btn::before,
+.shop-cat-btn::after,
+.mode-card::before,
+.veto-map-v2::before,
+.veto-map-v2::after,
+.veto-map-v3::after,
+.veto-map::before,
+.veto-map::after {
+    pointer-events: none !important;
+}
+
+/* 7. Декоративные слои-обёртки — пропускают (клик идёт кнопке-родителю) */
+.lb-avatar,
+.lb-info-compact,
+.lb-row-top,
+.lb-row-bottom,
+.lb-nick-inline,
+.lb-lvl-chip,
+.lb-dxp-chip,
+.leaderboard-rank,
+.leaderboard-DXP-value,
+.dev-tag-mini,
+.menu-item-icon,
+.menu-item-content,
+.menu-item-title,
+.menu-item-sub,
+.mode-icon,
+.mode-info,
+.mode-name,
+.mode-capacity,
+.chat-list-avatar,
+.chat-list-info,
+.chat-list-name,
+.chat-list-preview,
+.prc-avatar,
+.prc-info,
+.prc-name,
+.prc-meta,
+.prc-badge,
+.prc-count,
+.prc-count-num,
+.prc-count-label,
+.prc-bar,
+.prc-bar-fill,
+.tz-avatar,
+.tz-info,
+.tz-name,
+.tz-stats,
+.ig-mini-avatar,
+.ig-mini-info,
+.ig-mini-name,
+.ig-mini-id,
+.result-mini-avatar,
+.result-mini-info,
+.result-mini-name,
+.result-mini-id,
+.shop-preview,
+.shop-item-info,
+.shop-item-name,
+.shop-item-rarity,
+.clan-inv-preview,
+.clan-inv-info,
+.clan-inv-name,
+.clan-inv-status,
+.club-member-avatar,
+.club-member-info,
+.club-member-name,
+.club-member-sub,
+.notif-avatar,
+.notif-body,
+.notif-text,
+.notif-time,
+.report-player-av,
+.report-player-info,
+.report-player-name,
+.report-player-team,
+.report-player-arrow,
+.dispute-mini-avatar,
+.dispute-mini-name,
+.veto-cap-avatar,
+.veto-cap-name,
+.veto-cap-bans,
+.veto-cap-label,
+.veto-player-mini-avatar,
+.veto-player-mini-name,
+.veto-player-mini-crown {
+    pointer-events: none !important;
+}
+
+/* 8. Но если у них ЕСТЬ свой onclick — работает */
+[onclick].lb-avatar,
+[onclick].tz-avatar,
+[onclick].chat-list-avatar,
+[onclick].lb-info-compact,
+[onclick].prc-avatar,
+[onclick].tz-info,
+[onclick].ig-mini-avatar,
+[onclick].ig-mini-info,
+[onclick].shop-preview,
+[onclick].clan-inv-preview {
+    pointer-events: auto !important;
+}
+
+/* 9. Оверлеи-шиты: клик по оверлею закрывает, но только когда он активен */
+.sheet-overlay:not(.active),
+.msg-menu-overlay:not(.active),
+.menu-drawer-overlay:not(.active),
+.player-modal:not(.active),
+.chat-view:not(.active),
+.play-screen:not(.active) {
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
+/* 10. Хедер/навигация — клики всегда проходят */
+.header,
+.bottom-nav,
+.header *,
+.bottom-nav * {
+    pointer-events: auto;
+}
+
+/* 11. На ПК сайдбар — дети .nav-item не перехватывают */
+@media (min-width: 1024px) {
+    .nav-item > * {
+        pointer-events: none !important;
+    }
+    .nav-item [onclick] {
+        pointer-events: auto !important;
+    }
 }
     
 </style>
@@ -50365,6 +50498,108 @@ registerTicker('refreshOnlineStatuses', () => {
         updateOnlineStatusEl(el, el.dataset.lastSeen || '');
     });
 }, 30);
+
+            // ============================================================
+// 🛡️ ГЛОБАЛЬНАЯ ОБРАБОТКА ОШИБОК
+// Если кнопка не работает из-за ошибки — покажем это игроку
+// ============================================================
+
+let _lastErrorToast = 0;
+
+function reportGlobalError(msg, err) {
+    console.error('❌ Ошибка:', msg, err);
+    const now = Date.now();
+    if (now - _lastErrorToast < 3000) return;  // throttle 3 сек
+    _lastErrorToast = now;
+
+    if (typeof showToast === 'function') {
+        const shortMsg = String(msg).slice(0, 100);
+        showToast('⚠️ ' + shortMsg, 'error');
+    }
+}
+
+// Ловим ВСЕ ошибки JS — включая те что в onclick
+window.addEventListener('error', (event) => {
+    // Игнорируем ошибки загрузки ресурсов (картинки и т.д.)
+    if (event.target && event.target !== window && event.target.tagName) {
+        // Это ошибка загрузки элемента — пропускаем
+        return;
+    }
+
+    reportGlobalError(
+        event.message || 'Неизвестная ошибка',
+        event.error
+    );
+}, true);
+
+// Ловим необработанные промисы
+window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const msg = reason?.message || String(reason) || 'Ошибка промиса';
+    reportGlobalError(msg, reason);
+});
+
+// ============================================================
+// 🔍 ДИАГНОСТИКА КЛИКОВ (только в dev-режиме)
+// Если клик по [onclick] не сработал — покажем
+// ============================================================
+if (localStorage.getItem('debugClicks') === '1') {
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        const clickable = target.closest('[onclick], button, a, [role="button"]');
+        if (!clickable) {
+            console.warn('🖱️ Клик вне кликабельного:', target.tagName, target.className);
+            return;
+        }
+        console.log('🖱️ Клик:', {
+            target: target.tagName + '.' + (target.className || '').slice(0, 40),
+            clickable: clickable.tagName + '.' + (clickable.className || '').slice(0, 40),
+            hasOnclick: !!clickable.onclick
+        });
+    }, true);
+}
+
+            // ============================================================
+// 🧪 ПРОВЕРКА КЛИКОВ ПРИ СТАРТЕ (только ПК, только в dev)
+// ============================================================
+function runClickDiagnostics() {
+    if (localStorage.getItem('debugClicks') !== '1') return;
+    if (window.innerWidth < 1024) return;
+
+    setTimeout(() => {
+        const testElements = [
+            { sel: '.leaderboard-item',     name: 'Лидерборд' },
+            { sel: '.menu-item',            name: 'Меню быстрых действий' },
+            { sel: '.nav-item',             name: 'Навигация' },
+            { sel: '.play-btn-cyber',       name: 'Кнопка Играть' },
+            { sel: '.notif-btn',            name: 'Уведомления' },
+            { sel: '.header-coins',         name: 'Монеты в шапке' },
+        ];
+
+        console.log('🧪 === ДИАГНОСТИКА КЛИКОВ ===');
+        testElements.forEach(({ sel, name }) => {
+            const el = document.querySelector(sel);
+            if (!el) {
+                console.warn(`❌ ${name}: элемент не найден`);
+                return;
+            }
+            const rect = el.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const topEl = document.elementFromPoint(centerX, centerY);
+
+            const isClickable = el.contains(topEl) || topEl === el;
+            console.log(
+                `${isClickable ? '✅' : '❌'} ${name}:`,
+                isClickable ? 'OK' : `перехвачено ${topEl.tagName}.${topEl.className}`,
+                `(${Math.round(rect.width)}×${Math.round(rect.height)})`
+            );
+        });
+        console.log('🧪 === КОНЕЦ ===');
+    }, 2000);
+}
+
+runClickDiagnostics();
             
     </script>
 </body>
