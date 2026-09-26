@@ -21079,6 +21079,112 @@ a::before, a::after,
 [onclick].notif-avatar {
     pointer-events: auto !important;
 }
+
+    /* ============================================================ */
+/* 🎫 BATTLE PASS — индикаторы состояния ячейки                 */
+/* ============================================================ */
+
+.bp-reward-cell {
+    position: relative;
+    transition: transform 0.15s ease, opacity 0.2s ease, filter 0.2s ease;
+}
+
+/* 🔒 Уровень не достигнут — приглушено, но награда ВИДНА */
+.bp-reward-cell.locked {
+    opacity: 0.55;
+    filter: grayscale(45%);
+}
+.bp-reward-cell.locked .bp-reward-icon,
+.bp-reward-cell.locked .bp-reward-amount {
+    filter: blur(0.2px);
+}
+
+/* 🔒 Премиум не куплен — награда ВИДНА, но с золотой рамкой */
+.bp-reward-cell.locked-premium {
+    opacity: 0.75;
+    border-color: rgba(255, 215, 0, 0.35) !important;
+    background: linear-gradient(180deg,
+        rgba(255, 215, 0, 0.06) 0%,
+        rgba(255, 215, 0, 0.02) 60%,
+        rgba(0, 0, 0, 0.5) 100%);
+}
+.bp-reward-cell.locked-premium .bp-tier-label {
+    color: #ffd700;
+    opacity: 0.85;
+}
+.bp-reward-cell.locked-premium .bp-reward-amount {
+    color: rgba(255, 255, 255, 0.75);
+}
+/* При наведении/тапе — подсветка, намекаем что можно купить */
+.bp-reward-cell.locked-premium:active {
+    transform: scale(0.96);
+    border-color: rgba(255, 215, 0, 0.7) !important;
+    background: linear-gradient(180deg,
+        rgba(255, 215, 0, 0.14) 0%,
+        rgba(255, 215, 0, 0.04) 60%,
+        rgba(0, 0, 0, 0.5) 100%);
+}
+
+/* ✓ Уже забрано */
+.bp-reward-cell.claimed {
+    opacity: 0.5;
+}
+.bp-reward-cell.claimed .bp-reward-icon,
+.bp-reward-cell.claimed .bp-reward-amount {
+    opacity: 0.5;
+}
+
+/* ============================================================ */
+/* 🏷️ Бейдж в углу ячейки                                       */
+/* ============================================================ */
+.bp-cell-corner {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 900;
+    border-radius: 50%;
+    z-index: 5;
+    pointer-events: none;
+    line-height: 1;
+}
+.bp-cell-corner.claimed {
+    background: var(--emerald);
+    color: #04140e;
+    font-size: 11px;
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+}
+.bp-cell-corner.premium-lock {
+    background: rgba(255, 215, 0, 0.2);
+    border: 1px solid rgba(255, 215, 0, 0.55);
+    font-size: 9px;
+}
+.bp-cell-corner.level-lock {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border);
+    font-size: 9px;
+    opacity: 0.7;
+}
+
+/* ============================================================ */
+/* 📱 Адаптив — на больших экранах бейдж чуть крупнее            */
+/* ============================================================ */
+@media (min-width: 768px) {
+    .bp-cell-corner {
+        width: 18px;
+        height: 18px;
+        font-size: 11px;
+    }
+    .bp-cell-corner.premium-lock,
+    .bp-cell-corner.level-lock {
+        font-size: 10px;
+    }
+}
     
 </style>
 </head>
@@ -44739,18 +44845,9 @@ function bpScrollBy(n) {
 function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium }) {
     const isPremium = tier === 'premium';
 
-    // Premium + не куплен — жёлтый замочек
-    if (isPremium && !hasPremium) {
-        return `
-            <div class="bp-reward-cell premium locked-premium" onclick="buyBpPremium()">
-                <div class="bp-tier-label">PREMIUM</div>
-                <div class="bp-reward-icon">💎</div>
-                <div class="bp-reward-name" style="color: #ffd700;">Купить пропуск</div>
-            </div>
-        `;
-    }
-
-    // Нет награды
+    // ============================================================
+    // ❌ Нет награды вообще — пустая ячейка
+    // ============================================================
     if (!reward) {
         return `
             <div class="bp-reward-cell ${tier}">
@@ -44760,6 +44857,9 @@ function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium })
         `;
     }
 
+    // ============================================================
+    // 🎁 Формируем превью награды — ОДИНАКОВО для всех
+    // ============================================================
     const val = reward.reward_value || {};
     let iconHTML = '🎁';
     let displayText = '';
@@ -44771,22 +44871,50 @@ function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium })
         const item = SHOP_ITEMS_CACHE[val.item_id];
         displayText = item?.name || 'Предмет';
         if (displayText.length > 10) displayText = displayText.slice(0, 9) + '…';
-
-        // Превью предмета
-        if (item) {
-            iconHTML = renderBpItemIcon(item);
-        }
+        if (item) iconHTML = renderBpItemIcon(item);
     }
 
-    const cls = !reached ? 'locked' : (claimed ? 'claimed' : '');
-    const onClick = reached && !claimed
-        ? `onclick="claimBpReward(${level}, '${tier}')"`
-        : (reward && !claimed
-            ? `onclick="showBpCellTooltip(event, ${level}, '${tier}')"`
-            : '');
+    // ============================================================
+    // 🎯 Определяем состояние ячейки
+    // ============================================================
+    const canClaim = reached && !claimed && (!isPremium || hasPremium);
+    const isLockedByLevel = !reached;
+    const isLockedByPremium = isPremium && !hasPremium;
 
+    // Класс ячейки
+    let cls = '';
+    if (claimed)              cls = 'claimed';
+    else if (isLockedByPremium) cls = 'locked-premium';   // 🔒 премиум не куплен
+    else if (isLockedByLevel)   cls = 'locked';           // 🔒 уровень не достигнут
+
+    // Клик
+    let onClick = '';
+    if (canClaim) {
+        onClick = `onclick="claimBpReward(${level}, '${tier}')"`;
+    } else if (isLockedByPremium) {
+        onClick = `onclick="buyBpPremium()"`;
+    } else {
+        onClick = `onclick="showBpCellTooltip(event, ${level}, '${tier}')"`;
+    }
+
+    // ============================================================
+    // 🏷️ Индикатор в углу (замочек / галочка)
+    // ============================================================
+    let cornerBadge = '';
+    if (claimed) {
+        cornerBadge = `<div class="bp-cell-corner claimed">✓</div>`;
+    } else if (isLockedByPremium) {
+        cornerBadge = `<div class="bp-cell-corner premium-lock">🔒</div>`;
+    } else if (isLockedByLevel) {
+        cornerBadge = `<div class="bp-cell-corner level-lock">🔒</div>`;
+    }
+
+    // ============================================================
+    // Рендер
+    // ============================================================
     return `
         <div class="bp-reward-cell ${tier} ${cls}" ${onClick}>
+            ${cornerBadge}
             <div class="bp-tier-label">${isPremium ? 'PREMIUM' : 'FREE'}</div>
             <div class="bp-reward-icon">${iconHTML}</div>
             <div class="bp-reward-amount">${escapeHtml(displayText)}</div>
@@ -44881,20 +45009,29 @@ function showBpCellTooltip(e, level, tier) {
 
     const val = reward.reward_value || {};
     let name = '';
-    let desc = '';
     let icon = '🎁';
 
     if (reward.reward_type === 'coins') {
         name = '💰 ' + (val.amount || 0) + ' монет';
-        desc = `Награда ${tier === 'premium' ? 'Premium' : 'Free'} трека, уровень ${level}`;
     } else if (reward.reward_type === 'item') {
         const item = SHOP_ITEMS_CACHE[val.item_id];
         icon = '🎨';
         name = item?.name || 'Предмет';
-        desc = `Награда ${tier === 'premium' ? 'Premium' : 'Free'} трека, уровень ${level}`;
     }
 
-    // Убираем старый
+    // 🔥 Контекстные подсказки
+    const currentLevel = currentBpProgress?.level || 1;
+    const hasPremium = currentBpProgress?.premium_unlocked === true;
+
+    let statusLine = '';
+    if (level > currentLevel) {
+        statusLine = `🔒 Нужен уровень ${level} (у тебя ${currentLevel})`;
+    } else if (tier === 'premium' && !hasPremium) {
+        statusLine = `💎 Только с Premium-пропуском · нажми, чтобы купить`;
+    } else {
+        statusLine = `✅ Доступно — нажми, чтобы забрать`;
+    }
+
     document.getElementById('bpCellTooltip')?.remove();
 
     const tip = document.createElement('div');
@@ -44902,7 +45039,7 @@ function showBpCellTooltip(e, level, tier) {
     tip.id = 'bpCellTooltip';
     tip.innerHTML = `
         <div class="tt-name">${icon} ${escapeHtml(name)}</div>
-        <div class="tt-desc">${escapeHtml(desc)}</div>
+        <div class="tt-desc">${escapeHtml(statusLine)}</div>
     `;
 
     document.body.appendChild(tip);
@@ -44916,7 +45053,7 @@ function showBpCellTooltip(e, level, tier) {
     setTimeout(() => {
         tip.classList.remove('show');
         setTimeout(() => tip.remove(), 200);
-    }, 2000);
+    }, 2200);
 }
 
 // ============================================================
