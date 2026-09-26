@@ -345,9 +345,9 @@ body::after {
     z-index: 5;
 }
 
-/* ============================================================ */
-/* 👑 ЧЕМПИОН — отдельная большая карточка                     */
-/* ============================================================ */
+/* ============================================================
+   👑 ЧЕМПИОН — отдельная большая карточка
+   ============================================================ */
 .leaderboard-champion {
     position: relative;
     display: flex;
@@ -355,91 +355,24 @@ body::after {
     gap: 22px;
     padding: 24px 28px;
     margin-bottom: 14px;
-    min-height: 130px;
-    z-index: 1;
-    /* Убираем clip-path и overflow: hidden, чтобы SVG-рамка была видна */
-    overflow: visible !important;
-    cursor: pointer;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-/* Переносим фон и границы в ::before, чтобы сохранить форму */
-.leaderboard-champion::before {
-    content: '';
-    position: absolute;
-    inset: 0;
     background: linear-gradient(135deg,
         rgba(217, 171, 90, 0.18) 0%,
         rgba(var(--emerald-rgb), 0.08) 50%,
         rgba(0, 0, 0, 0.5) 100%);
     border: 2px solid rgba(217, 171, 90, 0.6);
+    border-radius: 0;
     clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px),
         calc(100% - 16px) 100%, 0 100%, 0 16px);
-    z-index: -1;
-    border-radius: 0;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    min-height: 130px;
 }
 
-/* Верхняя блестящая линия */
-.leaderboard-champion::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #ffd700 20%, #fff5cc 50%, #ffd700 80%, transparent);
-    background-size: 200% 100%;
-    animation: champShine 3s linear infinite;
-    z-index: 2;
-    pointer-events: none;
-    clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%, 0 16px);
-}
-
-/* Корона слева */
-.champ-crown {
-    position: absolute;
-    top: -20px;
-    left: 20px;
-    font-size: 32px;
-    filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.8));
-    animation: champFloat 3s ease-in-out infinite;
-    z-index: 3;
-    pointer-events: none;
-}
-
-/* Геймпад справа (новый элемент) */
-.champ-gamepad {
-    position: absolute;
-    top: -20px;
-    right: 20px;
-    font-size: 32px;
-    filter: drop-shadow(0 4px 12px rgba(0, 224, 138, 0.8));
-    animation: champFloat 3s ease-in-out infinite;
-    animation-delay: 1.5s;
-    z-index: 3;
-    pointer-events: none;
-}
-
-@keyframes champFloat {
-    0%, 100% { transform: translateY(0) rotate(-5deg); }
-    50%      { transform: translateY(-4px) rotate(5deg); }
-}
-
-@keyframes champShine {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-
-.leaderboard-champion:hover {
-    transform: translateY(-3px);
-}
-
-/* Аватар чемпиона — разрешаем SVG выходить за границы */
 .leaderboard-champion .champ-avatar {
     width: 96px !important;
     height: 96px !important;
     font-size: 38px !important;
-    overflow: visible !important; /* Важно для SVG-рамки */
-    position: relative;
-    z-index: 2;
 }
 
 .leaderboard-champion .champ-name {
@@ -468,6 +401,41 @@ body::after {
     .leaderboard-champion .champ-stat-value {
         font-size: 20px !important;
     }
+}
+
+.leaderboard-champion::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent, #ffd700 20%, #fff5cc 50%, #ffd700 80%, transparent);
+    background-size: 200% 100%;
+    animation: champShine 3s linear infinite;
+}
+
+@keyframes champShine {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.leaderboard-champion:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(217, 171, 90, 0.35);
+}
+
+.champ-crown {
+    position: absolute;
+    top: -20px;
+    left: 20px;
+    font-size: 32px;
+    filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.8));
+    animation: champFloat 3s ease-in-out infinite;
+}
+
+@keyframes champFloat {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50%      { transform: translateY(-4px) rotate(5deg); }
 }
 
 .champ-avatar {
@@ -559,44 +527,12 @@ body::after {
     text-transform: uppercase;
 }
 
-/* ============================================================ */
-/* 📱 МОБИЛЬНАЯ АДАПТАЦИЯ ДЛЯ ЧЕМПИОНА                           */
-/* ============================================================ */
 @media (max-width: 480px) {
-    .leaderboard-champion {
-        padding: 16px 14px;
-        gap: 10px;
-        min-height: 100px;
-    }
-    
-    /* Уменьшаем аватар и сдвигаем влево */
-    .leaderboard-champion .champ-avatar {
-        width: 70px !important;
-        height: 70px !important;
-        font-size: 28px !important;
-        margin-left: -4px; /* Сдвиг влево */
-    }
-    
-    .leaderboard-champion .champ-name {
-        font-size: 18px !important;
-    }
-    
-    .leaderboard-champion .champ-stat-value {
-        font-size: 14px !important;
-    }
-    
-    /* Корона и геймпад чуть меньше и ближе к краям */
-    .champ-crown {
-        font-size: 24px;
-        left: 8px;
-        top: -16px;
-    }
-    
-    .champ-gamepad {
-        font-size: 24px;
-        right: 8px;
-        top: -16px;
-    }
+    .leaderboard-champion { padding: 16px; gap: 14px; }
+    .champ-avatar { width: 60px; height: 60px; font-size: 24px; }
+    .champ-name { font-size: 18px; }
+    .champ-stat-value { font-size: 14px; }
+    .champ-crown { font-size: 24px; left: 12px; top: -16px; }
 }
         
         .lb-avatar {
@@ -29340,8 +29276,7 @@ async function loadLeaderboard() {
                 <div class="leaderboard-champion" data-user-id="${champion.telegram_id}"
                      onclick="openPlayerProfile(${champion.telegram_id})">
                     <div class="champ-crown">👑</div>
-                    <div class="champ-gamepad">🎮</div>
-                    <div class="champ-avatar" data-list-avatar>${champAv}</div>
+                    <div class="champ-avatar">${champAv}</div>
                     <div class="champ-info">
                         <div class="champ-label">
                             <span>ЧЕМПИОН</span>
