@@ -13114,32 +13114,7 @@ html.lite-mode .has-list-bg {
         font-size: 15px !important;
         margin-bottom: 8px !important;
     }
-
-    /* Ранг-бейдж — крупный */
-    .rank-badge {
-        max-width: 480px !important;
-        padding: 16px 22px !important;
-        gap: 16px !important;
-        margin-top: 12px !important;
-    }
-
-    .rank-badge-icon {
-        width: 64px !important;
-        height: 64px !important;
-        min-width: 64px !important;
-        min-height: 64px !important;
-    }
-
-    .rank-badge-name {
-        font-size: 24px !important;
-        letter-spacing: 2.5px !important;
-    }
-
-    .rank-badge-level {
-        font-size: 12px !important;
-        letter-spacing: 2px !important;
-    }
-
+    
     .rank-progress {
         margin-top: 12px !important;
         height: 6px !important;
@@ -17433,86 +17408,140 @@ html.lite-mode .list-frame-overlay svg * {
     line-height: 1.4;
 }
 
-/* ============================================================
-   🏆 РАНГ-БЕЙДЖ — КАК В CS:GO / VALORANT
-   ============================================================ */
-.rank-badge {
-    display: flex;
+/* ============================================================ */
+/* 🏆 РАНГ-ПИЛЮЛЯ — компактная, в правом нижнем углу hero      */
+/* ============================================================ */
+.phc-rank-pill {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
-    margin-top: 6px;
-    width: 100%;
-    max-width: 320px;
-    font-family: 'Rajdhani', sans-serif;
+    gap: 8px;
+    padding: 6px 12px 6px 8px;
+    margin-left: auto;
     background: linear-gradient(135deg,
-        rgba(var(--emerald-rgb), 0.20) 0%,
-        rgba(var(--emerald-rgb), 0.06) 60%,
-        rgba(0, 0, 0, 0.35) 100%);
-    border: 1.5px solid rgba(var(--emerald-rgb), 0.5);
-    border-radius: 0;
-    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px),
-        calc(100% - 8px) 100%, 0 100%, 0 8px);
+        rgba(0, 0, 0, 0.55) 0%,
+        rgba(0, 0, 0, 0.75) 100%);
+    border: 1px solid rgba(var(--emerald-rgb), 0.4);
+    border-radius: 999px;
     color: var(--emerald-3);
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+    flex-shrink: 0;
+    max-width: 200px;
     position: relative;
     overflow: hidden;
-    align-self: stretch;
-    box-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.rank-badge::before {
+.phc-rank-pill::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--emerald), transparent);
-    opacity: 0.8;
-    z-index: 3;
+    opacity: 0.6;
 }
 
-.rank-badge-icon {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-    display: flex;
+.phc-rank-pill:hover {
+    border-color: var(--emerald);
+    box-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.35);
+    transform: translateY(-1px);
+}
+
+.phc-rank-pill:active {
+    transform: scale(0.96);
+}
+
+.phc-rank-pill-icon {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: inherit;
-    filter: drop-shadow(0 0 8px currentColor);
+    flex-shrink: 0;
 }
 
-.rank-badge-icon svg {
-    width: 100%;
-    height: 100%;
-}
-
-.rank-badge-text {
+.phc-rank-pill-text {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
     min-width: 0;
-    flex: 1;
+    text-align: left;
+    overflow: hidden;
 }
 
-.rank-badge-name {
-    font-size: 16px;
-    font-weight: 900;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    line-height: 1;
-    color: inherit;
-    text-shadow: 0 0 10px currentColor;
-}
-
-.rank-badge-level {
+.phc-rank-pill-name {
+    font-family: 'Orbitron', sans-serif;
     font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-    opacity: 0.75;
-    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 1px;
     text-transform: uppercase;
+    color: var(--emerald);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.5);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.phc-rank-pill-level {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     color: var(--hint);
+    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Цвета для топ-рангов */
+.phc-rank-pill.rank-7,
+.phc-rank-pill.rank-8 {
+    border-color: rgba(255, 46, 109, 0.55);
+}
+.phc-rank-pill.rank-7 .phc-rank-pill-name,
+.phc-rank-pill.rank-8 .phc-rank-pill-name {
+    color: #ff7a8f;
+    text-shadow: 0 0 8px rgba(255, 46, 109, 0.7);
+}
+
+.phc-rank-pill.rank-9,
+.phc-rank-pill.rank-10 {
+    border-color: rgba(255, 204, 46, 0.65);
+    box-shadow: 0 0 12px rgba(255, 204, 46, 0.25);
+}
+.phc-rank-pill.rank-9 .phc-rank-pill-name,
+.phc-rank-pill.rank-10 .phc-rank-pill-name {
+    color: #ffcc2e;
+    text-shadow: 0 0 10px rgba(255, 204, 46, 0.8);
+}
+
+/* Прогресс-бар — тонкий, под всей шапкой */
+.rank-progress-slim {
+    margin-top: 8px;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 2px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.rank-progress-text-slim {
+    font-size: 9.5px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-align: right;
+    margin-top: 4px;
+    font-family: var(--font-mono);
+}
+
+.rank-progress-text-slim b {
+    color: var(--emerald);
+    font-weight: 900;
+    text-shadow: 0 0 6px rgba(var(--emerald-rgb), 0.5);
 }
 
 /* Прогресс-бар до след. ранга */
@@ -17533,17 +17562,29 @@ html.lite-mode .list-frame-overlay svg * {
     box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
     transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
     position: relative;
+    overflow: hidden;   /* 🔥 обрезаем shine по заливке */
 }
 
 .rank-progress-fill::after {
     content: '';
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: linear-gradient(90deg,
-        transparent,
-        rgba(255, 255, 255, 0.5),
-        transparent);
-    animation: rankShine 2.4s linear infinite;
+        transparent 0%,
+        rgba(255, 255, 255, 0.6) 50%,
+        transparent 100%);
+    animation: rankShine 2.4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes rankShine {
+    0%   { transform: translateX(-100%); opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateX(100%); opacity: 0; }
 }
 
 @keyframes rankShine {
