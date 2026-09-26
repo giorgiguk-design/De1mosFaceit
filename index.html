@@ -352,20 +352,55 @@ body::after {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 18px;
-    padding: 20px;
+    gap: 22px;
+    padding: 24px 28px;
     margin-bottom: 14px;
     background: linear-gradient(135deg,
-        rgba(217, 171, 90, 0.15) 0%,
+        rgba(217, 171, 90, 0.18) 0%,
         rgba(var(--emerald-rgb), 0.08) 50%,
-        rgba(0, 0, 0, 0.4) 100%);
+        rgba(0, 0, 0, 0.5) 100%);
     border: 2px solid rgba(217, 171, 90, 0.6);
     border-radius: 0;
     clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px),
         calc(100% - 16px) 100%, 0 100%, 0 16px);
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.25s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    min-height: 130px;
+}
+
+.leaderboard-champion .champ-avatar {
+    width: 96px !important;
+    height: 96px !important;
+    font-size: 38px !important;
+}
+
+.leaderboard-champion .champ-name {
+    font-size: 26px !important;
+}
+
+.leaderboard-champion .champ-label {
+    font-size: 11px !important;
+    margin-bottom: 8px !important;
+}
+
+@media (min-width: 1024px) {
+    .leaderboard-champion {
+        padding: 28px 34px;
+        gap: 26px;
+        min-height: 150px;
+    }
+    .leaderboard-champion .champ-avatar {
+        width: 120px !important;
+        height: 120px !important;
+        font-size: 48px !important;
+    }
+    .leaderboard-champion .champ-name {
+        font-size: 32px !important;
+    }
+    .leaderboard-champion .champ-stat-value {
+        font-size: 20px !important;
+    }
 }
 
 .leaderboard-champion::before {
@@ -12645,12 +12680,27 @@ html.lite-mode .has-list-bg {
             calc(100% - 20px) 100%, 0 100%, 0 20px);
     }
 
+      /* ============================================================ */
+    /* 🖥️ ЛИДЕРБОРД НА ПК — 3 колонки + чемпион на всю ширину      */
+    /* ============================================================ */
     #page-dashboard #leaderboard {
         grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        align-items: start;
     }
+
+    /* Чемпион — на всю ширину */
+    #page-dashboard #leaderboard .leaderboard-champion {
+        grid-column: 1 / -1;
+        margin-bottom: 4px;
+    }
+
+    #page-dashboard #leaderboard .leaderboard-item {
+        margin-bottom: 0;
+    }
+
     .leaderboard-item {
         padding: 14px 18px;
         margin-bottom: 0;
@@ -23043,6 +23093,70 @@ html.lite-mode .dash-bp-full .bp-level-card.current {
     </details>
 
     <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+    <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">🏅 Эмблемы рангов — что означают?</summary>
+    <div style="margin-top: 12px; color: var(--hint); line-height: 1.7;">
+
+        <div style="font-size: 12px; margin-bottom: 14px;">
+            Нажми на <b style="color: var(--emerald);">любую эмблему в приложении</b> — откроется карточка с подробной информацией о ранге.
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px;">
+            ${[1,2,3,4,5,6,7,8,9,10].map(lvl => {
+                const info = RANK_CONFIG.LEVELS[lvl-1];
+                return `
+                    <div style="
+                        display: flex; align-items: center; gap: 10px;
+                        padding: 10px;
+                        background: rgba(0,0,0,0.35);
+                        border: 1px solid ${info.color}44;
+                        border-radius: 10px;
+                        cursor: pointer;
+                    " onclick="openRankInfoSheet(${lvl})">
+                        <span style="width: 34px; height: 34px; flex-shrink: 0; display: inline-flex;">
+                            ${getRankEmblem(lvl, 34, true)}
+                        </span>
+                        <div style="min-width: 0; flex: 1;">
+                            <div style="
+                                font-family: 'Orbitron', sans-serif;
+                                font-size: 11px;
+                                font-weight: 900;
+                                letter-spacing: 1px;
+                                color: ${info.color};
+                                text-transform: uppercase;
+                                text-shadow: 0 0 8px ${info.color}77;
+                                line-height: 1.1;
+                            ">${info.name}</div>
+                            <div style="
+                                font-family: 'JetBrains Mono', monospace;
+                                font-size: 9px;
+                                color: var(--hint);
+                                font-weight: 700;
+                                margin-top: 3px;
+                                letter-spacing: 0.5px;
+                            ">УР. ${lvl} · ${info.min}+</div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+
+        <div style="
+            padding: 10px 12px;
+            background: rgba(var(--emerald-rgb), 0.06);
+            border-left: 3px solid var(--emerald);
+            border-radius: 8px;
+            font-size: 11.5px;
+            line-height: 1.5;
+            color: var(--text);
+        ">
+            💡 <b>Как получить следующий ранг?</b><br>
+            Побеждай в матчах. За каждую победу — <b style="color: var(--emerald);">+25 DXP</b>, за поражение — <b style="color: var(--red);">−25 DXP</b>. Ранг повышается автоматически при достижении нужного DXP.
+        </div>
+
+    </div>
+</details>
+
+    <details style="margin-bottom: 12px; padding: 12px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
         <summary style="cursor: pointer; font-weight: 800; color: var(--emerald); outline: none;">🎯 Что такое DXP и как он считается?</summary>
         <div style="margin-top: 10px; color: var(--hint); line-height: 1.7;">
             <b style="color: var(--emerald);">DXP</b> (De1mos Experience Points) — это твой игровой рейтинг, который показывает твой уровень мастерства.
@@ -24783,11 +24897,90 @@ function getQuestSvg(questId, size = 20) {
 
     return icons[questId] || `<svg ${c}><circle cx="12" cy="12" r="9"/></svg>`;
 }
+            
 
 // ============================================================
 // 🎯 SVG-ИКОНКИ РАНГОВ (киберспортивный стиль, outline)
 // ============================================================
 const _rankSvgCache = {};
+
+// ============================================================
+// 🏅 ЭМБЛЕМЫ РАНГОВ — детальные, как в CS:GO / Valorant
+// ============================================================
+const _rankEmblemCache = {};
+
+function getRankEmblem(level, size = 32, glow = true) {
+    level = Math.max(1, Math.min(10, level));
+    const key = `${level}_${size}_${glow}`;
+    if (_rankEmblemCache[key]) return _rankEmblemCache[key];
+
+    const info = RANK_CONFIG.LEVELS[level - 1];
+    const color = info.color || '#00e08a';
+    const dark = shadeColor(color, -55);
+    const light = shadeColor(color, 55);
+    const uid = '_' + Math.random().toString(36).slice(2, 7);
+
+    // Уникальный символ для каждого уровня
+    const symbols = {
+        1: `<polygon points="50,25 78,72 22,72" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <circle cx="50" cy="58" r="5" fill="${light}"/>`,
+
+        2: `<polygon points="50,20 82,72 18,72" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <polygon points="50,38 70,70 30,70" fill="${light}" opacity="0.45"/>
+            <circle cx="50" cy="58" r="4" fill="${light}"/>`,
+
+        3: `<polygon points="50,18 82,50 50,82 18,50" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <polygon points="50,32 68,50 50,68 32,50" fill="${light}" opacity="0.5"/>
+            <circle cx="50" cy="50" r="4" fill="${light}"/>`,
+
+        4: `<polygon points="50,15 85,50 50,85 15,50" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <line x1="25" y1="50" x2="75" y2="50" stroke="${light}" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="50" y1="25" x2="50" y2="75" stroke="${light}" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="50" cy="50" r="5" fill="${light}"/>`,
+
+        5: `<path d="M50 12 L82 28 L82 55 Q82 82 50 92 Q18 82 18 55 L18 28 Z" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M50 26 L72 38 L72 58 Q72 74 50 82 Q28 74 28 58 L28 38 Z" fill="${light}" opacity="0.35"/>
+            <polygon points="50,38 60,48 56,60 44,60 40,48" fill="${light}"/>`,
+
+        6: `<path d="M50 10 L84 26 L84 54 Q84 84 50 94 Q16 84 16 54 L16 26 Z" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M35 52 L46 63 L68 41" fill="none" stroke="${light}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`,
+
+        7: `<path d="M50 8 L90 28 L90 48 L50 68 L10 48 L10 28 Z" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M50 42 L80 57 L80 77 L50 92 L20 77 L20 57 Z" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M50 55 L68 65 L68 74 L50 83 L32 74 L32 65 Z" fill="${light}" opacity="0.55"/>`,
+
+        8: `<path d="M50 6 L62 36 L92 39 L68 59 L76 89 L50 72 L24 89 L32 59 L8 39 L38 36 Z" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <circle cx="50" cy="52" r="6" fill="${light}"/>`,
+
+        9: `<path d="M50 4 L63 35 L94 38 L70 59 L78 91 L50 73 L22 91 L30 59 L6 38 L37 35 Z" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+            <circle cx="50" cy="52" r="8" fill="${light}"/>
+            <circle cx="50" cy="52" r="3" fill="${dark}"/>`,
+
+        10: `<polygon points="50,4 92,27 92,73 50,96 8,73 8,27" fill="${dark}" stroke="${light}" stroke-width="3" stroke-linejoin="round"/>
+             <path d="M55 22 L33 55 L48 55 L43 82 L67 48 L52 48 Z" fill="${light}" stroke="none"/>
+             <circle cx="50" cy="50" r="40" fill="none" stroke="${light}" stroke-width="1.5" opacity="0.5"/>`,
+    };
+
+    const inner = symbols[level] || symbols[1];
+    const glowStyle = glow
+        ? `filter: drop-shadow(0 0 6px ${color}cc) drop-shadow(0 0 12px ${color}66);`
+        : '';
+
+    const result = `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg" style="${glowStyle}">
+        <defs>
+            <radialGradient id="emBg${uid}" cx="50%" cy="35%" r="60%">
+                <stop offset="0%" stop-color="${light}" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="${dark}" stop-opacity="0"/>
+            </radialGradient>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="url(#emBg${uid})"/>
+        ${inner}
+    </svg>`;
+
+    _rankEmblemCache[key] = result;
+    return result;
+}
+            
 function getRankSvg(level, size = 24) {
     const key = `${level}_${size}`;
     if (_rankSvgCache[key]) return _rankSvgCache[key];
@@ -27731,7 +27924,11 @@ async function renderProfileView(user, options = {}) {
 
 <!-- Строка 4: РАНГ-БЕЙДЖ с прогресс-баром -->
 <div class="rank-badge rank-${level}" data-rank-badge>
-    <span class="rank-badge-icon" data-rank-icon>${getRankSvg(level, 40)}</span>
+    <span class="rank-badge-icon"
+      data-rank-icon
+      onclick="openRankInfoSheet(${level}, event)"
+      style="cursor: pointer;"
+      title="Нажми, чтобы узнать про ранг">${getRankEmblem(level, 48, true)}</span>
     <div class="rank-badge-text">
         <div class="rank-badge-name">${levelInfo.name}</div>
         <div class="rank-badge-level">УРОВЕНЬ ${level} / 10</div>
@@ -28345,6 +28542,7 @@ async function loadLeaderboard() {
             const champInitial = (champion.display_name || 'U')[0].toUpperCase();
             const champAv = champSrc ? `<img src="${champSrc}" alt="">` : champInitial;
             const champLvl = eloToLevel(champion.elo);
+            const champEmblem = getRankEmblem(champLvl, 40, true);
             const champIsMe = champion.telegram_id === me;
 
             html += `
@@ -28357,17 +28555,34 @@ async function loadLeaderboard() {
                             <span>ЧЕМПИОН</span>
                             ${champIsMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
                         </div>
-                        <div class="champ-name">${escapeHtml(champion.display_name || 'Игрок')}</div>
-                        <div class="champ-stats">
-                            <div class="champ-stat">
-                                <span class="champ-stat-value">${champion.elo ?? 1000}</span>
-                                <span class="champ-stat-label">DXP</span>
-                            </div>
-                            <div class="champ-stat">
-                                <span class="champ-stat-value">${champLvl}</span>
-                                <span class="champ-stat-label">Уровень</span>
-                            </div>
-                        </div>
+<div class="champ-name">${escapeHtml(champion.display_name || 'Игрок')}</div>
+<div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+    <div style="
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 12px;
+        background: rgba(0,0,0,0.5);
+        border: 1px solid ${RANK_CONFIG.LEVELS[champLvl-1].color}66;
+        border-radius: 999px;
+        cursor: pointer;
+    " onclick="event.stopPropagation(); openRankInfoSheet(${champLvl});">
+        <span style="width: 24px; height: 24px; display: inline-flex; flex-shrink: 0;">
+            ${getRankEmblem(champLvl, 24, true)}
+        </span>
+        <span style="
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            color: ${RANK_CONFIG.LEVELS[champLvl-1].color};
+            text-transform: uppercase;
+            text-shadow: 0 0 8px ${RANK_CONFIG.LEVELS[champLvl-1].color}88;
+        ">${RANK_CONFIG.LEVELS[champLvl-1].name}</span>
+    </div>
+    <div class="champ-stat">
+        <span class="champ-stat-value">${champion.elo ?? 1000}</span>
+        <span class="champ-stat-label">DXP</span>
+    </div>
+</div>
                     </div>
                 </div>
             `;
@@ -28420,7 +28635,7 @@ function renderLbItem(user, rank, isMe = false) {
     const av = src ? `<img src="${src}" alt="">` : initial;
     const lvl = eloToLevel(user.elo);
     const isDev = isDevClubMember(user.telegram_id);
-    const rankIcon = getRankSvg(lvl, 18);
+    const rankIcon = getRankEmblem(lvl, 22, false);
 
     // 🟢 Онлайн-индикатор
     const lastSeen = user.last_seen ? new Date(user.last_seen).getTime() : 0;
@@ -28435,7 +28650,11 @@ return `
 
         <div class="lb-info-compact">
             <div class="lb-row-top">
-                <span class="lb-rank-mini" style="color: var(--emerald); flex-shrink: 0; display: inline-flex; width: 18px; height: 18px;">${rankIcon}</span>
+                <span class="lb-rank-emblem"
+      onclick="event.stopPropagation(); openRankInfoSheet(${lvl});"
+      title="Ранг: ${RANK_CONFIG.LEVELS[lvl-1].name}"
+      style="flex-shrink: 0; display: inline-flex; width: 22px; height: 22px; cursor: pointer; vertical-align: middle;"
+      data-rank-emblem>${rankIcon}</span>
                 <span class="lb-nick-inline" data-list-nick>
                     ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
                 </span>
