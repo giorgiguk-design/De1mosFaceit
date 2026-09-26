@@ -12658,7 +12658,7 @@ html.lite-mode .header-coins::before {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    opacity: 0.35;                 /* мягкая прозрачность, чтобы текст читался */
+    opacity: 0.65;
     pointer-events: none;
     z-index: 0;
     transition: opacity 0.3s ease;
@@ -12666,6 +12666,7 @@ html.lite-mode .header-coins::before {
     transform: translateZ(0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    border-radius: inherit;
 }
 
 /* Затемняющий слой поверх картинки, чтобы текст не терялся */
@@ -12674,10 +12675,22 @@ html.lite-mode .header-coins::before {
     position: absolute;
     inset: 0;
     background: linear-gradient(90deg,
-        rgba(0, 0, 0, 0.65) 0%,
-        rgba(0, 0, 0, 0.45) 50%,
-        rgba(0, 0, 0, 0.65) 100%);
+        rgba(0, 0, 0, 0.4) 0%,
+        rgba(0, 0, 0, 0.15) 50%,
+        rgba(0, 0, 0, 0.5) 100%);
 }
+
+@media (max-width: 767px) {
+    .list-item-bg { opacity: 0.55; }
+    .list-item-bg::after {
+        background: linear-gradient(90deg,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.35) 50%,
+            rgba(0, 0, 0, 0.6) 100%);
+    }
+}
+
+html.lite-mode .list-item-bg { opacity: 0.35; }
 
 /* Все дети .has-list-bg должны быть поверх фона */
 .has-list-bg > *:not(.list-item-bg) {
@@ -12687,10 +12700,10 @@ html.lite-mode .header-coins::before {
 
 /* 🔥 Дополнительно — усиленный фон для крупных плашек (профиль команды, комната) */
 .has-list-bg.leaderboard-item .list-item-bg {
-    opacity: 0.4;
+    opacity: 0.75;
 }
 .has-list-bg.club-member-row .list-item-bg {
-    opacity: 0.32;
+    opacity: 0.6;
 }
 
 /* Плавное появление */
@@ -27108,6 +27121,75 @@ function escapeHtml(str) {
 }
 
 // ============================================================
+// 📡 REALTIME — канал с авто-переподключением
+// ============================================================
+function createRealtimeChannel(name, setupFn, options = {}) {
+    const {
+        onSubscribed = null,
+        onError = null,
+        maxRetries = 5,
+        baseDelay = 2000,
+    } = options;
+
+    let channel = null;
+    let retryCount = 0;
+    let destroyed = false;
+
+    function build() {
+        if (destroyed) return;
+
+        channel = sb.channel(name);
+
+        // Регистрируем события канала
+        setupFn(channel);
+
+        channel.subscribe((status, err) => {
+            console.log(`📡 ${name} status:`, status);
+
+            if (status === 'SUBSCRIBED') {
+                retryCount = 0;
+                if (typeof onSubscribed === 'function') onSubscribed();
+                return;
+            }
+
+            if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+                // Пробуем переподключиться
+                if (destroyed) return;
+                if (retryCount >= maxRetries) {
+                    console.warn(`📡 ${name}: сдаюсь после ${maxRetries} попыток`);
+                    if (typeof onError === 'function') onError(err);
+                    return;
+                }
+
+                retryCount++;
+                const delay = Math.min(baseDelay * Math.pow(1.5, retryCount - 1), 30000);
+
+                console.log(`📡 ${name}: переподключение через ${delay}ms (попытка ${retryCount})`);
+
+                setTimeout(() => {
+                    try { sb.removeChannel(channel); } catch (e) {}
+                    build();
+                }, delay);
+            }
+        });
+
+        return channel;
+    }
+
+    build();
+
+    return {
+        get channel() { return channel; },
+        destroy() {
+            destroyed = true;
+            if (channel) {
+                try { sb.removeChannel(channel); } catch (e) {}
+            }
+        },
+    };
+}            
+
+// ============================================================
 // 🔒 БЛОКИРОВКА СКРОЛЛА BODY (при открытых модалках)
 // ============================================================
 let _bodyScrollLockCount = 0;
@@ -30101,53 +30183,58 @@ async function loadAllClubsSheet(q) {
     }
 }
 
-            // ============================================================
-// 📡 Realtime на shop_items — обновление магазина у всех
 // ============================================================
-let shopItemsChannel = null;
+// 📡 REALTIME — обновления магазина
+// ============================================================
+let shopItemsRef = null;
 
 function subscribeShopItemsRealtime() {
-    if (shopItemsChannel) {
-        try { sb.removeChannel(shopItemsChannel); } catch (e) {}
-        shopItemsChannel = null;
+    if (shopItemsRef) {
+        shopItemsRef.destroy();
+        shopItemsRef = null;
     }
 
-    shopItemsChannel = sb.channel('shop_items_rt')
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'shop_items'
-        }, (payload) => {
-            const row = payload.new || payload.old;
-            if (!row) return;
+    shopItemsRef = createRealtimeChannel(
+        'shop_items_rt',
+        (channel) => {
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'shop_items'
+            }, (payload) => {
+                const row = payload.new || payload.old;
+                if (!row) return;
 
-            console.log('📦 shop_items event:', payload.eventType, row.id);
+                console.log('📦 shop_items event:', payload.eventType, row.id);
 
-            // Обновляем кэш
-            if (payload.eventType === 'DELETE') {
-                delete SHOP_ITEMS_CACHE[row.id];
-            } else if (payload.new) {
-                SHOP_ITEMS_CACHE[payload.new.id] = payload.new;
-            }
-
-            // Если открыт магазин — обновляем
-            if (document.getElementById('page-shop')?.classList.contains('active')) {
-                // Открыта ли категория в модалке
-                if (document.getElementById('shopCatModal')) {
-                    refreshShopCategory().catch(e => console.warn(e));
-                } else {
-                    openShop();
+                if (payload.eventType === 'DELETE') {
+                    delete SHOP_ITEMS_CACHE[row.id];
+                } else if (payload.new) {
+                    SHOP_ITEMS_CACHE[payload.new.id] = payload.new;
                 }
-            }
 
-            // Если открыт магазин клана — обновляем и его
-            if (document.getElementById('clanShopSheet')?.classList.contains('active')) {
-                openClanShop();
+                if (document.getElementById('page-shop')?.classList.contains('active')) {
+                    if (document.getElementById('shopCatModal')) {
+                        refreshShopCategory().catch(e => console.warn(e));
+                    } else {
+                        openShop();
+                    }
+                }
+
+                if (document.getElementById('clanShopSheet')?.classList.contains('active')) {
+                    openClanShop();
+                }
+            });
+        },
+        {
+            onError: () => {
+                console.warn('📡 shop_items_rt: fallback — polling каждые 60 сек');
+                setInterval(() => {
+                    if (document.getElementById('page-shop')?.classList.contains('active')) {
+                        loadShopItemsCache();
+                    }
+                }, 60000);
             }
-        })
-        .subscribe((status) => {
-            console.log('📡 shop_items_rt status:', status);
-        });
+        }
+    );
 }
 
             // ============================================================
@@ -32301,153 +32388,228 @@ function onMatchFound(match) {
     subscribeMatchRealtime();
 }
 
+// ============================================================
+// 🎬 REALTIME — матч (veto, ready_check, side_pick, result)
+// ============================================================
+let currentMatchRef = null;
 let _matchRerenderTimer = null;
+let _lastMatchId = null;
 
 async function subscribeMatchRealtime() {
-    if (currentMatchChannel) {
-        try { sb.removeChannel(currentMatchChannel); } catch (e) {}
-        currentMatchChannel = null;
-    }
     if (!currentMatch) return;
-    const matchId = currentMatch.id;
 
+    const matchId = Number(currentMatch.id);
+
+    // 🔥 Уже подписаны на этот матч?
+    if (_lastMatchId === matchId && currentMatchRef && currentMatchRef.isConnected()) {
+        console.log('📡 match already subscribed for', matchId);
+        return;
+    }
+
+    clearTimeout(_matchRerenderTimer);
+
+    if (currentMatchRef) {
+        currentMatchRef.destroy();
+        currentMatchRef = null;
+    }
+
+    _lastMatchId = matchId;
     console.log('🎬 subscribeMatchRealtime for match', matchId);
 
-    currentMatchChannel = sb.channel('match_' + matchId)
-        .on('postgres_changes', {
-            event: 'UPDATE', schema: 'public', table: 'game_matches',
-            filter: `id=eq.${matchId}`
-        }, async (payload) => {
-            const fresh = payload.new;
-            if (!fresh) return;
+    currentMatchRef = createRealtimeChannel(
+        'match_' + matchId,
+        (channel) => {
+            channel.on('postgres_changes', {
+                event: 'UPDATE', schema: 'public', table: 'game_matches',
+                filter: `id=eq.${matchId}`
+            }, async (payload) => {
+                const fresh = payload.new;
+                if (!fresh) return;
 
-            // 🔥 Debounce 200мс — защита от частых обновлений last_action_at
-            clearTimeout(_matchRerenderTimer);
-            _matchRerenderTimer = setTimeout(async () => {
-                const prevStatus = currentMatch?.status;
-                currentMatch = fresh;
-
-                console.log('📥 match event:', prevStatus, '→', fresh.status);
-
-                // ==== READY_CHECK ====
-                if (fresh.status === 'ready_check') {
-                    // Если я уже на этом экране — просто перерендерить
-                    const onReadyScreen = document.querySelector('#vetoContent .veto-header-v2')
-                        && !document.querySelector('#vetoContent .veto-wrap-v3');
-
+                clearTimeout(_matchRerenderTimer);
+                _matchRerenderTimer = setTimeout(async () => {
+                    const prevStatus = currentMatch?.status;
                     currentMatch = fresh;
 
-                    if (onReadyScreen) {
-                        renderReadyCheck();
-                    } else {
-                        showReadyCheckScreen();
+                    console.log('📥 match event:', prevStatus, '→', fresh.status);
+
+                    // ==== READY_CHECK ====
+                    if (fresh.status === 'ready_check') {
+                        const onReady = document.body.innerHTML.includes('Проверка готовности')
+                            && document.getElementById('page-veto')?.classList.contains('active');
+
+                        if (!onReady) {
+                            showReadyCheckScreen();
+                        } else {
+                            // Проверяем, все ли готовы
+                            const readyData = fresh.ready_check_data || {};
+                            const allIds = [
+                                ...(fresh.team_a_players || []),
+                                ...(fresh.team_b_players || [])
+                            ].map(p => String(p.telegram_id));
+
+                            const allReady = allIds.length > 0 &&
+                                             allIds.every(id => readyData[id] === true);
+
+                            if (allReady) {
+                                await finishReadyCheck(true);
+                            } else {
+                                renderReadyCheck();
+                            }
+                        }
+                        return;
                     }
-                    return;
-                }
 
-                // ==== READY_CHECK ====
-if (fresh.status === 'ready_check') {
-    // Обновляем данные
-    const dataChanged = JSON.stringify(fresh.ready_check_data || {}) !==
-                        JSON.stringify(currentMatch?.ready_check_data || {});
+                    // ==== VETO ====
+                    if (fresh.status === 'veto') {
+                        // Останавливаем ready_check таймеры
+                        if (typeof _readyCheckTimer !== 'undefined' && _readyCheckTimer) {
+                            clearInterval(_readyCheckTimer);
+                            _readyCheckTimer = null;
+                        }
+                        if (typeof _readyCheckRefreshTimer !== 'undefined' && _readyCheckRefreshTimer) {
+                            clearInterval(_readyCheckRefreshTimer);
+                            _readyCheckRefreshTimer = null;
+                        }
 
-    currentMatch = fresh;
-
-    // Если я на этом экране — обновляем
-    const onReadyScreen = document.querySelector('#vetoContent .veto-wrap') &&
-                          document.body.innerHTML.includes('Проверка готовности');
-
-    if (!onReadyScreen) {
-        // Первый раз вижу этот матч — открываю экран
-        showReadyCheckScreen();
-    } else if (dataChanged) {
-        // Обновились данные о готовности — перерисовываю
-        renderReadyCheck();
-    }
-
-    // Если все готовы — финализируем
-    const readyData = fresh.ready_check_data || {};
-    const allIds = [
-        ...(fresh.team_a_players || []),
-        ...(fresh.team_b_players || [])
-    ].map(p => String(p.telegram_id));
-
-    const allReady = allIds.length > 0 &&
-                     allIds.every(id => readyData[id] === true);
-
-    if (allReady && fresh.status === 'ready_check') {
-        await finishReadyCheck(true);
-    }
-
-    return;
-}
-
-                // ==== VETO ====
-                if (fresh.status === 'veto') {
-                    if (document.getElementById('page-veto')?.classList.contains('active')) {
-                        renderVeto();
-                        startVetoCountdown();
-                    } else {
-                        showVetoScreen();
+                        if (document.getElementById('page-veto')?.classList.contains('active')) {
+                            renderVeto();
+                            startVetoCountdown();
+                        } else {
+                            showVetoScreen();
+                        }
+                        return;
                     }
-                    return;
-                }
 
-                // ==== SIDE_PICK ====
-                if (fresh.status === 'side_pick') {
-                    haptic('heavy');
-                    if (prevStatus !== 'side_pick') {
-                        showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
-                    }
-                    stopVetoPolling();
-                    if (document.getElementById('page-veto')?.classList.contains('active')) {
-                        renderVeto();
-                        startVetoCountdown();
-                    } else {
-                        showVetoScreen();
-                    }
-                    return;
-                }
-
-                // ==== IN_GAME ====
-                if (fresh.status === 'in_game') {
-                    stopVetoPolling();
-                    const { data: freshRoom } = await sb.from('rooms')
-                        .select('*').eq('id', fresh.room_id).single();
-                    if (freshRoom) {
+                    // ==== SIDE_PICK ====
+                    if (fresh.status === 'side_pick') {
                         haptic('heavy');
-                        showInGameScreen(freshRoom.id, freshRoom);
+                        if (prevStatus !== 'side_pick') {
+                            showToast('🗺️ Карта выбрана: ' + (fresh.final_map || '—'));
+                        }
+                        stopVetoPolling();
+                        if (document.getElementById('page-veto')?.classList.contains('active')) {
+                            renderVeto();
+                            startVetoCountdown();
+                        } else {
+                            showVetoScreen();
+                        }
+                        return;
                     }
-                    return;
-                }
 
-                // ==== RESULT ====
-                if (fresh.status === 'result') {
-                    stopVetoPolling();
-                    showResultScreen();
-                    return;
-                }
+                    // ==== IN_GAME ====
+                    if (fresh.status === 'in_game') {
+                        stopVetoPolling();
+                        const { data: freshRoom } = await sb.from('rooms')
+                            .select('*').eq('id', fresh.room_id).single();
+                        if (freshRoom) {
+                            haptic('heavy');
+                            showInGameScreen(freshRoom.id, freshRoom);
+                        }
+                        return;
+                    }
 
-                // ==== FINISHED ====
-                if (fresh.status === 'finished') {
-                    stopVetoPolling();
-                    showFinishedScreen();
-                    return;
-                }
+                    // ==== RESULT ====
+                    if (fresh.status === 'result') {
+                        stopVetoPolling();
+                        showResultScreen();
+                        return;
+                    }
 
-// ==== CANCELLED ====
-if (fresh.status === 'cancelled') {
-    stopVetoPolling();
-    if (_readyCheckTimer) { clearInterval(_readyCheckTimer); _readyCheckTimer = null; }
-    if (_readyCheckRefreshTimer) { clearInterval(_readyCheckRefreshTimer); _readyCheckRefreshTimer = null; }
-    showVetoCancelledScreen(fresh.cancelled_reason);
-    return;
+                    // ==== FINISHED ====
+                    if (fresh.status === 'finished') {
+                        stopVetoPolling();
+                        showFinishedScreen();
+                        return;
+                    }
+
+                    // ==== CANCELLED ====
+                    if (fresh.status === 'cancelled') {
+                        stopVetoPolling();
+
+                        if (typeof _readyCheckTimer !== 'undefined' && _readyCheckTimer) {
+                            clearInterval(_readyCheckTimer);
+                            _readyCheckTimer = null;
+                        }
+                        if (typeof _readyCheckRefreshTimer !== 'undefined' && _readyCheckRefreshTimer) {
+                            clearInterval(_readyCheckRefreshTimer);
+                            _readyCheckRefreshTimer = null;
+                        }
+
+                        showVetoCancelledScreen(fresh.cancelled_reason);
+                        return;
+                    }
+                }, 200);
+            });
+        },
+        {
+            onError: () => {
+                console.warn('📡 match_rt fallback: polling каждые 2 сек');
+                // Fallback — polling
+                if (_lastMatchId === matchId) {
+                    startMatchPolling(matchId);
+                }
+            }
+        }
+    );
 }
-            }, 200);
-        })
-        .subscribe((status) => {
-            console.log('📡 match_' + matchId + ' status:', status);
-        });
+
+function unsubscribeMatchRealtime() {
+    if (currentMatchRef) {
+        currentMatchRef.destroy();
+        currentMatchRef = null;
+    }
+    _lastMatchId = null;
+    clearTimeout(_matchRerenderTimer);
+    _matchRerenderTimer = null;
+    stopMatchPolling();
+}
+
+// ============================================================
+// 🔄 FALLBACK — polling статуса матча (если realtime упал)
+// ============================================================
+let _matchPollingTimer = null;
+
+function startMatchPolling(matchId) {
+    if (_matchPollingTimer) return;
+
+    _matchPollingTimer = setInterval(async () => {
+        if (!currentMatch || currentMatch.id !== matchId) {
+            stopMatchPolling();
+            return;
+        }
+        if (currentMatchRef && currentMatchRef.isConnected()) {
+            stopMatchPolling();
+            return;
+        }
+
+        try {
+            const { data } = await sb.from('game_matches')
+                .select('*').eq('id', matchId).maybeSingle();
+            if (!data) return;
+
+            const prevStatus = currentMatch?.status;
+            const prevReadyData = JSON.stringify(currentMatch?.ready_check_data || {});
+            const newReadyData = JSON.stringify(data.ready_check_data || {});
+
+            currentMatch = data;
+
+            if (prevStatus !== data.status || prevReadyData !== newReadyData) {
+                // Принудительно вызываем обработчик — пересоздаём realtime
+                if (currentMatchRef) currentMatchRef.destroy();
+                currentMatchRef = null;
+                _lastMatchId = null;
+                await subscribeMatchRealtime();
+            }
+        } catch (e) {}
+    }, 3000);
+}
+
+function stopMatchPolling() {
+    if (_matchPollingTimer) {
+        clearInterval(_matchPollingTimer);
+        _matchPollingTimer = null;
+    }
 }
 
         function showConfirmScreen() {
@@ -35351,7 +35513,7 @@ function returnToDashboard() {
 
     currentMatch = null;
     if (matchPollTimer) { clearInterval(matchPollTimer); matchPollTimer = null; }
-    if (currentMatchChannel) { sb.removeChannel(currentMatchChannel); currentMatchChannel = null; }
+    unsubscribeMatchRealtime();
     switchPage('dashboard');
     loadLeaderboard();
     checkActiveRoom();
@@ -36913,202 +37075,235 @@ const bDisabled = me?.team === 'B' || teamBCount >= perTeamCount;
         }
 
 // ============================================================
-// REALTIME ПОДПИСКА НА КОМНАТУ
+// 📡 REALTIME — комната (rooms + room_players)
 // ============================================================
-let roomRealtimeChannel = null;
+let roomRealtimeRef = null;
 let _roomRenderTimer = null;
+let _lastRoomId = null;
 
 function subscribeRoomRealtime(roomId) {
-    // 🔥 Валидация
     const rid = Number(roomId);
     if (!rid || isNaN(rid)) {
         console.warn('❌ subscribeRoomRealtime: invalid roomId =', roomId);
         return;
     }
-    roomId = rid;
 
-    console.log('🔌 subscribeRoomRealtime, roomId =', roomId);
+    // 🔥 Если уже подписаны на эту комнату — не пересоздаём
+    if (_lastRoomId === rid && roomRealtimeRef && roomRealtimeRef.isConnected()) {
+        console.log('📡 room_rt already subscribed for', rid);
+        return;
+    }
 
-    // 🔥 Отменяем старый таймер рендера ПЕРЕД пересозданием канала
+    console.log('🔌 subscribeRoomRealtime, roomId =', rid);
+
     clearTimeout(_roomRenderTimer);
     _roomRenderTimer = null;
 
-    if (roomRealtimeChannel) {
-        try { sb.removeChannel(roomRealtimeChannel); } catch (e) {}
-        roomRealtimeChannel = null;
+    if (roomRealtimeRef) {
+        roomRealtimeRef.destroy();
+        roomRealtimeRef = null;
     }
 
-    roomRealtimeChannel = sb.channel('room_rt_' + roomId)
-        // ==== Изменения комнаты ====
-        .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'rooms',
-            filter: 'id=eq.' + roomId
-        }, async (payload) => {
-            const room = payload.new;
-            if (!room) return;
+    _lastRoomId = rid;
 
-            console.log('📥 rooms event:', payload.eventType, 'id:', room.id, 'status:', room.status, '| host_link:', room.host_link ? 'ЕСТЬ' : 'нет');
+    roomRealtimeRef = createRealtimeChannel(
+        'room_rt_' + rid,
+        (channel) => {
+            // ============================================================
+            // Изменения комнаты
+            // ============================================================
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'rooms',
+                filter: 'id=eq.' + rid
+            }, async (payload) => {
+                const room = payload.new;
+                if (!room) return;
 
-            const kicked = room.kicked_users || [];
-            if (kicked.includes(Number(currentUser.telegram_id))) {
-                showToast('🚪 Тебя исключили из комнаты');
-                haptic('heavy');
-                unsubscribeRoomRealtime();
-                closePlayScreen();
-                checkActiveRoom();
-                const newKicked = kicked.filter(id => id !== Number(currentUser.telegram_id));
-                await sb.from('rooms').update({ kicked_users: newKicked }).eq('id', roomId);
-                return;
-            }
+                console.log('📥 rooms event:', payload.eventType, 'id:', room.id,
+                    'status:', room.status, '| host_link:', room.host_link ? 'ЕСТЬ' : 'нет');
 
-            if (activeRoomId === roomId && room.status === 'open') {
-                showActiveRoomBanner(room);
-            }
-
-            const killUI = () => {
-                activeRoomId = null;
-                hideActiveRoomBanner();
-                const _ind = document.getElementById('headerRoomIndicator');
-                if (_ind) _ind.style.display = 'none';
-                const _flt = document.getElementById('playEnterFloat');
-                if (_flt) _flt.classList.remove('active');
-                const _scr = document.getElementById('playScreen');
-                if (_scr) _scr.classList.remove('active');
-            };
-
-            if (room.status === 'cancelled') {
-                unsubscribeRoomRealtime();
-                unsubscribeInGameRealtime();
-                killUI();
-                showCancelledOnce(roomId);
-                return;
-            }
-
-            if (room.status === 'ready_check') {
-    killUI();
-
-    const { data: match } = await sb.from('game_matches')
-        .select('*')
-        .eq('room_id', roomId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (match) {
-        currentMatch = match;
-
-        // Если я уже на ready_check — не переключаю
-        const onReadyScreen = document.body.innerHTML.includes('Проверка готовности');
-
-        if (!onReadyScreen) {
-            haptic('heavy');
-            showReadyCheckScreen();
-            subscribeMatchRealtime();
-        }
-    }
-    return;
-}
-
-            if (room.status === 'veto' || room.status === 'side_pick') {
-                killUI();
-                const { data: match } = await sb.from('game_matches')
-                    .select('*').eq('room_id', roomId)
-                    .order('created_at', { ascending: false })
-                    .limit(1).maybeSingle();
-                if (match) {
-                    currentMatch = match;
-                    showVetoScreen();
-                    subscribeMatchRealtime();
+                // Кик
+                const kicked = room.kicked_users || [];
+                if (kicked.includes(Number(currentUser.telegram_id))) {
+                    showToast('🚪 Тебя исключили из комнаты');
+                    haptic('heavy');
+                    unsubscribeRoomRealtime();
+                    closePlayScreen();
+                    checkActiveRoom();
+                    const newKicked = kicked.filter(id => id !== Number(currentUser.telegram_id));
+                    await sb.from('rooms').update({ kicked_users: newKicked }).eq('id', rid);
+                    return;
                 }
-                return;
+
+                if (activeRoomId === rid && room.status === 'open') {
+                    showActiveRoomBanner(room);
+                }
+
+                const killUI = () => {
+                    activeRoomId = null;
+                    hideActiveRoomBanner();
+                    const _ind = document.getElementById('headerRoomIndicator');
+                    if (_ind) _ind.style.display = 'none';
+                    const _flt = document.getElementById('playEnterFloat');
+                    if (_flt) _flt.classList.remove('active');
+                    const _scr = document.getElementById('playScreen');
+                    if (_scr) _scr.classList.remove('active');
+                };
+
+                // Отмена
+                if (room.status === 'cancelled') {
+                    unsubscribeRoomRealtime();
+                    unsubscribeInGameRealtime();
+                    killUI();
+                    showCancelledOnce(rid);
+                    return;
+                }
+
+                // 🔥 READY_CHECK — новое
+                if (room.status === 'ready_check') {
+                    killUI();
+
+                    const { data: match } = await sb.from('game_matches')
+                        .select('*').eq('room_id', rid)
+                        .order('created_at', { ascending: false })
+                        .limit(1).maybeSingle();
+
+                    if (match) {
+                        currentMatch = match;
+
+                        // Не переключаем если уже на экране
+                        const onReady = document.body.innerHTML.includes('Проверка готовности')
+                            && document.getElementById('page-veto')?.classList.contains('active');
+
+                        if (!onReady) {
+                            haptic('heavy');
+                            showReadyCheckScreen();
+                            subscribeMatchRealtime();
+                        }
+                    }
+                    return;
+                }
+
+                // VETO / SIDE_PICK
+                if (room.status === 'veto' || room.status === 'side_pick') {
+                    killUI();
+                    const { data: match } = await sb.from('game_matches')
+                        .select('*').eq('room_id', rid)
+                        .order('created_at', { ascending: false })
+                        .limit(1).maybeSingle();
+                    if (match) {
+                        currentMatch = match;
+                        showVetoScreen();
+                        subscribeMatchRealtime();
+                    }
+                    return;
+                }
+
+                // WAITING_LINK
+                if (room.status === 'waiting_link') {
+                    killUI();
+                    const { data: match } = await sb.from('game_matches')
+                        .select('*').eq('room_id', rid)
+                        .order('created_at', { ascending: false })
+                        .limit(1).maybeSingle();
+                    if (match) currentMatch = match;
+                    showWaitingLinkScreen(rid, room);
+                    return;
+                }
+
+                // IN_GAME
+                if (room.status === 'in_game') {
+                    killUI();
+                    const { data: match } = await sb.from('game_matches')
+                        .select('*').eq('room_id', rid)
+                        .order('created_at', { ascending: false })
+                        .limit(1).maybeSingle();
+                    if (match) currentMatch = match;
+                    haptic('heavy');
+                    showInGameScreen(rid, room);
+                    subscribeMatchRealtime();
+                    return;
+                }
+
+                // RESULT
+                if (room.status === 'result') {
+                    killUI();
+                    const { data: match } = await sb.from('game_matches')
+                        .select('*').eq('room_id', rid)
+                        .order('created_at', { ascending: false })
+                        .limit(1).maybeSingle();
+                    if (match) currentMatch = match;
+                    showResultScreen();
+                    subscribeMatchRealtime();
+                    return;
+                }
+
+                // FINISHED
+                if (room.status === 'finished') {
+                    killUI();
+                    showFinishedScreen();
+                    return;
+                }
+
+                // OPEN — обновить содержимое
+                if (room.status === 'open') {
+                    clearTimeout(_roomRenderTimer);
+                    _roomRenderTimer = setTimeout(() => {
+                        renderRoomContent(rid);
+                    }, 250);
+                }
+            });
+
+            // ============================================================
+            // Изменения игроков
+            // ============================================================
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'room_players',
+                filter: 'room_id=eq.' + rid
+            }, async (payload) => {
+                console.log('📥 room_players event:',
+                    payload.eventType,
+                    'user:', payload.new?.telegram_id || payload.old?.telegram_id,
+                    'team:', payload.new?.team,
+                    'is_ready:', payload.new?.is_ready);
+
+                const { data: rooms } = await sb.from('rooms')
+                    .select('*').eq('id', rid).limit(1);
+                const room = rooms && rooms[0];
+                if (!room) return;
+
+                if (room.status === 'open') {
+                    await checkTeamsReady(rid, room);
+
+                    clearTimeout(_roomRenderTimer);
+                    _roomRenderTimer = setTimeout(() => {
+                        renderRoomContent(rid);
+                    }, 250);
+                }
+            });
+        },
+        {
+            onError: () => {
+                console.warn('📡 room_rt fallback: polling каждые 3 сек');
+                // Fallback — polling
+                if (_lastRoomId === rid) {
+                    setTimeout(() => {
+                        if (_lastRoomId === rid && currentPlayRoomId === rid) {
+                            renderRoomContent(rid);
+                        }
+                    }, 3000);
+                }
             }
-
-            if (room.status === 'waiting_link') {
-                killUI();
-                const { data: match } = await sb.from('game_matches')
-                    .select('*').eq('room_id', roomId)
-                    .order('created_at', { ascending: false })
-                    .limit(1).maybeSingle();
-                if (match) currentMatch = match;
-                showWaitingLinkScreen(roomId, room);
-                return;
-            }
-
-            if (room.status === 'in_game') {
-                killUI();
-                const { data: match } = await sb.from('game_matches')
-                    .select('*').eq('room_id', roomId)
-                    .order('created_at', { ascending: false })
-                    .limit(1).maybeSingle();
-                if (match) currentMatch = match;
-                haptic('heavy');
-                showInGameScreen(roomId, room);
-                subscribeMatchRealtime();
-                return;
-            }
-
-            if (room.status === 'result') {
-                killUI();
-                const { data: match } = await sb.from('game_matches')
-                    .select('*').eq('room_id', roomId)
-                    .order('created_at', { ascending: false })
-                    .limit(1).maybeSingle();
-                if (match) currentMatch = match;
-                showResultScreen();
-                subscribeMatchRealtime();
-                return;
-            }
-
-            if (room.status === 'finished') {
-                killUI();
-                showFinishedScreen();
-                return;
-            }
-
-            if (room.status === 'open') {
-                clearTimeout(_roomRenderTimer);
-                _roomRenderTimer = setTimeout(() => {
-                    renderRoomContent(roomId);
-                }, 250);
-            }
-        })
-        // ==== Изменения игроков ====
-        .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'room_players',
-            filter: 'room_id=eq.' + roomId
-        }, async (payload) => {
-            console.log('📥 room_players event:',
-                payload.eventType,
-                'room:', payload.new?.room_id || payload.old?.room_id,
-                'user:', payload.new?.telegram_id || payload.old?.telegram_id,
-                'team:', payload.new?.team,
-                'is_ready:', payload.new?.is_ready);
-
-            const { data: rooms } = await sb.from('rooms')
-                .select('*').eq('id', roomId).limit(1);
-            const room = rooms && rooms[0];
-            if (!room) return;
-
-            if (room.status === 'open') {
-                await checkTeamsReady(roomId, room);
-
-                clearTimeout(_roomRenderTimer);
-                _roomRenderTimer = setTimeout(() => {
-                    console.log('🔄 re-render room', roomId);
-                    renderRoomContent(roomId);
-                }, 250);
-            }
-        })
-        .subscribe((status) => {
-            console.log('📡 room_rt_' + roomId + ' status:', status);
-        });
+        }
+    );
 }
 
 function unsubscribeRoomRealtime() {
-    if (roomRealtimeChannel) {
-        try { sb.removeChannel(roomRealtimeChannel); } catch (e) {}
-        roomRealtimeChannel = null;
+    if (roomRealtimeRef) {
+        roomRealtimeRef.destroy();
+        roomRealtimeRef = null;
     }
+    _lastRoomId = null;
     clearTimeout(_roomRenderTimer);
     _roomRenderTimer = null;
 }
@@ -38280,7 +38475,7 @@ async function fullExitFromMatch(roomId) {
         if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
         if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
         if (matchPollTimer) { clearInterval(matchPollTimer); matchPollTimer = null; }
-        if (currentMatchChannel) { sb.removeChannel(currentMatchChannel); currentMatchChannel = null; }
+        unsubscribeMatchRealtime();
         unsubscribeRoomRealtime();
         unsubscribeInGameRealtime();
 
@@ -38469,7 +38664,7 @@ async function cleanupAfterCancel(roomId) {
     if (vetoRtChannel) { sb.removeChannel(vetoRtChannel); vetoRtChannel = null; }
     if (vetoTimeoutHandle) { clearTimeout(vetoTimeoutHandle); vetoTimeoutHandle = null; }
     if (matchPollTimer) clearInterval(matchPollTimer);
-    if (currentMatchChannel) { sb.removeChannel(currentMatchChannel); currentMatchChannel = null; }
+    unsubscribeMatchRealtime();
 
     activeRoomId = null;
     currentPlayRoomId = null;
@@ -41491,78 +41686,96 @@ if (document.getElementById('page-profile')?.classList.contains('active')
 }
 
 // ============================================================
-// 🔥 REALTIME USERS — глобальные обновления кастомизации
+// 🔥 REALTIME — обновления своего профиля
 // ============================================================
-let usersRealtimeChannel = null;
+let usersRealtimeRef = null;
 
 function subscribeUsersRealtime() {
-    if (usersRealtimeChannel) {
-        try { sb.removeChannel(usersRealtimeChannel); } catch (e) {}
-        usersRealtimeChannel = null;
+    if (usersRealtimeRef) {
+        usersRealtimeRef.destroy();
+        usersRealtimeRef = null;
     }
     if (!currentUser) return;
 
     const myId = Number(currentUser.telegram_id);
 
-    console.log('📡 Подписка на свой профиль (users realtime)...');
+    usersRealtimeRef = createRealtimeChannel(
+        'users_rt_self_' + myId,
+        (channel) => {
+            channel.on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'users',
+                filter: `telegram_id=eq.${myId}`
+            }, async (payload) => {
+                const u = payload.new;
+                if (!u) return;
 
-    usersRealtimeChannel = sb.channel('users_rt_self_' + myId)
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'users',
-            filter: `telegram_id=eq.${myId}`
-        }, async (payload) => {
-            const u = payload.new;
-            if (!u) return;
+                const eloChanged = u.elo !== currentUser.elo;
+                const coinsChanged = u.coins !== currentUser.coins;
+                const equipChanged = JSON.stringify(u.equipped_items || {}) !==
+                                     JSON.stringify(currentUser.equipped_items || {});
+                const statsChanged = u.wins !== currentUser.wins
+                    || u.matches_played !== currentUser.matches_played
+                    || u.display_name !== currentUser.display_name
+                    || u.custom_avatar !== currentUser.custom_avatar;
 
-            const eloChanged = u.elo !== currentUser.elo;
-            const coinsChanged = u.coins !== currentUser.coins;
-            const equipChanged = JSON.stringify(u.equipped_items || {}) !== JSON.stringify(currentUser.equipped_items || {});
-            const statsChanged = u.wins !== currentUser.wins
-                || u.matches_played !== currentUser.matches_played
-                || u.display_name !== currentUser.display_name
-                || u.custom_avatar !== currentUser.custom_avatar;
+                currentUser = { ...currentUser, ...u };
 
-            currentUser = { ...currentUser, ...u };
+                if (coinsChanged) updateCoinsBadge();
 
-            if (coinsChanged) updateCoinsBadge();
+                if (equipChanged) {
+                    const itemIds = Object.values(currentUser.equipped_items || {});
+                    const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
+                    if (missing.length) {
+                        const { data: items } = await sb.from('shop_items')
+                            .select('id, category, value').in('id', missing);
+                        (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+                    }
 
-            if (equipChanged) {
-                const itemIds = Object.values(currentUser.equipped_items || {});
-                const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
-                if (missing.length) {
-                    const { data: items } = await sb.from('shop_items')
-                        .select('id, category, value').in('id', missing);
-                    (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+                    if (document.getElementById('page-profile')?.classList.contains('active')
+                        && !profileEditMode) {
+                        const cont = document.getElementById('profileContent');
+                        if (cont) applyCustomizationToElement(cont, currentUser).catch(() => {});
+                    }
+                    fillMenuDrawerUser();
+                    applyCustomization();
+                    applyHeaderAvatar(currentUser);
+                    refreshAllMyAppearances();
                 }
 
-                if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
-                    const cont = document.getElementById('profileContent');
-                    if (cont) applyCustomizationToElement(cont, currentUser).catch(() => {});
+                if (eloChanged || statsChanged) {
+                    if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+                        renderDashboard(currentUser);
+                        updatePlayBtnSub();
+                        if (typeof renderDashBattlePass === 'function') renderDashBattlePass();
+                    }
+                    if (document.getElementById('page-profile')?.classList.contains('active')
+                        && !profileEditMode) {
+                        renderProfileView(currentUser);
+                    }
+                    applyHeaderAvatar(currentUser);
+                    fillMenuDrawerUser();
                 }
-                fillMenuDrawerUser();
-                applyCustomization();
-                applyHeaderAvatar(currentUser);
-                refreshAllMyAppearances();
+            });
+        },
+        {
+            onError: () => {
+                console.warn('📡 users_rt: fallback — ручное обновление');
+                if (currentUser) {
+                    sb.from('users').select('*').eq('telegram_id', currentUser.telegram_id)
+                        .maybeSingle()
+                        .then(({ data }) => {
+                            if (data) {
+                                currentUser = data;
+                                applyHeaderAvatar(currentUser);
+                                updateCoinsBadge();
+                            }
+                        });
+                }
             }
-
-            if (eloChanged || statsChanged) {
-if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-    renderDashboard(currentUser);
-    updatePlayBtnSub();
-    renderDashBattlePass();          // 🔥 НОВОЕ
-}
-                if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
-                    renderProfileView(currentUser);
-                }
-                applyHeaderAvatar(currentUser);
-                fillMenuDrawerUser();
-            }
-        })
-        .subscribe((status) => {
-            console.log('📡 users_rt_self status:', status);
-        });
+        }
+    );
 }
 
 // ============================================================
@@ -41803,227 +42016,149 @@ function subscribeFriendshipsRealtime() {
 }
 
 // ============================================================
-// REALTIME — clubs / club_members / club_requests / club_invites
+// 📡 REALTIME — кланы, участники, заявки, приглашения
 // ============================================================
-let clubsRealtimeChannel = null;
+let clubsRealtimeRef = null;
 
 function subscribeClubsRealtime() {
-    if (clubsRealtimeChannel) {
-        try { sb.removeChannel(clubsRealtimeChannel); } catch (e) {}
-        clubsRealtimeChannel = null;
+    if (clubsRealtimeRef) {
+        clubsRealtimeRef.destroy();
+        clubsRealtimeRef = null;
     }
     if (!currentUser) return;
 
     const myId = Number(currentUser.telegram_id);
 
-    clubsRealtimeChannel = sb.channel('clubs_rt_global_' + Date.now())
+    clubsRealtimeRef = createRealtimeChannel(
+        'clubs_rt_global_' + myId,
+        (channel) => {
+            // ==== КЛАНЫ ====
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'clubs'
+            }, async (payload) => {
+                const club = payload.new;
 
-        // ============================================================
-        // 1. ИЗМЕНЕНИЯ В КланАХ (название, лого, состав, equipped_items)
-        // ============================================================
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'clubs'
-        }, async (payload) => {
-            const club = payload.new;
-
-            // 🔥 Если обновился equipped_items — перезагружаем кэш клана
-            if (club && club.id && club.equipped_items) {
-                // Форсируем перезагрузку CLAN_SHOP_CACHE на случай
-                // если админ добавил/удалил товар
-                await loadClanShopCache(true);
-
-                // 🔥 Обновляем казну клана если открыт магазин
-if (club && club.coins !== undefined) {
-    if (myClub?.club && Number(myClub.club.id) === Number(club.id)) {
-        myClub.club.coins = club.coins;
-        
-        // Если открыт магазин клана — обновляем цифру
-        const balanceEl = document.querySelector('.shop-hero-balance span');
-        if (balanceEl) balanceEl.textContent = club.coins;
-    }
-}
-
-                Object.keys(clubTagCache).forEach(uid => {
-                    if (clubTagCache[uid]?.club_id === club.id) {
-                        clubTagCache[uid].equipped = club.equipped_items;
+                if (club && club.id && club.equipped_items) {
+                    if (typeof loadClanShopCache === 'function') {
+                        await loadClanShopCache(true);
                     }
-                });
 
-                // 🔥 Перерисовываем ВСЕ .clan-tag в списках
-                // (leaderboard, chat, room, friends, matches и т.д.)
-                document.querySelectorAll('.clan-tag').forEach(el => {
-                    const parent = el.closest('[data-user-id]');
-                    const uid = parent?.dataset.userId;
-                    if (!uid || !clubTagCache[uid]) return;
-
-                    const wrapper = document.createElement('span');
-                    wrapper.innerHTML = myClubTagHTML(uid);
-                    const newTag = wrapper.firstElementChild;
-                    if (newTag) el.replaceWith(newTag);
-                });
-
-                // ============================================================
-                // 🔥 ОБНОВЛЯЕМ ТЕГИ В ШАПКАХ ПРОФИЛЯ
-                // ============================================================
-                document.querySelectorAll('[data-club-tag]').forEach(el => {
-                    const scope = el.closest('[data-user-id]');
-                    const uid = scope?.dataset.userId;
-                    // В своём профиле data-user-id может не быть — берём currentUser
-                    const targetUid = uid || currentUser?.telegram_id;
-                    if (targetUid && clubTagCache[targetUid]
-                        && Number(clubTagCache[targetUid].club_id) === Number(club.id)) {
-                        applyClanTagCustomization(el, clubTagCache[targetUid]);
+                    if (club.coins !== undefined && myClub?.club
+                        && Number(myClub.club.id) === Number(club.id)) {
+                        myClub.club.coins = club.coins;
+                        const balanceEl = document.querySelector('.shop-hero-balance span');
+                        if (balanceEl) balanceEl.textContent = club.coins;
                     }
-                });
 
-                // 🔥 ОБНОВЛЯЕМ ТЕГИ В СПИСКАХ (.clan-tag)
-                document.querySelectorAll('.clan-tag').forEach(el => {
-                    const parent = el.closest('[data-user-id]');
-                    const uid = parent?.dataset.userId;
-                    if (uid && clubTagCache[uid]) {
-                        el.outerHTML = myClubTagHTML(uid);
-                    }
-                });
+                    Object.keys(clubTagCache).forEach(uid => {
+                        if (clubTagCache[uid]?.club_id === club.id) {
+                            clubTagCache[uid].equipped = club.equipped_items;
+                        }
+                    });
 
-                // Если открыт playerModal с чужим профилем — перерисуем его
-                const playerModal = document.getElementById('playerModal');
-                if (playerModal?.classList.contains('active') && currentProfileUserId) {
-                    const u = clubTagCache[currentProfileUserId];
-                    if (u && Number(u.club_id) === Number(club.id)) {
-                        const tagEl = document.querySelector('#playerModalContent [data-club-tag]');
-                        if (tagEl) applyClanTagCustomization(tagEl, u);
-                    }
+                    // Обновляем .clan-tag
+                    document.querySelectorAll('.clan-tag').forEach(el => {
+                        const parent = el.closest('[data-user-id]');
+                        const uid = parent?.dataset.userId;
+                        if (!uid || !clubTagCache[uid]) return;
+                        const wrapper = document.createElement('span');
+                        wrapper.innerHTML = myClubTagHTML(uid);
+                        const newTag = wrapper.firstElementChild;
+                        if (newTag) el.replaceWith(newTag);
+                    });
+
+                    // Обновляем data-club-tag в шапках профиля
+                    document.querySelectorAll('[data-club-tag]').forEach(el => {
+                        const scope = el.closest('[data-user-id]');
+                        const uid = scope?.dataset.userId || currentUser?.telegram_id;
+                        if (uid && clubTagCache[uid]
+                            && Number(clubTagCache[uid].club_id) === Number(club.id)) {
+                            applyClanTagCustomization(el, clubTagCache[uid]);
+                        }
+                    });
                 }
-            }
 
-            // Обновляем страницу Клана, если открыта
-            if (document.getElementById('page-club')?.classList.contains('active')) {
-                loadClub();
-            }
-
-            // Обновляем шит "Все Кланы"
-            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
-                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
-                if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
-            }
-        })
-
-        // ============================================================
-        // 2. ИЗМЕНЕНИЯ В СОСТАВЕ КланА (вход, выход, кик, повышение)
-        // ============================================================
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'club_members'
-        }, (payload) => {
-            const row = payload.new || payload.old;
-            if (!row) return;
-
-            // Если это МОЯ запись — обновляем myClub
-            if (Number(row.telegram_id) === myId) {
-                // Перезагружаем Клан (если я вступил/вышел/меня кикнули)
                 if (document.getElementById('page-club')?.classList.contains('active')) {
                     loadClub();
                 }
-                // Сбрасываем кэш тега
-                delete clubTagCache[myId];
-                loadClubTagsForUsers([myId]);
-            } else {
-                // Кто-то другой — просто обновляем Клан
+
+                if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
+                    const q = document.getElementById('allClubsSearch')?.value.trim() || '';
+                    if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
+                }
+            });
+
+            // ==== УЧАСТНИКИ ====
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'club_members'
+            }, (payload) => {
+                const row = payload.new || payload.old;
+                if (!row) return;
+
+                if (Number(row.telegram_id) === myId) {
+                    if (document.getElementById('page-club')?.classList.contains('active')) {
+                        loadClub();
+                    }
+                    delete clubTagCache[myId];
+                    loadClubTagsForUsers([myId]);
+                } else {
+                    if (document.getElementById('page-club')?.classList.contains('active')) {
+                        loadClub();
+                    }
+                }
+
+                if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
+                    const q = document.getElementById('allClubsSearch')?.value.trim() || '';
+                    if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
+                }
+            });
+
+            // ==== ЗАЯВКИ ====
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'club_requests'
+            }, (payload) => {
+                const row = payload.new || payload.old;
+                if (!row) return;
+                if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
+                    if (typeof updateRequestsBadge === 'function') updateRequestsBadge();
+                    if (document.getElementById('requestsSheet')?.classList.contains('active')) {
+                        renderRequestsSheet();
+                    }
+                }
+            });
+
+            // ==== ПРИГЛАШЕНИЯ ====
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'club_invites'
+            }, (payload) => {
+                const row = payload.new || payload.old;
+                if (!row) return;
+                if (Number(row.to_id) === myId) {
+                    if (typeof updateNotifBadge === 'function') updateNotifBadge();
+                    haptic('light');
+                }
                 if (document.getElementById('page-club')?.classList.contains('active')) {
                     loadClub();
                 }
-            }
+            });
 
-            // Обновляем открытый шит "Все Кланы"
-            if (document.getElementById('allClubsSheet')?.classList.contains('active')) {
-                const q = document.getElementById('allClubsSearch')?.value.trim() || '';
-                if (typeof loadAllClubsSheet === 'function') loadAllClubsSheet(q);
-            }
-
-            // Обновляем "Состав" в модалке просмотра Клана
-            const modal = document.getElementById('playerModal');
-            if (modal?.classList.contains('active')) {
-                // Если открыт профиль Клана — обновим (не всегда нужно, поэтому без фанатизма)
-            }
-        })
-
-        // ============================================================
-        // 3. ЗАЯВКИ В Клан (только для OWNER / ELDER)
-        // ============================================================
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'club_requests'
-        }, (payload) => {
-            const row = payload.new || payload.old;
-            if (!row) return;
-
-            // Обновляем бейдж заявок только если мой Клан
-            if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
-                if (typeof updateRequestsBadge === 'function') {
-                    updateRequestsBadge();
+            // ==== ИНВЕНТАРЬ КЛАНА ====
+            channel.on('postgres_changes', {
+                event: '*', schema: 'public', table: 'clan_inventory'
+            }, (payload) => {
+                const row = payload.new || payload.old;
+                if (!row) return;
+                if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
+                    if (document.getElementById('page-club')?.classList.contains('active')) {
+                        loadClub();
+                    }
+                    if (document.getElementById('clanInventorySheet')?.classList.contains('active')) {
+                        openClanInventory();
+                    }
                 }
-                // Обновляем список заявок, если он открыт
-                if (document.getElementById('requestsSheet')?.classList.contains('active')) {
-                    renderRequestsSheet();
-                }
-            }
-        })
-
-        // ============================================================
-        // 4. ПРИГЛАШЕНИЯ В Клан
-        // ============================================================
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'club_invites'
-        }, (payload) => {
-            const row = payload.new || payload.old;
-            if (!row) return;
-
-            // Если это МОЁ приглашение — обновляем уведомления
-            if (Number(row.to_id) === myId) {
-                if (typeof updateNotifBadge === 'function') {
-                    updateNotifBadge();
-                }
-                haptic('light');
-            }
-
-            // Обновляем страницу Клана, если открыта
-            if (document.getElementById('page-club')?.classList.contains('active')) {
-                loadClub();
-            }
-        })
-
-        // ============================================================
-        // 5. ИНВЕНТАРЬ КланА (купленные/надетые предметы)
-        // ============================================================
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'clan_inventory'
-        }, (payload) => {
-            const row = payload.new || payload.old;
-            if (!row) return;
-
-            // Если это инвентарь МОЕГО Клана — перезагружаем Клан
-            if (myClub?.club && Number(row.club_id) === Number(myClub.club.id)) {
-                if (document.getElementById('page-club')?.classList.contains('active')) {
-                    loadClub();
-                }
-                // Обновляем инвентарь, если он открыт
-                if (document.getElementById('clanInventorySheet')?.classList.contains('active')) {
-                    openClanInventory();
-                }
-            }
-        })
-
-        .subscribe((status) => {
-            console.log('📡 clubs_rt status:', status);
-        });
+            });
+        }
+    );
 }
 
         // ============================================================
