@@ -69,7 +69,7 @@
     --grid-line: rgba(0,224,138,0.03);
 }
 
-    :root {
+:root {
     --font-display: 'Orbitron', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', 'Courier New', monospace;
     --font-ui: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -237,6 +237,22 @@ body::after {
         .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
         .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px 8px; text-align: center; }
         .stat-value { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--emerald); }
+        /* Единый моно-шрифт для всех числовых значений */
+.pmr-value,
+.mh-score,
+.shop-hero-balance span,
+.dash-bp-level-num,
+.dash-bp-points b,
+.bp-level-num,
+.dlm-kd,
+.lmb-kd,
+.mini-stat-value,
+.stat-value,
+.elo-value {
+    font-family: var(--font-mono) !important;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
         .stat-label { font-size: 10px; color: var(--hint); margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 
         /* ============ PLAY BTN ============ */
@@ -297,6 +313,192 @@ body::after {
             border-color: var(--border-strong);
             transform: scale(0.985);
         }
+
+    /* ============================================================
+   🏆 МОЯ ПОЗИЦИЯ В ЛИДЕРБОРДЕ — HIGHLIGHT
+   ============================================================ */
+.leaderboard-item.is-me {
+    border-color: var(--emerald);
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.10) 0%,
+        rgba(var(--emerald-rgb), 0.02) 60%,
+        transparent 100%);
+    box-shadow: 0 0 0 1px var(--emerald),
+                0 6px 24px rgba(var(--emerald-rgb), 0.25);
+    position: relative;
+}
+
+.leaderboard-item.is-me::before {
+    content: 'ТЫ';
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    padding: 2px 8px;
+    background: var(--emerald);
+    color: #04140e;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    border-radius: 4px;
+    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.7);
+    z-index: 5;
+}
+
+/* ============================================================
+   👑 ЧЕМПИОН — отдельная большая карточка
+   ============================================================ */
+.leaderboard-champion {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 20px;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg,
+        rgba(217, 171, 90, 0.15) 0%,
+        rgba(var(--emerald-rgb), 0.08) 50%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 2px solid rgba(217, 171, 90, 0.6);
+    border-radius: 0;
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px),
+        calc(100% - 16px) 100%, 0 100%, 0 16px);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.25s ease;
+}
+
+.leaderboard-champion::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent, #ffd700 20%, #fff5cc 50%, #ffd700 80%, transparent);
+    background-size: 200% 100%;
+    animation: champShine 3s linear infinite;
+}
+
+@keyframes champShine {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.leaderboard-champion:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(217, 171, 90, 0.35);
+}
+
+.champ-crown {
+    position: absolute;
+    top: -20px;
+    left: 20px;
+    font-size: 32px;
+    filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.8));
+    animation: champFloat 3s ease-in-out infinite;
+}
+
+@keyframes champFloat {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50%      { transform: translateY(-4px) rotate(5deg); }
+}
+
+.champ-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd700, #b8860b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 900;
+    color: #04140e;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.5),
+                0 0 30px rgba(255, 215, 0, 0.4);
+    position: relative;
+    z-index: 2;
+}
+
+.champ-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.champ-info {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.champ-label {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #ffd700;
+    margin-bottom: 6px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.champ-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.champ-stats {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.champ-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.champ-stat-value {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 900;
+    color: #ffd700;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.champ-stat-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: var(--hint);
+    text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+    .leaderboard-champion { padding: 16px; gap: 14px; }
+    .champ-avatar { width: 60px; height: 60px; font-size: 24px; }
+    .champ-name { font-size: 18px; }
+    .champ-stat-value { font-size: 14px; }
+    .champ-crown { font-size: 24px; left: 12px; top: -16px; }
+}
         
         .lb-avatar {
             width: 34px; height: 34px; border-radius: 50%;
@@ -5187,12 +5389,8 @@ body::after {
     opacity: 0.85;
 }
 
-    .profile-badges-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
+.profile-badges-row {
+    display: none !important;
 }
 
 .dev-tag {
@@ -10245,12 +10443,154 @@ html.lite-mode .pm2-badge { animation: none; }
 /* ============================================================ */
 /* 🆔 КОМПАКТНЫЙ РЯД: ID + МАТЧИ + ПОБЕДЫ + LAST MATCH          */
 /* ============================================================ */
+/* ============================================================
+   📊 БОРД СТАТИСТИКИ (одна плашка как в трансляции)
+   ============================================================ */
 .profile-mini-row {
     display: grid;
     grid-template-columns: 1.4fr 1fr 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 0;
+    margin-bottom: 12px;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.04) 0%,
+        rgba(0, 0, 0, 0.55) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 0;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px),
+        calc(100% - 10px) 100%, 0 100%, 0 10px);
+    overflow: hidden;
+    position: relative;
 }
+
+.profile-mini-row::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.7;
+    z-index: 3;
+}
+
+.pmr-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 14px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--text);
+    font-family: inherit;
+    text-align: center;
+    cursor: default;
+    min-width: 0;
+    transition: background 0.2s ease;
+}
+
+/* Вертикальные разделители между ячейками */
+.pmr-item + .pmr-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--border-strong), transparent);
+}
+
+.pmr-item.pmr-id {
+    cursor: pointer;
+}
+
+.pmr-item.pmr-id:active {
+    background: rgba(var(--emerald-rgb), 0.12);
+}
+
+.pmr-icon {
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.85;
+    margin-bottom: 2px;
+}
+
+.pmr-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    width: 100%;
+    align-items: center;
+}
+
+.pmr-label {
+    font-size: 9px;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.pmr-value {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.pmr-id .pmr-value {
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+.pmr-copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 10px;
+    color: var(--emerald);
+    opacity: 0.55;
+    flex-shrink: 0;
+}
+
+.pmr-lastmatch {
+    background: transparent;
+}
+
+.pmr-lastmatch .pmr-value {
+    color: var(--emerald);
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.4);
+}
+
+/* На узких экранах — 2×2 */
+@media (max-width: 420px) {
+    .profile-mini-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    .pmr-item + .pmr-item::before {
+        display: none;
+    }
+    .pmr-item {
+        border-right: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+    }
+    .pmr-item:nth-child(2n) { border-right: none; }
+    .pmr-item:nth-child(n+3) { border-bottom: none; }
+}    
+    
 @media (max-width: 380px) {
     .profile-mini-row {
         grid-template-columns: 1.4fr 1fr 1fr;
@@ -11443,21 +11783,25 @@ html.lite-mode .header-coins::before {
 }
 
 /* ============ КАТЕГОРИИ ============ */
+/* ============================================================
+   🛒 КАТЕГОРИИ МАГАЗИНА — карточки с превью
+   ============================================================ */
 .shop-cat-tabs {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
     margin-bottom: 16px;
 }
+
 .shop-cat-btn {
     position: relative;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    background: linear-gradient(90deg,
-        rgba(0, 0, 0, 0.7) 0%,
-        rgba(0, 0, 0, 0.5) 100%);
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.04) 0%,
+        rgba(0, 0, 0, 0.6) 100%);
     border: 1.5px solid var(--border);
     border-radius: 0;
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px),
@@ -11466,74 +11810,149 @@ html.lite-mode .header-coins::before {
     font-family: inherit;
     cursor: pointer;
     text-align: left;
-    transition: transform 0.15s ease, border-color 0.22s ease,
-                background 0.22s ease, box-shadow 0.22s ease;
-    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    min-height: 130px;
 }
+
 .shop-cat-btn::before {
     content: '';
     position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: var(--emerald);
-    opacity: 0;
-    transition: opacity 0.22s ease;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.6;
+    z-index: 3;
+    pointer-events: none;
 }
-.shop-cat-btn:active { transform: scale(0.98); }
-.shop-cat-btn.active {
-    background: linear-gradient(90deg,
-        rgba(var(--emerald-rgb), 0.18) 0%,
-        rgba(var(--emerald-rgb), 0.04) 100%);
-    border-color: var(--emerald);
-    box-shadow: 0 0 0 1px var(--emerald),
-                0 6px 24px rgba(var(--emerald-rgb), 0.3);
-}
-.shop-cat-btn.active::before { opacity: 1; }
 
-.shop-cat-btn-icon {
-    width: 40px;
-    height: 40px;
+.shop-cat-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--emerald);
+    box-shadow: 0 8px 24px rgba(var(--emerald-rgb), 0.2);
+}
+
+.shop-cat-btn:active { transform: scale(0.98); }
+
+.shop-cat-btn.active {
+    border-color: var(--emerald);
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.18) 0%,
+        rgba(0, 0, 0, 0.6) 100%);
+    box-shadow: 0 0 0 1px var(--emerald), 0 8px 28px rgba(var(--emerald-rgb), 0.3);
+}
+
+/* Превью-зона сверху */
+.shop-cat-preview {
+    height: 72px;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(var(--emerald-rgb), 0.1);
-    border: 1px solid var(--border-strong);
-    border-radius: 10px;
-    color: var(--emerald);
-    flex-shrink: 0;
-    transition: transform 0.2s ease, background 0.22s ease;
-}
-.shop-cat-btn-icon svg { width: 22px; height: 22px; }
-.shop-cat-btn.active .shop-cat-btn-icon {
-    background: rgba(var(--emerald-rgb), 0.25);
-    border-color: var(--emerald);
-    transform: scale(1.05);
-}
-.shop-cat-btn.active .shop-cat-btn-icon svg {
-    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.6));
+    overflow: hidden;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    padding: 8px;
 }
 
+.shop-cat-preview > * {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.shop-cat-preview-empty {
+    font-size: 28px;
+    opacity: 0.3;
+}
+
+/* Инфо-зона снизу */
 .shop-cat-btn-info {
-    flex: 1;
-    min-width: 0;
+    padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
+    flex: 1;
 }
+
 .shop-cat-btn-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 900;
-    letter-spacing: 0.5px;
     color: var(--text);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
+
 .shop-cat-btn.active .shop-cat-btn-name { color: var(--emerald); }
+
 .shop-cat-btn-count {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 800;
     color: var(--hint);
+    font-family: var(--font-mono);
     letter-spacing: 0.5px;
 }
+
 .shop-cat-btn.active .shop-cat-btn-count { color: var(--emerald-3); }
+
+/* Индикатор прогресса покупок */
+.shop-cat-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.shop-cat-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--emerald-2), var(--emerald));
+    transition: width 0.6s ease;
+}
+
+/* Иконка категории — верхний правый угол */
+.shop-cat-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--emerald);
+    z-index: 4;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.shop-cat-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Убираем старую иконку внутри btn-info */
+.shop-cat-btn-icon {
+    display: none !important;
+}
+
+/* Адаптив */
+@media (min-width: 768px) {
+    .shop-cat-tabs {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .shop-cat-preview { height: 90px; }
+}
+
+@media (min-width: 1024px) {
+    .shop-cat-tabs {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    .shop-cat-btn { min-height: 160px; }
+}
 
 /* ============ АКТИВНАЯ КАТЕГОРИЯ ============ */
 .shop-active-cat {
@@ -14453,14 +14872,37 @@ html.lite-mode .list-frame-overlay svg * {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        180deg,
-        rgba(0, 0, 0, 0.35) 0%,
-        rgba(0, 0, 0, 0.55) 50%,
-        rgba(0, 0, 0, 0.75) 100%
-    );
+    background:
+        linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0.55) 0%,
+            rgba(0, 0, 0, 0.72) 50%,
+            rgba(0, 0, 0, 0.88) 100%
+        ),
+        repeating-linear-gradient(
+            135deg,
+            transparent 0px,
+            transparent 40px,
+            rgba(var(--emerald-rgb), 0.04) 40px,
+            rgba(var(--emerald-rgb), 0.04) 41px
+        );
     pointer-events: none;
     z-index: 1;
+}
+
+/* Scan-line сверху вниз */
+.profile-hero-compact::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 50%,
+        transparent 100%);
+    opacity: 0.6;
+    z-index: 3;
+    pointer-events: none;
 }
 .profile-hero-compact.has-custom-bg > * {
     position: relative;
@@ -16408,24 +16850,162 @@ html.lite-mode .list-frame-overlay svg * {
     line-height: 1.4;
 }
 
-/* ---- РАНГ-БЕЙДЖ ---- */
+/* ============================================================
+   🏆 РАНГ-БЕЙДЖ — КАК В CS:GO / VALORANT
+   ============================================================ */
 .rank-badge {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 5px 10px;
-    border-radius: 8px;
+    gap: 12px;
+    padding: 10px 14px;
+    margin-top: 6px;
+    width: 100%;
+    max-width: 320px;
     font-family: 'Rajdhani', sans-serif;
     background: linear-gradient(135deg,
-        rgba(var(--emerald-rgb), 0.15),
-        rgba(var(--emerald-rgb), 0.04));
-    border: 1.5px solid rgba(var(--emerald-rgb), 0.4);
+        rgba(var(--emerald-rgb), 0.20) 0%,
+        rgba(var(--emerald-rgb), 0.06) 60%,
+        rgba(0, 0, 0, 0.35) 100%);
+    border: 1.5px solid rgba(var(--emerald-rgb), 0.5);
+    border-radius: 0;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 0 100%, 0 8px);
     color: var(--emerald-3);
-    margin-top: 4px;
-    align-self: flex-start;
     position: relative;
     overflow: hidden;
-    max-width: 100%;
+    align-self: stretch;
+    box-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rank-badge::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.8;
+    z-index: 3;
+}
+
+.rank-badge-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+.rank-badge-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.rank-badge-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+}
+
+.rank-badge-name {
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    line-height: 1;
+    color: inherit;
+    text-shadow: 0 0 10px currentColor;
+}
+
+.rank-badge-level {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    opacity: 0.75;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--hint);
+}
+
+/* Прогресс-бар до след. ранга */
+.rank-progress {
+    position: relative;
+    margin-top: 8px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 2px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.rank-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--emerald-2), var(--emerald), var(--emerald-3));
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+    transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+}
+
+.rank-progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.5),
+        transparent);
+    animation: rankShine 2.4s linear infinite;
+}
+
+@keyframes rankShine {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.rank-progress-text {
+    font-size: 9px;
+    color: var(--hint);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: right;
+    margin-top: 4px;
+    font-family: var(--font-mono);
+}
+
+/* Топ-ранги */
+.rank-badge.rank-7,
+.rank-badge.rank-8 {
+    background: linear-gradient(135deg,
+        rgba(255, 46, 109, 0.25),
+        rgba(255, 122, 46, 0.08),
+        rgba(0, 0, 0, 0.35));
+    border-color: rgba(255, 46, 109, 0.6);
+    color: #ff7a8f;
+}
+.rank-badge.rank-7::before,
+.rank-badge.rank-8::before {
+    background: linear-gradient(90deg, transparent, #ff2e6d, transparent);
+}
+
+.rank-badge.rank-9,
+.rank-badge.rank-10 {
+    background: linear-gradient(135deg,
+        rgba(255, 204, 46, 0.30),
+        rgba(255, 122, 46, 0.10),
+        rgba(0, 0, 0, 0.35));
+    border-color: rgba(255, 204, 46, 0.7);
+    color: #ffcc2e;
+    box-shadow: 0 0 30px rgba(255, 204, 46, 0.4);
+}
+.rank-badge.rank-9::before,
+.rank-badge.rank-10::before {
+    background: linear-gradient(90deg, transparent, #ffcc2e, transparent);
 }
 
 .rank-badge-text {
@@ -21685,6 +22265,47 @@ html.lite-mode .dash-bp-full .bp-level-card.current {
     0%   { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+    /* ============================================================
+   🔲 УГОЛКИ-СКОБКИ — единый стиль для мелких карточек
+   ============================================================ */
+.pmr-item,
+.leaderboard-item,
+.chat-list-item,
+.match-history-item,
+.club-member-row {
+    position: relative;
+}
+
+.pmr-item::before,
+.leaderboard-item::after,
+.chat-list-item::after,
+.match-history-item::after,
+.club-member-row::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    border-right: 1.5px solid rgba(var(--emerald-rgb), 0.5);
+    border-bottom: 1.5px solid rgba(var(--emerald-rgb), 0.5);
+    pointer-events: none;
+    opacity: 0.55;
+    transition: opacity 0.22s ease;
+    z-index: 2;
+}
+
+.pmr-item:hover::before,
+.leaderboard-item:hover::after,
+.chat-list-item:hover::after {
+    opacity: 1;
+}
+
+/* У лидерборд-айтема убираем правый нижний уголок — там DXP */
+.leaderboard-item::after {
+    display: none;
+}
     
 </style>
 </head>
@@ -25623,6 +26244,44 @@ function tgAlert(message) {
 }
 
 // ============================================================
+// 🛠️ АДМИН-МЕНЮ МАГАЗИНА (модалка)
+// ============================================================
+function openAdminShopMenu() {
+    if (!isCurrentUserAdmin()) return;
+
+    document.getElementById('adminShopOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'adminShopOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeAdminShopMenu(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.style.zIndex = '9001';
+    sheet.innerHTML = `
+        <div class="sheet-title">🛠️ Админ-меню магазина</div>
+        <button class="sheet-option" onclick="closeAdminShopMenu(); openAddCustomBackgroundSheet();">
+            <span style="font-size: 18px;">🌄</span> Добавить фон шапки
+        </button>
+        <button class="sheet-option" onclick="closeAdminShopMenu(); openAddDxpChartBackgroundSheet();">
+            <span style="font-size: 18px;">📈</span> Добавить фон графика DXP
+        </button>
+        <button class="sheet-option" onclick="closeAdminShopMenu(); openAddAnyShopItemSheet();">
+            <span style="font-size: 18px;">✨</span> Добавить любой товар
+        </button>
+        <button class="sheet-cancel" onclick="closeAdminShopMenu()">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+}
+
+function closeAdminShopMenu() {
+    document.getElementById('adminShopOverlay')?.remove();
+}            
+
+// ============================================================
 // 💀 SKELETON LOADER
 // ============================================================
 function skeleton(type = 'list', count = 3) {
@@ -27070,14 +27729,33 @@ async function renderProfileView(user, options = {}) {
                         ${isDev ? `<span class="dev-tag dev-tag-inline" onclick="showDevTagInfo()">DEV</span>` : ''}
                     </div>
 
-                    <!-- Строка 4: РАНГ-БЕЙДЖ (двухстрочный) -->
+<!-- Строка 4: РАНГ-БЕЙДЖ с прогресс-баром -->
 <div class="rank-badge rank-${level}" data-rank-badge>
-    <span class="rank-badge-icon" data-rank-icon>${getRankSvg(level, 26)}</span>
+    <span class="rank-badge-icon" data-rank-icon>${getRankSvg(level, 40)}</span>
     <div class="rank-badge-text">
         <div class="rank-badge-name">${levelInfo.name}</div>
-        <div class="rank-badge-level">УРОВЕНЬ ${level}</div>
+        <div class="rank-badge-level">УРОВЕНЬ ${level} / 10</div>
     </div>
 </div>
+${(() => {
+    const cur = user.elo ?? RANK_CONFIG.START_DXP;
+    const curLevelInfo = RANK_CONFIG.LEVELS[Math.min(level - 1, 9)];
+    const nextLevelInfo = RANK_CONFIG.LEVELS[Math.min(level, 9)];
+    const minOfCurrent = curLevelInfo.min;
+    const maxOfCurrent = nextLevelInfo.min;
+    const pct = Math.min(100, Math.max(0, ((cur - minOfCurrent) / (maxOfCurrent - minOfCurrent)) * 100));
+    const remaining = Math.max(0, maxOfCurrent - cur);
+
+    if (level >= 10) {
+        return `<div style="font-size: 10px; color: var(--gold); font-weight: 900; letter-spacing: 1px; text-align: center; margin-top: 8px;">🏆 МАКСИМАЛЬНЫЙ РАНГ</div>`;
+    }
+    return `
+        <div class="rank-progress">
+            <div class="rank-progress-fill" style="width: ${pct}%"></div>
+        </div>
+        <div class="rank-progress-text">До ${nextLevelInfo.name}: ${remaining} DXP</div>
+    `;
+})()}
                 </div>
             </div>
 
@@ -27089,10 +27767,19 @@ async function renderProfileView(user, options = {}) {
             </div>
         </div>
 
-        <!-- 🏅 КОМПАКТНЫЕ ДОСТИЖЕНИЯ -->
-            <div class="achievements-strip" id="achievementsCard_${user.telegram_id}">
-                <div class="achv-strip" data-achievements></div>
-            </div>
+<!-- 🏅 ДОСТИЖЕНИЯ — компактно в одной строке -->
+<div class="achievements-strip" id="achievementsCard_${user.telegram_id}">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px;">
+        <div style="font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/>
+            </svg>
+            Достижения
+        </div>
+        <div style="font-size: 11px; font-weight: 900; color: var(--gold); font-family: var(--font-mono);" id="achvCounter_${user.telegram_id}">—/—</div>
+    </div>
+    <div class="achv-strip" data-achievements></div>
+</div>
 
         <!-- 🔥 ПОСЛЕДНИЕ 3 МАТЧА -->
         <div class="recent-matches-block" id="recentMatchesBlock_${user.telegram_id}">
@@ -27109,41 +27796,29 @@ async function renderProfileView(user, options = {}) {
             </div>
         </div>
 
-        <!-- МИНИ-СТАТЫ -->
-        <div class="profile-mini-row">
-            <button class="pmr-item pmr-id" onclick="copyStandoffId('${inModal ? 'playerStandoffId' : 'myStandoffId'}');">
-                <span class="pmr-icon">🆔</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">Standoff ID</span>
-                    <span class="pmr-value" id="${inModal ? 'playerStandoffId' : 'myStandoffId'}">${escapeHtml(user.standoff_id || '—')}</span>
-                </span>
-                ${user.standoff_id ? `<span class="pmr-copy">📋</span>` : ''}
-            </button>
+<!-- МИНИ-СТАТЫ — единый борд -->
+<div class="profile-mini-row">
+    <button class="pmr-item pmr-id" onclick="copyStandoffId('${inModal ? 'playerStandoffId' : 'myStandoffId'}');">
+        <span class="pmr-label">Standoff ID</span>
+        <span class="pmr-value" id="${inModal ? 'playerStandoffId' : 'myStandoffId'}">${escapeHtml(user.standoff_id || '—')}</span>
+        ${user.standoff_id ? `<span class="pmr-copy">📋</span>` : ''}
+    </button>
 
-            <div class="pmr-item">
-                <span class="pmr-icon">🎯</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">Матчей</span>
-                    <span class="pmr-value">${user.hide_matches ? '—' : (user.matches_played ?? 0)}</span>
-                </span>
-            </div>
+    <div class="pmr-item">
+        <span class="pmr-label">Матчей</span>
+        <span class="pmr-value">${user.hide_matches ? '—' : (user.matches_played ?? 0)}</span>
+    </div>
 
-            <div class="pmr-item">
-                <span class="pmr-icon">🏆</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">Побед</span>
-                    <span class="pmr-value">${user.hide_matches ? '—' : (user.wins ?? 0)}</span>
-                </span>
-            </div>
+    <div class="pmr-item">
+        <span class="pmr-label">Побед</span>
+        <span class="pmr-value">${user.hide_matches ? '—' : (user.wins ?? 0)}</span>
+    </div>
 
-            <div class="pmr-item pmr-lastmatch">
-                <span class="pmr-icon">⚔️</span>
-                <span class="pmr-content">
-                    <span class="pmr-label">K/D</span>
-                    <span class="pmr-value" id="lmbKDInline_${user.telegram_id}">— / —</span>
-                </span>
-            </div>
-        </div>
+    <div class="pmr-item pmr-lastmatch">
+        <span class="pmr-label">K/D</span>
+        <span class="pmr-value" id="lmbKDInline_${user.telegram_id}">—/—</span>
+    </div>
+</div>
 
         <!-- 📊 РАСШИРЕННАЯ СТАТИСТИКА -->
 <div class="ext-stats-card" id="extStatsCard_${user.telegram_id}">
@@ -27627,7 +28302,7 @@ async function loadLeaderboard() {
     const titleEl = document.getElementById('leaderboardTitle');
     if (!wrap || !container) return;
 
-    // 1. Баннер
+    // 1. Баннер (оставляем как есть)
     wrap.innerHTML = `
         <div class="leaderboard-hero" onclick="openFullLeaderboard()" style="cursor: pointer; position: relative; z-index: 2;">
             <img src="${LEADERBOARD_BANNER_URL}"
@@ -27636,9 +28311,9 @@ async function loadLeaderboard() {
         </div>
     `;
 
-    // 2. Шиммеры — только если контейнер пустой
-    if (!container.querySelector('.leaderboard-item')) {
-        container.innerHTML = skeleton('list', 3);
+    // 2. Шиммеры
+    if (!container.querySelector('.leaderboard-item') && !container.querySelector('.leaderboard-champion')) {
+        container.innerHTML = skeleton ? skeleton('list', 3) : Array(3).fill('<div class="loading-shimmer"></div>').join('');
     }
     if (titleEl) titleEl.style.display = 'none';
 
@@ -27657,13 +28332,65 @@ async function loadLeaderboard() {
 
         await loadClubTagsForUsers(others.map(u => u.telegram_id));
 
-        const top10 = others.slice(0, 10);
-        container.innerHTML = top10.map((user, i) => renderLbItem(user, i + 1)).join('');
+        const me = currentUser?.telegram_id;
+        const champion = others[0];
+        const top9 = others.slice(1, 10);
 
-        // 🔥 Догружаем shop_items
+        // 3. HTML: чемпион + топ-9
+        let html = '';
+
+        // Чемпион — отдельная большая карточка
+        if (champion) {
+            const champSrc = champion.custom_avatar || champion.photo_url;
+            const champInitial = (champion.display_name || 'U')[0].toUpperCase();
+            const champAv = champSrc ? `<img src="${champSrc}" alt="">` : champInitial;
+            const champLvl = eloToLevel(champion.elo);
+            const champIsMe = champion.telegram_id === me;
+
+            html += `
+                <div class="leaderboard-champion" data-user-id="${champion.telegram_id}"
+                     onclick="openPlayerProfile(${champion.telegram_id})">
+                    <div class="champ-crown">👑</div>
+                    <div class="champ-avatar">${champAv}</div>
+                    <div class="champ-info">
+                        <div class="champ-label">
+                            <span>ЧЕМПИОН</span>
+                            ${champIsMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
+                        </div>
+                        <div class="champ-name">${escapeHtml(champion.display_name || 'Игрок')}</div>
+                        <div class="champ-stats">
+                            <div class="champ-stat">
+                                <span class="champ-stat-value">${champion.elo ?? 1000}</span>
+                                <span class="champ-stat-label">DXP</span>
+                            </div>
+                            <div class="champ-stat">
+                                <span class="champ-stat-value">${champLvl}</span>
+                                <span class="champ-stat-label">Уровень</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Топ-9
+        if (top9.length) {
+            html += top9.map((user, i) => {
+                const rank = i + 2;
+                const isMe = user.telegram_id === me;
+                return renderLbItem(user, rank, isMe).replace(
+                    'class="leaderboard-item"',
+                    `class="leaderboard-item ${isMe ? 'is-me' : ''}"`
+                );
+            }).join('');
+        }
+
+        container.innerHTML = html;
+
+        // 4. Догружаем shop_items
         const allItems = new Set();
-        top10.forEach(u => {
-            if (u.equipped_items) Object.values(u.equipped_items).forEach(id => allItems.add(id));
+        [champion, ...top9].forEach(u => {
+            if (u?.equipped_items) Object.values(u.equipped_items).forEach(id => allItems.add(id));
         });
         const missing = [...allItems].filter(id => !SHOP_ITEMS_CACHE[id]);
         if (missing.length) {
@@ -27672,10 +28399,9 @@ async function loadLeaderboard() {
             (shopItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         }
 
-        // 🔥 Map вместо find — O(N) вместо O(N²)
-        const userMap = new Map(top10.map(u => [Number(u.telegram_id), u]));
-
-        container.querySelectorAll('.leaderboard-item[data-user-id]').forEach(el => {
+        // 5. Кастомизация
+        const userMap = new Map([champion, ...top9].map(u => [Number(u.telegram_id), u]));
+        container.querySelectorAll('[data-user-id]').forEach(el => {
             const uid = Number(el.dataset.userId);
             const user = userMap.get(uid);
             if (user) applyListCustomization(el, user);
@@ -27688,41 +28414,43 @@ async function loadLeaderboard() {
     }
 }
 
-function renderLbItem(user, rank) {
+function renderLbItem(user, rank, isMe = false) {
     const src = user.custom_avatar || user.photo_url;
     const initial = (user.display_name || 'U')[0].toUpperCase();
     const av = src ? `<img src="${src}" alt="">` : initial;
     const lvl = eloToLevel(user.elo);
     const isDev = isDevClubMember(user.telegram_id);
+    const rankIcon = getRankSvg(lvl, 18);
 
     // 🟢 Онлайн-индикатор
     const lastSeen = user.last_seen ? new Date(user.last_seen).getTime() : 0;
     const isOnline = Date.now() - lastSeen < 2 * 60 * 1000;
     const onlineDot = isOnline ? '<div class="online-dot online-dot-sm"></div>' : '';
 
-    return `
-        <div class="leaderboard-item" onclick="openPlayerProfile(${user.telegram_id})"
-             data-user-id="${user.telegram_id}">
-            <span class="leaderboard-rank">#${rank}</span>
-            <div class="lb-avatar" data-list-avatar>${av}${onlineDot}</div>
+return `
+    <div class="leaderboard-item ${isMe ? 'is-me' : ''}" onclick="openPlayerProfile(${user.telegram_id})"
+         data-user-id="${user.telegram_id}">
+        <span class="leaderboard-rank">#${rank}</span>
+        <div class="lb-avatar" data-list-avatar>${av}${onlineDot}</div>
 
-            <div class="lb-info-compact">
-<div class="lb-row-top">
-    <span class="lb-nick-inline" data-list-nick>
-        ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
-    </span>
-    ${isDev ? `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>` : ''}
-    <span class="leaderboard-DXP" data-list-badge></span>
-</div>
-
-                <div class="lb-row-bottom">
-                    <span class="lb-lvl-chip">⚡ ${lvl} ур.</span>
-                    <span class="lb-dxp-chip">🎯 ${user.elo ?? 1000} DXP</span>
-                </div>
+        <div class="lb-info-compact">
+            <div class="lb-row-top">
+                <span class="lb-rank-mini" style="color: var(--emerald); flex-shrink: 0; display: inline-flex; width: 18px; height: 18px;">${rankIcon}</span>
+                <span class="lb-nick-inline" data-list-nick>
+                    ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
+                </span>
+                ${isDev ? `<span class="dev-tag dev-tag-mini" onclick="event.stopPropagation(); showDevTagInfo()">DEV</span>` : ''}
+                <span class="leaderboard-DXP" data-list-badge></span>
             </div>
 
-            <span class="leaderboard-DXP-value">${user.elo}</span>
-        </div>`;
+            <div class="lb-row-bottom">
+                <span class="lb-lvl-chip">⚡ ${lvl} ур.</span>
+                <span class="lb-dxp-chip">🎯 ${user.elo ?? 1000} DXP</span>
+            </div>
+        </div>
+
+        <span class="leaderboard-DXP-value">${user.elo}</span>
+    </div>`;
 }
 
 async function openFullLeaderboard() {
@@ -27747,7 +28475,11 @@ async function openFullLeaderboard() {
 
         await loadClubTagsForUsers(others.map(u => u.telegram_id));
 
-        c.innerHTML = others.map((user, i) => renderLbItem(user, i + 1)).join('');
+        const myId = currentUser?.telegram_id;
+c.innerHTML = others.map((user, i) => {
+    const isMe = user.telegram_id === myId;
+    return renderLbItem(user, i + 1, isMe);
+}).join('');
 
         // 🔥 Догружаем shop_items
         const allItems = new Set();
@@ -41650,15 +42382,22 @@ function renderSortSelect(currentSort, onchangeFnName) {
     `;
 }            
 
+// ============================================================
+// 🛒 МАГАЗИН — киберспортивный интерфейс
+// ============================================================
 async function openShop() {
     if (!currentUser) {
         showToast('⚠️ Профиль ещё не загружен');
         return;
     }
+
     switchPage('shop');
     const container = document.getElementById('shopContent');
     if (!container) return;
-    container.innerHTML = skeleton ? skeleton('card', 3) : '<div class="empty">Загрузка...</div>';
+
+    container.innerHTML = (typeof skeleton === 'function')
+        ? skeleton('card', 4)
+        : '<div class="empty">Загрузка...</div>';
 
     // 🔥 Полный сброс кэша перед загрузкой
     Object.keys(SHOP_ITEMS_CACHE).forEach(k => delete SHOP_ITEMS_CACHE[k]);
@@ -41679,6 +42418,9 @@ async function openShop() {
 
         items.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
 
+        // ============================================================
+        // Категории
+        // ============================================================
         const categories = {
             nickname_color: { label: 'Цвет ника',    icon: 'nickname', desc: 'Покажи свой стиль' },
             avatar_frame:   { label: 'Рамки',        icon: 'frame',    desc: 'Выделись среди других' },
@@ -41691,13 +42433,16 @@ async function openShop() {
         const grouped = {};
         items.forEach(i => { (grouped[i.category] ||= []).push(i); });
 
+        // ============================================================
+        // SVG-иконки категорий
+        // ============================================================
         const catIcon = (type) => {
             const svgs = {
                 nickname: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 12 4l8 16"/><path d="M7 14h10"/></svg>`,
-                frame: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/></svg>`,
-                bg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
-                badge: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>`,
-                title: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/><path d="M5 21h14"/></svg>`,
+                frame:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/></svg>`,
+                bg:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>`,
+                badge:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>`,
+                title:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/><path d="M5 21h14"/></svg>`,
             };
             return svgs[type] || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>`;
         };
@@ -41705,6 +42450,9 @@ async function openShop() {
         const ownedCount = items.filter(i => owned.has(i.id)).length;
         const equippedCount = equipped.size;
 
+        // ============================================================
+        // РЕНДЕР
+        // ============================================================
         container.innerHTML = `
             <div class="shop-hero">
                 <div class="shop-hero-glow"></div>
@@ -41738,34 +42486,51 @@ async function openShop() {
                 </div>
             </div>
 
-            <div class="section-title">Категории</div>
-                        ${isCurrentUserAdmin() ? `
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                    <button class="shop-btn buy" style="padding: 12px; font-size: 11px;" onclick="openAddCustomBackgroundSheet()">
-                        🌄 + Фон шапки
+            <!-- Заголовок категорий + админ-кнопка -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
+                <div class="section-title" style="margin: 0; flex: 1;">Категории</div>
+                ${isCurrentUserAdmin() ? `
+                    <button class="phc-icon-btn" onclick="openAdminShopMenu()" title="Админ-меню" style="width: 34px; height: 34px;">
+                        <svg viewBox="0 0 24 24" style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+                        </svg>
                     </button>
-                    <button class="shop-btn buy" style="padding: 12px; font-size: 11px;" onclick="openAddDxpChartBackgroundSheet()">
-                        📈 + Фон графика
-                    </button>
-                    <button class="shop-btn buy" style="padding: 12px; font-size: 11px;" onclick="openAddAnyShopItemSheet()">
-                        ✨ + Любой товар
-                    </button>
-                </div>
-            ` : ''}
+                ` : ''}
+            </div>
+
+            <!-- Карточки категорий с превью -->
             <div class="shop-cat-tabs">
                 ${Object.entries(categories).map(([cat, meta]) => {
                     const list = grouped[cat] || [];
                     const ownedInCat = list.filter(i => owned.has(i.id)).length;
-                    const isEmpty = !list.length;
+                    const totalInCat = list.length;
+                    const isEmpty = !totalInCat;
+                    const progressPct = totalInCat > 0 ? (ownedInCat / totalInCat) * 100 : 0;
+
+                    // Первый доступный предмет для превью
+                    const previewItem = list.find(i => i.is_available !== false) || list[0];
+
                     return `
                         <button class="shop-cat-btn ${isEmpty ? 'disabled' : ''}" 
                                 onclick="${isEmpty ? '' : `openShopCategory('${cat}')`}"
                                 ${isEmpty ? 'disabled' : ''}>
-                            <span class="shop-cat-btn-icon">${catIcon(meta.icon)}</span>
-                            <span class="shop-cat-btn-info">
+                            <span class="shop-cat-icon">${catIcon(meta.icon)}</span>
+                            <div class="shop-cat-preview">
+                                ${previewItem
+                                    ? (typeof renderCaseItemPreview === 'function'
+                                        ? renderCaseItemPreview(previewItem)
+                                        : `<span class="shop-cat-preview-empty">📦</span>`)
+                                    : `<span class="shop-cat-preview-empty">${meta.icon === 'bg' ? '🌄' : '📦'}</span>`
+                                }
+                            </div>
+                            <div class="shop-cat-btn-info">
                                 <span class="shop-cat-btn-name">${meta.label}</span>
-                                <span class="shop-cat-btn-count">${ownedInCat}/${list.length}</span>
-                            </span>
+                                <span class="shop-cat-btn-count">${ownedInCat}/${totalInCat}</span>
+                            </div>
+                            <div class="shop-cat-progress">
+                                <div class="shop-cat-progress-fill" style="width: ${progressPct}%"></div>
+                            </div>
                         </button>
                     `;
                 }).join('')}
@@ -41778,7 +42543,16 @@ async function openShop() {
         `;
     } catch (e) {
         console.error('openShop:', e);
-        container.innerHTML = `<div class="empty" style="color:var(--red);">Ошибка: ${e.message}</div>`;
+        container.innerHTML = `
+            <div class="empty" style="color: var(--red); padding: 20px; text-align: center; line-height: 1.5;">
+                ❌ Ошибка загрузки магазина<br>
+                <span style="font-size: 11px; color: var(--hint);">${escapeHtml(e.message || String(e))}</span>
+                <br><br>
+                <button class="profile-action-btn cancel" onclick="openShop()" style="max-width: 200px; margin: 0 auto;">
+                    🔄 Попробовать снова
+                </button>
+            </div>
+        `;
     }
 }
 
@@ -50817,6 +51591,9 @@ async function renderAchievements(userId) {
     const container = document.querySelector(`#achievementsCard_${userId} [data-achievements]`);
     if (!container) return;
 
+    // Обновляем счётчик
+    const counterEl = document.getElementById(`achvCounter_${userId}`);
+
     let u;
     if (Number(userId) === Number(currentUser?.telegram_id)) {
         u = { ...currentUser };
@@ -50852,8 +51629,11 @@ async function renderAchievements(userId) {
         u.rank = 999;
     }
 
+    let unlockedCount = 0;
+
     container.innerHTML = ACHIEVEMENTS.map(a => {
         const isUnlocked = !!a.check(u);
+        if (isUnlocked) unlockedCount++;
         return `
             <div class="achv-mini ${isUnlocked ? 'unlocked' : 'locked'}"
                  data-achv-id="${a.id}"
@@ -50864,6 +51644,11 @@ async function renderAchievements(userId) {
             </div>
         `;
     }).join('');
+
+    // Обновляем счётчик
+    if (counterEl) {
+        counterEl.textContent = `${unlockedCount}/${ACHIEVEMENTS.length}`;
+    }
 
     // 🔥 Навешиваем обработчики для тултипов
     attachAchievementTooltips();
