@@ -28479,20 +28479,20 @@ async function handleFriendButtonClick(userId, btn) {
 }
 
 // ============================================================
-// 🎨 УНИВЕРСАЛЬНЫЙ ПРОФИЛЬ — для себя и для других
+// 🎨 ПРОФИЛЬ — универсальный (свой + чужой)
 // ============================================================
 async function renderProfileView(user, options = {}) {
     const container = document.getElementById('profileContent');
     const isMe = String(user.telegram_id) === String(currentUser?.telegram_id);
     const inModal = options.inModal === true;
-    
+
     currentProfileUserId = user.telegram_id;
 
     if (!clubTagCache[user.telegram_id]) {
         await loadClubTagsForUsers([user.telegram_id]);
     }
 
-    // 🔥 Догружаем shop_items
+    // 🔥 Догружаем shop_items для equipped
     if (user.equipped_items && Object.keys(user.equipped_items).length) {
         const itemIds = Object.values(user.equipped_items);
         const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
@@ -28503,6 +28503,9 @@ async function renderProfileView(user, options = {}) {
         }
     }
 
+    // ============================================================
+    // Базовые данные
+    // ============================================================
     const avatarSrc = user.custom_avatar || user.photo_url;
     const initial = (user.display_name || 'U')[0].toUpperCase();
     const avatarHTML = avatarSrc
@@ -28511,11 +28514,15 @@ async function renderProfileView(user, options = {}) {
                <span class="avatar-fallback-letter">${initial}</span>
                <span class="avatar-fallback-hint">📷</span>
            </div>`;
-    const winrate = user.matches_played > 0 
+
+    const winrate = user.matches_played > 0
         ? Math.round((user.wins / user.matches_played) * 100) : 0;
     const level = eloToLevel(user.elo);
+    const levelInfo = RANK_CONFIG.LEVELS[Math.min(level - 1, 9)];
 
-    // Проверка DEV-Клана
+    // ============================================================
+    // DEV-тег
+    // ============================================================
     let isDev = false;
     try {
         const { data: m } = await sb.from('club_members')
@@ -28527,7 +28534,9 @@ async function renderProfileView(user, options = {}) {
         }
     } catch (e) {}
 
-    // 🔥 СНАЧАЛА загружаем отношения с друзьями (до рендера!)
+    // ============================================================
+    // Отношения с друзьями (для чужого профиля)
+    // ============================================================
     if (!isMe) {
         try {
             const me = String(currentUser.telegram_id);
@@ -28558,16 +28567,19 @@ async function renderProfileView(user, options = {}) {
         }
     }
 
-    // Ранг
-    const levelInfo = RANK_CONFIG.LEVELS[Math.min(level - 1, 9)];
-
-    // Онлайн
+    // ============================================================
+    // Онлайн-статус
+    // ============================================================
     const lastSeen = user.last_seen ? new Date(user.last_seen).getTime() : 0;
     const isOnline = Date.now() - lastSeen < 2 * 60 * 1000;
 
+    // ============================================================
+    // HTML
+    // ============================================================
     const html = `
         <!-- HERO -->
         <div class="profile-hero-compact" data-profile-bg>
+
             <!-- 🆕 Верхняя строка: бейдж + кнопки -->
             <div class="phc-top-bar">
                 ${user.is_admin ? `<div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>` : '<div></div>'}
@@ -28602,14 +28614,14 @@ async function renderProfileView(user, options = {}) {
 
             <!-- 🆕 Основной блок: аватар слева, инфо справа -->
             <div class="phc-main">
-                <!-- Левая колонка: АВАТАР + рамка -->
+                <!-- Аватар + рамка -->
                 <div class="profile-avatar-wrap phc-avatar">
                     <div class="profile-avatar" data-avatar-frame>${avatarHTML}</div>
                     ${isMe ? `<button class="avatar-edit-btn" onclick="openAvatarSheet()">✎</button>` : ''}
                     ${isOnline ? `<div class="online-dot"></div>` : ''}
                 </div>
 
-                <!-- Правая колонка: инфо -->
+                <!-- Инфо -->
                 <div class="phc-info">
                     <!-- Строка 1: тег клана + ник -->
                     <div class="phc-name-row">
@@ -28623,8 +28635,7 @@ async function renderProfileView(user, options = {}) {
                         <span class="profile-equipped-badge" data-equipped-badge></span>
                     </div>
 
-                    <!-- Строка 3: username + DEV -->
-                    <!-- 🆕 ONLINE-СТАТУС -->
+                    <!-- Строка 3: username + статус -->
                     <div class="online-status" data-online-status data-last-seen="${user.last_seen || ''}">
                         <span class="status-dot"></span>
                         <span class="status-text">Загрузка...</span>
@@ -28637,62 +28648,60 @@ async function renderProfileView(user, options = {}) {
                         }
                         ${isDev ? `<span class="dev-tag dev-tag-inline" onclick="showDevTagInfo()">DEV</span>` : ''}
                     </div>
-
-<!-- Строка 4: РАНГ-БЕЙДЖ с прогресс-баром -->
-<div class="rank-badge rank-${level}" data-rank-badge>
-    <span class="rank-badge-icon"
-      data-rank-icon
-      onclick="openRankInfoSheet(${level}, event)"
-      style="cursor: pointer;"
-      title="Нажми, чтобы узнать про ранг">${getRankEmblem(level, 48, true)}</span>
-    <div class="rank-badge-text">
-        <div class="rank-badge-name">${levelInfo.name}</div>
-        <div class="rank-badge-level">УРОВЕНЬ ${level} / 10</div>
-    </div>
-</div>
-${(() => {
-    const cur = user.elo ?? RANK_CONFIG.START_DXP;
-    const curLevelInfo = RANK_CONFIG.LEVELS[Math.min(level - 1, 9)];
-    const nextLevelInfo = RANK_CONFIG.LEVELS[Math.min(level, 9)];
-    const minOfCurrent = curLevelInfo.min;
-    const maxOfCurrent = nextLevelInfo.min;
-    const pct = Math.min(100, Math.max(0, ((cur - minOfCurrent) / (maxOfCurrent - minOfCurrent)) * 100));
-    const remaining = Math.max(0, maxOfCurrent - cur);
-
-    if (level >= 10) {
-        return `<div style="font-size: 10px; color: var(--gold); font-weight: 900; letter-spacing: 1px; text-align: center; margin-top: 8px;">🏆 МАКСИМАЛЬНЫЙ РАНГ</div>`;
-    }
-    return `
-        <div class="rank-progress">
-            <div class="rank-progress-fill" style="width: ${pct}%"></div>
-        </div>
-        <div class="rank-progress-text">До ${nextLevelInfo.name}: ${remaining} DXP</div>
-    `;
-})()}
                 </div>
             </div>
 
-            <!-- 🆕 DXP-строка под всей шапкой -->
+            <!-- 🆕 DXP-строка + ранг-пилюля справа -->
             <div class="phc-dxp-row">
                 <span class="phc-dxp-value">⚡ ${user.elo ?? 1000}</span>
                 <span class="phc-dxp-label">DXP</span>
                 <span class="phc-dxp-next" data-dxp-next></span>
+
+                <!-- Ранг-пилюля в правом нижнем углу -->
+                <div class="phc-rank-pill rank-${level}" data-rank-badge
+                     onclick="openRankInfoSheet(${level}, event)"
+                     title="Нажми, чтобы узнать про ранг">
+                    <span class="phc-rank-pill-icon">${getRankEmblem(level, 26, true)}</span>
+                    <div class="phc-rank-pill-text">
+                        <div class="phc-rank-pill-name">${levelInfo.name}</div>
+                        <div class="phc-rank-pill-level">Уровень ${level}</div>
+                    </div>
+                </div>
             </div>
+
+            ${level < 10 ? (() => {
+                const cur = user.elo ?? RANK_CONFIG.START_DXP;
+                const curLevelInfo = RANK_CONFIG.LEVELS[Math.min(level - 1, 9)];
+                const nextLevelInfo = RANK_CONFIG.LEVELS[Math.min(level, 9)];
+                const minOfCurrent = curLevelInfo.min;
+                const maxOfCurrent = nextLevelInfo.min;
+                const pct = Math.min(100, Math.max(0, ((cur - minOfCurrent) / (maxOfCurrent - minOfCurrent)) * 100));
+                const remaining = Math.max(0, maxOfCurrent - cur);
+
+                return `
+                    <div class="rank-progress rank-progress-slim">
+                        <div class="rank-progress-fill" style="width: ${pct}%"></div>
+                    </div>
+                    <div class="rank-progress-text rank-progress-text-slim">
+                        До ${nextLevelInfo.name}: <b>${remaining}</b> DXP
+                    </div>
+                `;
+            })() : ''}
         </div>
 
-<!-- 🏅 ДОСТИЖЕНИЯ — компактно в одной строке -->
-<div class="achievements-strip" id="achievementsCard_${user.telegram_id}">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px;">
-        <div style="font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); display: flex; align-items: center; gap: 6px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 7l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/>
-            </svg>
-            Достижения
+        <!-- 🏅 ДОСТИЖЕНИЯ -->
+        <div class="achievements-strip" id="achievementsCard_${user.telegram_id}">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 0 4px;">
+                <div style="font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); display: flex; align-items: center; gap: 6px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 7l3 9 6-7 6 7 3-9-5 3-4-5-4 5-5-3Z"/>
+                    </svg>
+                    Достижения
+                </div>
+                <div style="font-size: 11px; font-weight: 900; color: var(--gold); font-family: var(--font-mono);" id="achvCounter_${user.telegram_id}">—/—</div>
+            </div>
+            <div class="achv-strip" data-achievements></div>
         </div>
-        <div style="font-size: 11px; font-weight: 900; color: var(--gold); font-family: var(--font-mono);" id="achvCounter_${user.telegram_id}">—/—</div>
-    </div>
-    <div class="achv-strip" data-achievements></div>
-</div>
 
         <!-- 🔥 ПОСЛЕДНИЕ 3 МАТЧА -->
         <div class="recent-matches-block" id="recentMatchesBlock_${user.telegram_id}">
@@ -28709,36 +28718,36 @@ ${(() => {
             </div>
         </div>
 
-<!-- МИНИ-СТАТЫ — единый борд -->
-<div class="profile-mini-row">
-    <button class="pmr-item pmr-id" onclick="copyStandoffId('${inModal ? 'playerStandoffId' : 'myStandoffId'}');">
-        <span class="pmr-label">Standoff ID</span>
-        <span class="pmr-value" id="${inModal ? 'playerStandoffId' : 'myStandoffId'}">${escapeHtml(user.standoff_id || '—')}</span>
-        ${user.standoff_id ? `<span class="pmr-copy">📋</span>` : ''}
-    </button>
+        <!-- МИНИ-СТАТЫ (борд) -->
+        <div class="profile-mini-row">
+            <button class="pmr-item pmr-id" onclick="copyStandoffId('${inModal ? 'playerStandoffId' : 'myStandoffId'}');">
+                <span class="pmr-label">Standoff ID</span>
+                <span class="pmr-value" id="${inModal ? 'playerStandoffId' : 'myStandoffId'}">${escapeHtml(user.standoff_id || '—')}</span>
+                ${user.standoff_id ? `<span class="pmr-copy">📋</span>` : ''}
+            </button>
 
-    <div class="pmr-item">
-        <span class="pmr-label">Матчей</span>
-        <span class="pmr-value">${user.hide_matches ? '—' : (user.matches_played ?? 0)}</span>
-    </div>
+            <div class="pmr-item">
+                <span class="pmr-label">Матчей</span>
+                <span class="pmr-value">${user.hide_matches ? '—' : (user.matches_played ?? 0)}</span>
+            </div>
 
-    <div class="pmr-item">
-        <span class="pmr-label">Побед</span>
-        <span class="pmr-value">${user.hide_matches ? '—' : (user.wins ?? 0)}</span>
-    </div>
+            <div class="pmr-item">
+                <span class="pmr-label">Побед</span>
+                <span class="pmr-value">${user.hide_matches ? '—' : (user.wins ?? 0)}</span>
+            </div>
 
-    <div class="pmr-item pmr-lastmatch">
-        <span class="pmr-label">K/D</span>
-        <span class="pmr-value" id="lmbKDInline_${user.telegram_id}">—/—</span>
-    </div>
-</div>
+            <div class="pmr-item pmr-lastmatch">
+                <span class="pmr-label">K/D</span>
+                <span class="pmr-value" id="lmbKDInline_${user.telegram_id}">—/—</span>
+            </div>
+        </div>
 
         <!-- 📊 РАСШИРЕННАЯ СТАТИСТИКА -->
-<div class="ext-stats-card" id="extStatsCard_${user.telegram_id}">
-    <div class="empty" style="font-size: 11px;">Загрузка статистики...</div>
-</div>
+        <div class="ext-stats-card" id="extStatsCard_${user.telegram_id}">
+            <div class="empty" style="font-size: 11px;">Загрузка статистики...</div>
+        </div>
 
-        <!-- График DXP -->
+        <!-- 📈 ГРАФИК DXP -->
         <div class="elo-chart-card" id="eloChartCard_${user.telegram_id}" data-user-id="${user.telegram_id}" data-dxp-bg>
             <span class="ech-corner ech-tl"></span>
             <span class="ech-corner ech-tr"></span>
@@ -28779,7 +28788,7 @@ ${(() => {
             </div>
         </div>
 
-        <!-- Goals -->
+        <!-- 🎯 GOALS -->
         <div class="goals-card" id="goalsCard_${user.telegram_id}">
             <div class="goals-header">
                 <div class="goals-title">
@@ -28802,7 +28811,7 @@ ${(() => {
             </div>
         </div>
 
-        <!-- Heatmap -->
+        <!-- 📊 HEATMAP -->
         <div class="heatmap-card" id="heatmapCard_${user.telegram_id}">
             <div class="heatmap-header">
                 <div class="heatmap-title">
@@ -28825,21 +28834,17 @@ ${(() => {
         <div class="section-title" style="margin-top: 20px;">История матчей</div>
         <div id="profileMatchHistory_${user.telegram_id}"><div class="empty">Загрузка...</div></div>
     `;
+
     if (inModal) {
         return html;
     }
 
-if (inModal) {
-    // Ничего не делаем — вызывающий код сам вставит в modal
-} else {
-    const target = document.getElementById('profileContent');
-    if (target) target.innerHTML = html;
-}
+    container.innerHTML = html;
 
-    // Применяем кастомизацию сразу (DOM уже вставлен)
+    // Применяем кастомизацию
     await applyCustomizationToElement(container, user);
 
-    // Асинхронные задачи — параллельно
+    // Асинхронные задачи
     await Promise.all([
         renderEloChart(user.telegram_id,
             document.getElementById(`eloChartCard_${user.telegram_id}`)),
@@ -32324,6 +32329,22 @@ async function subscribeMatchRealtime() {
 
                 console.log('📥 match event:', prevStatus, '→', fresh.status);
 
+                // ==== READY_CHECK ====
+                if (fresh.status === 'ready_check') {
+                    // Если я уже на этом экране — просто перерендерить
+                    const onReadyScreen = document.querySelector('#vetoContent .veto-header-v2')
+                        && !document.querySelector('#vetoContent .veto-wrap-v3');
+
+                    currentMatch = fresh;
+
+                    if (onReadyScreen) {
+                        renderReadyCheck();
+                    } else {
+                        showReadyCheckScreen();
+                    }
+                    return;
+                }
+
                 // ==== VETO ====
                 if (fresh.status === 'veto') {
                     if (document.getElementById('page-veto')?.classList.contains('active')) {
@@ -32380,6 +32401,10 @@ async function subscribeMatchRealtime() {
                 // ==== CANCELLED ====
                 if (fresh.status === 'cancelled') {
                     stopVetoPolling();
+                    if (_readyCheckTimer) {
+                        clearInterval(_readyCheckTimer);
+                        _readyCheckTimer = null;
+                    }
                     showVetoCancelledScreen(fresh.cancelled_reason);
                     return;
                 }
@@ -32668,6 +32693,281 @@ function showVetoScreen() {
     renderVeto();
     startVetoCountdown();
 }
+
+// ============================================================
+// ✅ READY CHECK — подтверждение готовности (15 сек)
+// ============================================================
+let _readyCheckTimer = null;
+
+function showReadyCheckScreen() {
+    if (_readyCheckTimer) clearInterval(_readyCheckTimer);
+
+    const screen = document.getElementById('playScreen');
+    if (screen) screen.classList.remove('active');
+
+    const enterFloat = document.getElementById('playEnterFloat');
+    if (enterFloat) enterFloat.classList.remove('active');
+
+    switchPage('veto');
+    renderReadyCheck();
+    startReadyCheckCountdown();
+}
+
+async function renderReadyCheck() {
+    const content = document.getElementById('vetoContent');
+    if (!content || !currentMatch) return;
+
+    const me = Number(currentUser.telegram_id);
+    const teamA = currentMatch.team_a_players || [];
+    const teamB = currentMatch.team_b_players || [];
+    const allIds = [...teamA, ...teamB].map(p => Number(p.telegram_id));
+
+    // Готовность из match.ready_check_data
+    const readyData = currentMatch.ready_check_data || {};
+    const meReady = readyData[String(me)] === true;
+    const readyCount = Object.values(readyData).filter(v => v === true).length;
+    const totalCount = allIds.length;
+
+    // Пользователи
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url')
+        .in('telegram_id', allIds);
+    const userMap = {};
+    (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
+
+    // Таймер
+    const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
+    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    const timeLeft = Math.max(0, 15 - elapsed);
+
+    const renderTeam = (team, list) => {
+        const teamColor = team === 'A' ? 'var(--emerald)' : '#ff5470';
+        const teamRgb = team === 'A' ? 'var(--emerald-rgb)' : '255,84,112';
+        return `
+            <div class="ig-team-col" style="background: rgba(${teamRgb}, 0.04); border: 1px solid rgba(${teamRgb}, 0.25); border-radius: 14px; padding: 10px;">
+                <div style="font-size: 10px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: ${teamColor}; margin-bottom: 10px; text-align: center;">
+                    КОМАНДА ${team}
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    ${list.map(p => {
+                        const u = userMap[Number(p.telegram_id)] || {};
+                        const src = u.custom_avatar || u.photo_url;
+                        const initial = (u.display_name || 'U')[0].toUpperCase();
+                        const av = src ? `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;">` : initial;
+                        const isReady = readyData[String(p.telegram_id)] === true;
+                        const isMe = Number(p.telegram_id) === me;
+                        return `
+                            <div style="
+                                display: flex; align-items: center; gap: 8px;
+                                padding: 6px 8px;
+                                background: ${isReady ? `rgba(${teamRgb}, 0.15)` : 'rgba(0,0,0,0.3)'};
+                                border: 1px solid ${isReady ? `rgba(${teamRgb}, 0.5)` : 'var(--border)'};
+                                border-radius: 10px;
+                                transition: all 0.3s ease;
+                            ">
+                                <div style="width: 28px; height: 28px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); color: #04140e; flex-shrink: 0;">
+                                    ${av}
+                                </div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 11px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        ${escapeHtml(u.display_name || 'Игрок')}${isMe ? ' <span style="color:var(--hint); font-size:9px;">(ты)</span>' : ''}
+                                    </div>
+                                </div>
+                                <div style="font-size: 16px; flex-shrink: 0;">
+                                    ${isReady ? '✅' : '⏳'}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    };
+
+    content.innerHTML = `
+        <div class="veto-wrap">
+            <div class="veto-header-v2" style="text-align: center;">
+                <div class="veto-header-top" style="justify-content: center;">
+                    <div style="text-align: center;">
+                        <div class="veto-phase-label">ГОТОВНОСТЬ</div>
+                        <div class="veto-phase-title" style="justify-content: center; margin-top: 6px;">
+                            Проверка игроков
+                        </div>
+                    </div>
+                </div>
+                <div style="
+                    margin-top: 16px;
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 42px;
+                    font-weight: 900;
+                    color: ${timeLeft <= 5 ? 'var(--red)' : 'var(--emerald)'};
+                    font-variant-numeric: tabular-nums;
+                    text-shadow: 0 0 20px ${timeLeft <= 5 ? 'rgba(255,84,112,0.6)' : 'rgba(var(--emerald-rgb),0.6)'};
+                    animation: ${timeLeft <= 5 ? 'pulseRed 0.6s ease-in-out infinite' : 'pulseText 2s ease-in-out infinite'};
+                ">${timeLeft}s</div>
+                <div style="
+                    margin-top: 8px;
+                    font-size: 13px;
+                    color: var(--hint);
+                    font-weight: 700;
+                ">${readyCount} / ${totalCount} готовы</div>
+            </div>
+
+            <div style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin-top: 14px;
+            ">
+                ${renderTeam('A', teamA)}
+                ${renderTeam('B', teamB)}
+            </div>
+
+            ${meReady ? `
+                <button class="profile-action-btn" style="
+                    margin-top: 16px;
+                    background: rgba(var(--emerald-rgb), 0.15);
+                    color: var(--emerald);
+                    border: 1px solid var(--emerald);
+                    cursor: default;
+                " disabled>
+                    ✅ ТЫ ГОТОВ
+                </button>
+            ` : `
+                <button class="profile-action-btn save" style="margin-top: 16px;"
+                        onclick="confirmReady()" id="readyBtn">
+                    ✅ Я ГОТОВ
+                </button>
+            `}
+        </div>
+    `;
+}
+
+async function confirmReady() {
+    if (!currentMatch) return;
+
+    const me = Number(currentUser.telegram_id);
+    const readyData = currentMatch.ready_check_data || {};
+
+    if (readyData[String(me)] === true) return;
+
+    haptic('medium');
+
+    // Обновляем локально
+    readyData[String(me)] = true;
+    currentMatch.ready_check_data = readyData;
+
+    // Сохраняем в БД
+    try {
+        await sb.from('game_matches')
+            .update({ ready_check_data: readyData })
+            .eq('id', currentMatch.id);
+
+        renderReadyCheck();
+    } catch (e) {
+        console.warn('confirmReady:', e);
+        showToast('Ошибка');
+    }
+}
+
+function startReadyCheckCountdown() {
+    if (_readyCheckTimer) clearInterval(_readyCheckTimer);
+
+    _readyCheckTimer = setInterval(async () => {
+        if (!currentMatch || currentMatch.status !== 'ready_check') {
+            clearInterval(_readyCheckTimer);
+            _readyCheckTimer = null;
+            return;
+        }
+
+        const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
+        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        const timeLeft = Math.max(0, 15 - elapsed);
+
+        // Проверяем, все ли готовы
+        const readyData = currentMatch.ready_check_data || {};
+        const allIds = [
+            ...(currentMatch.team_a_players || []),
+            ...(currentMatch.team_b_players || [])
+        ].map(p => String(p.telegram_id));
+
+        const allReady = allIds.length > 0 && allIds.every(id => readyData[id] === true);
+
+        if (allReady) {
+            clearInterval(_readyCheckTimer);
+            _readyCheckTimer = null;
+            await finishReadyCheck(true);
+            return;
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(_readyCheckTimer);
+            _readyCheckTimer = null;
+            await finishReadyCheck(false);
+            return;
+        }
+
+        // Обновляем только цифру таймера без полного рендера
+        const timerEl = document.querySelector('.veto-header-v2 [style*="Orbitron"]');
+        if (timerEl) timerEl.textContent = `${timeLeft}s`;
+    }, 1000);
+}
+
+async function finishReadyCheck(success) {
+    if (!currentMatch) return;
+
+    try {
+        if (!success) {
+            // Не все готовы — отменяем
+            await sb.from('game_matches').update({
+                status: 'cancelled',
+                cancelled_reason: 'ready_check_failed',
+                cancelled_at: new Date().toISOString()
+            }).eq('id', currentMatch.id);
+
+            await cancelMatch(currentMatch.room_id, 'ready_check_failed');
+
+            showToast('⏰ Не все подтвердили готовность');
+            haptic('heavy');
+
+            currentMatch = null;
+            setTimeout(() => {
+                unlockNav();
+                switchPage('dashboard');
+                checkActiveRoom();
+            }, 800);
+            return;
+        }
+
+        // Все готовы — переходим к veto
+        await sb.from('game_matches').update({
+            status: 'veto',
+            veto_started_at: new Date().toISOString(),
+            last_action_at: new Date().toISOString()
+        }).eq('id', currentMatch.id);
+
+        await sb.from('rooms').update({
+            status: 'veto',
+            veto_started_at: new Date().toISOString()
+        }).eq('id', currentMatch.room_id);
+        await touchRoom(currentMatch.room_id);
+
+        const { data: fresh } = await sb.from('game_matches')
+            .select('*').eq('id', currentMatch.id).single();
+
+        if (fresh) {
+            currentMatch = fresh;
+            showToast('🎯 Все готовы! Начинаем veto');
+            haptic('heavy');
+            showVetoScreen();
+        }
+
+    } catch (e) {
+        console.error('finishReadyCheck:', e);
+        showToast('Ошибка: ' + e.message);
+    }
+}
+            
 // ============================================================
 // РЕНДЕР VETO
 // ============================================================
@@ -34950,6 +35250,11 @@ async function checkActiveMatch() {
                     subscribeMatchRealtime();
                     return;
                 }
+                if (m.status === 'ready_check') {
+                    showReadyCheckScreen();
+                    subscribeMatchRealtime();
+                    return;
+                }
                 if (m.status === 'veto') {
                     showVetoScreen();   // ← внутри сам подпишется
                     subscribeMatchRealtime();
@@ -35003,6 +35308,23 @@ async function restoreRoomScreen(room, player) {
             openRoomView(room.id);
             break;
         }
+
+            case 'ready_check': {
+    const { data: match } = await sb.from('game_matches')
+        .select('*')
+        .eq('room_id', room.id)
+        .order('created_at', { ascending: false })
+        .limit(1).maybeSingle();
+    if (match) {
+        currentMatch = match;
+        showReadyCheckScreen();
+        subscribeMatchRealtime();
+    } else {
+        showToast('Матч потерян');
+        closePlayScreen();
+    }
+    break;
+}
 
         case 'veto':
         case 'side_pick': {
@@ -36571,51 +36893,74 @@ function unsubscribeRoomRealtime() {
     _roomRenderTimer = null;
 }
 
+// ============================================================
+// ✅ ПРОВЕРКА ГОТОВНОСТИ КОМАНД (все собрались?)
+// ============================================================
 async function checkTeamsReady(roomId, room) {
-            if (!room) return;
-            if (room.status !== 'open') return;
-            if (room.teams_notified_at) return;
+    if (!room) return;
+    if (room.status !== 'open') return;
+    if (room.teams_notified_at) return;
 
-            const { data: players } = await sb.from('room_players')
-                .select('telegram_id, team, is_ready').eq('room_id', roomId);
+    const { data: players } = await sb.from('room_players')
+        .select('telegram_id, team, is_ready').eq('room_id', roomId);
 
-                const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
+    const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready).length;
     const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready).length;
     const perTeamCount = needPerTeam(room.mode);
 
     if (teamA < perTeamCount || teamB < perTeamCount) return;
 
-            const allPlayers = players || [];
-            const { data: roomData } = await sb.from('rooms')
-                .select('leader_id, name').eq('id', roomId).single();
+    const allPlayers = players || [];
+    const { data: roomData } = await sb.from('rooms')
+        .select('leader_id, name').eq('id', roomId).single();
 
-            const leaderId = Number(roomData.leader_id);
-            const leaderIds = [];
-            const otherIds = [];
-            allPlayers.forEach(p => {
-                if (Number(p.telegram_id) === leaderId) leaderIds.push(p.telegram_id);
-                else otherIds.push(p.telegram_id);
-            });
+    const leaderId = Number(roomData.leader_id);
+    const leaderIds = [];
+    const otherIds = [];
+    allPlayers.forEach(p => {
+        if (Number(p.telegram_id) === leaderId) leaderIds.push(p.telegram_id);
+        else otherIds.push(p.telegram_id);
+    });
 
-            await Promise.all([
-                notifyMany(leaderIds,
-                    `✅ <b>Ваша комната заполнена!</b>\n` +
-                    `Все игроки собрались. <b>Запускайте матч!</b>\n\n` +
-                    `🎮 ${escapeHtml(roomData.name)}`, 'party'
-                ),
-                notifyMany(otherIds,
-                    `🎮 <b>Заходи в приложение, игра вот-вот начнётся!</b>\n` +
-                    `Все игроки собрались в комнате <b>${escapeHtml(roomData.name)}</b>.`, 'party'
-                ),
-            ]);
+    // ============================================================
+    // 🔥 НОВОЕ: Тост хосту если он в приложении
+    // ============================================================
+    if (currentUser && Number(currentUser.telegram_id) === leaderId) {
+        const onPlayScreen =
+            document.getElementById('playScreen')?.classList.contains('active') ||
+            document.getElementById('page-play')?.classList.contains('active');
 
-            await sb.from('rooms').update({
-                teams_notified_at: new Date().toISOString()
-            }).eq('id', roomId);
-
-            showToast('✅ Все игроки собрались!');
+        if (onPlayScreen) {
+            showToast('✅ Все игроки собрались! Можно запускать матч');
             haptic('heavy');
+
+            // Вспышка на кнопке старта
+            const startBtn = document.querySelector('.room-launch-btn.ready');
+            if (startBtn) {
+                startBtn.style.animation = 'none';
+                void startBtn.offsetWidth;
+                startBtn.style.animation = 'launchPulse 1s ease-in-out 3';
+            }
         }
+    }
+
+    // Уведомления через бота
+    await Promise.all([
+        notifyMany(leaderIds,
+            `✅ <b>Ваша комната заполнена!</b>\n` +
+            `Все игроки собрались. <b>Запускайте матч!</b>\n\n` +
+            `🎮 ${escapeHtml(roomData.name)}`, 'party'
+        ),
+        notifyMany(otherIds,
+            `🎮 <b>Заходи в приложение, игра вот-вот начнётся!</b>\n` +
+            `Все игроки собрались в комнате <b>${escapeHtml(roomData.name)}</b>.`, 'party'
+        ),
+    ]);
+
+    await sb.from('rooms').update({
+        teams_notified_at: new Date().toISOString()
+    }).eq('id', roomId);
+}
 
         let allowTeamSwitch = false;
 
@@ -36717,54 +37062,83 @@ async function closeRoom(roomId) {
     renderPlayList();
 }
 
+// ============================================================
+// 🎮 ЗАПУСК МАТЧА — с баланс-чеком и ready_check
+// ============================================================
 async function startMatch(roomId) {
     haptic('heavy');
     clearResultShown();
 
-    const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
-    if (!room) {
-        showToast('Комната не найдена');
-        return;
-    }
-
-    const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
-
-    const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
-    const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready);
-    const perTeamCount = needPerTeam(room.mode);
-
-    if (teamA.length < perTeamCount || teamB.length < perTeamCount) {
-        showToast(`Нужно по ${perTeamCount} игроков в каждой команде`);
-        return;
-    }
-
-    // Собираем команды для прогноза
-const { data: allPlayers } = await sb.from('room_players')
-    .select('telegram_id, team')
-    .eq('room_id', roomId)
-    .eq('is_ready', true);
-
-const predTeamA = (allPlayers || []).filter(p => p.team === 'A').map(p => ({ telegram_id: p.telegram_id }));
-const predTeamB = (allPlayers || []).filter(p => p.team === 'B').map(p => ({ telegram_id: p.telegram_id }));
-
-// Показываем прогноз, потом запускаем
-await new Promise((resolve) => {
-    showMatchPrediction(predTeamA, predTeamB, resolve);
-});
+    if (AppState.submitVoteLock) return;
+    AppState.submitVoteLock = true;
 
     try {
+        const { data: room } = await sb.from('rooms').select('*').eq('id', roomId).single();
+        if (!room) { showToast('Комната не найдена'); return; }
+
+        const { data: players } = await sb.from('room_players').select('*').eq('room_id', roomId);
+
+        const teamA = (players || []).filter(p => p.team === 'A' && p.is_ready);
+        const teamB = (players || []).filter(p => p.team === 'B' && p.is_ready);
+        const perTeamCount = needPerTeam(room.mode);
+
+        if (teamA.length < perTeamCount || teamB.length < perTeamCount) {
+            showToast(`Нужно по ${perTeamCount} ${plural(perTeamCount, 'игроку', 'игрока', 'игроков')} в каждой команде`);
+            return;
+        }
+
+        // ============================================================
+        // 🔥 НОВОЕ: Проверка баланса DXP
+        // ============================================================
+        const idsA = teamA.map(p => Number(p.telegram_id));
+        const idsB = teamB.map(p => Number(p.telegram_id));
+        const { data: users } = await sb.from('users')
+            .select('telegram_id, elo').in('telegram_id', [...idsA, ...idsB]);
+
+        const eloMap = {};
+        (users || []).forEach(u => eloMap[Number(u.telegram_id)] = u.elo || 1000);
+
+        const avgA = Math.round(idsA.reduce((s, id) => s + eloMap[id], 0) / idsA.length);
+        const avgB = Math.round(idsB.reduce((s, id) => s + eloMap[id], 0) / idsB.length);
+        const diff = Math.abs(avgA - avgB);
+
+        if (diff > 400) {
+            const ok = await tgConfirm(
+                `⚠️ Большой разрыв по DXP:\n\n` +
+                `Команда A: ${avgA}\n` +
+                `Команда B: ${avgB}\n` +
+                `Разница: ${diff}\n\n` +
+                `Всё равно запустить матч?`
+            );
+            if (!ok) {
+                haptic('medium');
+                return;
+            }
+        }
+
+        // ============================================================
+        // Прогноз на матч
+        // ============================================================
+        const predTeamA = teamA.map(p => ({ telegram_id: p.telegram_id }));
+        const predTeamB = teamB.map(p => ({ telegram_id: p.telegram_id }));
+
+        await new Promise((resolve) => {
+            showMatchPrediction(predTeamA, predTeamB, resolve);
+        });
+
+        // ============================================================
+        // 🔥 СОЗДАЁМ МАТЧ со статусом 'ready_check'
+        // ============================================================
         const captainA = teamA[0].telegram_id;
         const captainB = teamB[0].telegram_id;
         const host = room.leader_id;
 
-        // 🎲 50/50 — кто первый банит
+        // 50/50 — кто первый банит
         const vetoFirstTeam = Math.random() < 0.5 ? 'A' : 'B';
-        // Кто выбирает сторону = та команда, что НЕ банила последней
         const sidePickerTeam = vetoFirstTeam === 'A' ? 'B' : 'A';
 
-        // 1. Создаём матч
         const { data: match, error } = await sb.from('game_matches').insert({
-            status: 'veto',
+            status: 'ready_check',
             mode: room.mode,
             host_id: host,
             room_id: roomId,
@@ -36776,15 +37150,17 @@ await new Promise((resolve) => {
             veto_first_team: vetoFirstTeam,
             side_picker_team: sidePickerTeam,
             current_turn: vetoFirstTeam,
-            veto_started_at: new Date().toISOString(),
-            last_action_at: new Date().toISOString()
+            ready_check_started_at: new Date().toISOString(),
+            ready_check_data: {}
         }).select().single();
 
         if (error) throw error;
 
-        // 2. Обновляем комнату → veto
+        // ============================================================
+        // Обновляем комнату
+        // ============================================================
         await sb.from('rooms').update({
-            status: 'veto',
+            status: 'ready_check',
             game_match_id: match.id,
             veto_log: [],
             current_turn: vetoFirstTeam
@@ -36793,28 +37169,30 @@ await new Promise((resolve) => {
 
         currentMatch = match;
 
-        // 🔥 3. ГАСИМ баннер + геймпад + floating кнопку — теперь подсказки не горят
+        // Гасим баннеры и индикаторы
         activeRoomId = null;
         hideActiveRoomBanner();
+
         const _ind = document.getElementById('headerRoomIndicator');
         if (_ind) _ind.style.display = 'none';
+
         const _flt = document.getElementById('playEnterFloat');
         if (_flt) _flt.classList.remove('active');
 
-        // 🔥 4. Закрываем play-screen (если открыт)
         const _screen = document.getElementById('playScreen');
         if (_screen) _screen.classList.remove('active');
 
-        showToast(`🎲 Первой банит команда ${vetoFirstTeam}`);
+        showToast('🎯 Проверка готовности · 15 сек');
         haptic('heavy');
 
-        // 5. Открываем экран пиков карт
-        showVetoScreen();
+        showReadyCheckScreen();
         subscribeMatchRealtime();
 
     } catch (e) {
         console.error('startMatch:', e);
         showToast('Ошибка: ' + (e?.message || e));
+    } finally {
+        AppState.submitVoteLock = false;
     }
 }
 
