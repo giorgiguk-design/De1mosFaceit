@@ -1003,12 +1003,62 @@ body::after {
     transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
         .player-modal.active .player-modal-inner { animation: bounceIn 0.42s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .player-modal-close {
-            position: absolute; top: 12px; right: 12px;
-            background: rgba(255,255,255,0.06); border: none; color: var(--text);
-            width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
-            font-size: 18px; font-family: inherit;
-        }
+.player-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.06);
+    border: none;
+    color: var(--text);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    font-family: inherit;
+    z-index: 100;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+/* ============================================================ */
+/* 🖱️ СКРОЛЛБАР В МОДАЛКЕ ПРОФИЛЯ                             */
+/* ============================================================ */
+.player-modal-inner::-webkit-scrollbar {
+    width: 8px;
+}
+.player-modal-inner::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+}
+.player-modal-inner::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--emerald), var(--emerald-2));
+    border-radius: 4px;
+}
+.player-modal-inner::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--emerald-3), var(--emerald));
+}
+
+.player-modal-close:hover {
+    background: rgba(var(--emerald-rgb), 0.2);
+    transform: scale(1.05);
+}
+
+@media (min-width: 1024px) {
+    .player-modal-close {
+        position: sticky;
+        top: 8px;
+        float: right;
+        margin-left: auto;
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+        background: rgba(10, 20, 16, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-strong);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+}
 
         .msg-menu-overlay { position: fixed; inset: 0; z-index: 810; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: none; align-items: flex-end; justify-content: center; }
         .msg-menu-overlay.active { display: flex; }
@@ -11679,6 +11729,264 @@ html.lite-mode .header-coins::before {
     max-width: 100%;
 }
 
+    /* ============================================================ */
+/* 🖥️ ПРОФИЛЬ НА ПК — СЕТКА 2 КОЛОНКИ                          */
+/* ============================================================ */
+@media (min-width: 1024px) {
+
+    /* Заголовок hero и борд — на всю ширину */
+    #playerModalContent,
+    #profileContent {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+
+    /* Hero — на обе колонки */
+    #playerModalContent .profile-hero-compact,
+    #profileContent .profile-hero-compact {
+        grid-column: 1 / -1;
+        margin-bottom: 0 !important;
+    }
+
+    /* Достижения — на всю ширину, компактно */
+    #playerModalContent .achievements-strip,
+    #profileContent .achievements-strip {
+        grid-column: 1 / -1;
+        margin-top: 0;
+        padding: 16px;
+        background: linear-gradient(180deg,
+            rgba(var(--emerald-rgb), 0.04) 0%,
+            rgba(0, 0, 0, 0.4) 100%);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+    }
+
+    /* Борд со статистикой — на всю ширину, компактно */
+    #playerModalContent .profile-mini-row,
+    #profileContent .profile-mini-row {
+        grid-column: 1 / -1;
+        margin-bottom: 0 !important;
+    }
+
+    /* Последние матчи — на всю ширину */
+    #playerModalContent .recent-matches-block,
+    #profileContent .recent-matches-block {
+        grid-column: 1 / -1;
+        margin-bottom: 0 !important;
+    }
+
+    /* Расширенная статистика — на всю ширину, но контент внутри в 2 колонки */
+    #playerModalContent .ext-stats-card,
+    #profileContent .ext-stats-card {
+        grid-column: 1 / -1;
+        margin-bottom: 0 !important;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    #playerModalContent .ext-stats-card > .empty,
+    #profileContent .ext-stats-card > .empty {
+        grid-column: 1 / -1;
+    }
+
+    /* График DXP — левая колонка */
+    #playerModalContent .elo-chart-card,
+    #profileContent .elo-chart-card {
+        grid-column: 1 / 2;
+        margin-bottom: 0 !important;
+    }
+
+    /* Goals — правая колонка (под графиком, если рядом) */
+    #playerModalContent .goals-card,
+    #profileContent .goals-card {
+        grid-column: 2 / 3;
+        margin-bottom: 0 !important;
+    }
+
+    /* Heatmap — на всю ширину */
+    #playerModalContent .heatmap-card,
+    #profileContent .heatmap-card {
+        grid-column: 1 / -1;
+        margin-bottom: 0 !important;
+    }
+
+    /* История матчей — если есть */
+    #playerModalContent .section-title,
+    #profileContent .section-title {
+        grid-column: 1 / -1;
+    }
+
+    #profileMatchHistory_me,
+    [id^="profileMatchHistory_"] {
+        grid-column: 1 / -1;
+    }
+
+    /* ============================================================ */
+    /* Компактность внутри блоков                                   */
+    /* ============================================================ */
+
+    /* Hero — вертикальный компактный */
+    .profile-hero-compact {
+        padding: 28px 32px !important;
+        min-height: 220px !important;
+    }
+
+    /* Аватар меньше (не такой гигантский) */
+    .phc-avatar {
+        width: 160px !important;
+        height: 160px !important;
+        min-width: 160px !important;
+        min-height: 160px !important;
+        max-width: 160px !important;
+        max-height: 160px !important;
+        flex: 0 0 160px !important;
+    }
+
+    .phc-avatar .profile-avatar {
+        width: 130px !important;
+        height: 130px !important;
+        font-size: 52px !important;
+    }
+
+    .phc-avatar .special-frame-overlay {
+        width: 160px !important;
+        height: 160px !important;
+        min-width: 160px !important;
+        max-width: 160px !important;
+        min-height: 160px !important;
+        max-height: 160px !important;
+    }
+
+    /* Ник чуть меньше */
+    .phc-name {
+        font-size: 34px !important;
+        letter-spacing: 1px !important;
+    }
+
+    /* Ранг-бейдж компактнее */
+    .rank-badge {
+        max-width: 400px !important;
+        padding: 12px 18px !important;
+        gap: 14px !important;
+    }
+
+    .rank-badge-icon {
+        width: 52px !important;
+        height: 52px !important;
+        min-width: 52px !important;
+        min-height: 52px !important;
+    }
+
+    .rank-badge-name {
+        font-size: 20px !important;
+        letter-spacing: 2px !important;
+    }
+
+    .rank-badge-level {
+        font-size: 10px !important;
+        letter-spacing: 1.5px !important;
+    }
+
+    /* DXP-строка */
+    .phc-dxp-value {
+        font-size: 32px !important;
+    }
+
+    .phc-dxp-label {
+        font-size: 13px !important;
+    }
+
+    /* Кнопки */
+    .phc-icon-btn {
+        width: 42px !important;
+        height: 42px !important;
+    }
+
+    .phc-icon-btn svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Достижения — компактные плитки */
+    .achv-strip {
+        gap: 8px !important;
+    }
+
+    .achv-mini {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+    }
+
+    .achv-mini svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
+    /* Борд статистики */
+    .pmr-item {
+        padding: 16px 12px !important;
+    }
+
+    .pmr-value {
+        font-size: 22px !important;
+    }
+
+    .pmr-label {
+        font-size: 10px !important;
+    }
+
+    /* Последние матчи */
+    .rm-card {
+        min-height: 90px !important;
+        padding: 12px 10px !important;
+    }
+
+    .rm-map {
+        font-size: 11px !important;
+    }
+
+    .rm-score {
+        font-size: 18px !important;
+    }
+
+    /* График DXP */
+    .elo-chart-card {
+        padding: 18px !important;
+    }
+
+    .elo-chart-card .ech-svg-wrap,
+    .elo-chart-card .ech-svg {
+        min-height: 180px !important;
+    }
+
+    .ech-title {
+        font-size: 22px !important;
+    }
+
+    /* Goals */
+    .goals-card {
+        padding: 18px !important;
+    }
+
+    /* Heatmap — компактнее */
+    .heatmap-card {
+        padding: 16px 18px !important;
+    }
+
+    .heatmap-grid {
+        gap: 2px !important;
+    }
+
+    .heatmap-cell {
+        border-radius: 2px !important;
+    }
+}
+
 
     .frame-preview-special {
     position: relative;
@@ -12731,8 +13039,22 @@ html.lite-mode .has-list-bg {
     /* 🖥️ ПРОФИЛЬ НА ПК — ШИРОКИЙ КИБЕР-ЛЕЙАУТ                    */
     /* ============================================================ */
     #page-profile.active {
-        max-width: 1400px;
-        margin-right: 60px;
+        max-width: none !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Контейнер страницы профиля на ПК — на всю ширину */
+    body .container#page-profile {
+        padding-right: 40px !important;
+    }
+
+    #page-profile #profileContent {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        align-items: start;
     }
 
     /* HERO — растягиваем, увеличиваем всё */
@@ -12960,15 +13282,32 @@ html.lite-mode .has-list-bg {
     .shop-hero-balance { font-size: 17px; padding: 10px 18px; }
 
     /* -------- МОДАЛКИ -------- */
-@media (min-width: 1024px) {
-        .player-modal {
-            padding: 80px 20px 40px;
-            align-items: flex-start;
-        }
-        .player-modal-inner {
-            max-width: 520px;
-            padding: 22px;
-        }
+    /* ============================================================ */
+    /* 🖥️ ПРОФИЛЬ ИГРОКА НА ПК — ПОЛНОЭКРАННАЯ МОДАЛКА             */
+    /* ============================================================ */
+    .player-modal {
+        padding: 40px 24px;
+        align-items: flex-start;
+        justify-content: center;
+    }
+
+    .player-modal-inner {
+        max-width: 1400px;
+        width: 100%;
+        padding: 28px 32px 32px;
+        border-radius: 24px;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--emerald) rgba(0,0,0,0.4);
+    }
+
+    /* Кнопка закрытия — покрупнее */
+    .player-modal-close {
+        width: 44px;
+        height: 44px;
+        top: 16px;
+        right: 16px;
     }
 
     /* -------- SHEETS — правый drawer -------- */
@@ -19483,6 +19822,34 @@ html.lite-mode .achv-tooltip.visible {
 
 .ext-stat-block {
     margin-bottom: 16px;
+}
+
+@media (min-width: 1024px) {
+    .ext-stat-block {
+        margin-bottom: 0 !important;
+        padding: 14px;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
+    .ext-stat-block:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    /* Часы активности — компактнее */
+    .ext-hours {
+        height: 50px !important;
+    }
+
+    /* Месяцы — компактнее */
+    .ext-months {
+        height: 70px !important;
+    }
+
+    .ext-month-bar-wrap {
+        height: 40px !important;
+    }
 }
 
 .ext-stat-block:last-child { margin-bottom: 0; }
