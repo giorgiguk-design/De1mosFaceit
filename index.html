@@ -21493,6 +21493,106 @@ html.lite-mode .dash-bp-premium-badge,
 html.lite-mode .dash-bp-progress-fill::after {
     animation: none !important;
 }
+
+    /* ============================================================ */
+/* 🎫 БОЕВОЙ ПРОПУСК НА ГЛАВНОЙ — полная версия                 */
+/* ============================================================ */
+.dash-bp-full {
+    padding: 18px 18px 16px;
+    cursor: default;
+    /* На всю ширину на ПК */
+}
+
+/* Обёртка вокруг скролла уровней */
+.dash-bp-full .bp-levels-scroll {
+    margin-top: 6px;
+    padding-bottom: 14px;
+}
+
+/* Кнопка "Открыть полную версию" */
+.dash-bp-open-full {
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    border-radius: 12px;
+    color: #ffd700;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.dash-bp-open-full:hover {
+    background: rgba(255, 215, 0, 0.16);
+    border-color: #ffd700;
+    transform: translateY(-1px);
+}
+.dash-bp-open-full:active {
+    transform: scale(0.98);
+}
+
+/* ============================================================ */
+/* 💻 ПК — пропуск во всю ширину                                 */
+/* ============================================================ */
+@media (min-width: 1024px) {
+    /* Растягиваем блок на все колонки грида дашборда */
+    #page-dashboard #dashBattlePass {
+        grid-column: 1 / -1;
+        margin-bottom: 0 !important;
+    }
+
+    /* Внутренние отступы побольше */
+    #page-dashboard #dashBattlePass .dash-bp-full {
+        padding: 22px 24px 20px;
+    }
+
+    /* Уровни крупнее на ПК */
+    #page-dashboard .bp-level-card {
+        flex: 0 0 160px;
+        min-width: 160px;
+    }
+
+    /* Карточки выше, чтобы всё влезло */
+    #page-dashboard .bp-reward-cell {
+        min-height: 74px;
+    }
+
+    /* Прострел скролла на ПК — уже видно много, но всё ещё нужно */
+    #page-dashboard .bp-levels-scroll {
+        padding-bottom: 18px;
+    }
+
+    /* Чат открыт — не двигаем пропуск */
+    body.chat-open #page-dashboard #dashBattlePass {
+        max-width: 100%;
+    }
+}
+
+/* ============================================================ */
+/* 📱 Мобильный — компактнее                                     */
+/* ============================================================ */
+@media (max-width: 767px) {
+    .dash-bp-full {
+        padding: 14px 12px 12px;
+    }
+    .dash-bp-full .bp-levels-scroll {
+        margin-top: 2px;
+    }
+    .dash-bp-open-full {
+        padding: 10px 12px;
+        font-size: 11px;
+    }
+}
+
+/* ============================================================ */
+/* ⚡ Lite-mode — отключаем анимации                             */
+/* ============================================================ */
+html.lite-mode .dash-bp-full .bp-level-card.current {
+    animation: none !important;
+}
     
 </style>
 </head>
@@ -45419,14 +45519,24 @@ function showBpCellTooltip(e, level, tier) {
 // 🎁 ЗАБРАТЬ НАГРАДУ
 // ============================================================
 async function claimBpReward(level, tier) {
-    if (!currentSeason) return;
+    // 🔥 Если мы на главной — используем сохранённый контекст
+    const season = currentSeason || window._dashBpSeason;
+    const progress = currentBpProgress || window._dashBpProgress;
+    const rewards = (Object.keys(currentBpRewards || {}).length
+        ? currentBpRewards
+        : window._dashBpRewards) || {};
+
+    if (!season) {
+        showToast('⚠️ Сезон не загружен');
+        return;
+    }
 
     haptic('medium');
 
     try {
         const { data, error } = await sb.rpc('claim_bp_reward', {
             p_user_id: currentUser.telegram_id,
-            p_season_id: currentSeason.id,
+            p_season_id: season.id,
             p_level: level,
             p_tier: tier
         });
@@ -45442,16 +45552,18 @@ async function claimBpReward(level, tier) {
             return;
         }
 
-        // Обновляем локально
-        if (tier === 'free') {
-            if (!currentBpProgress.claimed_free) currentBpProgress.claimed_free = [];
-            currentBpProgress.claimed_free.push(level);
-        } else {
-            if (!currentBpProgress.claimed_premium) currentBpProgress.claimed_premium = [];
-            currentBpProgress.claimed_premium.push(level);
-        }
+        // Обновляем локально — оба контекста
+        const bumpList = (obj, tier, level) => {
+            if (!obj) return;
+            const key = tier === 'free' ? 'claimed_free' : 'claimed_premium';
+            if (!obj[key]) obj[key] = [];
+            if (!obj[key].includes(level)) obj[key].push(level);
+        };
+        bumpList(progress, tier, level);
+        bumpList(window._dashBpProgress, tier, level);
+        bumpList(currentBpProgress, tier, level);
 
-        // Обновляем монеты если награда — coins
+        // Монеты
         if (data.reward_type === 'coins') {
             const amount = data.reward_value?.amount || 0;
             currentUser.coins = (currentUser.coins || 0) + amount;
@@ -45462,7 +45574,14 @@ async function claimBpReward(level, tier) {
         }
 
         haptic('heavy');
-        renderBattlePass(document.getElementById('seasonContent'));
+
+        // Перерисовываем оба экрана
+        if (document.getElementById('seasonContent')) {
+            renderBattlePass(document.getElementById('seasonContent'));
+        }
+        if (document.getElementById('dashBattlePass')) {
+            renderDashBattlePass();
+        }
     } catch (e) {
         console.error('claimBpReward:', e);
         showToast('❌ ' + e.message);
@@ -45470,27 +45589,40 @@ async function claimBpReward(level, tier) {
 }
 
 // ============================================================
-// 💎 КУПИТЬ ПРЕМИУМ
+// 💎 КУПИТЬ PREMIUM-ПРОПУСК
+// Работает и на главной, и на странице "Сезоны"
 // ============================================================
 async function buyBpPremium() {
-    if (!currentSeason) return;
-    if (currentBpProgress?.premium_unlocked) {
-        showToast('Уже куплено');
+    // 🔥 Берём контекст откуда угодно — с главной или со страницы Сезонов
+    const season = currentSeason || window._dashBpSeason;
+    const progress = currentBpProgress || window._dashBpProgress;
+
+    if (!season) {
+        showToast('⚠️ Сезон не загружен');
         return;
     }
 
-    const price = currentSeason.premium_price || 1500;
+    if (progress?.premium_unlocked) {
+        showToast('✅ Premium уже куплен');
+        return;
+    }
+
+    const price = season.premium_price || 1500;
+
     if ((currentUser.coins || 0) < price) {
-        showToast(`❌ Нужно ${price} монет`);
+        showToast(`❌ Нужно ${price} монет. У тебя: ${currentUser.coins || 0}`);
+        haptic('heavy');
         return;
     }
 
-    if (!confirm(`Купить Premium-пропуск за ${price} монет?`)) return;
+    if (!confirm(`Купить Premium-пропуск за ${price} монет?\n\nОткроет премиум-награды на всех уровнях.`)) return;
+
+    haptic('medium');
 
     try {
         const { data, error } = await sb.rpc('buy_bp_premium', {
             p_user_id: currentUser.telegram_id,
-            p_season_id: currentSeason.id,
+            p_season_id: season.id,
             p_price: price
         });
 
@@ -45498,22 +45630,63 @@ async function buyBpPremium() {
 
         if (!data?.ok) {
             const err = data?.error || 'unknown';
-            if (err === 'not_enough_coins') showToast(`❌ Нужно ${price} монет`);
-            else if (err === 'already_unlocked') showToast('Уже куплено');
-            else showToast('❌ ' + err);
+            if (err === 'not_enough_coins') {
+                showToast(`❌ Нужно ${price} монет`);
+            } else if (err === 'already_unlocked') {
+                showToast('✅ Premium уже куплен');
+            } else if (err === 'season_not_found') {
+                showToast('❌ Сезон не найден');
+            } else if (err === 'user_not_found') {
+                showToast('❌ Пользователь не найден');
+            } else {
+                showToast('❌ Ошибка: ' + err);
+            }
             return;
         }
 
-        currentUser.coins = data.user_coins;
-        currentBpProgress.premium_unlocked = true;
-
+        // ============================================================
+        // ОБНОВЛЯЕМ ЛОКАЛЬНОЕ СОСТОЯНИЕ
+        // ============================================================
+        currentUser.coins = data.user_coins ?? (currentUser.coins - price);
         updateCoinsBadge();
+
+        // Обновляем оба контекста — и главный, и со страницы Сезонов
+        if (progress) progress.premium_unlocked = true;
+        if (window._dashBpProgress) window._dashBpProgress.premium_unlocked = true;
+        if (currentBpProgress) currentBpProgress.premium_unlocked = true;
+
+        // Обновляем баланс в hero-блоке магазина (если открыт)
+        const shopBalance = document.querySelector('.shop-hero-balance span, .shop-balance');
+        if (shopBalance) shopBalance.textContent = currentUser.coins;
+
+        // ============================================================
+        // УСПЕХ
+        // ============================================================
         haptic('heavy');
         showToast('💎 Premium активирован!');
-        renderBattlePass(document.getElementById('seasonContent'));
+
+        // Перерисовываем оба экрана
+        if (document.getElementById('seasonContent')?.querySelector('.bp-hero')) {
+            renderBattlePass(document.getElementById('seasonContent'));
+        }
+        if (document.getElementById('dashBattlePass')) {
+            renderDashBattlePass();
+        }
+
+        // Уведомляем игрока в боте (не критично)
+        if (typeof notify === 'function') {
+            notify(currentUser.telegram_id,
+                `💎 <b>Premium-пропуск активирован!</b>\n\n` +
+                `Сезон: <b>${escapeHtml(season.name)}</b>\n` +
+                `Все Premium-награды разблокированы.`,
+                'party'
+            ).catch(() => {});
+        }
+
     } catch (e) {
         console.error('buyBpPremium:', e);
-        showToast('❌ ' + e.message);
+        showToast('❌ ' + (e.message || 'Ошибка покупки'));
+        haptic('heavy');
     }
 }
 
@@ -51322,18 +51495,16 @@ function showPlayerContextMenu(x, y, userId) {
     });
 }
 
-            // ============================================================
-// 🎫 ПРЕВЬЮ БОЕВОГО ПРОПУСКА НА ГЛАВНОЙ
+// ============================================================
+// 🎫 БОЕВОЙ ПРОПУСК НА ГЛАВНОЙ — полная версия как в "Сезоны"
 // ============================================================
 async function renderDashBattlePass() {
     const el = document.getElementById('dashBattlePass');
     if (!el) return;
 
     try {
-        // 1. Активный сезон
+        // ---- Сезон ----
         const { data: seasonRes } = await sb.rpc('get_active_season');
-
-        // Нет сезона — показываем заглушку
         if (!seasonRes?.ok || !seasonRes.season) {
             el.innerHTML = `
                 <div class="dash-bp-empty" onclick="openSeason()">
@@ -51346,7 +51517,7 @@ async function renderDashBattlePass() {
 
         const season = seasonRes.season;
 
-        // 2. Прогресс игрока
+        // ---- Прогресс ----
         const { data: progressRes } = await sb.rpc('get_bp_progress', {
             p_user_id: currentUser.telegram_id,
             p_season_id: season.id
@@ -51355,7 +51526,9 @@ async function renderDashBattlePass() {
         const progress = progressRes?.ok ? progressRes : {
             points: 0,
             level: 1,
-            premium_unlocked: false
+            premium_unlocked: false,
+            claimed_free: [],
+            claimed_premium: [],
         };
 
         const points = progress.points || 0;
@@ -51363,16 +51536,17 @@ async function renderDashBattlePass() {
         const currentLevelProgress = points % 100;
         const isPremium = progress.premium_unlocked === true;
 
-        // 3. Превью наград: текущий уровень и 2 следующих
-        const maxLevel = season.max_level || 50;
+        // ---- Награды ----
         const { data: rewards } = await sb.from('battle_pass_rewards')
             .select('*')
-            .eq('season_id', season.id)
-            .gte('level', level)
-            .lte('level', Math.min(level + 2, maxLevel))
-            .order('level');
+            .eq('season_id', season.id);
 
-        // Догружаем shop_items, если нужно
+        const rewardsMap = {};
+        (rewards || []).forEach(r => {
+            rewardsMap[`${r.tier}-${r.level}`] = r;
+        });
+
+        // Догружаем shop_items для превью предметов
         const itemIds = new Set();
         (rewards || []).forEach(r => {
             if (r.reward_type === 'item' && r.reward_value?.item_id) {
@@ -51386,51 +51560,51 @@ async function renderDashBattlePass() {
             (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         }
 
-        // Собираем 3 мини-превью
-        const miniRewards = [];
-        for (let lvl = level; lvl <= Math.min(level + 2, maxLevel); lvl++) {
-            const reward = (rewards || []).find(r => r.level === lvl && r.tier === 'premium')
-                        || (rewards || []).find(r => r.level === lvl && r.tier === 'free');
+        // ---- Max level ----
+        let maxLevel = season.max_level || 50;
+        Object.keys(rewardsMap).forEach(key => {
+            const lvl = parseInt(key.split('-')[1], 10);
+            if (lvl > maxLevel) maxLevel = lvl;
+        });
 
-            if (!reward) {
-                miniRewards.push(`<div class="dash-bp-reward-mini locked">—</div>`);
-                continue;
-            }
+        // ---- Сохраняем в глобальное состояние для кликов ----
+        window._dashBpSeason = season;
+        window._dashBpProgress = progress;
+        window._dashBpRewards = rewardsMap;
 
-            const isLocked = (reward.tier === 'premium' && !isPremium) || lvl > level;
+        // ---- Строим карточки уровней ----
+        const cells = [];
+        for (let lvl = 1; lvl <= maxLevel; lvl++) {
+            const free = rewardsMap[`free-${lvl}`];
+            const prem = rewardsMap[`premium-${lvl}`];
+            const isReached = lvl <= level;
+            const isCurrent = lvl === level;
+            const freeClaimed = (progress.claimed_free || []).includes(lvl);
+            const premClaimed = (progress.claimed_premium || []).includes(lvl);
+            const hasAny = free || prem;
+            const hasBoth = free && prem;
 
-            let previewHTML = '🎁';
-            if (reward.reward_type === 'coins') {
-                previewHTML = '💰';
-            } else if (reward.reward_type === 'item') {
-                const item = SHOP_ITEMS_CACHE[reward.reward_value?.item_id];
-                if (item) {
-                    previewHTML = renderBpItemIcon(item);
-                }
-            }
-
-            const tierCls = reward.tier === 'premium' ? 'premium' : '';
-            const lockCls = isLocked ? 'locked' : '';
-
-            miniRewards.push(`
-                <div class="dash-bp-reward-mini ${tierCls} ${lockCls}"
-                     title="Уровень ${lvl} · ${reward.tier === 'premium' ? 'Premium' : 'Free'}">
-                    ${previewHTML}
+            cells.push(`
+                <div class="bp-level-card
+                            ${isReached ? 'reached' : ''}
+                            ${isCurrent ? 'current' : ''}
+                            ${hasAny ? 'has-rewards' : ''}
+                            ${hasBoth ? 'has-both-rewards' : ''}"
+                     data-bp-level="${lvl}">
+                    <div class="bp-level-header">LV ${lvl}</div>
+                    ${renderRewardCell({
+                        tier: 'premium', level: lvl, reward: prem,
+                        reached: isReached, claimed: premClaimed, hasPremium: isPremium
+                    })}
+                    ${renderRewardCell({
+                        tier: 'free', level: lvl, reward: free,
+                        reached: isReached, claimed: freeClaimed, hasPremium: isPremium
+                    })}
                 </div>
             `);
         }
 
-        // Иконка значка BP
-        const bpIcon = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/>
-                <path d="M7 5H4v2a4 4 0 0 0 4 4M17 5h3v2a4 4 0 0 1-4 4"/>
-                <path d="M9 20h6M12 13v7"/>
-            </svg>
-        `;
-
-        // Premium badge или кнопка "Купить"
+        // ---- Premium блок ----
         const premiumBlock = isPremium
             ? `<div class="dash-bp-premium-badge">⭐ PREMIUM</div>`
             : `<button class="dash-bp-buy-btn"
@@ -51438,10 +51612,23 @@ async function renderDashBattlePass() {
                    💎 КУПИТЬ
                </button>`;
 
+        // ---- SVG иконка ----
+        const bpIcon = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                 style="width: 20px; height: 20px;">
+                <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/>
+                <path d="M7 5H4v2a4 4 0 0 0 4 4M17 5h3v2a4 4 0 0 1-4 4"/>
+                <path d="M9 20h6M12 13v7"/>
+            </svg>
+        `;
+
+        // ---- Финальный рендер ----
         el.innerHTML = `
-            <div class="dash-bp" onclick="openSeason()">
+            <div class="dash-bp dash-bp-full">
                 <div class="dash-bp-glow"></div>
 
+                <!-- HEADER -->
                 <div class="dash-bp-header">
                     <div>
                         <div class="dash-bp-title">
@@ -51453,33 +51640,73 @@ async function renderDashBattlePass() {
                     ${premiumBlock}
                 </div>
 
+                <!-- LEVEL + POINTS -->
                 <div class="dash-bp-level-row">
                     <div class="dash-bp-level-num">${level}</div>
-                    <div>
-                        <div class="dash-bp-level-label">УРОВЕНЬ</div>
-                    </div>
-                    <div class="dash-bp-points">
-                        <b>${points}</b> очков
-                    </div>
+                    <div class="dash-bp-level-label">УРОВЕНЬ</div>
+                    <div class="dash-bp-points"><b>${points}</b> очков</div>
                 </div>
 
+                <!-- PROGRESS -->
                 <div class="dash-bp-progress">
                     <div class="dash-bp-progress-fill" style="width: ${currentLevelProgress}%"></div>
                 </div>
 
-                <div class="dash-bp-footer">
-                    <div class="dash-bp-rewards-preview">
-                        ${miniRewards.join('')}
-                    </div>
-                    <div class="dash-bp-arrow">→</div>
+                <!-- NAV ARROWS -->
+                <div class="bp-nav-arrows" style="margin-top: 16px;">
+                    <button class="bp-nav-btn" onclick="dashBpScrollBy(-5)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 6l-6 6 6 6"/>
+                        </svg>
+                        −5 УРОВНЕЙ
+                    </button>
+                    <button class="bp-nav-btn" onclick="dashBpScrollBy(5)">
+                        +5 УРОВНЕЙ
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 6l6 6-6 6"/>
+                        </svg>
+                    </button>
                 </div>
+
+                <!-- LEVELS SCROLL -->
+                <div class="bp-levels-scroll" id="dashBpLevelsScroll">
+                    ${cells.join('')}
+                </div>
+
+                <!-- OPEN FULL -->
+                <button class="dash-bp-open-full" onclick="openSeason()">
+                    📖 ОТКРЫТЬ ПОЛНУЮ ВЕРСИЮ
+                </button>
             </div>
         `;
+
+        // ---- Автоскролл к текущему уровню ----
+        setTimeout(() => {
+            const container = document.getElementById('dashBpLevelsScroll');
+            if (!container) return;
+            const current = container.querySelector('.bp-level-card.current');
+            if (!current) return;
+            const offset = current.offsetLeft
+                         - container.clientWidth / 2
+                         + current.clientWidth / 2;
+            container.scrollTo({ left: offset, behavior: 'auto' });
+        }, 150);
 
     } catch (e) {
         console.error('renderDashBattlePass:', e);
         el.innerHTML = '';
     }
+}
+
+// ============================================================
+// 📜 Скролл по уровням BP на главной
+// ============================================================
+function dashBpScrollBy(n) {
+    const c = document.getElementById('dashBpLevelsScroll');
+    if (!c) return;
+    // ширина карточки + gap = 130 + 10
+    c.scrollBy({ left: n * 140, behavior: 'smooth' });
+    haptic('light');
 }
 
             // ============================================================
