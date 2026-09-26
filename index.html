@@ -23964,11 +23964,14 @@ function renderCaseItemPreview(item) {
 
 // Экран кейсов
 async function openCasesScreen() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
     switchPage('cases');
-
     const container = document.getElementById('casesContent');
     if (!container) return;
-    container.innerHTML = skeleton('card', 3);
+    container.innerHTML = skeleton ? skeleton('card', 3) : '<div class="empty">Загрузка...</div>';
 
     const freeInfo = await canOpenFreeCase();
 
@@ -25942,6 +25945,59 @@ function showInitErrorScreen() {
     `;
 }
 
+            // ============================================================
+// 🚨 БЛОКИРУЮЩИЙ ЭКРАН ОШИБКИ — перекрывает ВСЁ приложение
+// ============================================================
+function showFatalErrorScreen(title = 'Ошибка', html = '') {
+    // Полностью очищаем body и показываем только ошибку
+    document.body.innerHTML = `
+        <div style="
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; padding: 40px 24px; text-align: center;
+            background: #050807; color: #e6f5ee;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        ">
+            <div style="font-size: 72px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(0,224,138,0.4));">
+                📡
+            </div>
+
+            <div style="font-size: 22px; font-weight: 800; margin-bottom: 12px; color: #fff;">
+                ${title}
+            </div>
+
+            <div style="font-size: 14px; color: #6d8a80; line-height: 1.6; max-width: 340px; margin-bottom: 28px;">
+                ${html}
+            </div>
+
+            <button onclick="location.reload()" style="
+                padding: 16px 40px;
+                background: linear-gradient(135deg, #00e08a, #00b874);
+                color: #04140e;
+                border: none;
+                border-radius: 14px;
+                font-weight: 900;
+                font-size: 15px;
+                letter-spacing: 1.5px;
+                cursor: pointer;
+                font-family: inherit;
+                box-shadow: 0 8px 28px rgba(0, 224, 138, 0.4);
+                transition: transform 0.2s ease;
+            " onmousedown="this.style.transform='scale(0.95)'"
+               onmouseup="this.style.transform='scale(1)'">
+                🔄 ПЕРЕЗАГРУЗИТЬ
+            </button>
+
+            <div style="font-size: 11px; color: #4a5d54; margin-top: 24px; line-height: 1.6;">
+                Если ошибка повторяется —<br>
+                напиши в поддержку @Mark1zell
+            </div>
+        </div>
+    `;
+
+    // Убираем возможные оставшиеся модалки
+    document.getElementById('pageLoadingBar')?.remove();
+}
+
         // ============================================================
         // INIT
         // ============================================================
@@ -25960,23 +26016,53 @@ async function init() {
 // ============================================================
 // 🔐 Безопасное получение пользователя
 // ============================================================
+// ============================================================
+// 🔐 ВАЛИДАЦИЯ initData С РЕТРАЯМИ
+// ============================================================
 let user = null;
 
-// 1) Основной путь: валидируем initData через сервер
 if (tg?.initData && tg.initData.length > 20) {
-    try {
-        const res = await sb.rpc('validate_init_data', { p_init_data: tg.initData });
+    const MAX_ATTEMPTS = 4;
+    const DELAYS = [0, 800, 2000, 4000];  // мс
 
-        if (res.error) {
-            console.error('❌ validate_init_data RPC error:', res.error);
-        } else if (!res.data?.ok) {
-            console.error('❌ initData не прошёл валидацию:', res.data?.error);
-        } else {
-            user = res.data.user;
-            console.log('✅ initData валидирован на сервере, user.id =', user.id);
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        if (attempt > 0) {
+            console.log(`⏳ Повторная попытка валидации (${attempt + 1}/${MAX_ATTEMPTS})...`);
+            await new Promise(r => setTimeout(r, DELAYS[attempt]));
         }
-    } catch (e) {
-        console.error('❌ validate_init_data exception:', e);
+
+        try {
+            const res = await sb.rpc('validate_init_data', {
+                p_init_data: tg.initData
+            });
+
+            if (res.error) {
+                console.warn(`⚠️ RPC error (попытка ${attempt + 1}):`, res.error.message);
+                continue;   // пробуем ещё
+            }
+
+            if (!res.data?.ok) {
+                // Это НЕ сетевая ошибка — значит initData подделан или токен неверный
+                // Ретраить бессмысленно
+                console.error('❌ initData не валиден:', res.data?.error);
+                if (res.data?.debug) {
+                    console.error('   debug:', res.data.debug);
+                }
+                break;
+            }
+
+            user = res.data.user;
+            console.log('✅ initData валидирован, user.id =', user.id);
+            break;   // успех, выходим из цикла
+
+        } catch (e) {
+            console.warn(`⚠️ Exception (попытка ${attempt + 1}):`, e.message);
+            // продолжаем — возможно следующая попытка пройдёт
+        }
+    }
+
+    if (!user) {
+        console.error('❌ Все попытки валидации исчерпаны');
     }
 }
 
@@ -25994,29 +26080,13 @@ if (!user && (location.hostname === 'localhost' || location.hostname === '127.0.
     console.warn('⚠️ DEV MODE:', user);
 }
 
-// 3) Если ничего не сработало — ошибка
+// 3) Если ничего не сработало — блокирующий экран
 if (!user) {
-    console.warn('⚠️ Не удалось получить пользователя');
-    const isDesktop = !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const container = document.getElementById('profileContent');
-    if (container) {
-        container.innerHTML = `
-            <div class="profile-hero" style="text-align:center; padding: 40px 20px;">
-                <div style="font-size: 64px; margin-bottom: 16px;">${isDesktop ? '💻' : '📡'}</div>
-                <div style="font-size: 18px; font-weight: 800; margin-bottom: 10px;">
-                    ${isDesktop ? 'Открой с телефона' : 'Ошибка авторизации'}
-                </div>
-                <div style="font-size: 13px; color: var(--hint); line-height: 1.6; margin-bottom: 20px;">
-                    ${isDesktop
-                        ? 'De1mos Faceit работает только в Telegram Mini App.'
-                        : 'Не удалось проверить твои данные. Перезапусти приложение.'}
-                </div>
-                <button onclick="location.reload()" style="padding: 12px 28px; background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); color: #04140e; border: none; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; font-family: inherit;">
-                    🔄 ПЕРЕЗАГРУЗИТЬ
-                </button>
-            </div>
-        `;
-    }
+    console.error('❌ Не удалось получить пользователя');
+    showFatalErrorScreen(
+        'Не удалось авторизоваться',
+        'Сервер не отвечает или initData невалиден.<br>Проверь интернет и попробуй снова.'
+    );
     return;
 }
 
@@ -27679,6 +27749,10 @@ async function openFullLeaderboard() {
         // FRIENDS
         // ============================================================
 function openFriendsPage() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
     switchPage('friends');
     loadFriends();
 }
@@ -27921,11 +27995,16 @@ async function openClubPage() {
     // Realtime уже подписан глобально через subscribeClubsRealtime()
 }
 
-        async function loadClub() {
-            const container = document.getElementById('clubContent');
-            container.innerHTML = '<div class="empty">Загрузка...</div>';
-            try {
-                const me = currentUser.telegram_id;
+async function loadClub() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
+    const container = document.getElementById('clubContent');
+    if (!container) return;
+    container.innerHTML = skeleton ? skeleton('list', 3) : '<div class="empty">Загрузка...</div>';
+    try {
+        const me = currentUser.telegram_id;
                 const { data: membership } = await sb.from('club_members')
                     .select('club_id, role').eq('telegram_id', me).maybeSingle();
 
@@ -29271,6 +29350,10 @@ async function createClub(name, tag, description) {
         // CHAT
         // ============================================================
 function openChatPage() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
     switchPage('chat');
     markChatsAsRead();
     loadChatList();
@@ -41539,10 +41622,14 @@ function renderSortSelect(currentSort, onchangeFnName) {
 }            
 
 async function openShop() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
     switchPage('shop');
     const container = document.getElementById('shopContent');
     if (!container) return;
-    container.innerHTML = skeleton('card', 3);
+    container.innerHTML = skeleton ? skeleton('card', 3) : '<div class="empty">Загрузка...</div>';
 
     // 🔥 Полный сброс кэша перед загрузкой
     Object.keys(SHOP_ITEMS_CACHE).forEach(k => delete SHOP_ITEMS_CACHE[k]);
@@ -45477,10 +45564,14 @@ let currentBpProgress = null;  // { points, level, premium_unlocked, claimed_fre
 let currentBpRewards = {};     // { 'free-1': {...}, 'premium-1': {...} }
 
 async function openSeason() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
     switchPage('season');
     const container = document.getElementById('seasonContent');
     if (!container) return;
-    container.innerHTML = skeleton('card', 3);
+    container.innerHTML = skeleton ? skeleton('card', 2) : '<div class="empty">Загрузка...</div>';
 
     try {
         // 1. Активный сезон
@@ -51167,11 +51258,14 @@ async function updateCasesBadge() {
 // 🎯 ЭКРАН КВЕСТОВ
 // ============================================================
 async function openQuestsScreen() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
     switchPage('quests');
-
     const container = document.getElementById('questsContent');
     if (!container) return;
-    container.innerHTML = skeleton('list', 5);
+    container.innerHTML = skeleton ? skeleton('list', 4) : '<div class="empty">Загрузка...</div>';
 
     const { daily, weekly } = await loadQuestsProgress();
 
