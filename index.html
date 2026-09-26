@@ -21599,6 +21599,63 @@ html.lite-mode .dash-bp-progress-fill::after {
 html.lite-mode .dash-bp-full .bp-level-card.current {
     animation: none !important;
 }
+
+    /* ============================================================ */
+/* 💀 SKELETON LOADER                                            */
+/* ============================================================ */
+.skeleton-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+.skeleton-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.05) 25%,
+        rgba(var(--emerald-rgb), 0.14) 50%,
+        rgba(var(--emerald-rgb), 0.05) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s linear infinite;
+}
+.skeleton-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.05) 25%,
+        rgba(var(--emerald-rgb), 0.14) 50%,
+        rgba(var(--emerald-rgb), 0.05) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s linear infinite;
+}
+.skeleton-card {
+    height: 100px;
+    border-radius: 16px;
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.05) 25%,
+        rgba(var(--emerald-rgb), 0.14) 50%,
+        rgba(var(--emerald-rgb), 0.05) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s linear infinite;
+    margin-bottom: 10px;
+}
+@keyframes skeletonShimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
     
 </style>
 </head>
@@ -21625,6 +21682,14 @@ html.lite-mode .dash-bp-full .bp-level-card.current {
                 <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
             </svg>
         </div>
+
+        <button class="notif-btn" id="searchBtn" onclick="openGlobalSearch()" title="Поиск">
+    <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7"/>
+        <path d="m20 20-3.5-3.5"/>
+    </svg>
+</button>
+        
         <button class="notif-btn" id="notifBtn" onclick="openNotificationsSheet()">
             <svg class="cy-icon cy-md" viewBox="0 0 24 24">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
@@ -22295,6 +22360,19 @@ html.lite-mode .dash-bp-full .bp-level-card.current {
         <div id="allClubsList"><div class="empty">Загрузка...</div></div>
         <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
     </div>
+
+    <!-- SHEET: Global Search -->
+<div class="sheet" id="globalSearchSheet" style="max-height: 88vh;">
+    <div class="sheet-title">🔍 Поиск по платформе</div>
+    <input type="text" class="field-input" id="globalSearchInput"
+           placeholder="Ник, @username, Standoff ID, Клан или #матч"
+           autocomplete="off" oninput="debouncedGlobalSearch()"
+           style="margin-bottom: 12px;">
+    <div id="globalSearchResults">
+        <div class="empty">Введи минимум 2 символа</div>
+    </div>
+    <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+</div>
 
     <!-- SHEET: FAQ -->
 <div class="sheet" id="faqSheet" style="max-height: 88vh;">
@@ -23890,7 +23968,7 @@ async function openCasesScreen() {
 
     const container = document.getElementById('casesContent');
     if (!container) return;
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    container.innerHTML = skeleton('card', 3);
 
     const freeInfo = await canOpenFreeCase();
 
@@ -25486,6 +25564,163 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
+ // ============================================================
+// 📱 TELEGRAM NATIVE DIALOGS
+// ============================================================
+function tgConfirm(message) {
+    return new Promise((resolve) => {
+        try {
+            if (tg?.showConfirm) {
+                tg.showConfirm(message, (ok) => resolve(!!ok));
+                return;
+            }
+        } catch (e) {}
+        // Fallback
+        resolve(window.confirm(message));
+    });
+}
+
+function tgAlert(message) {
+    try {
+        if (tg?.showAlert) {
+            tg.showAlert(message);
+            return;
+        }
+    } catch (e) {}
+    window.alert(message);
+}
+
+// ============================================================
+// 💀 SKELETON LOADER
+// ============================================================
+function skeleton(type = 'list', count = 3) {
+    if (type === 'list') {
+        return Array(count).fill(`
+            <div class="skeleton-item">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-lines">
+                    <div class="skeleton-line" style="width: 60%;"></div>
+                    <div class="skeleton-line" style="width: 35%;"></div>
+                </div>
+            </div>
+        `).join('');
+    }
+    if (type === 'card') {
+        return Array(count).fill('<div class="skeleton-card"></div>').join('');
+    }
+    return '';
+}
+
+            // ============================================================
+// 🔍 ГЛОБАЛЬНЫЙ ПОИСК
+// ============================================================
+function openGlobalSearch() {
+    document.getElementById('sheetOverlay').classList.add('active');
+    document.getElementById('globalSearchSheet').classList.add('active');
+    const input = document.getElementById('globalSearchInput');
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+    document.getElementById('globalSearchResults').innerHTML =
+        '<div class="empty">Введи минимум 2 символа</div>';
+    haptic('light');
+}
+
+let _globalSearchTimer = null;
+function debouncedGlobalSearch() {
+    clearTimeout(_globalSearchTimer);
+    _globalSearchTimer = setTimeout(async () => {
+        const q = document.getElementById('globalSearchInput')?.value.trim() || '';
+        const el = document.getElementById('globalSearchResults');
+        if (!el) return;
+
+        if (q.length < 2) {
+            el.innerHTML = '<div class="empty">Введи минимум 2 символа</div>';
+            return;
+        }
+
+        el.innerHTML = skeleton('list', 3);
+        await doGlobalSearch(q);
+    }, 300);
+}
+
+async function doGlobalSearch(q) {
+    const safe = q.replace(/[%_]/g, '');
+    const el = document.getElementById('globalSearchResults');
+    if (!el) return;
+
+    try {
+        const isMatchId = /^#?\d{1,10}$/.test(q);
+        const matchId = isMatchId ? parseInt(q.replace('#', ''), 10) : null;
+
+        const [usersRes, clubsRes, matchRes] = await Promise.all([
+            sb.from('users')
+                .select('telegram_id, display_name, username, custom_avatar, photo_url, elo, standoff_id')
+                .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%,standoff_id.ilike.%${safe}%`)
+                .limit(8),
+            sb.from('clubs')
+                .select('id, name, tag, logo_url, max_members')
+                .or(`name.ilike.%${safe}%,tag.ilike.%${safe}%`)
+                .limit(5),
+            matchId
+                ? sb.from('game_matches')
+                    .select('id, final_map, status, created_at, winner_team')
+                    .eq('id', matchId).limit(1)
+                : Promise.resolve({ data: [] }),
+        ]);
+
+        let html = '';
+
+        if (usersRes.data?.length) {
+            html += `<div class="section-title" style="margin-top: 8px;">👥 Игроки</div>`;
+            html += usersRes.data.map(u => `
+                <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => openPlayerProfile(${u.telegram_id}), 250);">
+                    <div class="lb-avatar">${renderAvatar(u)}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
+                        <div style="font-size:11px;color:var(--hint);">
+                            ${u.standoff_id ? 'ID ' + escapeHtml(u.standoff_id) + ' · ' : ''}DXP ${u.elo ?? 1000}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        if (clubsRes.data?.length) {
+            html += `<div class="section-title" style="margin-top: 14px;">🛡️ Кланы</div>`;
+            html += clubsRes.data.map(c => `
+                <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => viewClub(${c.id}), 250);">
+                    <div class="lb-avatar" style="border-radius:14px;">
+                        ${c.logo_url ? `<img src="${c.logo_url}" alt="">` : escapeHtml(c.tag.slice(0,2))}
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="leaderboard-name">${escapeHtml(c.name)}</div>
+                        <div style="font-size:11px;color:var(--hint);">[${escapeHtml(c.tag)}]</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        if (matchRes.data?.length) {
+            html += `<div class="section-title" style="margin-top: 14px;">🎮 Матч</div>`;
+            html += matchRes.data.map(m => `
+                <div class="leaderboard-item" onclick="closeAllSheets(); setTimeout(() => openMatchDetails(${m.id}), 250);">
+                    <div style="flex:1;">
+                        <div class="leaderboard-name">Матч #${m.id} · ${escapeHtml(m.final_map || '—')}</div>
+                        <div style="font-size:11px;color:var(--hint);">${escapeHtml(m.status)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        el.innerHTML = html || '<div class="empty">Ничего не найдено</div>';
+    } catch (e) {
+        console.error('doGlobalSearch:', e);
+        el.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка поиска</div>';
+    }
+}
+
             // ============================================================
 // 🧹 Очистка ВСЕХ модалок боевого пропуска
 // Вызывай в начале каждой функции открытия
@@ -25785,6 +26020,35 @@ if (!user) {
     return;
 }
 
+    // ============================================================
+// 📱 TELEGRAM BACK BUTTON — регистрация обработчика
+// ============================================================
+if (tg?.BackButton) {
+    tg.BackButton.onClick(() => {
+        // Приоритет: модалки → sheets → playScreen → страницы
+        if (document.getElementById('chatView')?.classList.contains('active')) {
+            closeChatView();
+            return;
+        }
+        if (document.getElementById('playerModal')?.classList.contains('active')) {
+            closePlayerModal();
+            return;
+        }
+        if (document.querySelector('.sheet.active')) {
+            closeAllSheets();
+            return;
+        }
+        if (document.getElementById('playScreen')?.classList.contains('active')) {
+            closePlayScreen();
+            return;
+        }
+        const currentPage = document.querySelector('.page.active')?.id?.replace('page-', '');
+        if (currentPage && currentPage !== 'dashboard') {
+            switchPage('dashboard');
+        }
+    });
+}
+
     console.log('✅ init() запущен с user:', user);
 
     try {
@@ -25942,6 +26206,10 @@ if (!user) {
 
         // 🔥 Запускаем единый тикер
         startGlobalTicker();
+
+        // 🎁 Проверяем ежедневную награду (через 2 секунды)
+        setTimeout(checkDailyStreak, 2000);
+
     } catch (e) {
         console.error('Init error:', e);
         showToast('Ошибка: ' + (e?.message || e));
@@ -26028,6 +26296,17 @@ function switchPage(page) {
     // 📳 ТАКТИЛЬНЫЙ ОТКЛИК
     // ============================================================
     haptic();
+
+    // ============================================================
+    // 📱 TELEGRAM BACK BUTTON
+    // ============================================================
+    try {
+        if (page === 'dashboard') {
+            tg?.BackButton?.hide();
+        } else {
+            tg?.BackButton?.show();
+        }
+    } catch (e) {}
 }
 
         function animateNumber(el, to, duration = 800) {
@@ -27260,7 +27539,7 @@ async function loadLeaderboard() {
 
     // 2. Шиммеры — только если контейнер пустой
     if (!container.querySelector('.leaderboard-item')) {
-        container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
+        container.innerHTML = skeleton('list', 3);
     }
     if (titleEl) titleEl.style.display = 'none';
 
@@ -27352,7 +27631,7 @@ async function openFullLeaderboard() {
     const c = document.getElementById('leaderboardFull');
     if (!c) return;
 
-    c.innerHTML = Array(8).fill('<div class="loading-shimmer"></div>').join('');
+    c.innerHTML = skeleton('list', 8);
 
     try {
         const { data, error } = await sb.from('users')
@@ -27524,7 +27803,7 @@ async function loadAllPlayers() {
 async function loadFriends() {
     if (!currentUser) return;
     const container = document.getElementById('friendsList');
-    container.innerHTML = Array(3).fill('<div class="loading-shimmer"></div>').join('');
+    container.innerHTML = skeleton('list', 3);
     try {
         const me = currentUser.telegram_id;
         const { data: rels, error } = await sb.from('friendships')
@@ -29006,7 +29285,7 @@ function openChatPage() {
 async function loadChatList() {
     if (!currentUser) return;
     const container = document.getElementById('chatList');
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    container.innerHTML = skeleton('list', 4);
     try {
         const me = currentUser.telegram_id;
         const items = [];
@@ -30195,15 +30474,23 @@ async function startSearch() {
             } catch (e) {}
         }
 
-        async function cancelSearch() {
-            clearInterval(searchTickInterval);
-            searchTickInterval = null;
-            if (myParty) {
-                try { await sb.from('mm_queue').delete().eq('party_id', myParty.party.id); } catch (e) {}
-            }
-            switchPage('play');
-            await loadOpenRooms();
-        }
+async function cancelSearch() {
+    clearInterval(searchTickInterval);
+    searchTickInterval = null;
+
+    // Убираемся ТОЛЬКО из очереди, пати сохраняем
+    if (myParty) {
+        try {
+            await sb.from('mm_queue').delete().eq('party_id', myParty.party.id);
+        } catch (e) {}
+    }
+
+    switchPage('play');
+    await loadOpenRooms();
+    await loadOrCreateParty();   // ← восстанавливаем пати визуально
+    showToast('Поиск отменён');
+    haptic('light');
+}
 
         // ============================================================
         // MATCH FOUND
@@ -32060,7 +32347,7 @@ async function renderResultScreen() {
 
             async function deleteMyScreenshot() {
     if (!currentMatch || !currentUser) return;
-    if (!confirm('Удалить скриншот? Можно будет загрузить новый.')) return;
+    if (!(await tgConfirm('Удалить скриншот? Можно будет загрузить новый.'))) return;
 
     const me = Number(currentUser.telegram_id);
 
@@ -38147,7 +38434,7 @@ function openMatchesHistory() {
 async function loadMatchesHistory() {
     const container = document.getElementById('matchesHistoryList');
     if (!container) return;
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    container.innerHTML = skeleton('list', 5);
 
     try {
         const me = currentUser.telegram_id;
@@ -41255,7 +41542,7 @@ async function openShop() {
     switchPage('shop');
     const container = document.getElementById('shopContent');
     if (!container) return;
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    container.innerHTML = skeleton('card', 3);
 
     // 🔥 Полный сброс кэша перед загрузкой
     Object.keys(SHOP_ITEMS_CACHE).forEach(k => delete SHOP_ITEMS_CACHE[k]);
@@ -41633,7 +41920,7 @@ async function buyShopItem(itemId, price) {
         haptic('heavy');
         return;
     }
-    if (!confirm(`Купить за ${price} монет?`)) return;
+    if (!(await tgConfirm(`Купить за ${price} монет?`))) return;
 
     _buyInProgress.add(itemId);
 
@@ -44996,6 +45283,132 @@ function updateCoinsBadge() {
     if (shopBalance) shopBalance.textContent = val;
 }
 
+            // ============================================================
+// 🎁 ЕЖЕДНЕВНАЯ СЕРИЯ НАГРАД
+// ============================================================
+async function checkDailyStreak() {
+    if (!currentUser) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const lastClaim = currentUser.last_daily_claim
+        ? currentUser.last_daily_claim.slice(0, 10)
+        : null;
+
+    // Уже забрал сегодня
+    if (lastClaim === today) return;
+
+    // Считаем серию
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const streak = lastClaim === yesterday
+        ? (currentUser.daily_streak || 0) + 1
+        : 1;
+
+    // Награды за 7 дней
+    const rewards = [100, 150, 200, 250, 300, 400, 500];
+    const dayIndex = Math.min(streak - 1, 6);
+    const reward = rewards[dayIndex];
+
+    // Показываем модалку
+    showDailyRewardModal(streak, reward);
+
+    try {
+        // Начисляем монеты
+        await sb.rpc('add_coins', {
+            p_user_id: currentUser.telegram_id,
+            p_amount: reward,
+            p_reason: `daily_streak:${streak}`,
+            p_meta: { streak }
+        });
+
+        // Обновляем прогресс в БД
+        await sb.from('users').update({
+            last_daily_claim: new Date().toISOString(),
+            daily_streak: streak
+        }).eq('telegram_id', currentUser.telegram_id);
+
+        // Локально
+        currentUser.coins = (currentUser.coins || 0) + reward;
+        currentUser.last_daily_claim = new Date().toISOString();
+        currentUser.daily_streak = streak;
+        updateCoinsBadge();
+
+        haptic('heavy');
+    } catch (e) {
+        console.error('checkDailyStreak:', e);
+    }
+}
+
+function showDailyRewardModal(streak, reward) {
+    document.getElementById('dailyRewardOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'share-preview-overlay active';
+    overlay.id = 'dailyRewardOverlay';
+
+    // Иконки дней
+    const dayIcons = ['🥉', '🥈', '🥇', '💎', '💠', '👑', '🏆'];
+    const dayIdx = Math.min(streak - 1, 6);
+
+    overlay.innerHTML = `
+        <div class="share-preview-modal" style="max-width: 400px;">
+            <div class="share-preview-body" style="text-align: center; padding: 28px 20px;">
+
+                <div style="font-size: 64px; margin-bottom: 12px; animation: bounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);">
+                    ${dayIcons[dayIdx]}
+                </div>
+
+                <div style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: #ffd700; letter-spacing: 2px; margin-bottom: 6px; text-shadow: 0 0 20px rgba(255,215,0,0.5);">
+                    ДЕНЬ ${streak}
+                </div>
+
+                <div style="font-size: 13px; color: var(--hint); margin-bottom: 20px; line-height: 1.5;">
+                    Ежедневная награда за вход
+                </div>
+
+                <div style="
+                    display: inline-flex; align-items: center; gap: 8px;
+                    padding: 14px 24px; border-radius: 999px;
+                    background: linear-gradient(135deg, rgba(255,215,0,0.20), rgba(255,215,0,0.06));
+                    border: 1.5px solid rgba(255,215,0,0.5);
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 24px; font-weight: 900; color: #ffd700;
+                    margin-bottom: 20px;
+                    box-shadow: 0 0 30px rgba(255,215,0,0.3);
+                ">
+                    💰 +${reward}
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 20px;">
+                    ${[1,2,3,4,5,6,7].map(d => {
+                        const done = d <= streak;
+                        const isToday = d === streak;
+                        return `
+                            <div style="
+                                aspect-ratio: 1;
+                                display: flex; align-items: center; justify-content: center;
+                                border-radius: 10px;
+                                background: ${isToday ? 'linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,215,0,0.1))' : done ? 'rgba(var(--emerald-rgb), 0.12)' : 'rgba(255,255,255,0.03)'};
+                                border: 1.5px solid ${isToday ? '#ffd700' : done ? 'rgba(var(--emerald-rgb), 0.4)' : 'var(--border)'};
+                                font-size: 16px;
+                                ${isToday ? 'box-shadow: 0 0 16px rgba(255,215,0,0.5);' : ''}
+                            ">
+                                ${done ? '✓' : d}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <button class="share-preview-btn primary" style="width: 100%;"
+                        onclick="document.getElementById('dailyRewardOverlay').remove()">
+                    🎉 ЗАБРАТЬ
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
 async function openCoinsHistory() {
     switchPage('coins');
     const container = document.getElementById('coinsContent');
@@ -45067,7 +45480,7 @@ async function openSeason() {
     switchPage('season');
     const container = document.getElementById('seasonContent');
     if (!container) return;
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    container.innerHTML = skeleton('card', 3);
 
     try {
         // 1. Активный сезон
@@ -50758,7 +51171,7 @@ async function openQuestsScreen() {
 
     const container = document.getElementById('questsContent');
     if (!container) return;
-    container.innerHTML = '<div class="empty">Загрузка...</div>';
+    container.innerHTML = skeleton('list', 5);
 
     const { daily, weekly } = await loadQuestsProgress();
 
@@ -51716,12 +52129,12 @@ if (window.innerWidth >= 1024) {
             return;
         }
 
-        // Ctrl/Cmd + K — поиск игроков
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-            e.preventDefault();
-            if (typeof openFriendSearchSheet === 'function') openFriendSearchSheet();
-            return;
-        }
+// Ctrl/Cmd + K — глобальный поиск
+if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    if (typeof openGlobalSearch === 'function') openGlobalSearch();
+    return;
+}
 
         // Ctrl/Cmd + Enter — меню-дровер
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
