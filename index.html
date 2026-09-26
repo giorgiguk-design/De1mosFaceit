@@ -20517,6 +20517,10 @@ html.lite-mode .ctb-text.ctb-neon {
 }
 
 /* 🔥 ЖЁСТКАЯ метка «ТЫ ЗДЕСЬ» */
+/* ============================================================ */
+/* 💚 ТЕКУЩИЙ УРОВЕНЬ BP — метка внутри карточки               */
+/* ============================================================ */
+
 .bp-level-card.current {
     border-color: var(--emerald);
     border-width: 2px;
@@ -20543,38 +20547,63 @@ html.lite-mode .ctb-text.ctb-neon {
     }
 }
 
-/* Стрелка «ты здесь» над текущим уровнем */
-.bp-level-card.current::before {
-    content: 'ТЫ ЗДЕСЬ';
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 3px 10px;
-    background: var(--emerald);
-    color: #04140e;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    border-radius: 6px;
-    white-space: nowrap;
-    z-index: 5;
-    box-shadow: 0 0 12px rgba(var(--emerald-rgb), 0.8);
+/* Убираем старые псевдоэлементы */
+.bp-level-card.current::before,
+.bp-level-card.current::after {
+    content: none !important;
+    display: none !important;
 }
 
-.bp-level-card.current::after {
+/* Заголовок текущего уровня — зелёная лента с «ТЫ ЗДЕСЬ» */
+.bp-level-card.current .bp-level-header {
+    position: relative;
+    background: linear-gradient(135deg,
+        var(--emerald) 0%,
+        var(--emerald-2) 100%);
+    color: #04140e;
+    margin: -8px -8px 8px -8px;
+    padding: 7px 8px;
+    border-radius: 11px 11px 0 0;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-align: center;
+    box-shadow: 0 3px 14px rgba(var(--emerald-rgb), 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Зелёная точка-пульс слева */
+.bp-level-card.current .bp-level-header::before {
     content: '';
-    position: absolute;
-    top: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 6px solid var(--emerald);
-    z-index: 5;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #04140e;
+    animation: bpDotPulse 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+/* Текст «ТЫ ЗДЕСЬ» справа */
+.bp-level-card.current .bp-level-header::after {
+    content: 'ТЫ ЗДЕСЬ';
+    font-size: 8.5px;
+    letter-spacing: 1px;
+    opacity: 0.85;
+    padding-left: 6px;
+    border-left: 1px solid rgba(4, 20, 14, 0.35);
+}
+
+@keyframes bpDotPulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.4); }
+}
+
+/* Больше отступа сверху в скролле — чтобы ничего не сливалось */
+.bp-levels-scroll {
+    padding: 16px 0 20px;
 }
 
 /* Header уровня */
@@ -45715,20 +45744,20 @@ function renderBattlePass(container) {
         <div class="section-title">🎁 Награды за уровни</div>
 
         <div class="bp-scroll-wrapper">
-            <div class="bp-nav-arrows">
-                <button class="bp-nav-btn" onclick="bpScrollBy(-5)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15 6l-6 6 6 6"/>
-                    </svg>
-                    −5 УРОВНЕЙ
-                </button>
-                <button class="bp-nav-btn" onclick="bpScrollBy(5)">
-                    +5 УРОВНЕЙ
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 6l6 6-6 6"/>
-                    </svg>
-                </button>
-            </div>
+<div class="bp-nav-arrows">
+    <button class="bp-nav-btn" onclick="bpScrollBy(-1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 6l-6 6 6 6"/>
+        </svg>
+        −${getBpScrollStep()} УРОВНЕЙ
+    </button>
+    <button class="bp-nav-btn" onclick="bpScrollBy(1)">
+        +${getBpScrollStep()} УРОВНЕЙ
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 6l6 6-6 6"/>
+        </svg>
+    </button>
+</div>
 
             <div class="bp-levels-scroll" id="bpLevelsScroll">
                 ${cells.join('')}
@@ -45769,16 +45798,22 @@ function bpScrollToCurrent() {
 // ============================================================
 // ⏩ Скролл на N уровней
 // ============================================================
-function bpScrollBy(n) {
+// ============================================================
+// 📜 Сколько уровней за один клик (ПК: 9 / мобилка: 3)
+// ============================================================
+function getBpScrollStep() {
+    return window.innerWidth >= 1024 ? 9 : 3;
+}
+
+function bpScrollBy(direction) {
     const container = document.getElementById('bpLevelsScroll');
     if (!container) return;
 
-    // Ширина карточки + gap (130 + 10 = 140)
-    const cardWidth = 140;
-    container.scrollBy({
-        left: n * cardWidth,
-        behavior: 'smooth'
-    });
+    const step = getBpScrollStep();
+    const cardWidth = 140;  // карточка 130 + gap 10
+    const amount = Math.sign(direction) * step * cardWidth;
+
+    container.scrollBy({ left: amount, behavior: 'smooth' });
     haptic('light');
 }
 
@@ -52150,20 +52185,20 @@ async function renderDashBattlePass() {
                 </div>
 
                 <!-- NAV ARROWS -->
-                <div class="bp-nav-arrows" style="margin-top: 16px;">
-                    <button class="bp-nav-btn" onclick="dashBpScrollBy(-5)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M15 6l-6 6 6 6"/>
-                        </svg>
-                        −5 УРОВНЕЙ
-                    </button>
-                    <button class="bp-nav-btn" onclick="dashBpScrollBy(5)">
-                        +5 УРОВНЕЙ
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 6l6 6-6 6"/>
-                        </svg>
-                    </button>
-                </div>
+<div class="bp-nav-arrows" style="margin-top: 16px;">
+    <button class="bp-nav-btn" onclick="dashBpScrollBy(-1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 6l-6 6 6 6"/>
+        </svg>
+        −${getBpScrollStep()} УРОВНЕЙ
+    </button>
+    <button class="bp-nav-btn" onclick="dashBpScrollBy(1)">
+        +${getBpScrollStep()} УРОВНЕЙ
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 6l6 6-6 6"/>
+        </svg>
+    </button>
+</div>
 
                 <!-- LEVELS SCROLL -->
                 <div class="bp-levels-scroll" id="dashBpLevelsScroll">
@@ -52198,11 +52233,15 @@ async function renderDashBattlePass() {
 // ============================================================
 // 📜 Скролл по уровням BP на главной
 // ============================================================
-function dashBpScrollBy(n) {
+function dashBpScrollBy(direction) {
     const c = document.getElementById('dashBpLevelsScroll');
     if (!c) return;
-    // ширина карточки + gap = 130 + 10
-    c.scrollBy({ left: n * 140, behavior: 'smooth' });
+
+    const step = getBpScrollStep();
+    const cardWidth = 140;
+    const amount = Math.sign(direction) * step * cardWidth;
+
+    c.scrollBy({ left: amount, behavior: 'smooth' });
     haptic('light');
 }
 
