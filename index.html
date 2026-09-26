@@ -54673,6 +54673,752 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             
     </script>
 
+<!-- ============================================================ -->
+<!-- 🔊 SOUND SYSTEM v3 — звуковые эффекты (без фоновой музыки)    -->
+<!-- ============================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    const K = {
+        SFX:    'appSfxEnabled',
+        MUSIC:  'appMusicEnabled',
+        SFX_V:  'appSfxVolume',
+        MUS_V:  'appMusicVolume',
+    };
+
+    let sfxEnabled   = localStorage.getItem(K.SFX)   !== '0';
+    let musicEnabled = localStorage.getItem(K.MUSIC) === '1';
+    let sfxVolume    = parseFloat(localStorage.getItem(K.SFX_V)) || 0.35;
+    let musicVolume  = parseFloat(localStorage.getItem(K.MUS_V)) || 0.35;
+
+    let audioCtx = null;
+    let masterGain, sfxGain;
+
+    // ============================================================
+    // AUDIO CONTEXT
+    // ============================================================
+    function initAudio() {
+        if (audioCtx) return true;
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return false;
+            audioCtx = new AC();
+
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 1;
+            masterGain.connect(audioCtx.destination);
+
+            sfxGain = audioCtx.createGain();
+            sfxGain.gain.value = sfxVolume;
+            sfxGain.connect(masterGain);
+
+            return true;
+        } catch (e) {
+            console.warn('AudioContext init:', e);
+            return false;
+        }
+    }
+
+    function resumeAudio() {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+    }
+
+    // ============================================================
+    // ГЕНЕРАТОРЫ
+    // ============================================================
+    function tone(opt) {
+        if (!audioCtx || !sfxEnabled) return;
+        const {
+            freq = 440, type = 'sine', duration = 0.15,
+            volume = 0.5, attack = 0.005, release = null,
+            delay = 0, slideTo = null, curve = 'exp'
+        } = opt;
+
+        const t0 = audioCtx.currentTime + delay;
+        const osc = audioCtx.createOscillator();
+        const g   = audioCtx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t0);
+
+        if (slideTo) {
+            if (curve === 'linear') {
+                osc.frequency.linearRampToValueAtTime(slideTo, t0 + duration);
+            } else {
+                osc.frequency.exponentialRampToValueAtTime(Math.max(slideTo, 1), t0 + duration);
+            }
+        }
+
+        const rel = release || duration;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.linearRampToValueAtTime(volume, t0 + attack);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + rel);
+
+        osc.connect(g);
+        g.connect(sfxGain);
+        osc.start(t0);
+        osc.stop(t0 + rel + 0.05);
+    }
+
+    function noise(opt) {
+        if (!audioCtx || !sfxEnabled) return;
+        const { duration = 0.1, volume = 0.25, filter = 3000, delay = 0 } = opt || {};
+        const t0 = audioCtx.currentTime + delay;
+        const size = Math.floor(audioCtx.sampleRate * duration);
+        const buf  = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < size; i++) {
+            data[i] = (Math.random() * 2 - 1) * (1 - i / size);
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        const f = audioCtx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = filter;
+        const g = audioCtx.createGain();
+        g.gain.value = volume;
+        src.connect(f); f.connect(g); g.connect(sfxGain);
+        src.start(t0);
+        src.stop(t0 + duration + 0.05);
+    }
+
+    const Sounds = {
+        tap() {
+            tone({ freq: 950, type: 'sine',     duration: 0.05, volume: 0.55, release: 0.06 });
+            tone({ freq: 1400, type: 'sine',    duration: 0.03, volume: 0.25, release: 0.04, delay: 0.012 });
+        },
+        click() { tone({ freq: 720, type: 'triangle', duration: 0.06, volume: 0.45, release: 0.07 }); },
+        nav() {
+            tone({ freq: 780,  type: 'triangle', duration: 0.06, volume: 0.4 });
+            tone({ freq: 1040, type: 'triangle', duration: 0.08, volume: 0.35, delay: 0.05 });
+        },
+        open() {
+            tone({ freq: 420, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 900 });
+            tone({ freq: 840, type: 'sine', duration: 0.1,  volume: 0.25, delay: 0.1 });
+        },
+        close() { tone({ freq: 900, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 420 }); },
+        swipe() { noise({ duration: 0.12, volume: 0.15, filter: 5500 }); },
+        success() {
+            tone({ freq: 660,  type: 'sine', duration: 0.12, volume: 0.55 });
+            tone({ freq: 880,  type: 'sine', duration: 0.14, volume: 0.55, delay: 0.08 });
+            tone({ freq: 1320, type: 'sine', duration: 0.22, volume: 0.45, delay: 0.16 });
+        },
+        error() {
+            tone({ freq: 240, type: 'sawtooth', duration: 0.16, volume: 0.4, slideTo: 110 });
+            tone({ freq: 180, type: 'square',   duration: 0.18, volume: 0.25, delay: 0.06 });
+            noise({ duration: 0.1, volume: 0.15, filter: 800 });
+        },
+        warning() {
+            tone({ freq: 520, type: 'square', duration: 0.14, volume: 0.35 });
+            tone({ freq: 520, type: 'square', duration: 0.14, volume: 0.35, delay: 0.2 });
+        },
+        notification() {
+            tone({ freq: 880,  type: 'sine', duration: 0.14, volume: 0.5 });
+            tone({ freq: 1174, type: 'sine', duration: 0.14, volume: 0.5, delay: 0.11 });
+            tone({ freq: 1568, type: 'sine', duration: 0.24, volume: 0.4, delay: 0.22 });
+        },
+        message() {
+            tone({ freq: 1200, type: 'sine', duration: 0.07, volume: 0.5 });
+            tone({ freq: 1600, type: 'sine', duration: 0.09, volume: 0.4, delay: 0.06 });
+        },
+        send() {
+            tone({ freq: 1300, type: 'sine', duration: 0.09, volume: 0.5, slideTo: 2300 });
+            noise({ duration: 0.06, volume: 0.12, filter: 4500 });
+        },
+        coin() {
+            tone({ freq: 1318, type: 'sine', duration: 0.09, volume: 0.5 });
+            tone({ freq: 1760, type: 'sine', duration: 0.12, volume: 0.5, delay: 0.07 });
+            tone({ freq: 2637, type: 'sine', duration: 0.22, volume: 0.3, delay: 0.16 });
+        },
+        purchase() {
+            tone({ freq: 523, type: 'triangle', duration: 0.13, volume: 0.5 });
+            tone({ freq: 659, type: 'triangle', duration: 0.13, volume: 0.5, delay: 0.09 });
+            tone({ freq: 784, type: 'triangle', duration: 0.22, volume: 0.45, delay: 0.18 });
+        },
+        matchFound() {
+            [440, 554, 659, 880].forEach((f, i) =>
+                tone({ freq: f, type: 'triangle', duration: 0.45, volume: 0.4, delay: i * 0.06 })
+            );
+            noise({ duration: 0.35, volume: 0.15, filter: 3500 });
+            tone({ freq: 1318, type: 'sine', duration: 0.4, volume: 0.35, delay: 0.4 });
+        },
+        victory() {
+            [523, 659, 784, 1047].forEach((f, i) =>
+                tone({ freq: f, type: 'triangle', duration: 0.35, volume: 0.5, delay: i * 0.11 })
+            );
+            setTimeout(() => {
+                tone({ freq: 1319, type: 'triangle', duration: 0.55, volume: 0.5 });
+                tone({ freq: 1568, type: 'sine',     duration: 0.55, volume: 0.35, delay: 0.1 });
+            }, 460);
+        },
+        defeat() {
+            [440, 392, 330, 262].forEach((f, i) =>
+                tone({ freq: f, type: 'sine', duration: 0.32, volume: 0.4, delay: i * 0.14 })
+            );
+            tone({ freq: 220, type: 'sine', duration: 0.7, volume: 0.35, delay: 0.6 });
+        },
+        achievement() {
+            [784, 988, 1174, 1568].forEach((f, i) =>
+                tone({ freq: f, type: 'sine', duration: 0.28, volume: 0.5, delay: i * 0.075 })
+            );
+            setTimeout(() => {
+                [1568, 1976].forEach((f, i) =>
+                    tone({ freq: f, type: 'sine', duration: 0.4, volume: 0.4, delay: i * 0.1 })
+                );
+            }, 350);
+        },
+        levelUp() {
+            [523, 659, 784, 1047, 1319].forEach((f, i) =>
+                tone({ freq: f, type: 'sine', duration: 0.32, volume: 0.5, delay: i * 0.085 })
+            );
+        },
+        openCase() {
+            for (let i = 0; i < 10; i++) {
+                tone({
+                    freq: 320 + i * 90, type: 'triangle',
+                    duration: 0.05, volume: 0.25, delay: i * 0.11
+                });
+            }
+            setTimeout(() => {
+                [659, 880, 1319].forEach((f, i) =>
+                    tone({ freq: f, type: 'sine', duration: 0.5, volume: 0.5, delay: i * 0.05 })
+                );
+            }, 1200);
+        },
+    };
+
+    // ============================================================
+    // ПУБЛИЧНЫЙ API
+    // ============================================================
+    window.SFX = {
+        play(name) {
+            if (!sfxEnabled) return;
+            if (!initAudio()) return;
+            resumeAudio();
+            const fn = Sounds[name];
+            if (typeof fn === 'function') {
+                try { fn(); } catch (e) { console.warn('SFX', name, e); }
+            }
+        },
+        enable(on) {
+            sfxEnabled = !!on;
+            localStorage.setItem(K.SFX, on ? '1' : '0');
+            if (on) { initAudio(); resumeAudio(); }
+        },
+        isEnabled() { return sfxEnabled; },
+        setVolume(v) {
+            sfxVolume = Math.max(0, Math.min(1, v));
+            localStorage.setItem(K.SFX_V, String(sfxVolume));
+            if (sfxGain) sfxGain.gain.value = sfxVolume;
+        },
+        getVolume() { return sfxVolume; },
+    };
+
+    window.Music = {
+        start() {
+            musicEnabled = true;
+            localStorage.setItem(K.MUSIC, '1');
+            return Promise.resolve();
+        },
+        stop() {
+            musicEnabled = false;
+            localStorage.setItem(K.MUSIC, '0');
+            if (typeof window.stopStudioPlayback === 'function') {
+                try { window.stopStudioPlayback(); } catch (e) {}
+            }
+        },
+        async toggle() {
+            if (musicEnabled) this.stop();
+            else await this.start();
+            return musicEnabled;
+        },
+        isEnabled() { return musicEnabled; },
+        isPlaying() { return musicEnabled; },
+        setVolume(v) {
+            musicVolume = Math.max(0, Math.min(1, v));
+            localStorage.setItem(K.MUS_V, String(musicVolume));
+        },
+        getVolume() { return musicVolume; },
+    };
+
+    // ============================================================
+    // АВТОЗАПУСК AUDIO
+    // ============================================================
+    document.addEventListener('pointerdown', () => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }, { passive: true });
+
+    // ============================================================
+    // АВТОХУКИ
+    // ============================================================
+    function installAutoHooks() {
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest(
+                'button, [onclick], [role="button"], .nav-item, ' +
+                '.menu-item, .menu-drawer-btn, .leaderboard-item, ' +
+                '.chat-list-item, .shop-item, .shop-cat-btn, ' +
+                '.play-room-card, .rv-icon-btn, .mode-card, .side-card, ' +
+                '.sheet-option, .winner-btn, .report-reason-btn, ' +
+                '.theme-option, .onboard-theme, .mode-selector .mode-card'
+            );
+            if (!target) return;
+            if (target.disabled) return;
+
+            if (target.classList.contains('nav-item')) { SFX.play('nav'); return; }
+            if (target.classList.contains('menu-drawer-btn')) { SFX.play('click'); return; }
+            if (target.classList.contains('theme-option') ||
+                target.classList.contains('onboard-theme')) { SFX.play('click'); return; }
+            if (target.classList.contains('mode-card')) { SFX.play('tap'); return; }
+            if (target.classList.contains('shop-btn') && target.classList.contains('buy')) return;
+            if (target.classList.contains('sheet-cancel') ||
+                (target.classList.contains('profile-action-btn') && target.classList.contains('cancel'))) {
+                SFX.play('close'); return;
+            }
+            if (target.classList.contains('profile-action-btn') &&
+                (target.classList.contains('save') || target.classList.contains('edit'))) {
+                SFX.play('click'); return;
+            }
+            if (target.classList.contains('winner-btn')) { SFX.play('tap'); return; }
+
+            SFX.play('tap');
+        }, { passive: true });
+
+        if (typeof window.showToast === 'function') {
+            const origToast = window.showToast;
+            window.showToast = function(msg, type) {
+                const m = String(msg || '');
+                if (/✅|готово|сохранено|успешно|куплено|принято|добавлено|надето|забрано|выполнен/i.test(m)) {
+                    SFX.play('success');
+                } else if (/❌|🚫|ошибка|не удалось|запрещено|заполнен|забанен|нельзя/i.test(m)) {
+                    SFX.play('error');
+                } else if (/⚠️|⏰|внимание|подожди|ещё рано|уже/i.test(m)) {
+                    SFX.play('warning');
+                } else if (/💰|монет|казна/i.test(m) || /[+]\d+\s*монет/i.test(m)) {
+                    SFX.play('coin');
+                } else if (/🏆|победа|выиграл|win/i.test(m)) {
+                    SFX.play('victory');
+                } else if (/💀|поражение|проиграл|loss/i.test(m)) {
+                    SFX.play('defeat');
+                } else if (/🔔|📨|📬|уведомление|приглашение|пригласил/i.test(m)) {
+                    SFX.play('notification');
+                } else if (/💬|сообщение/i.test(m)) {
+                    SFX.play('message');
+                } else if (/🎁|кейс|открыт/i.test(m)) {
+                    SFX.play('openCase');
+                } else if (/⭐|уровень|level up/i.test(m)) {
+                    SFX.play('levelUp');
+                }
+                return origToast.apply(this, arguments);
+            };
+        }
+
+        if (typeof window.sendMessage === 'function') {
+            const origSend = window.sendMessage;
+            window.sendMessage = function() {
+                const input = document.getElementById('chatInput');
+                if (input && input.value.trim()) SFX.play('send');
+                return origSend.apply(this, arguments);
+            };
+        }
+
+        if (typeof window.sendRoomMessage === 'function') {
+            const origSendRoom = window.sendRoomMessage;
+            window.sendRoomMessage = function() {
+                const input = document.getElementById('roomChatInput');
+                if (input && input.value.trim()) SFX.play('send');
+                return origSendRoom.apply(this, arguments);
+            };
+        }
+
+        if (typeof window.appendMessage === 'function') {
+            const origAppend = window.appendMessage;
+            window.appendMessage = async function(m) {
+                const me = currentUser?.telegram_id;
+                if (m && m.sender_id !== me) SFX.play('message');
+                return origAppend.apply(this, arguments);
+            };
+        }
+
+        if (typeof window.finishMatch === 'function') {
+            const origFinish = window.finishMatch;
+            window.finishMatch = async function(matchId, result) {
+                try {
+                    const me = Number(currentUser?.telegram_id);
+                    const { data: match } = await sb.from('game_matches')
+                        .select('team_a_players, team_b_players').eq('id', matchId).single();
+                    if (match) {
+                        const inA = (match.team_a_players || []).some(p => Number(p.telegram_id) === me);
+                        const inB = (match.team_b_players || []).some(p => Number(p.telegram_id) === me);
+                        const myTeam = inA ? 'A' : inB ? 'B' : null;
+                        if (myTeam === result.winner) SFX.play('victory');
+                        else if (myTeam) SFX.play('defeat');
+                    }
+                } catch (e) {}
+                return origFinish.apply(this, arguments);
+            };
+        }
+
+        ['buyShopItem', 'equipShopItem', 'claimQuestReward', 'openCase'].forEach(fnName => {
+            if (typeof window[fnName] === 'function') {
+                const orig = window[fnName];
+                window[fnName] = async function() {
+                    SFX.play('tap');
+                    return orig.apply(this, arguments);
+                };
+            }
+        });
+
+        if (typeof window.showCaseOpening === 'function') {
+            const origShowCase = window.showCaseOpening;
+            window.showCaseOpening = function() {
+                setTimeout(() => SFX.play('openCase'), 200);
+                return origShowCase.apply(this, arguments);
+            };
+        }
+
+        ['openShop', 'openSeason', 'openCasesScreen', 'openQuestsScreen',
+         'openNotificationsSheet', 'openSettingsSheet', 'openPrivacySheet',
+         'openThemeSheet', 'openFaqSheet', 'openCoverPickerSheet'].forEach(fnName => {
+            if (typeof window[fnName] === 'function') {
+                const orig = window[fnName];
+                window[fnName] = function() {
+                    SFX.play('open');
+                    return orig.apply(this, arguments);
+                };
+            }
+        });
+
+        if (typeof window.onMatchFound === 'function') {
+            const origMF = window.onMatchFound;
+            window.onMatchFound = function() {
+                SFX.play('matchFound');
+                return origMF.apply(this, arguments);
+            };
+        }
+
+        if (typeof window.showDailyRewardModal === 'function') {
+            const origDR = window.showDailyRewardModal;
+            window.showDailyRewardModal = function(streak, reward) {
+                SFX.play('levelUp');
+                return origDR.apply(this, arguments);
+            };
+        }
+    }
+
+    // ============================================================
+    // 🎵 РАЗДЕЛ "МУЗЫКА И ЗВУКИ"
+    // ============================================================
+    async function openSoundMusicSheet() {
+        document.getElementById('snmOverlay')?.remove();
+        document.getElementById('snmSheet')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'sheet-overlay active';
+        overlay.id = 'snmOverlay';
+        overlay.onclick = (e) => { if (e.target === overlay) closeSoundMusicSheet(); };
+
+        const sheet = document.createElement('div');
+        sheet.className = 'sheet active';
+        sheet.id = 'snmSheet';
+        sheet.style.zIndex = '10000';
+        sheet.style.maxHeight = '88vh';
+        sheet.style.overflowY = 'auto';
+
+        const renderContent = () => {
+            const sfxOn = SFX.isEnabled();
+            const tracksCount = window.getMusicTracksCount ? window.getMusicTracksCount() : 0;
+            const musicOn = window.Music?.isEnabled() || false;
+
+            sheet.innerHTML = `
+                <div class="sheet-title">🎵 Музыка и звуки</div>
+
+                <button class="sheet-option" id="snmLibraryBtn" style="background: linear-gradient(135deg, rgba(217,171,90,0.15), rgba(167,139,250,0.08)); border: 1px solid rgba(217,171,90,0.4);">
+                    <span style="font-size: 18px;">🎧</span>
+                    <span style="color: #ffd700; font-weight: 800;">Музыкальная библиотека</span>
+                    <span style="margin-left:auto;font-size:11px;color:#ffd700;font-weight:800;">${tracksCount} трек${tracksCount === 1 ? '' : tracksCount >= 2 && tracksCount <= 4 ? 'а' : 'ов'}</span>
+                </button>
+
+                <button class="sheet-option" id="snmMusicBtn">
+                    <span style="font-size: 18px;">🎵</span>
+                    Воспроизведение музыки
+                    <span style="margin-left:auto;font-size:12px;color:${musicOn ? 'var(--emerald)' : 'var(--hint)'};font-weight:800;">
+                        ${musicOn ? 'ВКЛ' : 'ВЫКЛ'}
+                    </span>
+                </button>
+
+                <div style="height: 1px; background: linear-gradient(90deg, transparent, var(--border-strong), transparent); margin: 12px 0;"></div>
+
+                <button class="sheet-option" id="snmSfxBtn">
+                    <span style="font-size: 18px;">🔊</span>
+                    Звуковые эффекты
+                    <span style="margin-left:auto;font-size:12px;color:${sfxOn ? 'var(--emerald)' : 'var(--hint)'};font-weight:800;">
+                        ${sfxOn ? 'ВКЛ' : 'ВЫКЛ'}
+                    </span>
+                </button>
+
+                <div style="margin: 0 0 14px; padding: 12px 14px; background: rgba(var(--emerald-rgb),0.04); border: 1px solid var(--border); border-radius: 12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-size:12px;font-weight:700;color:var(--text);">🔔 Громкость звуков</span>
+                        <span id="snmSfxVolLabel" style="font-size:11px;font-weight:800;color:var(--emerald);font-family:var(--font-mono);">${Math.round(SFX.getVolume() * 100)}%</span>
+                    </div>
+                    <input type="range" id="snmSfxVolSlider" min="0" max="100"
+                           value="${Math.round(SFX.getVolume() * 100)}"
+                           style="width:100%;accent-color:var(--emerald);cursor:pointer;">
+                </div>
+
+                <button class="sheet-option" id="snmSuggestBtn" style="background: rgba(var(--emerald-rgb), 0.06); border: 1px dashed var(--border-strong);">
+                    <span style="font-size: 18px;">💡</span>
+                    Предложить свою музыку
+                    <span style="margin-left:auto;font-size:11px;color:var(--hint);font-weight:700;">→</span>
+                </button>
+
+                <button class="sheet-cancel" onclick="closeSoundMusicSheet()" style="margin-top: 12px;">ЗАКРЫТЬ</button>
+            `;
+
+            document.getElementById('snmLibraryBtn').onclick = () => {
+                closeSoundMusicSheet();
+                setTimeout(() => {
+                    if (window.openMusicLibrary) window.openMusicLibrary();
+                    else if (typeof showToast === 'function') showToast('⚠️ Библиотека не готова');
+                }, 260);
+            };
+
+            document.getElementById('snmMusicBtn').onclick = async () => {
+                const on = !window.Music.isEnabled();
+                if (on) await Music.start();
+                else Music.stop();
+                SFX.play(on ? 'success' : 'click');
+                if (typeof haptic === 'function') haptic('light');
+                renderContent();
+                if (window.refreshMusicWidget) window.refreshMusicWidget();
+            };
+
+            document.getElementById('snmSfxBtn').onclick = () => {
+                const on = !SFX.isEnabled();
+                SFX.enable(on);
+                if (on) setTimeout(() => SFX.play('success'), 60);
+                if (typeof haptic === 'function') haptic('light');
+                renderContent();
+            };
+
+            const sfxVolSlider = document.getElementById('snmSfxVolSlider');
+            if (sfxVolSlider) {
+                sfxVolSlider.oninput = (e) => {
+                    const v = parseInt(e.target.value, 10) / 100;
+                    SFX.setVolume(v);
+                    document.getElementById('snmSfxVolLabel').textContent = e.target.value + '%';
+                };
+            }
+
+            document.getElementById('snmSuggestBtn').onclick = () => {
+                closeSoundMusicSheet();
+                setTimeout(() => openSuggestMusicSheet(), 260);
+            };
+        };
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(sheet);
+        renderContent();
+        if (typeof haptic === 'function') haptic('medium');
+    }
+
+    function closeSoundMusicSheet() {
+        document.getElementById('snmOverlay')?.remove();
+        document.getElementById('snmSheet')?.remove();
+    }
+
+    // ============================================================
+    // 💡 ПРЕДЛОЖИТЬ СВОЮ МУЗЫКУ
+    // ============================================================
+    async function openSuggestMusicSheet() {
+        if (!currentUser) {
+            if (typeof showToast === 'function') showToast('⚠️ Профиль не загружен');
+            return;
+        }
+
+        document.getElementById('suggestMusicOverlay')?.remove();
+        document.getElementById('suggestMusicSheet')?.remove();
+
+        let pendingCount = 0;
+        try {
+            const { data } = await sb.from('music_suggestions')
+                .select('id').eq('user_id', currentUser.telegram_id).eq('status', 'pending');
+            pendingCount = (data || []).length;
+        } catch (e) {}
+        const MAX_PENDING = 5;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'sheet-overlay active';
+        overlay.id = 'suggestMusicOverlay';
+        overlay.onclick = (e) => { if (e.target === overlay) closeSuggestMusicSheet(); };
+
+        const sheet = document.createElement('div');
+        sheet.className = 'sheet active';
+        sheet.id = 'suggestMusicSheet';
+        sheet.style.zIndex = '10000';
+        sheet.style.maxHeight = '88vh';
+        sheet.style.overflowY = 'auto';
+
+        sheet.innerHTML = `
+            <div class="sheet-title">💡 Предложить свою музыку</div>
+
+            <div style="font-size: 12px; color: var(--hint); line-height: 1.7; margin-bottom: 14px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                <b style="color: var(--text);">Как это работает:</b><br>
+                1️⃣ Найди трек в <b>YouTube</b>, <b>SoundCloud</b> или <b>Яндекс.Музыке</b><br>
+                2️⃣ Скопируй ссылку на трек<br>
+                3️⃣ Вставь её сюда<br>
+                4️⃣ Админ проверит и добавит в библиотеку
+                <br><br>
+                <b style="color: var(--gold);">Лимит:</b> до ${MAX_PENDING} активных
+                ${pendingCount > 0 ? ` · у тебя <b>${pendingCount}</b>` : ''}
+            </div>
+
+            ${pendingCount >= MAX_PENDING ? `
+                <div style="padding: 16px; text-align: center; background: rgba(217,171,90,0.08); border: 1px solid rgba(217,171,90,0.35); border-radius: 12px; color: var(--gold); font-size: 13px; font-weight: 700;">
+                    ⏳ У тебя уже ${pendingCount} активных предложений
+                </div>
+            ` : `
+                <label class="field-label">Ссылка на трек</label>
+                <input type="text"
+                       class="field-input"
+                       id="suggestMusicInput"
+                       placeholder="https://youtu.be/... или https://soundcloud.com/..."
+                       style="margin-bottom: 12px; font-size: 12px; font-family: 'Courier New', monospace;">
+
+                <button class="profile-action-btn save"
+                        id="suggestMusicSubmitBtn"
+                        onclick="submitMusicSuggestion()">
+                    📤 ОТПРАВИТЬ АДМИНУ
+                </button>
+            `}
+
+            <button class="sheet-cancel" onclick="closeSuggestMusicSheet()">ОТМЕНА</button>
+        `;
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(sheet);
+        setTimeout(() => document.getElementById('suggestMusicInput')?.focus(), 250);
+        if (typeof haptic === 'function') haptic('medium');
+    }
+
+    function closeSuggestMusicSheet() {
+        document.getElementById('suggestMusicOverlay')?.remove();
+        document.getElementById('suggestMusicSheet')?.remove();
+    }
+
+    async function submitMusicSuggestion() {
+        const input = document.getElementById('suggestMusicInput');
+        const btn = document.getElementById('suggestMusicSubmitBtn');
+        if (!input || !btn) return;
+
+        const url = input.value.trim();
+        if (!url) { if (typeof showToast === 'function') showToast('⚠️ Вставь ссылку'); return; }
+
+        if (!window.detectMusicService) {
+            if (typeof showToast === 'function') showToast('⚠️ Парсер ссылок недоступен');
+            return;
+        }
+        const detected = window.detectMusicService(url);
+        if (!detected) {
+            if (typeof showToast === 'function') showToast('⚠️ Поддержи: YouTube, SoundCloud, Яндекс');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '⏳ ЗАГРУЗКА...';
+
+        try {
+            const { data: existing } = await sb.from('music_suggestions')
+                .select('id').eq('user_id', currentUser.telegram_id)
+                .eq('track_id', String(detected.track_id)).eq('status', 'pending');
+            if (existing?.length) {
+                if (typeof showToast === 'function') showToast('⚠️ Уже предлагал этот трек');
+                btn.disabled = false;
+                btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
+                return;
+            }
+
+            const { data: inLib } = await sb.from('music_studio_tracks')
+                .select('id').eq('service', detected.service)
+                .eq('track_id', String(detected.track_id)).maybeSingle();
+            if (inLib) {
+                if (typeof showToast === 'function') showToast('ℹ️ Уже в библиотеке');
+                btn.disabled = false;
+                btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
+                return;
+            }
+
+            let meta = { title: 'Трек', artist: '', cover_url: '' };
+            if (window.fetchMusicMetadata) {
+                try { meta = await window.fetchMusicMetadata(url, detected.service); } catch (e) {}
+            }
+
+            const { error } = await sb.from('music_suggestions').insert({
+                user_id: currentUser.telegram_id,
+                track_url: url,
+                track_id: String(detected.track_id),
+                title: meta.title,
+                artist: meta.artist,
+                cover_url: meta.cover_url,
+                status: 'pending',
+            });
+            if (error) throw error;
+
+            if (typeof showToast === 'function') showToast('✅ Трек отправлен админу');
+            if (typeof haptic === 'function') haptic('medium');
+
+            try {
+                const { data: admins } = await sb.from('users')
+                    .select('telegram_id')
+                    .or('is_admin.eq.true,username.eq.mark1zell');
+                for (const admin of admins || []) {
+                    if (Number(admin.telegram_id) === Number(currentUser.telegram_id)) continue;
+                    if (typeof notify === 'function') {
+                        await notify(admin.telegram_id,
+                            `💡 <b>${escapeHtml(currentUser.display_name || 'Игрок')}</b> предложил трек:\n\n<b>${escapeHtml(meta.title)}</b> — ${escapeHtml(meta.artist)}`,
+                            'party'
+                        ).catch(() => {});
+                    }
+                }
+            } catch (e) {}
+
+            closeSuggestMusicSheet();
+        } catch (e) {
+            console.error('submitMusicSuggestion:', e);
+            if (typeof showToast === 'function') showToast('❌ ' + e.message);
+            btn.disabled = false;
+            btn.textContent = '📤 ОТПРАВИТЬ АДМИНУ';
+        }
+    }
+
+    // ============================================================
+    // ЭКСПОРТ В WINDOW (чтобы кнопки работали)
+    // ============================================================
+    window.openSoundMusicSheet = openSoundMusicSheet;
+    window.closeSoundMusicSheet = closeSoundMusicSheet;
+    window.openSuggestMusicSheet = openSuggestMusicSheet;
+    window.closeSuggestMusicSheet = closeSuggestMusicSheet;
+    window.submitMusicSuggestion = submitMusicSuggestion;
+
+    // ============================================================
+    // BOOT
+    // ============================================================
+    function boot() {
+        installAutoHooks();
+        console.log('🔊 Sound System v3 готов (только эффекты)');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+})();
+</script>
+
     <!-- ============================================================ -->
 <!-- 🎧 MUSIC PLAYER v3 — плавающий виджет + панель управления     -->
 <!-- ============================================================ -->
