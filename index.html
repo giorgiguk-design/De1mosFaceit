@@ -26775,7 +26775,7 @@ function closeResolveDisputeSheet() {
 
 async function submitResolveDispute(matchId) {
     const btn = document.querySelector('#resolveSheet button.profile-action-btn.save');
-    if (btn?.disabled) return; // 🔥 защита от двойного клика
+    if (btn?.disabled) return;
 
     const a = parseInt(document.getElementById('resolveScoreA')?.value) || 0;
     const b = parseInt(document.getElementById('resolveScoreB')?.value) || 0;
@@ -26784,53 +26784,41 @@ async function submitResolveDispute(matchId) {
 
     const winner = a > b ? 'A' : 'B';
 
-    // 🔥 Блокируем кнопку СРАЗУ
     if (btn) {
         btn.disabled = true;
         btn.textContent = 'ОБРАБОТКА...';
         btn.style.opacity = '0.6';
-        btn.style.pointerEvents = 'none';
     }
 
     try {
-        const result = await mmCall('resolve_dispute', {
-            match_id: matchId,
-            moderator_id: currentUser.telegram_id,
-            winner,
-            score_a: a,
-            score_b: b
+        // 🔥 ВЫЗЫВАЕМ ПРЯМО RPC, а не edge-функцию!
+        const { data, error } = await sb.rpc('resolve_dispute', {
+            p_match_id: matchId,
+            p_moderator_id: currentUser.telegram_id,
+            p_winner: winner,
+            p_score_a: a,
+            p_score_b: b
         });
 
-        // Проверяем ответ от edge-функции
-        if (result && result.error) {
-            throw new Error(result.error);
-        }
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Ошибка');
 
         haptic('medium');
         showToast(`✅ Решено: ${a}:${b} → Команда ${winner}`);
 
-        // 🔥 Закрываем модалку СРАЗУ после успеха
         closeResolveDisputeSheet();
-
-        // Небольшая задержка перед перерисовкой, чтобы визуально всё улеглось
-        setTimeout(() => {
-            renderModeratorPanel();
-        }, 200);
+        setTimeout(() => renderModeratorPanel(), 200);
 
     } catch (e) {
         console.error('submitResolveDispute:', e);
         showToast('Ошибка: ' + e.message);
-
-        // Разблокируем кнопку при ошибке
         if (btn) {
             btn.disabled = false;
             btn.textContent = '💾 СОХРАНИТЬ РЕШЕНИЕ';
             btn.style.opacity = '1';
-            btn.style.pointerEvents = 'auto';
         }
     }
 }
-
             // ============================================================
 // ПЕРЕОПРЕДЕЛЕНИЕ РЕЗУЛЬТАТА МОДЕРАТОРОМ
 // ============================================================
@@ -26911,83 +26899,42 @@ async function submitOverride() {
     if (AppState.ovWinner === 'B' && scoreB <= scoreA) { showToast('Счёт не совпадает с победителем'); return; }
 
     try {
-        // 1. Откатываем старые дельты, если матч уже был завершён
-        if (currentMatch.status === 'finished') {
-            const allP = [...(currentMatch.team_a_players || []), ...(currentMatch.team_b_players || [])];
-            for (const p of allP) {
-                const pid = Number(p.telegram_id);
-                if (!pid || p.elo_before == null) continue;
-                const wasInA = (currentMatch.team_a_players || []).some(x => Number(x.telegram_id) === pid);
-                const wasWinner = currentMatch.winner_team === (wasInA ? 'A' : 'B');
+        // 🔥 Тот же RPC resolve_dispute — он корректно откатывает старые дельты
+        const { data, error } = await sb.rpc('resolve_dispute', {
+            p_match_id: currentMatch.id,
+            p_moderator_id: currentUser.telegram_id,
+            p_winner: AppState.ovWinner,
+            p_score_a: scoreA,
+            p_score_b: scoreB
+        });
 
-                const { data: u } = await sb.from('users')
-                    .select('elo, matches_played, wins').eq('telegram_id', pid).single();
-                if (u) {
-                    await sb.from('users').update({
-                        elo: p.elo_before,
-                        matches_played: Math.max(0, (u.matches_played ?? 1) - 1),
-                        wins: Math.max(0, (u.wins ?? 0) - (wasWinner ? 1 : 0))
-                    }).eq('telegram_id', pid);
-                }
-            }
-        }
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Ошибка');
 
-        // 2. Сбрасываем флаги
-        await sb.from('game_matches').update({
-            status: 'result',
-            result_status: null,
-            winner_team: null,
-            score_a: null,
-            score_b: null,
-            finished_at: null,
-            disputed_at: null,
-            resolved_by: currentUser.telegram_id
-        }).eq('id', currentMatch.id);
-
-        // 3. Записываем новые голоса от имени обоих капитанов
-        await sb.from('match_votes').upsert({
-            match_id: currentMatch.id,
-            telegram_id: Number(currentMatch.captain_a_id),
-            team: 'A', is_captain: true,
-            winner: AppState.ovWinner,
-            score_a: scoreA, score_b: scoreB,
-            created_at: new Date().toISOString()
-        }, { onConflict: 'match_id,telegram_id' });
-
-        await sb.from('match_votes').upsert({
-            match_id: currentMatch.id,
-            telegram_id: Number(currentMatch.captain_b_id),
-            team: 'B', is_captain: true,
-            winner: AppState.ovWinner,
-            score_a: scoreA, score_b: scoreB,
-            created_at: new Date().toISOString()
-        }, { onConflict: 'match_id,telegram_id' });
-
-        // 4. Финализируем заново
         closeOverrideSheet();
-        await tryFinishMatch(currentMatch.id);
 
-        const { data: fresh } = await sb.from('game_matches').select('*').eq('id', currentMatch.id).single();
+        const { data: fresh } = await sb.from('game_matches')
+            .select('*').eq('id', currentMatch.id).single();
         if (fresh) currentMatch = fresh;
 
         showToast('✅ Результат переопределён');
+        haptic('medium');
         renderFinishedScreen();
 
-        // 5. Уведомляем участников
+        // Уведомляем участников
         const teamA = currentMatch.team_a_players || [];
         const teamB = currentMatch.team_b_players || [];
         for (const p of [...teamA, ...teamB]) {
             await notify(Number(p.telegram_id),
-                `⚖️ Модератор переопределил результат матча. Новый счёт: <b>${scoreA} : ${scoreB}</b>, победитель — команда <b>${AppState.ovWinner}</b>.`,
+                `⚖️ Модератор переопределил результат матча. Счёт: <b>${scoreA} : ${scoreB}</b>, победитель — команда <b>${AppState.ovWinner}</b>.`,
                 'party'
             );
         }
     } catch (e) {
-        console.error(e);
+        console.error('submitOverride:', e);
         showToast('Ошибка: ' + e.message);
     }
 }
-
 async function closeReport(reportId) {
     if (!confirm('Закрыть эту запись?')) return;
     try {
@@ -27825,6 +27772,7 @@ if (tg?.BackButton) {
         if (error) throw error;
 
         currentUser = data;
+	syncServerTime();
         applyHeaderAvatar(currentUser);
         renderDashboard(currentUser);
         loadProfile(currentUser);
@@ -32766,8 +32714,36 @@ const READY_CHECK_DURATION = 120; // 2 минуты в секундах
 let _readyCheckTimer = null;
 let _readyCheckRefreshTimer = null;
 
+// ═══════════════════════════════════════════════════════════════
+// ⏱️ СЕРВЕРНОЕ ВРЕМЯ — защита от рассинхрона таймеров
+// ═══════════════════════════════════════════════════════════════
+let _serverTimeOffset = 0;
+let _serverTimeSynced = false;
+
+async function syncServerTime() {
+    try {
+        const { data, error } = await sb.rpc('get_server_time');
+        if (error || !data) return;
+        const serverMs = new Date(data).getTime();
+        _serverTimeOffset = serverMs - Date.now();
+        _serverTimeSynced = true;
+        console.log('⏱️ Server time synced, offset:', _serverTimeOffset, 'ms');
+    } catch (e) {
+        console.warn('syncServerTime:', e);
+    }
+}
+
+function serverNow() {
+    return Date.now() + _serverTimeOffset;
+}
+window.serverNow = serverNow;
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ READY CHECK — флаг + переписанный показ экрана
+// ═══════════════════════════════════════════════════════════════
+window._onReadyCheckScreen = false;
+
 function showReadyCheckScreen() {
-    // Очищаем старые таймеры
     if (_readyCheckTimer) { clearInterval(_readyCheckTimer); _readyCheckTimer = null; }
     if (_readyCheckRefreshTimer) { clearInterval(_readyCheckRefreshTimer); _readyCheckRefreshTimer = null; }
 
@@ -32777,34 +32753,207 @@ function showReadyCheckScreen() {
     const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
 
-    switchPage('veto');
-    renderReadyCheck();
-    startReadyCheckCountdown();
+    // 🔥 Синхронизируем серверное время ПЕРЕД показом
+    syncServerTime().finally(() => {
+        window._onReadyCheckScreen = true;
+        switchPageForce('veto');   // ← принудительный переход
+        renderReadyCheck();
+        startReadyCheckCountdown();
 
-    // 🔥 Периодический рефреш из БД — на случай если realtime пропустит
-    _readyCheckRefreshTimer = setInterval(async () => {
-        if (!currentMatch || currentMatch.status !== 'ready_check') return;
-
-        try {
-            const { data } = await sb.from('game_matches')
-                .select('ready_check_data, status')
-                .eq('id', currentMatch.id)
-                .maybeSingle();
-
-            if (!data) return;
-
-            // Если realtime пропустил — обновляем вручную
-            const oldData = JSON.stringify(currentMatch.ready_check_data || {});
-            const newData = JSON.stringify(data.ready_check_data || {});
-
-            if (oldData !== newData) {
-                currentMatch.ready_check_data = data.ready_check_data || {};
-                renderReadyCheck();
+        // Fallback-рефреш из БД каждые 2 сек
+        _readyCheckRefreshTimer = setInterval(async () => {
+            if (!currentMatch || currentMatch.status !== 'ready_check') {
+                clearInterval(_readyCheckRefreshTimer);
+                _readyCheckRefreshTimer = null;
+                return;
             }
-        } catch (e) {}
-    }, 2000); // каждые 2 секунды
+            try {
+                const { data } = await sb.from('game_matches')
+                    .select('ready_check_data, status, ready_check_started_at')
+                    .eq('id', currentMatch.id)
+                    .maybeSingle();
+
+                if (!data) return;
+
+                // Обновляем started_at если изменилось — фикс рассинхрона
+                if (data.ready_check_started_at) {
+                    currentMatch.ready_check_started_at = data.ready_check_started_at;
+                }
+
+                const oldData = JSON.stringify(currentMatch.ready_check_data || {});
+                const newData = JSON.stringify(data.ready_check_data || {});
+                if (oldData !== newData) {
+                    currentMatch.ready_check_data = data.ready_check_data || {};
+                    renderReadyCheck();
+                }
+
+                if (data.status === 'veto') {
+                    clearInterval(_readyCheckRefreshTimer);
+                    _readyCheckRefreshTimer = null;
+                    window._onReadyCheckScreen = false;
+                    showVetoScreen();
+                    subscribeMatchRealtime();
+                } else if (data.status === 'cancelled') {
+                    clearInterval(_readyCheckRefreshTimer);
+                    _readyCheckRefreshTimer = null;
+                    window._onReadyCheckScreen = false;
+                    showVetoCancelledScreen('ready_check_failed');
+                }
+            } catch (e) {}
+        }, 2000);
+    });
+}
+window.showReadyCheckScreen = showReadyCheckScreen;
+
+// ═══════════════════════════════════════════════════════════════
+// 🔒 ПРИНУДИТЕЛЬНЫЙ ПЕРЕХОД — игнорирует блокировки
+// ═══════════════════════════════════════════════════════════════
+function switchPageForce(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('page-' + page);
+    if (target) target.classList.add('active');
+
+    document.querySelectorAll('.nav-item').forEach(n =>
+        n.classList.toggle('active', n.dataset.page === page)
+    );
+
+    try {
+        if (page === 'dashboard') tg?.BackButton?.hide();
+        else tg?.BackButton?.show();
+    } catch (e) {}
+}
+window.switchPageForce = switchPageForce;
+
+// ═══════════════════════════════════════════════════════════════
+// 🛡️ БЛОКИРОВКА switchPage ВО ВРЕМЯ ready_check
+// ═══════════════════════════════════════════════════════════════
+if (!window._switchPageLocked) {
+    const _origSwitchPage = window.switchPage;
+    window.switchPage = function(page, ...args) {
+        // Если мы на экране ready_check и матч ещё активен —
+        // блокируем ЛЮБЫЕ переходы кроме veto
+        if (window._onReadyCheckScreen
+            && currentMatch?.status === 'ready_check'
+            && page !== 'veto') {
+            console.warn('🚫 switchPage заблокирован во время ready_check →', page);
+            return;
+        }
+        return _origSwitchPage.apply(this, [page, ...args]);
+    };
+    window._switchPageLocked = true;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 🛡️ БЛОКИРОВКА checkActiveRoom ВО ВРЕМЯ ready_check
+// ═══════════════════════════════════════════════════════════════
+if (!window._checkActiveRoomLocked) {
+    const _origCheckActiveRoom = window.checkActiveRoom;
+    window.checkActiveRoom = async function(...args) {
+        if (window._onReadyCheckScreen && currentMatch?.status === 'ready_check') {
+            console.warn('🚫 checkActiveRoom заблокирован во время ready_check');
+            return;
+        }
+        return _origCheckActiveRoom.apply(this, args);
+    };
+    window._checkActiveRoomLocked = true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ⏱️ ТАЙМЕР — переписываем через СЕРВЕРНОЕ время
+// ═══════════════════════════════════════════════════════════════
+function startReadyCheckCountdown() {
+    if (_readyCheckTimer) clearInterval(_readyCheckTimer);
+
+    // Принудительная синхронизация
+    if (!_serverTimeSynced) syncServerTime();
+
+    _readyCheckTimer = setInterval(async () => {
+        if (!currentMatch || currentMatch.status !== 'ready_check') {
+            clearInterval(_readyCheckTimer);
+            _readyCheckTimer = null;
+            return;
+        }
+
+        // 🔥 Считаем от СЕРВЕРНОГО времени
+        const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
+        const elapsed = Math.floor((serverNow() - startedAt) / 1000);
+        const timeLeft = Math.max(0, READY_CHECK_DURATION - elapsed);
+
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        const timeText = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+
+        const timerEl = document.querySelector('#vetoContent [style*="Orbitron"]');
+        if (timerEl) {
+            timerEl.textContent = timeText;
+            if (timeLeft <= 30) {
+                timerEl.style.color = 'var(--red)';
+                timerEl.style.textShadow = '0 0 24px rgba(255,84,112,0.6)';
+            } else {
+                timerEl.style.color = 'var(--emerald)';
+                timerEl.style.textShadow = '0 0 24px rgba(var(--emerald-rgb),0.6)';
+            }
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(_readyCheckTimer);
+            _readyCheckTimer = null;
+            await finishReadyCheck(false);
+            return;
+        }
+    }, 500);   // 500мс — точнее чем 1000мс
+}
+window.startReadyCheckCountdown = startReadyCheckCountdown;
+
+// ═══════════════════════════════════════════════════════════════
+// 🔁 ПОСЛЕ ЗАВЕРШЕНИЯ — снимаем флаг
+// ═══════════════════════════════════════════════════════════════
+if (!window._finishReadyCheckPatched) {
+    const _origFinish = window.finishReadyCheck;
+    window.finishReadyCheck = async function(success) {
+        window._onReadyCheckScreen = false;
+        if (_readyCheckTimer) { clearInterval(_readyCheckTimer); _readyCheckTimer = null; }
+        if (_readyCheckRefreshTimer) { clearInterval(_readyCheckRefreshTimer); _readyCheckRefreshTimer = null; }
+        return _origFinish.apply(this, arguments);
+    };
+    window._finishReadyCheckPatched = true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🚨 ГЛАВНЫЙ FALLBACK — если игрока не перекинуло, кидаем принудительно
+// ═══════════════════════════════════════════════════════════════
+setInterval(async () => {
+    if (!currentUser) return;
+    if (window._onReadyCheckScreen) return;
+
+    // Есть ли активный матч в статусе ready_check, где я игрок?
+    try {
+        const me = Number(currentUser.telegram_id);
+        const { data: matches } = await sb.from('game_matches')
+            .select('id, status, team_a_players, team_b_players, ready_check_started_at, ready_check_data')
+            .eq('status', 'ready_check')
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        for (const m of matches || []) {
+            const allIds = [
+                ...(m.team_a_players || []),
+                ...(m.team_b_players || [])
+            ].map(p => Number(p.telegram_id));
+
+            if (allIds.includes(me)) {
+                console.log('🚨 Fallback: игрок не на экране ready_check, но матч активен — принудительно кидаем');
+                currentMatch = m;
+                haptic('heavy');
+                showReadyCheckScreen();
+                subscribeMatchRealtime();
+                return;
+            }
+        }
+    } catch (e) {}
+}, 3000);
+
+console.log('⏱️ Ready Check Fix загружен: серверное время + защита перехода');
 async function renderReadyCheck() {
     const content = document.getElementById('vetoContent');
     if (!content || !currentMatch) return;
@@ -35038,25 +35187,36 @@ async function tryFinishMatch(matchId) {
 // ============================================================
 async function finishMatch(matchId, result) {
     try {
-        // 🔥 Определяем, я ли выиграл — ДО вызова RPC
-        // (нужно для квестов, которые считаются на клиенте)
-        const { data: match } = await sb.from('game_matches')
-            .select('team_a_players, team_b_players, status')
+        // 🔥 Проверяем статус СВЕЖИЙ — вдруг уже завершено другим клиентом/mm-tick
+        const { data: fresh } = await sb.from('game_matches')
+            .select('status, team_a_players, team_b_players, result_status')
             .eq('id', matchId)
             .single();
 
-        if (!match) { showToast('Матч не найден'); return; }
-        if (match.status === 'finished') return; // защита от двойного вызова
+        if (!fresh) { showToast('Матч не найден'); return; }
 
+        // Если матч уже finished — не трогаем
+        if (fresh.status === 'finished') {
+            console.log('ℹ️ Матч уже завершён, пропускаем finish_match');
+            return;
+        }
+
+        // 🔥 Если уже disputed — тоже не трогаем
+        if (fresh.result_status === 'disputed') {
+            console.log('ℹ️ Матч уже в споре, пропускаем finish_match');
+            return;
+        }
+
+        // Определяем свою команду
         const me = Number(currentUser?.telegram_id);
-        const teamA = match.team_a_players || [];
-        const teamB = match.team_b_players || [];
+        const teamA = fresh.team_a_players || [];
+        const teamB = fresh.team_b_players || [];
         const iAmInA = teamA.some(p => Number(p.telegram_id) === me);
         const iAmInB = teamB.some(p => Number(p.telegram_id) === me);
         const myTeam = iAmInA ? 'A' : (iAmInB ? 'B' : null);
         const isWinnerMe = myTeam && myTeam === result.winner;
 
-        // 🔥 Вызов RPC — вся логика в одной транзакции
+        // 🔥 Вызываем RPC — вся логика в одной транзакции
         const { data: rpcResult, error: rpcErr } = await sb.rpc('finish_match', {
             p_match_id: matchId,
             p_winner: result.winner,
@@ -35069,38 +35229,31 @@ async function finishMatch(matchId, result) {
         if (!rpcResult?.ok) {
             const err = rpcResult?.error || 'unknown';
             if (err === 'already_finished') {
-                console.log('Матч уже завершён другим клиентом');
+                console.log('ℹ️ finish_match: уже завершено');
+                return;
+            }
+            if (err === 'match_cancelled') {
+                console.log('ℹ️ finish_match: матч отменён');
                 return;
             }
             throw new Error('RPC error: ' + err);
         }
 
-        // ============================================================
-        // 🎯 Обновляем квесты (клиентская логика)
-        // ============================================================
+        // Квесты
         try {
             await updateQuestsProgress({
                 matches_played: 1,
                 wins: isWinnerMe ? 1 : 0,
                 mvps: 0
             });
-        } catch (e) {
-            console.warn('quests progress:', e);
-        }
+        } catch (e) {}
 
-        // ============================================================
-        // 🎉 Успех
-        // ============================================================
         haptic('heavy');
         showToast('🏆 Матч завершён!');
 
         const { data: refreshed } = await sb.from('game_matches')
-            .select('*')
-            .eq('id', matchId)
-            .single();
-
+            .select('*').eq('id', matchId).single();
         currentMatch = refreshed;
-
         showFinishedScreen();
 
     } catch (e) {
@@ -35108,7 +35261,6 @@ async function finishMatch(matchId, result) {
         showToast('Ошибка завершения: ' + (e?.message || e));
     }
 }
-
         // ============================================================
         // FINISHED
         // ============================================================
