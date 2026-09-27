@@ -42529,22 +42529,23 @@ function subscribeUsersRealtime() {
             if (coinsChanged) updateCoinsBadge();
 
             if (equipChanged) {
-                const itemIds = Object.values(currentUser.equipped_items || {});
-                const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
-                if (missing.length) {
+                // Догружаем ВСЕ предметы
+                const itemIds = Object.values(currentUser.equipped_items || {}).filter(Boolean);
+                if (itemIds.length) {
                     const { data: items } = await sb.from('shop_items')
-                        .select('id, category, value').in('id', missing);
+                        .select('id, category, value').in('id', itemIds);
                     (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
                 }
 
-                if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
-                    const cont = document.getElementById('profileContent');
-                    if (cont) applyCustomizationToElement(cont, currentUser).catch(() => {});
-                }
                 fillMenuDrawerUser();
-                applyCustomization();
                 applyHeaderAvatar(currentUser);
+                applyCustomization();
                 refreshAllMyAppearances();
+
+                // 🔥 ПОЛНЫЙ РЕРЕНДЕР ПРОФИЛЯ
+                if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
+                    renderProfileView(currentUser).catch(() => {});
+                }
             }
 
             if (eloChanged || statsChanged) {
@@ -45555,20 +45556,21 @@ async function refreshShopCategory() {
 let _equipInProgress = new Set();
 
 async function equipShopItem(itemId) {
-    if (_equipInProgress.has(itemId)) return;
-    _equipInProgress.add(itemId);
+    if (!currentUser) return;
+    if (AppState.equipInProgress?.has(itemId)) return;
+    if (!AppState.equipInProgress) AppState.equipInProgress = new Set();
+    AppState.equipInProgress.add(itemId);
 
-    // 🔥 Страховка на 8 сек
     const unlockTimer = setTimeout(() => {
-        _equipInProgress.delete(itemId);
-    }, 8000);
+        AppState.equipInProgress.delete(itemId);
+    }, 10000);
 
     try {
         const { data: item } = await sb.from('shop_items')
             .select('category').eq('id', itemId).single();
         if (!item) throw new Error('Item not found');
 
-        // Снять со всей категории
+        // Снимаем всё из этой категории
         const { data: sameCat } = await sb.from('shop_items')
             .select('id').eq('category', item.category);
         const sameCatIds = (sameCat || []).map(i => i.id);
@@ -45580,13 +45582,13 @@ async function equipShopItem(itemId) {
                 .in('item_id', sameCatIds);
         }
 
-        // Надеть новое
+        // Надеваем новое
         await sb.from('user_inventory')
             .update({ is_equipped: true })
             .eq('telegram_id', currentUser.telegram_id)
             .eq('item_id', itemId);
 
-        // Собрать equipped_items
+        // Собираем equipped_items
         const { data: inv } = await sb.from('user_inventory')
             .select('item_id, shop_items!inner(category)')
             .eq('telegram_id', currentUser.telegram_id)
@@ -45603,37 +45605,51 @@ async function equipShopItem(itemId) {
 
         currentUser.equipped_items = equipped;
 
-        // Догрузить value
-        const itemIds = Object.values(equipped);
-        const missing = itemIds.filter(id => !SHOP_ITEMS_CACHE[id]);
-        if (missing.length) {
+        // 🔥 Догружаем ВСЕ предметы, а не только отсутствующие
+        const itemIds = Object.values(equipped).filter(Boolean);
+        if (itemIds.length) {
             const { data: freshItems } = await sb.from('shop_items')
-                .select('id, category, value').in('id', missing);
+                .select('id, category, value').in('id', itemIds);
             (freshItems || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
         }
 
-        // Применить локально
+        // Применяем локально
         applyCustomization();
+        applyHeaderAvatar(currentUser);
         refreshAllMyAppearances();
-        refreshOpenProfileViews();
 
-        // Обновить модалку магазина
-        const shopModal = document.getElementById('shopCatModal');
-        if (shopModal) {
-            refreshShopCategory().catch(e => console.warn(e));
+        // 🔥 ЕСЛИ ПРОФИЛЬ ОТКРЫТ — ПЕРЕРИСОВЫВАЕМ ЕГО ПОЛНОСТЬЮ
+        if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
+            await renderProfileView(currentUser);
+        }
+
+        // 🔥 ЕСЛИ ОТКРЫТ ЧУЖОЙ ПРОФИЛЬ — тоже
+        const playerModal = document.getElementById('playerModal');
+        if (playerModal?.classList.contains('active') && currentProfileUserId) {
+            const { data: freshUser } = await sb.from('users')
+                .select('*').eq('telegram_id', currentProfileUserId).maybeSingle();
+            if (freshUser) {
+                const content = document.getElementById('playerModalContent');
+                if (content) await applyCustomizationToElement(content, freshUser);
+            }
+        }
+
+        // Обновляем модалку магазина
+        if (document.getElementById('shopCatModal')) {
+            await refreshShopCategory();
         }
 
         showToast('✅ Надето');
         haptic('medium');
+
     } catch (e) {
         console.error('equipShopItem:', e);
         showToast('❌ ' + e.message);
     } finally {
         clearTimeout(unlockTimer);
-        _equipInProgress.delete(itemId);
+        AppState.equipInProgress.delete(itemId);
     }
 }
-
 // ============================================================
 // 🎨 ГЛОБАЛЬНАЯ КАСТОМИЗАЦИЯ — только для СВОЕГО профиля
 // (не трогаем глобальные CSS-переменные, чтобы не влиять на других)
@@ -50966,6 +50982,7 @@ function closeAddCustomBackgroundSheet() {
     const ov = document.getElementById('addBgOverlay');
     const sh = document.getElementById('addBgSheet');
     if (ov) ov.remove();
+    if (sh) sh.remove();
     AppState.newBgBlob = null;
 
     // Сброс инпутов
@@ -50974,7 +50991,7 @@ function closeAddCustomBackgroundSheet() {
     if (nameEl) nameEl.value = '';
     if (priceEl) priceEl.value = '1500';
 
-    console.log('🚪 Закрыл шит добавления фона');
+    console.log('🚪 Зикрыл шит добавления фона');
 }
 
 // ============================================================
@@ -50986,14 +51003,15 @@ function closeAddCustomBackgroundSheet() {
 // ============================================================
 async function uploadImageToStorage(blob, prefix = 'img') {
     const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
-    const tryBuckets = ['profile_backgrounds', 'branding', 'avatars', 'maps'];
+    const tryBuckets = ['profile_backgrounds', 'branding', 'avatars'];
     const errors = [];
 
     for (const bucket of tryBuckets) {
         try {
             console.log(`📤 Пробую bucket: ${bucket}`);
 
-            const { data: upData, error: upErr } = await sb.storage
+            // 🔥 Таймаут 15 сек на загрузку
+            const uploadPromise = sb.storage
                 .from(bucket)
                 .upload(fileName, blob, {
                     contentType: 'image/jpeg',
@@ -51001,12 +51019,17 @@ async function uploadImageToStorage(blob, prefix = 'img') {
                     cacheControl: '3600'
                 });
 
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('timeout 15s')), 15000)
+            );
+
+            const { data: upData, error: upErr } = await Promise.race([uploadPromise, timeoutPromise]);
+
             if (upErr) {
-                console.warn(`⚠️ ${bucket} upload error:`, upErr.message);
+                console.warn(`⚠️ ${bucket}:`, upErr.message);
                 errors.push(`${bucket}: ${upErr.message}`);
                 continue;
             }
-
             if (!upData?.path) {
                 errors.push(`${bucket}: пустой ответ`);
                 continue;
@@ -51017,31 +51040,13 @@ async function uploadImageToStorage(blob, prefix = 'img') {
             return { ok: true, url: urlData.publicUrl, bucket };
 
         } catch (e) {
-            console.error(`💥 ${bucket} exception:`, e);
+            console.error(`💥 ${bucket}:`, e.message);
             errors.push(`${bucket}: ${e.message}`);
         }
     }
 
-    // === Фолбэк на base64 ===
-    console.warn('⚠️ Все бакеты провалились, использую base64');
-    try {
-        const base64 = await blobToDataURL(blob);
-
-        // 🔥 Лимит поднят до 5MB — большинство сжатых картинок помещаются
-        if (base64 && base64.length < 5_000_000) {
-            console.log('✅ Fallback: base64, размер', Math.round(base64.length / 1024), 'KB');
-            return { ok: true, url: base64, bucket: 'base64' };
-        }
-
-        return {
-            ok: false,
-            error: `Все бакеты недоступны. Причина: ${errors.join('; ')}. Base64 слишком большой (${Math.round(base64.length / 1024)}KB)`
-        };
-    } catch (e) {
-        return { ok: false, error: errors.join('; ') || 'неизвестная ошибка' };
-    }
+    return { ok: false, error: errors.join('; ') || 'Все бакеты недоступны' };
 }
-
 // ============================================================
 // 🖼️ Blob → base64 (для фолбэка)
 // ============================================================
@@ -51069,7 +51074,7 @@ async function submitNewBackground() {
     const btn     = document.getElementById('addBgSubmitBtn');
 
     const name   = nameEl?.value.trim();
-    const price  = parseInt(priceEl?.value) || 0;
+    const price  = parseInt(priceEl?.value, 10) || 0;
     const rarity = rarEl?.value || 'rare';
     const blob   = AppState.newBgBlob;
 
@@ -51089,7 +51094,6 @@ async function submitNewBackground() {
     if (btn) { btn.disabled = true; btn.textContent = '⏳ ЗАГРУЗКА...'; }
 
     try {
-        // 1. Загружаем картинку
         showToast('⏳ Загружаю картинку...');
         const uploadResult = await uploadImageToStorage(blob, 'bg');
 
@@ -51097,9 +51101,9 @@ async function submitNewBackground() {
             throw new Error(uploadResult.error);
         }
 
-        console.log('✅ URL картинки:', uploadResult.url.slice(0, 100) + '...');
+        console.log('✅ URL картинки:', uploadResult.url.slice(0, 100));
 
-        // 2. Создаём товар в БД
+        // Создаём товар
         const itemId = `bg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
         const { error: insertErr } = await sb.from('shop_items').insert({
@@ -51116,7 +51120,7 @@ async function submitNewBackground() {
 
         if (insertErr) throw new Error('Магазин: ' + insertErr.message);
 
-        // 3. Обновляем кэш
+        // Добавляем в кэш
         SHOP_ITEMS_CACHE[itemId] = {
             id: itemId,
             category: 'profile_bg',
@@ -51128,104 +51132,21 @@ async function submitNewBackground() {
         showToast(`✅ Фон «${name}» добавлен!`);
         haptic('medium');
 
+        // 🔥 ЗАКРЫВАЕМ ШИТ СРАЗУ, без setTimeout
         closeAddCustomBackgroundSheet();
+        AppState.newBgBlob = null;
 
-        // 4. Открываем магазин на нужной категории
+        // 🔥 Перезагружаем магазин
         await loadShopItemsCache();
-        setTimeout(() => {
-            AppState.shopActiveCategory = 'profile_bg';
-            openShop();
-        }, 300);
+        setTimeout(() => openShop(), 300);
 
     } catch (e) {
         console.error('❌ submitNewBackground:', e);
         showToast('❌ ' + (e.message || 'Ошибка загрузки'));
-        if (btn) { btn.disabled = false; btn.textContent = origText || '✅ ДОБАВИТЬ В МАГАЗИН'; }
-    }
-}
-
-// ============================================================
-// 📈 ДОБАВИТЬ ФОН ГРАФИКА DXP В МАГАЗИН
-// ============================================================
-async function submitNewDxpBackground() {
-    if (!isCurrentUserAdmin()) {
-        showToast('❌ Только администратор');
-        return;
-    }
-
-    const nameEl  = document.getElementById('newDxpBgName');
-    const priceEl = document.getElementById('newDxpBgPrice');
-    const rarEl   = document.getElementById('newDxpBgRarity');
-    const btn     = document.getElementById('addDxpBgSubmitBtn');
-
-    const name   = nameEl?.value.trim();
-    const price  = parseInt(priceEl?.value, 10) || 0;
-    const rarity = rarEl?.value || 'epic';
-    const blob   = AppState.newDxpBgBlob;
-
-    console.log('📈 submitNewDxpBackground:', { name, price, rarity, blobSize: blob?.size });
-
-    if (!name || name.length < 2) {
-        showToast('⚠️ Введи название');
-        nameEl?.focus();
-        return;
-    }
-    if (!blob) {
-        showToast('⚠️ Загрузи картинку — нажми «📤 Выбрать файл»');
-        return;
-    }
-    if (btn?.disabled) return;
-
-    const origText = btn?.textContent;
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ ЗАГРУЗКА...'; }
-
-    try {
-        showToast('⏳ Загружаю картинку...');
-        const uploadResult = await uploadImageToStorage(blob, 'dxpbg');
-
-        if (!uploadResult.ok) {
-            throw new Error(uploadResult.error);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = origText || '✅ ДОБАВИТЬ В МАГАЗИН';
         }
-
-        const itemId = `dxpbg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-
-        const { error: insertErr } = await sb.from('shop_items').insert({
-            id: itemId,
-            category: 'dxp_chart_bg',
-            name: name,
-            description: 'Кастомный фон графика DXP',
-            price: price,
-            rarity: rarity,
-            value: { url: uploadResult.url },
-            is_available: true,
-            sort_order: 100,
-        });
-
-        if (insertErr) throw new Error('Магазин: ' + insertErr.message);
-
-        SHOP_ITEMS_CACHE[itemId] = {
-            id: itemId,
-            category: 'dxp_chart_bg',
-            name,
-            rarity,
-            value: { url: uploadResult.url }
-        };
-
-        showToast(`✅ Фон графика «${name}» добавлен!`);
-        haptic('medium');
-
-        closeAddDxpBackgroundSheet();
-
-        await loadShopItemsCache();
-        setTimeout(() => {
-            AppState.shopActiveCategory = 'dxp_chart_bg';
-            openShop();
-        }, 300);
-
-    } catch (e) {
-        console.error('❌ submitNewDxpBackground:', e);
-        showToast('❌ ' + (e.message || 'Ошибка загрузки'));
-        if (btn) { btn.disabled = false; btn.textContent = origText || '✅ ДОБАВИТЬ В МАГАЗИН'; }
     }
 }
 
