@@ -32715,29 +32715,62 @@ let _readyCheckTimer = null;
 let _readyCheckRefreshTimer = null;
 
 // ═══════════════════════════════════════════════════════════════
-// ⏱️ СЕРВЕРНОЕ ВРЕМЯ — защита от рассинхрона таймеров
+// 🕐 NTP-СТИЛЬ СИНХРОНИЗАЦИЯ ВРЕМЕНИ
+// Делает 5 запросов, считает медианный offset с учётом RTT
 // ═══════════════════════════════════════════════════════════════
 let _serverTimeOffset = 0;
 let _serverTimeSynced = false;
+let _serverTimeRtt = 0;
 
 async function syncServerTime() {
-    try {
-        const { data, error } = await sb.rpc('get_server_time');
-        if (error || !data) return;
-        const serverMs = new Date(data).getTime();
-        _serverTimeOffset = serverMs - Date.now();
-        _serverTimeSynced = true;
-        console.log('⏱️ Server time synced, offset:', _serverTimeOffset, 'ms');
-    } catch (e) {
-        console.warn('syncServerTime:', e);
+    const samples = [];
+    const N = 5;
+
+    for (let i = 0; i < N; i++) {
+        const t0 = Date.now();
+        try {
+            const { data, error } = await sb.rpc('get_server_time');
+            const t1 = Date.now();
+            if (error || !data) continue;
+
+            const serverMs = new Date(data).getTime();
+            const rtt = t1 - t0;              // полный RTT
+            const offset = serverMs - (t0 + rtt / 2); // offset с учётом RTT
+            samples.push({ offset, rtt });
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 80));
     }
+
+    if (samples.length === 0) return;
+
+    // Берём sample с наименьшим RTT — он самый точный
+    samples.sort((a, b) => a.rtt - b.rtt);
+    const best = samples[0];
+
+    _serverTimeOffset = best.offset;
+    _serverTimeRtt = best.rtt;
+    _serverTimeSynced = true;
+
+    console.log('🕐 Server time sync:', {
+        offset: best.offset + 'ms',
+        rtt: best.rtt + 'ms',
+        samples: samples.map(s => s.rtt + 'ms').join(', ')
+    });
 }
 
 function serverNow() {
     return Date.now() + _serverTimeOffset;
 }
-window.serverNow = serverNow;
 
+// 🔄 Пересинхронизация каждые 60 сек (часы дрейфуют)
+setInterval(() => {
+    if (document.hidden) return;
+    if (!_serverTimeSynced) return;
+    syncServerTime();
+}, 60000);
+
+window.serverNow = serverNow;
+window.syncServerTime = syncServerTime;
 // ═══════════════════════════════════════════════════════════════
 // ✅ READY CHECK — флаг + переписанный показ экрана
 // ═══════════════════════════════════════════════════════════════
@@ -32864,8 +32897,10 @@ if (!window._checkActiveRoomLocked) {
 function startReadyCheckCountdown() {
     if (_readyCheckTimer) clearInterval(_readyCheckTimer);
 
-    // Принудительная синхронизация
     if (!_serverTimeSynced) syncServerTime();
+
+    // 🔥 Считаем точный момент завершения в серверном времени
+    let deadline = null;
 
     _readyCheckTimer = setInterval(async () => {
         if (!currentMatch || currentMatch.status !== 'ready_check') {
@@ -32874,17 +32909,23 @@ function startReadyCheckCountdown() {
             return;
         }
 
-        // 🔥 Считаем от СЕРВЕРНОГО времени
+        // Пересчитываем deadline только если его ещё нет
+        // или если ready_check_started_at изменился
         const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
-        const elapsed = Math.floor((serverNow() - startedAt) / 1000);
-        const timeLeft = Math.max(0, READY_CHECK_DURATION - elapsed);
+        if (deadline === null) {
+            deadline = startedAt + READY_CHECK_DURATION * 1000;
+        }
+
+        // Сколько серверных мс осталось
+        const remainingMs = deadline - serverNow();
+        const timeLeft = Math.max(0, Math.ceil(remainingMs / 1000));
 
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
         const timeText = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
 
         const timerEl = document.querySelector('#vetoContent [style*="Orbitron"]');
-        if (timerEl) {
+        if (timerEl && timerEl.textContent !== timeText) {
             timerEl.textContent = timeText;
             if (timeLeft <= 30) {
                 timerEl.style.color = 'var(--red)';
@@ -32899,10 +32940,10 @@ function startReadyCheckCountdown() {
             clearInterval(_readyCheckTimer);
             _readyCheckTimer = null;
             await finishReadyCheck(false);
-            return;
         }
-    }, 500);   // 500мс — точнее чем 1000мс
+    }, 250);  // 250мс — точнее
 }
+
 window.startReadyCheckCountdown = startReadyCheckCountdown;
 
 // ═══════════════════════════════════════════════════════════════
@@ -33191,8 +33232,70 @@ async function confirmReady() {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 🕐 NTP-СИНХРОНИЗАЦИЯ ВРЕМЕНИ С СЕРВЕРОМ
+// ═══════════════════════════════════════════════════════════════
+let _serverTimeOffset = 0;
+let _serverTimeSynced = false;
+let _serverTimeRtt = 0;
+
+async function syncServerTime() {
+    const samples = [];
+    const N = 5;
+
+    for (let i = 0; i < N; i++) {
+        const t0 = Date.now();
+        try {
+            const { data, error } = await sb.rpc('get_server_time');
+            const t1 = Date.now();
+            if (error || !data) continue;
+
+            const serverMs = new Date(data).getTime();
+            const rtt = t1 - t0;
+            const offset = serverMs - (t0 + rtt / 2);
+            samples.push({ offset, rtt });
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 80));
+    }
+
+    if (samples.length === 0) return;
+
+    samples.sort((a, b) => a.rtt - b.rtt);
+    const best = samples[0];
+
+    _serverTimeOffset = best.offset;
+    _serverTimeRtt = best.rtt;
+    _serverTimeSynced = true;
+
+    console.log('🕐 Server time sync:', {
+        offset: best.offset + 'ms',
+        rtt: best.rtt + 'ms',
+    });
+}
+
+function serverNow() {
+    return Date.now() + _serverTimeOffset;
+}
+
+// Пересинхронизация каждые 60 сек
+setInterval(() => {
+    if (document.hidden) return;
+    if (!_serverTimeSynced) return;
+    syncServerTime();
+}, 60000);
+
+window.serverNow = serverNow;
+window.syncServerTime = syncServerTime;
+
+// ═══════════════════════════════════════════════════════════════
+// ⏱️ ТАЙМЕР — от СЕРВЕРНОГО времени
+// ═══════════════════════════════════════════════════════════════
 function startReadyCheckCountdown() {
     if (_readyCheckTimer) clearInterval(_readyCheckTimer);
+
+    if (!_serverTimeSynced) syncServerTime();
+
+    let deadline = null;
 
     _readyCheckTimer = setInterval(async () => {
         if (!currentMatch || currentMatch.status !== 'ready_check') {
@@ -33202,34 +33305,38 @@ function startReadyCheckCountdown() {
         }
 
         const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
-        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-        const timeLeft = Math.max(0, READY_CHECK_DURATION - elapsed);
+        if (deadline === null) {
+            deadline = startedAt + READY_CHECK_DURATION * 1000;
+        }
+
+        const remainingMs = deadline - serverNow();
+        const timeLeft = Math.max(0, Math.ceil(remainingMs / 1000));
 
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
-        const timeText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        const timeText = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
 
-        // Обновляем только цифру таймера
         const timerEl = document.querySelector('#vetoContent [style*="Orbitron"]');
-        if (timerEl) {
+        if (timerEl && timerEl.textContent !== timeText) {
             timerEl.textContent = timeText;
             if (timeLeft <= 30) {
                 timerEl.style.color = 'var(--red)';
                 timerEl.style.textShadow = '0 0 24px rgba(255,84,112,0.6)';
+            } else {
+                timerEl.style.color = 'var(--emerald)';
+                timerEl.style.textShadow = '0 0 24px rgba(var(--emerald-rgb),0.6)';
             }
         }
 
-        // Время вышло
         if (timeLeft <= 0) {
             clearInterval(_readyCheckTimer);
             _readyCheckTimer = null;
             await finishReadyCheck(false);
-            return;
         }
-
-    }, 1000);
+    }, 250);
 }
 
+window.startReadyCheckCountdown = startReadyCheckCountdown;
 async function finishReadyCheck(success) {
     if (!currentMatch) return;
 
