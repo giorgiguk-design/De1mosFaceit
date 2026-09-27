@@ -27940,8 +27940,8 @@ function openAdminShopMenu() {
 
 function closeAdminShopMenu() {
     document.getElementById('adminShopOverlay')?.remove();
-    document.getElementById('adminShopSheet')?.remove();     // 🔥 УДАЛЯЕМ SHEET
-}      
+    document.getElementById('adminShopSheet')?.remove();    // 🔥 ГЛАВНОЕ — удаляем и sheet
+}
 
 // ============================================================
 // 💀 SKELETON LOADER
@@ -51237,41 +51237,86 @@ async function submitNewDxpBackground() {
 async function openAddShopItemSheet(category) {
     if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
 
+    // 🔥 Чистим ВСЕ старые модалки, которые могут перекрывать форму
     document.getElementById('shopItemSheetOverlay')?.remove();
     document.getElementById('shopItemSheet')?.remove();
+    document.getElementById('adminShopOverlay')?.remove();
+    document.getElementById('adminShopSheet')?.remove();
+
+    // 🔥 На всякий случай убираем все открытые шиты, кроме целевых
+    document.querySelectorAll('.sheet.active').forEach(s => {
+        if (s.id !== 'shopItemSheet') s.classList.remove('active');
+    });
 
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay active';
     overlay.id = 'shopItemSheetOverlay';
+    overlay.style.zIndex = '9000';
     overlay.onclick = (e) => { if (e.target === overlay) closeShopItemSheet(); };
 
     const sheet = document.createElement('div');
     sheet.className = 'sheet active';
     sheet.id = 'shopItemSheet';
-    sheet.style.zIndex = '810';
+    sheet.style.zIndex = '9001';
     sheet.style.maxHeight = '90vh';
     sheet.style.overflowY = 'auto';
+    sheet.style.pointerEvents = 'auto';
+
+    const catLabels = {
+        nickname_color: 'Цвет ника',
+        avatar_frame: 'Рамка',
+        badge: 'Значок',
+        title: 'Титул',
+    };
 
     sheet.innerHTML = `
         <div class="sheet-title">➕ Новый товар</div>
 
         <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px;">
-            Категория: <b style="color: var(--emerald);">${category}</b>
+            Категория: <b style="color: var(--emerald);">${catLabels[category] || category}</b>
         </div>
 
         <div style="margin-bottom: 10px;">
-            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">НАЗВАНИЕ</label>
-            <input type="text" class="field-input" id="shopItemName" placeholder="Название товара" maxlength="40">
+            <label class="field-label">НАЗВАНИЕ</label>
+            <input type="text"
+                   class="field-input"
+                   id="shopItemName"
+                   placeholder="Название товара"
+                   maxlength="40"
+                   autocomplete="off"
+                   style="pointer-events: auto !important;
+                          -webkit-user-select: text !important;
+                          user-select: text !important;
+                          touch-action: manipulation;">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
             <div>
-                <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">ЦЕНА</label>
-                <input type="number" class="field-input" id="shopItemPrice" value="500" min="0" max="999999">
+                <label class="field-label">ЦЕНА (МОНЕТ)</label>
+                <input type="text"
+                       class="field-input"
+                       id="shopItemPrice"
+                       value="500"
+                       inputmode="numeric"
+                       pattern="[0-9]*"
+                       autocomplete="off"
+                       style="pointer-events: auto !important;
+                              -webkit-user-select: text !important;
+                              user-select: text !important;
+                              touch-action: manipulation;
+                              text-align: center;
+                              font-family: 'JetBrains Mono', monospace;
+                              font-weight: 800;">
             </div>
             <div>
-                <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">РЕДКОСТЬ</label>
-                <select class="field-input" id="shopItemRarity" style="padding: 12px;">
+                <label class="field-label">РЕДКОСТЬ</label>
+                <select class="field-input"
+                        id="shopItemRarity"
+                        style="padding: 12px;
+                               pointer-events: auto !important;
+                               touch-action: manipulation;
+                               -webkit-user-select: text !important;
+                               user-select: text !important;">
                     <option value="common">Common</option>
                     <option value="rare" selected>Rare</option>
                     <option value="epic">Epic</option>
@@ -51281,24 +51326,48 @@ async function openAddShopItemSheet(category) {
         </div>
 
         <div style="margin-bottom: 14px;">
-            <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">
-                VALUE (JSON)
-            </label>
-            <textarea class="field-input" id="shopItemValue" style="min-height: 100px; font-family: 'Courier New', monospace; font-size: 12px;" placeholder='{"color": "#ff2e6d"}'></textarea>
+            <label class="field-label">VALUE (JSON)</label>
+            <textarea class="field-input"
+                      id="shopItemValue"
+                      style="min-height: 100px;
+                             font-family: 'Courier New', monospace;
+                             font-size: 12px;
+                             pointer-events: auto !important;
+                             -webkit-user-select: text !important;
+                             user-select: text !important;
+                             touch-action: manipulation;
+                             resize: vertical;"
+                      placeholder='{"color": "#ff2e6d"}'></textarea>
             <div style="font-size: 10px; color: var(--hint); margin-top: 6px; line-height: 1.4;">
                 ${getValueHint(category)}
             </div>
         </div>
 
-        <button class="profile-action-btn save" id="shopItemSaveBtn" onclick="saveShopItem('${category}', null)">✅ ДОБАВИТЬ</button>
-        <button class="sheet-cancel" onclick="closeShopItemSheet()">ОТМЕНА</button>
+        <button class="profile-action-btn save"
+                id="shopItemSaveBtn"
+                onclick="saveShopItem('${category}', null)"
+                style="pointer-events: auto !important;">
+            ✅ ДОБАВИТЬ
+        </button>
+        <button class="sheet-cancel"
+                onclick="closeShopItemSheet()"
+                style="pointer-events: auto !important;">
+            ОТМЕНА
+        </button>
     `;
 
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
     haptic('medium');
-}
 
+    // 🔥 Автофокус на название через 250мс
+    setTimeout(() => {
+        const nameInput = document.getElementById('shopItemName');
+        if (nameInput) {
+            try { nameInput.focus(); } catch (e) {}
+        }
+    }, 250);
+}
 // ===== РЕДАКТИРОВАТЬ ТОВАР =====
 async function openEditShopItemSheet(itemId) {
     if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
@@ -51506,7 +51575,8 @@ async function saveShopItem(category, itemId) {
     if (!isCurrentUserAdmin()) return;
 
     const name = document.getElementById('shopItemName')?.value.trim();
-    const price = parseInt(document.getElementById('shopItemPrice')?.value) || 0;
+    const priceStr = document.getElementById('shopItemPrice')?.value.trim() || '0';
+    const price = parseInt(priceStr.replace(/\D/g, ''), 10) || 0;
     const rarity = document.getElementById('shopItemRarity')?.value || 'common';
     const valueRaw = document.getElementById('shopItemValue')?.value.trim();
 
