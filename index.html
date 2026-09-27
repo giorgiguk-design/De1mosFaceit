@@ -23592,6 +23592,251 @@ html.lite-mode .case-card-v2:hover {
     align-items: center;
     justify-content: center;
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* 🎁 ЭКРАН КЕЙСА (детали)                                          */
+/* ═══════════════════════════════════════════════════════════════ */
+.case-detail-hero {
+    position: relative;
+    padding: 70px 20px 30px;
+    margin-bottom: 20px;
+    background:
+        radial-gradient(ellipse 90% 100% at 50% 0%, rgba(var(--case-rgb), 0.15), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.9));
+    border: 1px solid rgba(var(--case-rgb), 0.35);
+    border-radius: 22px;
+    text-align: center;
+    overflow: hidden;
+}
+.case-detail-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent,
+        var(--case-color) 50%,
+        transparent);
+}
+
+.case-detail-back {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(var(--case-rgb), 0.4);
+    border-radius: 10px;
+    color: var(--case-color);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    z-index: 5;
+}
+.case-detail-back:hover {
+    background: rgba(var(--case-rgb), 0.15);
+    border-color: var(--case-color);
+}
+.case-detail-back:active { transform: scale(0.94); }
+
+.case-detail-chest {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0 6px;
+    animation: chestFloat 4s ease-in-out infinite;
+}
+.case-detail-chest .case-chest-v2 {
+    width: 180px !important;
+    height: 180px !important;
+}
+
+.case-detail-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #fff;
+    margin-top: 12px;
+    text-shadow: 0 0 20px rgba(var(--case-rgb), 0.6);
+    text-transform: uppercase;
+}
+.case-detail-sub {
+    font-size: 12px;
+    color: var(--hint);
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+.case-detail-desc {
+    font-size: 12px;
+    color: var(--hint);
+    line-height: 1.5;
+    max-width: 400px;
+    margin: 12px auto 0;
+}
+
+.case-detail-info {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 16px 0 20px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--hint);
+    letter-spacing: 0.5px;
+}
+
+.case-detail-open-btn {
+    width: 100%;
+    max-width: 400px;
+    padding: 18px 24px;
+    background: linear-gradient(135deg,
+        var(--case-color),
+        rgba(var(--case-rgb), 0.7));
+    border: none;
+    border-radius: 16px;
+    color: #04140e;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    cursor: pointer;
+    box-shadow:
+        0 8px 32px rgba(var(--case-rgb), 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.22s ease;
+    animation: openBtnPulse 2.4s ease-in-out infinite;
+}
+@keyframes openBtnPulse {
+    0%, 100% { box-shadow: 0 8px 32px rgba(var(--case-rgb), 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+    50%      { box-shadow: 0 8px 44px rgba(var(--case-rgb), 0.7), 0 0 60px rgba(var(--case-rgb), 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+}
+.case-detail-open-btn:hover { transform: translateY(-3px); }
+.case-detail-open-btn:active { transform: scale(0.98); }
+.case-detail-open-btn.free {
+    background: linear-gradient(135deg, #ffd700, #b8860b);
+    color: #000;
+    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.5);
+}
+.case-detail-open-btn.cooldown {
+    background: rgba(255,255,255,0.05);
+    color: var(--hint);
+    cursor: not-allowed;
+    animation: none;
+    box-shadow: none;
+}
+
+/* ─── Содержимое ─── */
+.case-detail-items-section {
+    padding: 0 4px 40px;
+}
+.case-detail-rarity-block {
+    margin-bottom: 20px;
+}
+.case-detail-rarity-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    padding: 8px 4px 10px;
+    text-transform: uppercase;
+}
+.case-detail-rarity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.case-detail-items-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+@media (min-width: 600px) {
+    .case-detail-items-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+}
+@media (min-width: 1024px) {
+    .case-detail-items-grid { grid-template-columns: repeat(6, 1fr); gap: 12px; }
+}
+
+.case-detail-item {
+    position: relative;
+    padding: 10px 8px;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 110px;
+}
+.case-detail-item:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(0, 0, 0, 0.5) 100%);
+}
+.case-detail-item:active { transform: scale(0.97); }
+.case-detail-item-preview {
+    width: 100%;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+}
+.case-detail-item-preview > * { max-width: 100%; max-height: 100%; }
+.case-detail-item-name {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    line-height: 1.2;
+    pointer-events: none;
+}
+.case-detail-item-rarity {
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+/* ─── Адаптив ─── */
+@media (max-width: 420px) {
+    .case-detail-chest .case-chest-v2 {
+        width: 140px !important;
+        height: 140px !important;
+    }
+    .case-detail-name { font-size: 22px; letter-spacing: 2px; }
+    .case-detail-open-btn { font-size: 13px; padding: 16px 20px; }
+    .case-detail-items-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .case-detail-item { min-height: 100px; padding: 8px 6px; }
+    .case-detail-item-preview { height: 48px; }
+}
+
+html.lite-mode .case-detail-chest,
+html.lite-mode .case-detail-open-btn {
+    animation: none;
+}
     
 </style>
 </head>
@@ -25293,9 +25538,9 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool) {
     const meta = rarityMeta[rarity] || rarityMeta.common;
 
     // ---- Собираем пул предметов для ленты ----
-    let reelPool = (pool && pool.length)
-        ? pool
-        : Object.values(SHOP_ITEMS_CACHE).filter(i => i && i.id && i.name);
+let reelPool = (pool && pool.length)
+    ? pool
+    : Object.values(SHOP_ITEMS_CACHE).filter(i => i && i.id && i.name);
 
     if (!reelPool.length) {
         reelPool = [{
@@ -26077,19 +26322,18 @@ async function openCaseById(caseId) {
 
     haptic('heavy');
 
-    // Загружаем пул из этого кейса для рулетки
-    const { data: poolRaw } = await sb.from('case_items')
-        .select('item_id, weight, shop_items!inner(id, name, category, rarity, value)')
-        .eq('case_id', caseId);
+// Загружаем пул из этого кейса для рулетки
+const { data: poolRaw } = await sb.from('case_items')
+    .select('item_id, weight, shop_items!inner(id, name, category, rarity, value)')
+    .eq('case_id', caseId);
 
-    const pool = (poolRaw || [])
-        .map(r => ({ ...r.shop_items, weight: r.weight }))
-        .filter(i => i && i.id);
-    // Обязательно загружаем в кеш для рендера
-    pool.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+const pool = (poolRaw || [])
+    .map(r => ({ ...r.shop_items, weight: r.weight }))
+    .filter(i => i && i.id);
+pool.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
 
-    // Показываем анимацию (существующая функция showCaseOpening)
-    showCaseOpening(item, item.rarity, isDuplicate, refund, caseId, pool);
+// Показываем анимацию
+showCaseOpening(item, item.rarity, isDuplicate, refund, caseId, pool);  // ← pool передаётся
 }
 
 // ────────────────────────────────────────────────────────────
@@ -26245,52 +26489,337 @@ async function removeCaseItem(ciId, caseId) {
 // АДМИН: ДОБАВИТЬ ПРЕДМЕТ В КЕЙС
 // ────────────────────────────────────────────────────────────
 async function openAddCaseItemSheet(caseId) {
-    const { data: items } = await sb.from('shop_items')
-        .select('id, name, category, rarity, price')
-        .eq('is_available', true)
-        .order('category').order('name');
+    if (!isCurrentUserAdmin()) return;
 
-    const { data: existing } = await sb.from('case_items')
-        .select('item_id').eq('case_id', caseId);
-    const inCase = new Set((existing || []).map(e => e.item_id));
+    // 🔥 Загружаем все предметы магазина + что уже в кейсе
+    const [allItemsRes, inCaseRes] = await Promise.all([
+        sb.from('shop_items')
+            .select('id, name, category, rarity, price, value')
+            .eq('is_available', true)
+            .order('category')
+            .order('name'),
+        sb.from('case_items').select('item_id').eq('case_id', caseId)
+    ]);
+
+    const allItems = allItemsRes.data || [];
+    const inCase = new Set((inCaseRes.data || []).map(e => e.item_id));
+
+    const catMeta = {
+        avatar_frame:   { label: '🖼 Рамки',       color: '#a78bfa' },
+        badge:          { label: '🏅 Значки',      color: '#00e08a' },
+        nickname_color: { label: '🎨 Цвет ника',   color: '#ff5470' },
+        title:          { label: '👑 Титулы',      color: '#ffd700' },
+        profile_bg:     { label: '🌄 Фоны',        color: '#4fc3f7' },
+    };
+
+    // Группируем по категориям
+    const grouped = {};
+    allItems.forEach(i => {
+        (grouped[i.category] ||= []).push(i);
+    });
 
     document.getElementById('addCaseItemOverlay')?.remove();
+    document.getElementById('addCaseItemSheet')?.remove();
+
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay active';
     overlay.id = 'addCaseItemOverlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.style.zIndex = '9000';
+    overlay.onclick = (e) => { if (e.target === overlay) closeAddCaseItemSheet(); };
 
     const sheet = document.createElement('div');
     sheet.className = 'sheet active';
-    sheet.style.zIndex = '815';
-    sheet.style.maxHeight = '85vh';
+    sheet.id = 'addCaseItemSheet';
+    sheet.style.zIndex = '9001';
+    sheet.style.maxHeight = '92vh';
     sheet.style.overflowY = 'auto';
 
+    // Первый экран — категории
     sheet.innerHTML = `
-        <div class="sheet-title">➕ Добавить предмет</div>
-        <input type="text" class="field-input" id="addCiSearch" placeholder="🔍 Поиск..." style="margin-bottom: 10px;"
-               oninput="(function(v){document.querySelectorAll('#addCiList [data-name]').forEach(el => {
-                   el.style.display = el.dataset.name.toLowerCase().includes(v.toLowerCase()) ? '' : 'none';
-               });})(this.value)">
-        <div id="addCiList">
-            ${(items || []).filter(i => !inCase.has(i.id)).map(i => `
-                <button class="sheet-option" data-name="${escapeHtml(i.name)}"
-                        onclick="addCaseItem('${caseId}', '${i.id}', this)">
-                    <span style="font-size: 16px;">📦</span>
-                    <div style="flex:1;text-align:left;">
-                        <div style="font-weight:800;font-size:13px;">${escapeHtml(i.name)}</div>
-                        <div style="font-size:10px;color:var(--hint);">${i.category} · ${i.rarity}</div>
-                    </div>
-                </button>
-            `).join('') || '<div class="empty" style="font-size: 12px;">Все предметы уже в кейсе</div>'}
+        <div class="sheet-title">➕ Добавить предметы в кейс</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+            Выбери категорию, потом отметь нужные предметы
         </div>
-        <button class="sheet-cancel" onclick="document.getElementById('addCaseItemOverlay')?.remove()">ЗАКРЫТЬ</button>
+
+        <div id="addCaseCatList">
+            ${Object.entries(grouped).map(([cat, list]) => {
+                const meta = catMeta[cat] || { label: cat, color: 'var(--emerald)' };
+                const inCaseCount = list.filter(i => inCase.has(i.id)).length;
+                const available = list.length - inCaseCount;
+                return `
+                    <button class="sheet-option"
+                            onclick="openCaseCategoryAdd('${caseId}', '${cat}')"
+                            style="position: relative;">
+                        <span style="font-size: 18px;">${meta.label.split(' ')[0]}</span>
+                        <div style="flex: 1; text-align: left;">
+                            <div style="font-weight: 800; color: var(--text);">${meta.label.slice(2)}</div>
+                            <div style="font-size: 10px; color: var(--hint); margin-top: 2px;">
+                                Доступно: <b style="color: var(--emerald);">${available}</b> из ${list.length}
+                                · В кейсе: ${inCaseCount}
+                            </div>
+                        </div>
+                        <span style="color: var(--hint); font-size: 18px;">→</span>
+                    </button>
+                `;
+            }).join('') || '<div class="empty">Нет предметов в магазине</div>'}
+        </div>
+
+        <button class="sheet-cancel" onclick="closeAddCaseItemSheet()">ЗАКРЫТЬ</button>
     `;
 
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
+    haptic('medium');
 }
 
+function closeAddCaseItemSheet() {
+    document.getElementById('addCaseItemOverlay')?.remove();
+    document.getElementById('addCaseItemSheet')?.remove();
+}
+
+// ────────────────────────────────────────────────────────────
+// ЭКРАН КАТЕГОРИИ С ЧЕКБОКСАМИ
+// ────────────────────────────────────────────────────────────
+async function openCaseCategoryAdd(caseId, category) {
+    if (!isCurrentUserAdmin()) return;
+
+    const [itemsRes, inCaseRes] = await Promise.all([
+        sb.from('shop_items')
+            .select('id, name, rarity, price')
+            .eq('is_available', true)
+            .eq('category', category)
+            .order('rarity')
+            .order('name'),
+        sb.from('case_items').select('item_id').eq('case_id', caseId)
+    ]);
+
+    const items = itemsRes.data || [];
+    const inCase = new Set((inCaseRes.data || []).map(e => e.item_id));
+
+    const rarityColor = {
+        common: '#9aa7b5',
+        rare: '#4fc3f7',
+        epic: '#a78bfa',
+        legendary: '#ffd700',
+    };
+
+    const catMeta = {
+        avatar_frame:   '🖼 Рамки',
+        badge:          '🏅 Значки',
+        nickname_color: '🎨 Цвет ника',
+        title:          '👑 Титулы',
+        profile_bg:     '🌄 Фоны',
+    };
+
+    document.getElementById('addCaseItemOverlay')?.remove();
+    document.getElementById('addCaseItemSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'addCaseItemOverlay';
+    overlay.style.zIndex = '9000';
+    overlay.onclick = (e) => { if (e.target === overlay) closeAddCaseItemSheet(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'addCaseItemSheet';
+    sheet.style.zIndex = '9001';
+    sheet.style.maxHeight = '92vh';
+    sheet.style.overflowY = 'auto';
+
+    const selected = new Set();
+
+    sheet.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+            <button class="sheet-cancel"
+                    onclick="openAddCaseItemSheet('${caseId}')"
+                    style="width: 40px; height: 40px; padding: 0; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                ←
+            </button>
+            <div style="flex: 1;">
+                <div class="sheet-title" style="margin-bottom: 0; text-align: left;">
+                    ${catMeta[category] || category}
+                </div>
+                <div style="font-size: 10px; color: var(--hint); margin-top: 2px;">
+                    Отмечено: <b id="addCaseSelCount" style="color: var(--emerald);">0</b> из ${items.length}
+                </div>
+            </div>
+            <button class="sheet-cancel"
+                    onclick="toggleAllCaseItems(true)"
+                    style="width: 40px; height: 40px; padding: 0; flex-shrink: 0;">
+                ✓
+            </button>
+        </div>
+
+        <div style="max-height: 60vh; overflow-y: auto; padding-right: 4px; margin-bottom: 12px;">
+            ${items.map(i => {
+                const isInCase = inCase.has(i.id);
+                const color = rarityColor[i.rarity] || '#9aa7b5';
+                return `
+                    <div class="case-admin-item"
+                         data-item-id="${i.id}"
+                         data-in-case="${isInCase ? '1' : '0'}"
+                         onclick="toggleCaseItemSelect('${i.id}', this)"
+                         style="cursor: pointer; user-select: none; -webkit-user-select: none; border-left: 3px solid ${isInCase ? 'var(--emerald)' : color};">
+                        <div style="
+                            width: 22px; height: 22px;
+                            border-radius: 6px;
+                            border: 2px solid ${isInCase ? 'var(--emerald)' : 'var(--border-strong)'};
+                            background: ${isInCase ? 'var(--emerald)' : 'transparent'};
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: #04140e;
+                            font-size: 13px;
+                            font-weight: 900;
+                            flex-shrink: 0;
+                            transition: all 0.18s ease;
+                        " class="case-check-box">${isInCase ? '✓' : ''}</div>
+
+                        <div class="case-admin-item-info">
+                            <div class="case-admin-item-name">${escapeHtml(i.name)}</div>
+                            <div class="case-admin-item-meta">
+                                <span style="color: ${color}; font-weight: 800; text-transform: uppercase;">${i.rarity}</span>
+                                · 📦 ${i.price || 0}
+                                ${isInCase ? ' · <span style="color: var(--emerald); font-weight: 800;">УЖЕ В КЕЙСЕ</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<div class="empty">Нет предметов в этой категории</div>'}
+        </div>
+
+        <button class="profile-action-btn save"
+                id="addCaseSubmitBtn"
+                onclick="applyCaseItems('${caseId}')">
+            💾 ПРИМЕНИТЬ
+        </button>
+        <button class="sheet-cancel" onclick="openAddCaseItemSheet('${caseId}')">← НАЗАД</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    // Восстанавливаем состояние выбора
+    window._caseAddSelected = new Set(
+        items.filter(i => inCase.has(i.id)).map(i => i.id)
+    );
+    updateCaseSelCount();
+
+    haptic('medium');
+}
+
+// ────────────────────────────────────────────────────────────
+// ТОГГЛ ВЫБОРА
+// ────────────────────────────────────────────────────────────
+function toggleCaseItemSelect(itemId, el) {
+    const box = el.querySelector('.case-check-box');
+    if (!box) return;
+
+    const wasInCase = el.dataset.inCase === '1';
+    let isSelected;
+
+    if (window._caseAddSelected?.has(itemId)) {
+        window._caseAddSelected.delete(itemId);
+        isSelected = false;
+    } else {
+        window._caseAddSelected.add(itemId);
+        isSelected = true;
+    }
+
+    // Визуально
+    if (isSelected) {
+        box.style.background = 'var(--emerald)';
+        box.style.borderColor = 'var(--emerald)';
+        box.textContent = '✓';
+    } else {
+        box.style.background = 'transparent';
+        box.style.borderColor = 'var(--border-strong)';
+        box.textContent = '';
+    }
+
+    updateCaseSelCount();
+    haptic('light');
+}
+
+function toggleAllCaseItems(selectAll) {
+    const sel = window._caseAddSelected;
+    if (!sel) return;
+
+    document.querySelectorAll('#addCaseItemSheet [data-item-id]').forEach(el => {
+        const id = el.dataset.itemId;
+        const box = el.querySelector('.case-check-box');
+        if (selectAll) {
+            sel.add(id);
+            box.style.background = 'var(--emerald)';
+            box.style.borderColor = 'var(--emerald)';
+            box.textContent = '✓';
+        } else {
+            sel.delete(id);
+            box.style.background = 'transparent';
+            box.style.borderColor = 'var(--border-strong)';
+            box.textContent = '';
+        }
+    });
+    updateCaseSelCount();
+}
+
+function updateCaseSelCount() {
+    const el = document.getElementById('addCaseSelCount');
+    if (el) el.textContent = String(window._caseAddSelected?.size || 0);
+}
+
+// ────────────────────────────────────────────────────────────
+// ПРИМЕНИТЬ ИЗМЕНЕНИЯ
+// ────────────────────────────────────────────────────────────
+async function applyCaseItems(caseId) {
+    const selected = window._caseAddSelected;
+    if (!selected) return;
+
+    const btn = document.getElementById('addCaseSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ СОХРАНЕНИЕ...'; }
+
+    try {
+        // Что уже в кейсе
+        const { data: currentInCase } = await sb.from('case_items')
+            .select('item_id').eq('case_id', caseId);
+        const currentIds = new Set((currentInCase || []).map(e => e.item_id));
+
+        // Что нужно добавить
+        const toAdd = [...selected].filter(id => !currentIds.has(id));
+        // Что нужно удалить
+        const toRemove = [...currentIds].filter(id => !selected.has(id));
+
+        // Удаляем
+        if (toRemove.length) {
+            await sb.from('case_items')
+                .delete()
+                .eq('case_id', caseId)
+                .in('item_id', toRemove);
+        }
+
+        // Добавляем
+        if (toAdd.length) {
+            const rows = toAdd.map(id => ({
+                case_id: caseId,
+                item_id: id,
+                weight: 100,
+            }));
+            await sb.from('case_items').insert(rows);
+        }
+
+        showToast(`✅ Сохранено: +${toAdd.length} / −${toRemove.length}`);
+        haptic('medium');
+
+        window._caseAddSelected = null;
+        closeAddCaseItemSheet();
+        openCaseAdmin(caseId);
+    } catch (e) {
+        console.error('applyCaseItems:', e);
+        showToast('❌ ' + e.message);
+        if (btn) { btn.disabled = false; btn.textContent = '💾 ПРИМЕНИТЬ'; }
+    }
+}
 async function addCaseItem(caseId, itemId, btn) {
     if (btn?.disabled) return;
     if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
@@ -56653,6 +57182,204 @@ async function measurePing() {
 // Показываем пинг в sheet онлайн
 // (будет рядом с totalOnline)
 
+
+// ═══════════════════════════════════════════════════════════════
+// 🎁 ЭКРАН КЕЙСА (перед открытием)
+// ═══════════════════════════════════════════════════════════════
+async function openCaseDetail(caseId) {
+    if (!currentUser) return;
+
+    const { data: caseData } = await sb.from('cases')
+        .select('*').eq('id', caseId).single();
+    if (!caseData) { showToast('❌ Кейс не найден'); return; }
+
+    switchPage('case-detail');
+
+    // Создаём страницу если её нет
+    let page = document.getElementById('page-case-detail');
+    if (!page) {
+        page = document.createElement('div');
+        page.className = 'container page';
+        page.id = 'page-case-detail';
+        const dash = document.getElementById('page-dashboard');
+        dash?.parentNode?.insertBefore(page, dash.nextSibling);
+    }
+
+    page.innerHTML = '<div class="empty">Загрузка...</div>';
+
+    // Загружаем предметы кейса
+    const { data: caseItemsRaw } = await sb.from('case_items')
+        .select('item_id, weight, shop_items!inner(id, name, category, rarity, value, price)')
+        .eq('case_id', caseId);
+
+    const items = (caseItemsRaw || [])
+        .map(r => ({ ...r.shop_items, weight: r.weight }))
+        .filter(i => i && i.id);
+    items.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+    // Проверка daily
+    const isDaily = caseData.cooldown === 'daily';
+    const dailyInfo = isDaily ? await canOpenFreeCase() : null;
+
+    // Кнопка открытия
+    let actionHTML;
+    if (isDaily) {
+        if (dailyInfo?.can) {
+            actionHTML = `<button class="case-detail-open-btn free" onclick="openCaseById('${caseId}')">
+                🎁 ОТКРЫТЬ БЕСПЛАТНО
+            </button>`;
+        } else {
+            const hoursLeft = Math.ceil((dailyInfo?.timeLeft || 0) / 3600000);
+            actionHTML = `<button class="case-detail-open-btn cooldown" disabled>
+                ⏳ ДОСТУПНО ЧЕРЕЗ ${hoursLeft} Ч
+            </button>`;
+        }
+    } else {
+        actionHTML = `<button class="case-detail-open-btn" onclick="openCaseById('${caseId}')">
+            💰 ОТКРЫТЬ ЗА ${caseData.price} МОНЕТ
+        </button>`;
+    }
+
+    // Группируем предметы по редкости
+    const rarityMeta = {
+        common:    { label: 'ОБЫЧНЫЕ',     color: '#9aa7b5', weight: 1 },
+        rare:      { label: 'РЕДКИЕ',       color: '#4fc3f7', weight: 2 },
+        epic:      { label: 'ЭПИЧЕСКИЕ',   color: '#a78bfa', weight: 3 },
+        legendary: { label: 'ЛЕГЕНДАРНЫЕ', color: '#ffd700', weight: 4 },
+    };
+
+    const byRarity = {};
+    items.forEach(i => {
+        (byRarity[i.rarity || 'common'] ||= []).push(i);
+    });
+
+    const itemsHTML = Object.entries(byRarity)
+        .sort(([a], [b]) => (rarityMeta[a]?.weight || 0) - (rarityMeta[b]?.weight || 0))
+        .map(([rarity, list]) => {
+            const meta = rarityMeta[rarity] || rarityMeta.common;
+            return `
+                <div class="case-detail-rarity-block">
+                    <div class="case-detail-rarity-label" style="color: ${meta.color};">
+                        <span class="case-detail-rarity-dot" style="background: ${meta.color}; box-shadow: 0 0 8px ${meta.color};"></span>
+                        ${meta.label} (${list.length})
+                    </div>
+                    <div class="case-detail-items-grid">
+                        ${list.map(i => `
+                            <div class="case-detail-item"
+                                 style="border-color: ${meta.color}44;"
+                                 onclick="event.stopPropagation(); previewCaseItem('${i.id}')">
+                                <div class="case-detail-item-preview">
+                                    ${renderCaseItemPreview(i)}
+                                </div>
+                                <div class="case-detail-item-name">${escapeHtml(i.name)}</div>
+                                <div class="case-detail-item-rarity" style="color: ${meta.color};">${rarity.toUpperCase()}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+    page.innerHTML = `
+        <div class="case-detail-hero" style="--case-color: ${caseData.accent_color}; --case-rgb: ${caseData.accent_rgb};">
+            <button class="case-detail-back" onclick="switchPage('cases'); openCasesScreen();">
+                ← НАЗАД
+            </button>
+
+            <div class="case-detail-chest">
+                ${renderCaseChest(caseData.accent_color, caseData.accent_rgb)}
+            </div>
+
+            <div class="case-detail-name">${escapeHtml(caseData.name)}</div>
+            <div class="case-detail-sub">${escapeHtml(caseData.subtitle || '')}</div>
+            ${caseData.description ? `<div class="case-detail-desc">${escapeHtml(caseData.description)}</div>` : ''}
+
+            <div class="case-detail-info">
+                <span>📦 ${items.length} предметов</span>
+                ${isDaily ? '<span>⏱ Раз в 24 часа</span>' : `<span>💰 ${caseData.price} монет</span>`}
+            </div>
+
+            ${actionHTML}
+        </div>
+
+        <div class="case-detail-items-section">
+            <div class="section-title">Содержимое кейса</div>
+            ${itemsHTML || '<div class="empty">Кейс пуст</div>'}
+        </div>
+    `;
+
+    // Скроллим наверх
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Запоминаем для навигации назад
+    window._lastOpenedCaseId = caseId;
+}
+
+// Превью предмета в новой модалке
+async function previewCaseItem(itemId) {
+    const item = SHOP_ITEMS_CACHE[itemId];
+    if (!item) return;
+
+    const rarityColor = {
+        common: '#9aa7b5',
+        rare: '#4fc3f7',
+        epic: '#a78bfa',
+        legendary: '#ffd700',
+    }[item.rarity] || '#9aa7b5';
+
+    // Простая модалка
+    document.getElementById('caseItemPreviewOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'share-preview-overlay active';
+    overlay.id = 'caseItemPreviewOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="share-preview-modal" style="max-width: 380px;">
+            <div class="share-preview-body" style="text-align: center; padding: 24px 20px;">
+                <div style="
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 140px;
+                    width: 100%;
+                    padding: 16px;
+                    background: radial-gradient(circle at center, ${rarityColor}22, transparent 70%);
+                    border-radius: 16px;
+                    margin-bottom: 14px;
+                    border: 1px solid ${rarityColor}44;
+                ">
+                    ${renderCaseItemPreview(item)}
+                </div>
+                <div style="
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 18px;
+                    font-weight: 900;
+                    color: #fff;
+                    margin-bottom: 6px;
+                ">${escapeHtml(item.name)}</div>
+                <div style="
+                    font-size: 11px;
+                    font-weight: 900;
+                    letter-spacing: 2px;
+                    color: ${rarityColor};
+                    text-transform: uppercase;
+                    margin-bottom: 16px;
+                ">${item.rarity || 'common'}</div>
+
+                <button class="profile-action-btn cancel"
+                        onclick="document.getElementById('caseItemPreviewOverlay').remove()"
+                        style="width: 100%;">
+                    ЗАКРЫТЬ
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    haptic('light');
+}
             
     </script>
 
