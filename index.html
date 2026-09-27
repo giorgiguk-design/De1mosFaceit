@@ -11077,6 +11077,215 @@ html.lite-mode .shop-cat-btn.active .shop-cat-icon {
     animation: none !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════ */
+/* 🟢 ОНЛАЙН-СЧЁТЧИК В ШАПКЕ                                       */
+/* ═══════════════════════════════════════════════════════════════ */
+.header-online {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px 6px 8px;
+    background: linear-gradient(135deg,
+        rgba(34, 197, 94, 0.18) 0%,
+        rgba(34, 197, 94, 0.05) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    border-radius: 20px;
+    color: #22c55e;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.18s ease, background 0.22s ease,
+                border-color 0.22s ease, box-shadow 0.22s ease;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+.header-online::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg,
+        transparent 0%,
+        rgba(34, 197, 94, 0.25) 50%,
+        transparent 100%);
+    transform: translateX(-100%);
+    animation: onlineShine 4s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes onlineShine {
+    0%, 100% { transform: translateX(-100%); }
+    50%      { transform: translateX(100%); }
+}
+.header-online:active {
+    transform: scale(0.94);
+    background: rgba(34, 197, 94, 0.28);
+}
+.header-online-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+    flex-shrink: 0;
+    animation: onlineDotPulse 2s ease-in-out infinite;
+}
+@keyframes onlineDotPulse {
+    0%, 100% {
+        box-shadow: 0 0 8px #22c55e;
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 16px #22c55e, 0 0 24px rgba(34, 197, 94, 0.6);
+        transform: scale(1.15);
+    }
+}
+.header-online-value {
+    min-width: 14px;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    color: #22c55e;
+}
+
+/* Компактнее на узких экранах */
+@media (max-width: 400px) {
+    .header-online {
+        padding: 5px 8px 5px 6px;
+        font-size: 11px;
+    }
+    .header-online-dot {
+        width: 7px;
+        height: 7px;
+    }
+}
+
+/* Lite-режим — без анимации */
+html.lite-mode .header-online::before,
+html.lite-mode .header-online-dot {
+    animation: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* 🟢 СПИСОК ОНЛАЙН-ИГРОКОВ                                        */
+/* ═══════════════════════════════════════════════════════════════ */
+.online-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);   /* ← стало 4 */
+    gap: 8px;
+    padding: 14px;
+    background: linear-gradient(160deg,
+        rgba(34, 197, 94, 0.08) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 14px;
+    margin-bottom: 14px;
+}
+
+/* На узких экранах 2×2 */
+@media (max-width: 400px) {
+    .online-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}.online-summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+}
+.online-summary-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 900;
+    color: #22c55e;
+    text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+    line-height: 1;
+}
+.online-summary-label {
+    font-size: 9px;
+    color: var(--hint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 800;
+}
+
+.online-player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background: linear-gradient(180deg,
+        rgba(34, 197, 94, 0.04) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px solid var(--border);
+    border-left: 3px solid #22c55e;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.15s ease;
+}
+.online-player-row:active {
+    transform: scale(0.98);
+    background: rgba(34, 197, 94, 0.10);
+}
+.online-player-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 13px;
+    color: #04140e;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+}
+.online-player-avatar img {
+    width: 100%; height: 100%; object-fit: cover;
+}
+.online-player-info {
+    flex: 1; min-width: 0;
+}
+.online-player-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.online-player-status {
+    font-size: 10px;
+    color: var(--hint);
+    margin-top: 2px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.online-player-status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+    flex-shrink: 0;
+}
+.online-player-elo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 900;
+    color: #22c55e;
+    flex-shrink: 0;
+}
+
     /* ============================================================ */
 /* 💰 БАЛАНС В ШАПКЕ                                             */
 /* ============================================================ */
@@ -23083,39 +23292,43 @@ html.lite-mode .dash-bp-full .bp-level-card.current {
 <header class="header">
     <div class="avatar" id="headerAvatar" onclick="switchPage('profile')">?</div>
     <div class="header-title">De1mos <span>Faceit</span></div>
-    <div style="display: flex; gap: 6px; align-items: center;">
+<div style="display: flex; gap: 5px; align-items: center;">
+    <!-- 🔥 ОНЛАЙН-СЧЁТЧИК -->
+    <button class="header-online" id="headerOnline" onclick="openOnlineSheet()" title="Игроки онлайн">
+        <span class="header-online-dot"></span>
+        <span class="header-online-value" id="headerOnlineValue">0</span>
+    </button>
 
-        <!-- 🔥 БАЛАНС МОНЕТ -->
-        <button class="header-coins" id="headerCoins" onclick="openShop()" title="Магазин">
-            <span class="header-coins-icon">💰</span>
-            <span class="header-coins-value" id="headerCoinsValue">0</span>
-        </button>
+    <!-- Монеты -->
+    <button class="header-coins" id="headerCoins" onclick="openShop()" title="Магазин">
+        <span class="header-coins-icon">💰</span>
+        <span class="header-coins-value" id="headerCoinsValue">0</span>
+    </button>
 
-        <div class="header-room-indicator" id="headerRoomIndicator" onclick="reopenActiveRoom()" style="display: none;">
-            <div class="hri-dot"></div>
-            <svg class="cy-icon cy-md" viewBox="0 0 24 24">
-                <path d="M6 11h4M8 9v4"/>
-                <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
-                <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
-            </svg>
-        </div>
-
-        <button class="notif-btn" id="searchBtn" onclick="openGlobalSearch()" title="Поиск">
-    <svg class="cy-icon cy-md" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="7"/>
-        <path d="m20 20-3.5-3.5"/>
-    </svg>
-</button>
-        
-        <button class="notif-btn" id="notifBtn" onclick="openNotificationsSheet()">
-            <svg class="cy-icon cy-md" viewBox="0 0 24 24">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-            </svg>
-            <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
-        </button>
+    <div class="header-room-indicator" id="headerRoomIndicator" onclick="reopenActiveRoom()" style="display: none;">
+        <div class="hri-dot"></div>
+        <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+            <path d="M6 11h4M8 9v4"/>
+            <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
+            <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
+        </svg>
     </div>
-</header>
+
+    <button class="notif-btn" id="searchBtn" onclick="openGlobalSearch()" title="Поиск">
+        <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m20 20-3.5-3.5"/>
+        </svg>
+    </button>
+
+    <button class="notif-btn" id="notifBtn" onclick="openNotificationsSheet()" title="Уведомления">
+        <svg class="cy-icon cy-md" viewBox="0 0 24 24">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+    </button>
+</div></header>
 
     <!-- ============ DASHBOARD ============ -->
     <div class="container page active" id="page-dashboard">
@@ -27777,7 +27990,10 @@ if (tg?.BackButton) {
         renderDashboard(currentUser);
         loadProfile(currentUser);
         loadLeaderboard();
-        startOnlineHeartbeat();   // 🟢 ЗАПУСКАЕМ HEARTBEAT
+	startOnlineHeartbeat();
+	loadOnlineCount();
+	// Обновление счётчика каждые 30 секунд
+	setInterval(loadOnlineCount, 30000);
         updateQuestsBadge();
         updateCasesBadge();
 
@@ -35156,35 +35372,50 @@ async function tryFinishMatch(matchId) {
         const capAVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_a_id));
         const capBVote = (votes || []).find(v => Number(v.telegram_id) === Number(match.captain_b_id));
 
-        if (capAVote && capBVote) {
-            const same = capAVote.winner === capBVote.winner
-                      && capAVote.score_a === capBVote.score_a
-                      && capAVote.score_b === capBVote.score_b;
+        if (!capAVote || !capBVote) return;
 
-            if (same) {
-                await finishMatch(matchId, {
-                    winner: capAVote.winner,
-                    score_a: capAVote.score_a,
-                    score_b: capAVote.score_b
-                });
-                markResultShown(matchId);
-                return;
-            } else {
-                if (match.result_status !== 'disputed') {
-                    await sb.from('game_matches').update({
-                        result_status: 'disputed',
-                        disputed_at: new Date().toISOString()
-                    }).eq('id', matchId);
-                    markResultShown(matchId);
-                }
-                return;
-            }
+        const sameWinner = capAVote.winner === capBVote.winner;
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🔥 ГЛАВНОЕ ПРАВИЛО: если оба капитана указали ОДНУ команду — 
+        //    матч завершается БЕЗ споров, даже если счёт разный
+        // ═══════════════════════════════════════════════════════════════
+        if (sameWinner) {
+            const winnerIsA = capAVote.winner === 'A';
+            // Доверяем счёту капитана победившей команды
+            const trustedVote = winnerIsA ? capAVote : capBVote;
+            const scoreA = trustedVote.score_a ?? capAVote.score_a ?? capBVote.score_a ?? 0;
+            const scoreB = trustedVote.score_b ?? capAVote.score_b ?? capBVote.score_b ?? 0;
+
+            console.log('✅ Один победитель, финализируем:', {
+                winner: capAVote.winner,
+                score: `${scoreA}:${scoreB}`,
+                scoreMismatch: capAVote.score_a !== capBVote.score_a || capAVote.score_b !== capBVote.score_b
+            });
+
+            await finishMatch(matchId, {
+                winner: capAVote.winner,
+                score_a: scoreA,
+                score_b: scoreB
+            });
+            markResultShown(matchId);
+            return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // 🚨 Разные победители — реальный спор, уходит модератору
+        // ═══════════════════════════════════════════════════════════════
+        if (match.result_status !== 'disputed') {
+            await sb.from('game_matches').update({
+                result_status: 'disputed',
+                disputed_at: new Date().toISOString()
+            }).eq('id', matchId);
+            markResultShown(matchId);
         }
     } catch (e) {
         console.warn('tryFinishMatch:', e);
     }
 }
-
 // ============================================================
 // Завершение матча — вся логика в RPC finish_match
 // ============================================================
@@ -55498,6 +55729,286 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
     console.log('🎨 Premium Visual Pack загружен: значки, титулы, эффекты, фиксы');
 })();
+
+// ═══════════════════════════════════════════════════════════════
+// 🟢 ОНЛАЙН-СЧЁТЧИК
+// ═══════════════════════════════════════════════════════════════
+const ONLINE_WINDOW_MS = 2 * 60 * 1000;   // 2 минуты — считаем "в сети"
+
+async function loadOnlineCount() {
+    try {
+        const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS).toISOString();
+        const { count, error } = await sb.from('users')
+            .select('telegram_id', { count: 'exact', head: true })
+            .gte('last_seen', cutoff);
+
+        if (error) return;
+
+        const val = document.getElementById('headerOnlineValue');
+        if (val) val.textContent = count || 0;
+    } catch (e) {}
+}
+
+async function openOnlineSheet() {
+    // Гасим другие шиты
+    document.querySelectorAll('.sheet').forEach(s => s.classList.remove('active'));
+    const overlay = document.getElementById('sheetOverlay');
+    if (overlay) overlay.classList.add('active');
+
+    // Создаём или переиспользуем sheet
+    let sheet = document.getElementById('onlineSheet');
+    if (!sheet) {
+        sheet = document.createElement('div');
+        sheet.className = 'sheet';
+        sheet.id = 'onlineSheet';
+        sheet.style.maxHeight = '88vh';
+        document.body.appendChild(sheet);
+    }
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🟢 Игроки онлайн</div>
+        <div id="onlineSheetContent">
+            <div class="empty">Загрузка...</div>
+        </div>
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    `;
+
+    requestAnimationFrame(() => sheet.classList.add('active'));
+
+    await renderOnlineSheet();
+}
+
+async function renderOnlineSheet() {
+    const el = document.getElementById('onlineSheetContent');
+    if (!el) return;
+
+    try {
+        const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS).toISOString();
+
+        // ────────────────────────────────────────────────────────
+        // 1. Онлайн-игроки (кто был активен последние 2 минуты)
+        // ────────────────────────────────────────────────────────
+        const { data: users } = await sb.from('users')
+            .select('telegram_id, display_name, custom_avatar, photo_url, elo, last_seen, standoff_id')
+            .gte('last_seen', cutoff)
+            .order('last_seen', { ascending: false })
+            .limit(200);
+
+        const list = users || [];
+
+        // ────────────────────────────────────────────────────────
+        // 2. Игроки в комнатах (все статусы кроме finished/cancelled)
+        // ────────────────────────────────────────────────────────
+        let inMatches = 0;
+        let inRooms = 0;
+        try {
+            const { data: rooms } = await sb.from('rooms')
+                .select('id, status')
+                .in('status', ['open', 'ready_check', 'veto', 'side_pick', 'waiting_link', 'in_game', 'result']);
+
+            const roomIds = (rooms || []).map(r => r.id);
+            const inGameIds = (rooms || [])
+                .filter(r => ['in_game', 'result', 'waiting_link'].includes(r.status))
+                .map(r => r.id);
+
+            if (roomIds.length) {
+                const { data: players } = await sb.from('room_players')
+                    .select('telegram_id, room_id')
+                    .in('room_id', roomIds);
+
+                const uniqueAll = new Set((players || []).map(p => p.telegram_id));
+                const uniqueGame = new Set(
+                    (players || [])
+                        .filter(p => inGameIds.includes(p.room_id))
+                        .map(p => p.telegram_id)
+                );
+
+                inRooms = uniqueAll.size;
+                inMatches = uniqueGame.size;
+            }
+        } catch (e) {
+            console.warn('online rooms:', e);
+        }
+
+        const totalOnline = list.length;
+        const inQueue = Math.max(0, totalOnline - inRooms);
+
+        // ────────────────────────────────────────────────────────
+        // 3. Пинг до сервера
+        // ────────────────────────────────────────────────────────
+        const ping = await measurePing();
+        const pingColor = ping == null ? 'var(--hint)' :
+                          ping < 200  ? '#22c55e' :
+                          ping < 500  ? '#ffd700' : '#ff5470';
+
+        // ────────────────────────────────────────────────────────
+        // 4. Рендер
+        // ────────────────────────────────────────────────────────
+        const now = Date.now();
+
+        el.innerHTML = `
+            <!-- СВОДКА -->
+            <div class="online-summary">
+                <div class="online-summary-item">
+                    <div class="online-summary-value">${totalOnline}</div>
+                    <div class="online-summary-label">Онлайн</div>
+                </div>
+                <div class="online-summary-item">
+                    <div class="online-summary-value">${inMatches}</div>
+                    <div class="online-summary-label">В игре</div>
+                </div>
+                <div class="online-summary-item">
+                    <div class="online-summary-value">${inQueue}</div>
+                    <div class="online-summary-label">Свободны</div>
+                </div>
+                <div class="online-summary-item">
+                    <div class="online-summary-value" style="color: ${pingColor}; text-shadow: 0 0 10px ${pingColor}88;">
+                        ${ping ?? '—'}<span style="font-size: 12px; opacity: 0.7; margin-left: 1px;">ms</span>
+                    </div>
+                    <div class="online-summary-label">Пинг</div>
+                </div>
+            </div>
+
+            <!-- СПИСОК ИГРОКОВ -->
+            ${totalOnline === 0 ? `
+                <div class="empty" style="padding: 30px 16px;">
+                    🟢 Сейчас никого нет онлайн<br>
+                    <span style="font-size: 11px; color: var(--hint); margin-top: 6px; display: inline-block;">
+                        Зайди позже — обычно вечером людно
+                    </span>
+                </div>
+            ` : `
+                <div style="
+                    font-size: 11px;
+                    color: var(--hint);
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                    padding: 6px 4px;
+                    margin-bottom: 4px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                ">
+                    <span>В сети (${totalOnline})</span>
+                    <span style="flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent);"></span>
+                </div>
+                ${list.map(u => {
+                    const src = u.custom_avatar || u.photo_url;
+                    const initial = (u.display_name || 'U')[0].toUpperCase();
+                    const av = src ? `<img src="${src}" alt="">` : initial;
+
+                    const lastSeenMs = u.last_seen ? new Date(u.last_seen).getTime() : 0;
+                    const diff = Math.max(0, now - lastSeenMs);
+                    const isFresh = diff < 30 * 1000;   // моложе 30 сек — "прямо сейчас"
+                    const status = isFresh ? 'В сети' : 'Активен ' + formatTimeAgo(u.last_seen);
+
+                    const elo = u.elo ?? 1000;
+                    const lvl = eloToLevel(elo);
+                    const isMe = currentUser && Number(u.telegram_id) === Number(currentUser.telegram_id);
+
+                    return `
+                        <div class="online-player-row"
+                             ${isMe ? 'style="border-left-color: var(--emerald); background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.10), rgba(0,0,0,0.4));"' : ''}
+                             onclick="closeAllSheets(); setTimeout(() => openPlayerProfile(${u.telegram_id}), 250);">
+                            <div class="online-player-avatar">
+                                ${av}
+                                <div class="online-dot online-dot-sm" style="bottom:0; right:0; width:10px; height:10px; border-width:1.5px;"></div>
+                            </div>
+                            <div class="online-player-info">
+                                <div class="online-player-name">
+                                    ${escapeHtml(u.display_name || 'Игрок')}
+                                    ${isMe ? '<span style="color: var(--emerald); font-size: 10px; font-weight: 900;">· ТЫ</span>' : ''}
+                                </div>
+                                <div class="online-player-status">
+                                    <span class="online-player-status-dot" ${isFresh ? '' : 'style="opacity:0.4;"'}></span>
+                                    <span>${status}</span>
+                                    <span style="opacity:0.6;">· ⚡ ур. ${lvl}</span>
+                                </div>
+                            </div>
+                            <div class="online-player-elo">${elo}</div>
+                        </div>
+                    `;
+                }).join('')}
+            `}
+        `;
+    } catch (e) {
+        console.error('renderOnlineSheet:', e);
+        el.innerHTML = `
+            <div class="empty" style="color: var(--red); padding: 20px;">
+                ❌ Ошибка загрузки<br>
+                <span style="font-size: 11px; color: var(--hint);">${escapeHtml(e.message || '')}</span>
+            </div>
+        `;
+    }
+}
+// ═══════════════════════════════════════════════════════════════
+// ⬆️ КНОПКА "НАВЕРХ"
+// ═══════════════════════════════════════════════════════════════
+(function() {
+    const btn = document.createElement('button');
+    btn.id = 'scrollTopBtn';
+    btn.innerHTML = '↑';
+    btn.style.cssText = `
+        position: fixed;
+        bottom: 100px;
+        right: 16px;
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+        color: #04140e;
+        font-size: 20px;
+        font-weight: 900;
+        border: none;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        box-shadow: 0 6px 22px rgba(var(--emerald-rgb), 0.4);
+        font-family: inherit;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+        opacity: 0;
+        pointer-events: none;
+    `;
+    btn.onclick = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        haptic('light');
+    };
+    document.body.appendChild(btn);
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+            const show = window.scrollY > 500;
+            btn.style.display = show ? 'flex' : 'none';
+            btn.style.opacity = show ? '1' : '0';
+            btn.style.pointerEvents = show ? 'auto' : 'none';
+            ticking = false;
+        });
+    }, { passive: true });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// 📡 ИНДИКАТОР ПИНГА
+// ═══════════════════════════════════════════════════════════════
+async function measurePing() {
+    const t0 = performance.now();
+    try {
+        await sb.from('users').select('telegram_id').limit(1);
+        const ping = Math.round(performance.now() - t0);
+        window._lastPing = ping;
+        return ping;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Показываем пинг в sheet онлайн
+// (будет рядом с totalOnline)
+
             
     </script>
 
@@ -57467,6 +57978,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 })();
 </script>
    
+
 
 </body>
 </html>
