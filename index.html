@@ -57121,5 +57121,67 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 })();
 </script>
 
+<!-- ============================================================ -->
+<!-- 🎨 BADGE GLOW FIX — убираем тройное свечение значка            -->
+<!-- ============================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    if (document.getElementById('badgeGlowFixStyle')) return;
+
+    const style = document.createElement('style');
+    style.id = 'badgeGlowFixStyle';
+    style.textContent = `
+        /* ================================================== */
+        /* 🎯 КОНТЕЙНЕР ЗНАЧКА — без свечения                  */
+        /* ================================================== */
+        .profile-equipped-badge,
+        .pm2-badge,
+        [data-equipped-badge],
+        [data-list-badge] {
+            filter: none !important;
+            animation: none !important;   /* убираем badgeFloat */
+        }
+
+        /* ================================================== */
+        /* 🎯 SVG ВНУТРИ — без drop-shadow                     */
+        /* ================================================== */
+        .profile-equipped-badge svg,
+        .pm2-badge svg,
+        [data-equipped-badge] svg,
+        [data-list-badge] svg,
+        .badge-svg-wrap svg,
+        .badge-svg-wrap *,
+        [data-equipped-badge] svg *,
+        [data-list-badge] svg *,
+        .pm2-badge svg * {
+            filter: none !important;
+            /* 🔥 ВАЖНО: НЕ трогаем fill/stroke — пусть SVG сам решает */
+        }
+
+        /* Картинка-значок — тоже без свечения */
+        .profile-equipped-badge img,
+        .pm2-badge img,
+        [data-equipped-badge] img,
+        [data-list-badge] img {
+            filter: none !important;
+        }
+
+        /* ================================================== */
+        /* 🎯 Отступ справа от титула — чтобы не слипалось      */
+        /* ================================================== */
+        .phc-title-row .profile-equipped-badge {
+            margin-left: 4px;
+        }
+        .pm2-name-row .pm2-badge {
+            margin-left: 4px;
+        }
+    `;
+    document.head.appendChild(style);
+    console.log('🎨 Badge glow fix: свечение убрано');
+})();
+</script>
+
 </body>
 </html>
