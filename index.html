@@ -23608,6 +23608,117 @@ html.lite-mode .case-card-v2:hover {
     text-align: center;
     overflow: hidden;
 }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* 🎲 ШАНСЫ ВЫПАДЕНИЯ КЕЙСА                                    */
+/* ═══════════════════════════════════════════════════════════ */
+.case-drop-chances {
+    margin: 16px auto 18px;
+    max-width: 400px;
+    padding: 14px 16px;
+    background: linear-gradient(160deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(0, 0, 0, 0.5) 100%);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+}
+.case-drop-chances::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent,
+        var(--emerald),
+        transparent);
+    opacity: 0.6;
+}
+
+.cdc-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-bottom: 12px;
+}
+.cdc-title svg {
+    opacity: 0.7;
+}
+
+.cdc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.cdc-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid color-mix(in srgb, var(--rarity-color) 30%, transparent);
+    border-radius: 10px;
+    transition: transform 0.18s ease, border-color 0.22s ease;
+}
+.cdc-item:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--rarity-color) 60%, transparent);
+}
+
+.cdc-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--rarity-color);
+    box-shadow: 0 0 8px var(--rarity-color);
+}
+
+.cdc-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.cdc-label {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--hint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cdc-value {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--rarity-color);
+    text-shadow: 0 0 8px color-mix(in srgb, var(--rarity-color) 60%, transparent);
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 380px) {
+    .cdc-label { font-size: 8px; letter-spacing: 0.5px; }
+    .cdc-value { font-size: 12px; }
+    .cdc-item { padding: 6px 8px; gap: 6px; }
+    .cdc-dot { width: 8px; height: 8px; }
+}
+
 .case-detail-hero::before {
     content: '';
     position: absolute;
@@ -26532,6 +26643,54 @@ async function openCaseAdmin(caseId) {
                           touch-action: manipulation;">
         </div>
 
+    ${(() => {
+        const ch = caseData.rarity_chances || { common: 60, rare: 28, epic: 10, legendary: 2 };
+        const total = (ch.common || 0) + (ch.rare || 0) + (ch.epic || 0) + (ch.legendary || 0);
+        const totalColor = Math.abs(total - 100) < 1 ? 'var(--emerald)' : 'var(--gold)';
+        return `
+        <div style="margin: 14px 0 10px; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 12px;">
+            <label class="field-label" style="margin-bottom: 10px; display: block;">🎲 ШАНСЫ ВЫПАДЕНИЯ (%)</label>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div>
+                    <label style="display:block;font-size:10px;color:#9aa7b5;font-weight:800;margin-bottom:4px;">⚪ ОБЫЧНЫЙ</label>
+                    <input type="text" class="field-input" id="admCaseChanceCommon"
+                           value="${ch.common || 0}" inputmode="numeric"
+                           oninput="updateChanceTotal()"
+                           style="text-align:center;font-family:var(--font-mono);font-weight:800;padding:10px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:10px;color:#4fc3f7;font-weight:800;margin-bottom:4px;">🔵 РЕДКИЙ</label>
+                    <input type="text" class="field-input" id="admCaseChanceRare"
+                           value="${ch.rare || 0}" inputmode="numeric"
+                           oninput="updateChanceTotal()"
+                           style="text-align:center;font-family:var(--font-mono);font-weight:800;padding:10px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:10px;color:#a78bfa;font-weight:800;margin-bottom:4px;">🟣 ЭПИЧЕСКИЙ</label>
+                    <input type="text" class="field-input" id="admCaseChanceEpic"
+                           value="${ch.epic || 0}" inputmode="numeric"
+                           oninput="updateChanceTotal()"
+                           style="text-align:center;font-family:var(--font-mono);font-weight:800;padding:10px;">
+                </div>
+                <div>
+                    <label style="display:block;font-size:10px;color:#ffd700;font-weight:800;margin-bottom:4px;">🟡 ЛЕГЕНДАРНЫЙ</label>
+                    <input type="text" class="field-input" id="admCaseChanceLegendary"
+                           value="${ch.legendary || 0}" inputmode="numeric"
+                           oninput="updateChanceTotal()"
+                           style="text-align:center;font-family:var(--font-mono);font-weight:800;padding:10px;">
+                </div>
+            </div>
+
+            <div id="admCaseChanceTotal" style="
+                font-size: 11px; font-weight: 800; text-align: center;
+                margin-top: 10px; color: ${totalColor};
+                letter-spacing: 0.5px;
+            ">Сумма: ${total}%</div>
+        </div>
+        `;
+    })()}
+
         <div style="margin-bottom: 10px;">
             <label class="field-label">ПОДЗАГОЛОВОК</label>
             <input type="text" class="field-input" id="admCaseSub"
@@ -26617,9 +26776,26 @@ async function saveCaseAdmin(caseId) {
     const price = parseInt(document.getElementById('admCasePrice')?.value, 10) || 0;
     const is_available = document.getElementById('admCaseAvail')?.value === 'true';
 
+    const rarity_chances = {
+        common:    parseInt(document.getElementById('admCaseChanceCommon')?.value, 10)    || 0,
+        rare:      parseInt(document.getElementById('admCaseChanceRare')?.value, 10)      || 0,
+        epic:      parseInt(document.getElementById('admCaseChanceEpic')?.value, 10)      || 0,
+        legendary: parseInt(document.getElementById('admCaseChanceLegendary')?.value, 10) || 0,
+    };
+
+    const total = rarity_chances.common + rarity_chances.rare + rarity_chances.epic + rarity_chances.legendary;
+    if (total <= 0) {
+        showToast('⚠️ Сумма шансов должна быть больше 0');
+        return;
+    }
+    if (total !== 100) {
+        const ok = confirm(`Сумма шансов = ${total}%, а не 100%.\n\nЭто не критично — ролл будет работать пропорционально. Сохранить?`);
+        if (!ok) return;
+    }
+
     try {
         const { error } = await sb.from('cases').update({
-            name, subtitle, price, is_available
+            name, subtitle, price, is_available, rarity_chances
         }).eq('id', caseId);
         if (error) throw error;
         showToast('✅ Сохранено');
@@ -26629,6 +26805,32 @@ async function saveCaseAdmin(caseId) {
         showToast('❌ ' + e.message);
     }
 }
+
+function updateChanceTotal() {
+    const c = parseInt(document.getElementById('admCaseChanceCommon')?.value, 10) || 0;
+    const r = parseInt(document.getElementById('admCaseChanceRare')?.value, 10) || 0;
+    const e = parseInt(document.getElementById('admCaseChanceEpic')?.value, 10) || 0;
+    const l = parseInt(document.getElementById('admCaseChanceLegendary')?.value, 10) || 0;
+    const total = c + r + e + l;
+    const el = document.getElementById('admCaseChanceTotal');
+    if (!el) return;
+    el.textContent = 'Сумма: ' + total + '%';
+    el.style.color = Math.abs(total - 100) < 1 ? 'var(--emerald)' : 'var(--gold)';
+}
+window.updateChanceTotal = updateChanceTotal;
+
+function updateChanceTotal() {
+    const c = parseInt(document.getElementById('admCaseChanceCommon')?.value, 10) || 0;
+    const r = parseInt(document.getElementById('admCaseChanceRare')?.value, 10) || 0;
+    const e = parseInt(document.getElementById('admCaseChanceEpic')?.value, 10) || 0;
+    const l = parseInt(document.getElementById('admCaseChanceLegendary')?.value, 10) || 0;
+    const total = c + r + e + l;
+    const el = document.getElementById('admCaseChanceTotal');
+    if (!el) return;
+    el.textContent = 'Сумма: ' + total + '%';
+    el.style.color = Math.abs(total - 100) < 1 ? 'var(--emerald)' : 'var(--gold)';
+}
+window.updateChanceTotal = updateChanceTotal;
 
 async function updateCaseItemWeight(ciId, newWeight) {
     const w = Math.max(1, parseInt(newWeight, 10) || 1);
@@ -57436,6 +57638,63 @@ async function openCaseDetail(caseId) {
     const isDaily = caseData.cooldown === 'daily';
     const dailyInfo = isDaily ? await canOpenFreeCase() : null;
 
+    // ============================================================
+    // 🎲 ШАНСЫ ВЫПАДЕНИЯ — плашка для игрока
+    // ============================================================
+    const rc = caseData.rarity_chances || { common: 60, rare: 28, epic: 10, legendary: 2 };
+    const rcTotal = (rc.common || 0) + (rc.rare || 0) + (rc.epic || 0) + (rc.legendary || 0) || 1;
+
+    // Считаем проценты (нормализуем, если сумма не 100)
+    const pCommon    = ((rc.common || 0)    / rcTotal * 100).toFixed(1).replace(/\.0$/, '');
+    const pRare      = ((rc.rare || 0)      / rcTotal * 100).toFixed(1).replace(/\.0$/, '');
+    const pEpic      = ((rc.epic || 0)      / rcTotal * 100).toFixed(1).replace(/\.0$/, '');
+    const pLegendary = ((rc.legendary || 0) / rcTotal * 100).toFixed(1).replace(/\.0$/, '');
+
+    const chancesHTML = `
+        <div class="case-drop-chances">
+            <div class="cdc-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/>
+                    <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/>
+                    <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/>
+                    <circle cx="8.5" cy="15.5" r="1.2" fill="currentColor"/>
+                    <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/>
+                </svg>
+                ШАНСЫ ВЫПАДЕНИЯ
+            </div>
+            <div class="cdc-grid">
+                <div class="cdc-item" style="--rarity-color: #9aa7b5;">
+                    <div class="cdc-dot"></div>
+                    <div class="cdc-info">
+                        <div class="cdc-label">ОБЫЧНЫЙ</div>
+                        <div class="cdc-value">${pCommon}%</div>
+                    </div>
+                </div>
+                <div class="cdc-item" style="--rarity-color: #4fc3f7;">
+                    <div class="cdc-dot"></div>
+                    <div class="cdc-info">
+                        <div class="cdc-label">РЕДКИЙ</div>
+                        <div class="cdc-value">${pRare}%</div>
+                    </div>
+                </div>
+                <div class="cdc-item" style="--rarity-color: #a78bfa;">
+                    <div class="cdc-dot"></div>
+                    <div class="cdc-info">
+                        <div class="cdc-label">ЭПИЧЕСКИЙ</div>
+                        <div class="cdc-value">${pEpic}%</div>
+                    </div>
+                </div>
+                <div class="cdc-item" style="--rarity-color: #ffd700;">
+                    <div class="cdc-dot"></div>
+                    <div class="cdc-info">
+                        <div class="cdc-label">ЛЕГЕНДАРНЫЙ</div>
+                        <div class="cdc-value">${pLegendary}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
     // Кнопка открытия
     let actionHTML;
     if (isDaily) {
@@ -57513,6 +57772,8 @@ async function openCaseDetail(caseId) {
                 <span>📦 ${items.length} предметов</span>
                 ${isDaily ? '<span>⏱ Раз в 24 часа</span>' : `<span>💰 ${caseData.price} монет</span>`}
             </div>
+
+            ${chancesHTML}
 
             ${actionHTML}
         </div>
