@@ -23837,6 +23837,24 @@ html.lite-mode .case-detail-chest,
 html.lite-mode .case-detail-open-btn {
     animation: none;
 }
+
+/* Поля в админ-шитах всегда работают */
+#caseAdminSheet input,
+#caseAdminSheet select,
+#caseAdminSheet textarea,
+#caseAdminSheet button,
+#shopItemSheet input,
+#shopItemSheet select,
+#shopItemSheet textarea,
+#shopItemSheet button,
+#addCaseItemSheet input,
+#addCaseItemSheet select,
+#addCaseItemSheet button {
+    pointer-events: auto !important;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    touch-action: manipulation !important;
+}
     
 </style>
 </head>
@@ -25538,20 +25556,13 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool) {
     const meta = rarityMeta[rarity] || rarityMeta.common;
 
     // ---- Собираем пул предметов для ленты ----
-let reelPool = (pool && pool.length)
-    ? pool
-    : Object.values(SHOP_ITEMS_CACHE).filter(i => i && i.id && i.name);
+    // 🔥 Только предметы кейса — НИКАКОГО fallback
+    const reelPool = (pool && pool.length) ? pool : [item];
 
     if (!reelPool.length) {
-        reelPool = [{
-            id: '_fallback',
-            name: 'Приз',
-            category: 'badge',
-            value: { emoji: '🎁' },
-            rarity: 'common'
-        }];
-    }
-    // ---- Параметры ленты ----
+        console.error('❌ Пустой пул — не должно случиться');
+        return;
+    }    // ---- Параметры ленты ----
     const REEL_LEN   = 60;
     const WINNER_IDX = 52;
     const ITEM_W     = 130;
@@ -25614,9 +25625,33 @@ let reelPool = (pool && pool.length)
 
     document.body.appendChild(overlay);
 
+    // 🔥 Звук СТАРТА прокрутки (короткий тик)
+    if (typeof SFX !== 'undefined') {
+        // короткий "вжжж" в начале
+        SFX.play('swipe');
+    }
+
+    // 🔥 Серия тиков во время прокрутки (каждые 180мс, плавно замедляясь)
+    let tickCount = 0;
+    const totalTicks = 20;
+    const playTick = () => {
+        if (tickCount >= totalTicks) return;
+        const progress = tickCount / totalTicks;
+        // Интервал растёт: 100мс → 500мс
+        const interval = 100 + progress * progress * 400;
+        tickCount++;
+        if (typeof SFX !== 'undefined' && SFX.isEnabled?.()) {
+            // тихий тик
+            try {
+                if (typeof SFX.play === 'function') SFX.play('tap');
+            } catch (e) {}
+        }
+        setTimeout(playTick, interval);
+    };
+    setTimeout(playTick, 100);
+
     // Запускаем анимацию после того как DOM отрисован
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+    requestAnimationFrame(() => {        requestAnimationFrame(() => {
             startCaseReel({
                 winnerIdx: WINNER_IDX,
                 ITEM_TOTAL,
@@ -25707,6 +25742,19 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
 // ============================================================
 function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
     haptic('heavy');
+
+    // 🔥 Звук результата — в момент остановки
+    if (typeof SFX !== 'undefined') {
+        if (rarity === 'legendary') {
+            SFX.play('victory');
+        } else if (rarity === 'epic') {
+            SFX.play('levelUp');
+        } else if (rarity === 'rare') {
+            SFX.play('success');
+        } else {
+            SFX.play('coin');
+        }
+    }
 
     // Подсвечиваем победный айтем
     const winner = document.querySelector('.case-open-reel-item.winner');
@@ -26196,7 +26244,7 @@ function renderCaseCardV2(c, dailyInfo, index) {
     return `
         <div class="case-card-v2"
              style="--case-color: ${c.accent_color}; --case-rgb: ${c.accent_rgb}; animation-delay: ${index * 0.05}s;"
-             onclick="openCaseById('${c.id}')">
+             onclick="openCaseDetail('${c.id}')">
             ${isCurrentUserAdmin() ? `
                 <button class="case-card-v2-badge" style="left: 8px; right: auto; cursor: pointer;"
                         onclick="event.stopPropagation(); openCaseAdmin('${c.id}')"
@@ -26322,20 +26370,44 @@ async function openCaseById(caseId) {
 
     haptic('heavy');
 
-// Загружаем пул из этого кейса для рулетки
-const { data: poolRaw } = await sb.from('case_items')
-    .select('item_id, weight, shop_items!inner(id, name, category, rarity, value)')
-    .eq('case_id', caseId);
+    // 🔥 Загружаем пул кейса через ДВА запроса (без JOIN — надёжнее)
+    const { data: poolRows } = await sb.from('case_items')
+        .select('item_id, weight')
+        .eq('case_id', caseId);
 
-const pool = (poolRaw || [])
-    .map(r => ({ ...r.shop_items, weight: r.weight }))
-    .filter(i => i && i.id);
-pool.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+    const poolItemIds = (poolRows || []).map(r => r.item_id);
+    let pool = [];
 
-// Показываем анимацию
-showCaseOpening(item, item.rarity, isDuplicate, refund, caseId, pool);  // ← pool передаётся
-}
+    if (poolItemIds.length) {
+        const { data: shopRows } = await sb.from('shop_items')
+            .select('id, name, category, rarity, value')
+            .in('id', poolItemIds);
 
+        const shopMap = {};
+        (shopRows || []).forEach(s => shopMap[s.id] = s);
+
+        pool = (poolRows || [])
+            .map(r => {
+                const s = shopMap[r.item_id];
+                if (!s) return null;
+                return { ...s, weight: r.weight };
+            })
+            .filter(Boolean);
+
+        // Кэшируем
+        pool.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+    }
+
+    console.log('🎰 Пул кейса:', pool.length, 'предметов');
+
+    // 🔥 Если пул пустой — НЕ показываем рулетку
+    if (pool.length === 0) {
+        showToast('❌ Кейс пуст — нечего показывать');
+        return;
+    }
+
+    // Показываем анимацию с ТОЛЬКО предметами кейса
+    showCaseOpening(item, item.rarity, isDuplicate, refund, caseId, pool);
 // ────────────────────────────────────────────────────────────
 // ОБНОВЛЁННАЯ АНИМАЦИЯ С ПУЛОМ КЕЙСА
 // ────────────────────────────────────────────────────────────
@@ -26359,12 +26431,31 @@ async function openCaseAdmin(caseId) {
     if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
 
     const caseData = _casesCache.find(c => c.id === caseId);
-    if (!caseData) return;
+    if (!caseData) { showToast('Кейс не найден'); return; }
 
-    const { data: items } = await sb.from('case_items')
-        .select('id, item_id, weight, shop_items!inner(id, name, category, rarity, value, price)')
+    // 🔥 Два отдельных запроса — надёжнее чем JOIN
+    const { data: ciRows } = await sb.from('case_items')
+        .select('id, item_id, weight')
         .eq('case_id', caseId)
         .order('weight', { ascending: false });
+
+    const itemIds = (ciRows || []).map(r => r.item_id);
+    let shopMap = {};
+    if (itemIds.length) {
+        const { data: shopItems } = await sb.from('shop_items')
+            .select('id, name, category, rarity, value, price')
+            .in('id', itemIds);
+        (shopItems || []).forEach(s => shopMap[s.id] = s);
+    }
+
+    const items = (ciRows || []).map(r => ({
+        id: r.id,
+        item_id: r.item_id,
+        weight: r.weight,
+        si: shopMap[r.item_id] || { name: '—', category: '?', rarity: '?', price: 0 }
+    }));
+
+    console.log('📦 openCaseAdmin items:', items.length, 'для кейса', caseId);
 
     document.getElementById('caseAdminOverlay')?.remove();
     document.getElementById('caseAdminSheet')?.remove();
@@ -26372,34 +26463,54 @@ async function openCaseAdmin(caseId) {
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay active';
     overlay.id = 'caseAdminOverlay';
+    overlay.style.zIndex = '9000';
     overlay.onclick = (e) => { if (e.target === overlay) closeCaseAdmin(); };
 
     const sheet = document.createElement('div');
     sheet.className = 'sheet active';
     sheet.id = 'caseAdminSheet';
-    sheet.style.zIndex = '810';
-    sheet.style.maxHeight = '90vh';
+    sheet.style.zIndex = '9001';
+    sheet.style.maxHeight = '92vh';
     sheet.style.overflowY = 'auto';
+    sheet.style.pointerEvents = 'auto';
 
     sheet.innerHTML = `
         <div class="sheet-title">⚙️ ${escapeHtml(caseData.name)}</div>
 
         <div style="margin-bottom: 10px;">
-            <label class="field-label">Название</label>
-            <input type="text" class="field-input" id="admCaseName" value="${escapeHtml(caseData.name)}">
+            <label class="field-label">НАЗВАНИЕ</label>
+            <input type="text" class="field-input" id="admCaseName"
+                   value="${escapeHtml(caseData.name)}"
+                   autocomplete="off"
+                   style="pointer-events: auto !important;
+                          -webkit-user-select: text !important;
+                          user-select: text !important;
+                          touch-action: manipulation;">
         </div>
+
         <div style="margin-bottom: 10px;">
-            <label class="field-label">Подзаголовок</label>
-            <input type="text" class="field-input" id="admCaseSub" value="${escapeHtml(caseData.subtitle || '')}">
+            <label class="field-label">ПОДЗАГОЛОВОК</label>
+            <input type="text" class="field-input" id="admCaseSub"
+                   value="${escapeHtml(caseData.subtitle || '')}"
+                   autocomplete="off"
+                   style="pointer-events: auto !important;
+                          -webkit-user-select: text !important;
+                          user-select: text !important;
+                          touch-action: manipulation;">
         </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
             <div>
-                <label class="field-label">Цена</label>
-                <input type="number" class="field-input" id="admCasePrice" value="${caseData.price}" min="0">
+                <label class="field-label">ЦЕНА</label>
+                <input type="text" class="field-input" id="admCasePrice"
+                       value="${caseData.price}" inputmode="numeric" pattern="[0-9]*"
+                       autocomplete="off"
+                       style="pointer-events: auto !important; text-align: center;">
             </div>
             <div>
-                <label class="field-label">Доступен</label>
-                <select class="field-input" id="admCaseAvail" style="padding: 12px;">
+                <label class="field-label">ДОСТУПЕН</label>
+                <select class="field-input" id="admCaseAvail"
+                        style="padding: 12px; pointer-events: auto !important;">
                     <option value="true" ${caseData.is_available ? 'selected' : ''}>Да</option>
                     <option value="false" ${!caseData.is_available ? 'selected' : ''}>Нет</option>
                 </select>
@@ -26407,32 +26518,42 @@ async function openCaseAdmin(caseId) {
         </div>
 
         <div style="margin: 16px 0 10px;">
-            <label class="field-label">Предметы (${(items || []).length})</label>
+            <label class="field-label">ПРЕДМЕТЫ (${items.length})</label>
             <div style="max-height: 40vh; overflow-y: auto; margin-top: 6px;">
-                ${(items || []).map(it => {
-                    const si = it.shop_items || {};
-                    return `
-                        <div class="case-admin-item">
-                            <div class="case-admin-item-info">
-                                <div class="case-admin-item-name">${escapeHtml(si.name || '—')}</div>
-                                <div class="case-admin-item-meta">${si.category} · ${si.rarity} · 📦 ${si.price || 0}</div>
+                ${items.length === 0 ? `
+                    <div class="empty" style="font-size: 12px; padding: 16px; text-align: center;">
+                        📦 Кейс пуст<br>
+                        <span style="font-size: 11px; color: var(--hint);">Добавь предметы кнопкой ниже</span>
+                    </div>
+                ` : items.map(it => `
+                    <div class="case-admin-item">
+                        <div class="case-admin-item-info">
+                            <div class="case-admin-item-name">${escapeHtml(it.si.name)}</div>
+                            <div class="case-admin-item-meta">
+                                ${it.si.category} · ${it.si.rarity} · 📦 ${it.si.price || 0}
                             </div>
-                            <input type="number" class="case-admin-item-weight" value="${it.weight}"
-                                   min="1" max="9999" data-ci-id="${it.id}"
-                                   onchange="updateCaseItemWeight(${it.id}, this.value)">
-                            <button class="case-admin-item-remove" onclick="removeCaseItem(${it.id}, '${caseId}')">×</button>
                         </div>
-                    `;
-                }).join('') || '<div class="empty" style="font-size: 11px;">Нет предметов</div>'}
+                        <input type="text" class="case-admin-item-weight"
+                               value="${it.weight}" inputmode="numeric" pattern="[0-9]*"
+                               data-ci-id="${it.id}"
+                               onchange="updateCaseItemWeight(${it.id}, this.value)"
+                               style="pointer-events: auto !important;">
+                        <button class="case-admin-item-remove"
+                                onclick="removeCaseItem(${it.id}, '${caseId}')">×</button>
+                    </div>
+                `).join('')}
             </div>
         </div>
 
-        <button class="profile-action-btn save" onclick="saveCaseAdmin('${caseId}')">
+        <button class="profile-action-btn save"
+                onclick="saveCaseAdmin('${caseId}')"
+                style="pointer-events: auto !important;">
             💾 СОХРАНИТЬ
         </button>
         <button class="profile-action-btn cancel" style="margin-top: 8px;"
-                onclick="openAddCaseItemSheet('${caseId}')">
-            ➕ ДОБАВИТЬ ПРЕДМЕТ
+                onclick="closeCaseAdmin(); openAddCaseItemSheet('${caseId}');"
+                style="pointer-events: auto !important;">
+            ➕ ДОБАВИТЬ ПРЕДМЕТЫ
         </button>
         <button class="sheet-cancel" onclick="closeCaseAdmin()">ЗАКРЫТЬ</button>
     `;
@@ -26441,7 +26562,6 @@ async function openCaseAdmin(caseId) {
     document.body.appendChild(sheet);
     haptic('medium');
 }
-
 function closeCaseAdmin() {
     document.getElementById('caseAdminOverlay')?.remove();
     document.getElementById('caseAdminSheet')?.remove();
