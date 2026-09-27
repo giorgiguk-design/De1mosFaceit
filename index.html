@@ -33233,61 +33233,6 @@ async function confirmReady() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🕐 NTP-СИНХРОНИЗАЦИЯ ВРЕМЕНИ С СЕРВЕРОМ
-// ═══════════════════════════════════════════════════════════════
-let _serverTimeOffset = 0;
-let _serverTimeSynced = false;
-let _serverTimeRtt = 0;
-
-async function syncServerTime() {
-    const samples = [];
-    const N = 5;
-
-    for (let i = 0; i < N; i++) {
-        const t0 = Date.now();
-        try {
-            const { data, error } = await sb.rpc('get_server_time');
-            const t1 = Date.now();
-            if (error || !data) continue;
-
-            const serverMs = new Date(data).getTime();
-            const rtt = t1 - t0;
-            const offset = serverMs - (t0 + rtt / 2);
-            samples.push({ offset, rtt });
-        } catch (e) {}
-        await new Promise(r => setTimeout(r, 80));
-    }
-
-    if (samples.length === 0) return;
-
-    samples.sort((a, b) => a.rtt - b.rtt);
-    const best = samples[0];
-
-    _serverTimeOffset = best.offset;
-    _serverTimeRtt = best.rtt;
-    _serverTimeSynced = true;
-
-    console.log('🕐 Server time sync:', {
-        offset: best.offset + 'ms',
-        rtt: best.rtt + 'ms',
-    });
-}
-
-function serverNow() {
-    return Date.now() + _serverTimeOffset;
-}
-
-// Пересинхронизация каждые 60 сек
-setInterval(() => {
-    if (document.hidden) return;
-    if (!_serverTimeSynced) return;
-    syncServerTime();
-}, 60000);
-
-window.serverNow = serverNow;
-window.syncServerTime = syncServerTime;
-
-// ═══════════════════════════════════════════════════════════════
 // ⏱️ ТАЙМЕР — от СЕРВЕРНОГО времени
 // ═══════════════════════════════════════════════════════════════
 function startReadyCheckCountdown() {
