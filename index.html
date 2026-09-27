@@ -23282,6 +23282,323 @@ html.lite-mode .dash-bp-full .bp-level-card.current {
 .leaderboard-item::after {
     display: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* 🎁 КЕЙСЫ — 3D карточки как на рулетках                          */
+/* ═══════════════════════════════════════════════════════════════ */
+.cases-hero-v2 {
+    position: relative;
+    padding: 24px 20px;
+    margin-bottom: 20px;
+    background:
+        radial-gradient(ellipse 80% 100% at 50% 0%, rgba(217,171,90,0.15), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.9));
+    border: 1px solid rgba(217,171,90,0.35);
+    border-radius: 20px;
+    text-align: center;
+    overflow: hidden;
+}
+.cases-hero-v2::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #ffd700, transparent);
+    animation: heroShine 4s linear infinite;
+    background-size: 200% 100%;
+}
+.cases-hero-v2-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255,215,0,0.5);
+    margin-bottom: 6px;
+}
+.cases-hero-v2-sub {
+    font-size: 11px;
+    color: var(--hint);
+    letter-spacing: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cases-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    padding-bottom: 20px;
+}
+
+/* ─────── КАРТОЧКА КЕЙСА ─────── */
+.case-card-v2 {
+    position: relative;
+    padding: 16px 12px 14px;
+    background: linear-gradient(180deg,
+        rgba(20, 20, 20, 0.9) 0%,
+        rgba(5, 5, 5, 0.98) 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
+    isolation: isolate;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: caseCardIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes caseCardIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.case-card-v2::before {
+    /* Верхняя неоновая полоска */
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent,
+        var(--case-color, #00e08a) 50%,
+        transparent);
+    opacity: 0.9;
+    z-index: 3;
+}
+.case-card-v2::after {
+    /* Радиальный фон-свечение */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 40%,
+        rgba(var(--case-rgb, 0,224,138), 0.20) 0%,
+        transparent 65%);
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.35s ease;
+}
+
+.case-card-v2:hover {
+    transform: translateY(-4px);
+    border-color: rgba(var(--case-rgb, 0,224,138), 0.6);
+    box-shadow:
+        0 12px 40px rgba(var(--case-rgb, 0,224,138), 0.35),
+        0 0 0 1px rgba(var(--case-rgb, 0,224,138), 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.case-card-v2:hover::after { opacity: 1.4; }
+.case-card-v2:active { transform: scale(0.98); }
+
+/* Rare badge в углу */
+.case-card-v2-badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    z-index: 5;
+    padding: 3px 8px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(var(--case-rgb, 0,224,138), 0.5);
+    border-radius: 8px;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--case-color, #00e08a);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    animation: badgePulse 2s ease-in-out infinite;
+}
+@keyframes badgePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--case-rgb, 0,224,138), 0.6); }
+    50%      { box-shadow: 0 0 0 6px rgba(var(--case-rgb, 0,224,138), 0); }
+}
+
+/* SVG сундук */
+.case-chest-v2 {
+    width: 130px;
+    height: 130px;
+    margin: 12px auto 8px;
+    filter: drop-shadow(0 8px 20px rgba(var(--case-rgb, 0,224,138), 0.3));
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: chestFloat 4s ease-in-out infinite;
+    z-index: 2;
+    position: relative;
+}
+@keyframes chestFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-5px) rotate(-1deg); }
+}
+.case-card-v2:hover .case-chest-v2 {
+    transform: scale(1.06) rotate(2deg);
+    animation: none;
+}
+
+/* Название */
+.case-card-v2-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 2px;
+    z-index: 2;
+    text-shadow: 0 0 12px rgba(var(--case-rgb, 0,224,138), 0.6);
+    text-transform: uppercase;
+}
+.case-card-v2-sub {
+    font-size: 10px;
+    color: var(--hint);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-align: center;
+    z-index: 2;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Кнопка / цена */
+.case-card-v2-action {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 2;
+    margin-top: auto;
+    transition: transform 0.18s ease, box-shadow 0.22s ease;
+    text-transform: uppercase;
+}
+.case-card-v2-action.buy {
+    background: linear-gradient(135deg,
+        var(--case-color, #00e08a),
+        rgba(var(--case-rgb, 0,224,138), 0.7));
+    color: #04140e;
+    box-shadow:
+        0 4px 16px rgba(var(--case-rgb, 0,224,138), 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.case-card-v2-action.buy:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        0 8px 22px rgba(var(--case-rgb, 0,224,138), 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.case-card-v2-action.free {
+    background: linear-gradient(135deg, #ffd700, #b8860b);
+    color: #000;
+    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.5);
+    animation: freePulse 2s ease-in-out infinite;
+}
+@keyframes freePulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(255, 215, 0, 0.5); }
+    50%      { box-shadow: 0 4px 24px rgba(255, 215, 0, 0.9), 0 0 40px rgba(255,215,0,0.4); }
+}
+.case-card-v2-action.cooldown {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--hint);
+    cursor: not-allowed;
+}
+.case-card-v2-action:active:not(.cooldown) { transform: scale(0.97); }
+
+/* Адаптив для десктопа */
+@media (min-width: 768px) {
+    .cases-grid-v2 { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .case-chest-v2 { width: 150px; height: 150px; }
+    .case-card-v2 { min-height: 290px; padding: 20px 16px 18px; }
+    .case-card-v2-name { font-size: 16px; }
+}
+@media (min-width: 1024px) {
+    .cases-grid-v2 { grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .case-chest-v2 { width: 170px; height: 170px; }
+    .case-card-v2 { min-height: 320px; }
+}
+
+/* Lite-mode */
+html.lite-mode .case-chest-v2,
+html.lite-mode .case-card-v2-badge,
+html.lite-mode .case-card-v2-action.free {
+    animation: none;
+}
+html.lite-mode .case-card-v2:hover {
+    transform: none;
+}
+
+/* Шапка магазина кейсов */
+.cases-header-balance {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05));
+    border: 1px solid rgba(255,215,0,0.5);
+    border-radius: 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,215,0,0.5);
+    cursor: pointer;
+}
+
+/* Админ-панель кейса */
+.case-admin-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+}
+.case-admin-item-info { flex: 1; min-width: 0; }
+.case-admin-item-name {
+    font-size: 12px; font-weight: 800; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.case-admin-item-meta {
+    font-size: 10px; color: var(--hint); margin-top: 2px;
+}
+.case-admin-item-weight {
+    width: 70px;
+    padding: 6px 8px;
+    text-align: center;
+    background: rgba(var(--emerald-rgb), 0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--emerald);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 800;
+    outline: none;
+}
+.case-admin-item-remove {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: rgba(255,84,112,0.15);
+    border: 1px solid rgba(255,84,112,0.35);
+    color: var(--red);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
     
 </style>
 </head>
@@ -24868,45 +25185,6 @@ const RANK_CONFIG = {
     ],
 };
 
-          // ============================================================
-// 🎁 КЕЙСЫ
-// ============================================================
-const CASE_CONFIG = {
-    daily_free: {
-        name: 'Ежедневный кейс',
-        price: 0,
-        cooldown: 'daily',              // раз в день
-        free: true,
-        rarity_chances: {
-            common: 0.60,
-            rare: 0.28,
-            epic: 0.10,
-            legendary: 0.02,
-        },
-    },
-    common: {
-        name: 'Обычный кейс',
-        price: 500,
-        free: false,
-        rarity_chances: {
-            common: 0.50,
-            rare: 0.30,
-            epic: 0.15,
-            legendary: 0.05,
-        },
-    },
-    premium: {
-        name: 'Премиум кейс',
-        price: 1500,
-        free: false,
-        rarity_chances: {
-            common: 0.20,
-            rare: 0.35,
-            epic: 0.30,
-            legendary: 0.15,
-        },
-    },
-};
 
 // ============================================================
 // 🎁 SVG-ИКОНКИ КЕЙСОВ
@@ -25006,170 +25284,10 @@ function resetDailyCaseLocal() {
     console.log('🔄 Локальный кулдаун сброшен');
 }
 
-// Получить случайный предмет из магазина по редкости
-async function getRandomItemByRarity(rarity) {
-    try {
-        const { data } = await sb.from('shop_items')
-            .select('*')
-            .eq('is_available', true)
-            .eq('rarity', rarity)
-            .neq('category', 'profile_bg'); // исключим фоны профиля (тяжёлые)
-
-        if (!data || !data.length) return null;
-        return data[Math.floor(Math.random() * data.length)];
-    } catch (e) {
-        return null;
-    }
-}
-
-// Выбрать редкость по шансам
-function rollRarity(chances) {
-    const roll = Math.random();
-    let cumulative = 0;
-    for (const [rarity, chance] of Object.entries(chances)) {
-        cumulative += chance;
-        if (roll < cumulative) return rarity;
-    }
-    return 'common';
-}
-
-// Открытие кейса
-async function openCase(caseType) {
-    if (!currentUser) return;
-
-    const config = CASE_CONFIG[caseType];
-    if (!config) return;
-
-    // Проверки
-    if (caseType === 'daily_free') {
-        const { can } = await canOpenFreeCase();
-        if (!can) {
-            showToast('⏳ Бесплатный кейс уже открыт. Возвращайся завтра!');
-            return;
-        }
-
-        // 🔥 КРИТИЧНО: помечаем локально СРАЗУ,
-        // чтобы даже если БД отвалится — кулдаун сработал
-        markDailyCaseOpened();
-    } else {
-        // Платный — списываем монеты
-        if ((currentUser.coins || 0) < config.price) {
-            showToast('❌ Недостаточно монет');
-            return;
-        }
-        if (!confirm(`Открыть ${config.name} за ${config.price} монет?`)) return;
-
-        // Списываем
-        try {
-            await sb.rpc('add_coins', {
-                p_user_id: currentUser.telegram_id,
-                p_amount: -config.price,
-                p_reason: `case:${caseType}`,
-                p_meta: { case_type: caseType },
-            });
-            currentUser.coins -= config.price;
-            updateCoinsBadge();
-        } catch (e) {
-            showToast('❌ Ошибка списания');
-            return;
-        }
-    }
-
-    // Определяем редкость
-    const rarity = rollRarity(config.rarity_chances);
-
-    // Получаем предмет
-    let item = await getRandomItemByRarity(rarity);
-
-    // Если нет предметов этой редкости — откат на common
-    if (!item) {
-        item = await getRandomItemByRarity('common');
-    }
-    if (!item) {
-        showToast('❌ Нет доступных предметов');
-        return;
-    }
-
-    // Даём предмет игроку
-    try {
-        // Проверка — есть ли уже
-        const { data: existing } = await sb.from('user_inventory')
-            .select('id')
-            .eq('telegram_id', currentUser.telegram_id)
-            .eq('item_id', item.id)
-            .maybeSingle();
-
-        if (existing) {
-            // ============================================================
-            // ДУБЛИКАТ — даём монеты вместо предмета
-            // ============================================================
-            const refund = Math.round(item.price * 0.5);
-
-            await sb.rpc('add_coins', {
-                p_user_id: currentUser.telegram_id,
-                p_amount: refund,
-                p_reason: `case_duplicate:${item.id}`,
-                p_meta: { item_id: item.id },
-            });
-            currentUser.coins += refund;
-            updateCoinsBadge();
-
-            // Логируем (не критично — если упадёт, всё равно показываем картинку)
-            try {
-                await sb.from('case_openings').insert({
-                    telegram_id: currentUser.telegram_id,
-                    case_type: caseType,
-                    item_id: item.id,
-                    item_rarity: rarity,
-                    is_free: config.free,
-                    opened_at: new Date().toISOString(),
-                });
-            } catch (logErr) {
-                console.warn('case_openings insert (dup) failed:', logErr);
-            }
-
-            // 🔥 Показываем анимацию В ЛЮБОМ СЛУЧАЕ
-            showCaseOpening(item, rarity, true, refund);
-
-        } else {
-            // ============================================================
-            // НОВЫЙ ПРЕДМЕТ — добавляем в инвентарь
-            // ============================================================
-            await sb.from('user_inventory').insert({
-                telegram_id: currentUser.telegram_id,
-                item_id: item.id,
-                is_equipped: false,
-            });
-
-            // Логируем (не критично)
-            try {
-                await sb.from('case_openings').insert({
-                    telegram_id: currentUser.telegram_id,
-                    case_type: caseType,
-                    item_id: item.id,
-                    item_rarity: rarity,
-                    is_free: config.free,
-                    opened_at: new Date().toISOString(),
-                });
-            } catch (logErr) {
-                console.warn('case_openings insert failed:', logErr);
-            }
-
-            // 🔥 Показываем анимацию
-            showCaseOpening(item, rarity, false, 0);
-        }
-
-        haptic('heavy');
-    } catch (e) {
-        console.error('openCase:', e);
-        showToast('❌ ' + e.message);
-    }
-}
-
 // ============================================================
 // 🎰 КРАСИВАЯ АНИМАЦИЯ ОТКРЫТИЯ КЕЙСА (CS:GO style)
 // ============================================================
-function showCaseOpening(item, rarity, isDuplicate, refund) {
+function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool) {
     document.getElementById('caseModal')?.remove();
     document.getElementById('caseOpenOverlay')?.remove();
 
@@ -25182,17 +25300,19 @@ function showCaseOpening(item, rarity, isDuplicate, refund) {
     const meta = rarityMeta[rarity] || rarityMeta.common;
 
     // ---- Собираем пул предметов для ленты ----
-    const pool = Object.values(SHOP_ITEMS_CACHE).filter(i => i && i.id && i.name);
-    if (!pool.length) {
-        pool.push({
+    let reelPool = (pool && pool.length)
+        ? pool
+        : Object.values(SHOP_ITEMS_CACHE).filter(i => i && i.id && i.name);
+
+    if (!reelPool.length) {
+        reelPool = [{
             id: '_fallback',
             name: 'Приз',
             category: 'badge',
             value: { emoji: '🎁' },
             rarity: 'common'
-        });
+        }];
     }
-
     // ---- Параметры ленты ----
     const REEL_LEN   = 60;
     const WINNER_IDX = 52;
@@ -25205,7 +25325,7 @@ function showCaseOpening(item, rarity, isDuplicate, refund) {
         if (i === WINNER_IDX) {
             reelItems.push({ ...item, _winner: true });
         } else {
-            reelItems.push(pool[Math.floor(Math.random() * pool.length)]);
+            reelItems.push(reelPool[Math.floor(Math.random() * reelPool.length)]);
         }
     }
 
@@ -25665,7 +25785,78 @@ function renderCaseItemPreview(item) {
     return '<span style="font-size: 36px;">🎁</span>';
 }
 
-// Экран кейсов
+// ═══════════════════════════════════════════════════════════════
+// 🎁 КЕЙСЫ v2 — 7 категорий, редактируемые, 3D
+// ═══════════════════════════════════════════════════════════════
+
+let _casesCache = [];
+
+// ────────────────────────────────────────────────────────────
+// SVG-СУНДУК
+// ────────────────────────────────────────────────────────────
+function renderCaseChest(color, rgb) {
+    const uid = '_' + Math.random().toString(36).slice(2, 7);
+    return `
+        <svg class="case-chest-v2" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"
+             style="--case-color: ${color}; --case-rgb: ${rgb}; color: ${color};">
+            <defs>
+                <radialGradient id="cg${uid}" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="${color}" stop-opacity="0.75"/>
+                    <stop offset="60%" stop-color="${color}" stop-opacity="0.15"/>
+                    <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="top${uid}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#4a4a4a"/>
+                    <stop offset="100%" stop-color="#1a1a1a"/>
+                </linearGradient>
+                <linearGradient id="body${uid}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#2a2a2a"/>
+                    <stop offset="100%" stop-color="#0a0a0a"/>
+                </linearGradient>
+                <linearGradient id="gold${uid}" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#fff5cc"/>
+                    <stop offset="50%" stop-color="#ffd700"/>
+                    <stop offset="100%" stop-color="#8a6a00"/>
+                </linearGradient>
+            </defs>
+
+            <circle cx="100" cy="100" r="95" fill="url(#cg${uid})"/>
+
+            <path d="M 35 65 Q 100 35 165 65 L 165 95 L 35 95 Z"
+                  fill="url(#top${uid})" stroke="${color}" stroke-width="2.5"/>
+
+            <path d="M 35 75 Q 100 48 165 75"
+                  fill="none" stroke="url(#gold${uid})" stroke-width="2" opacity="0.85"/>
+
+            <path d="M 35 95 L 165 95 L 165 170 Q 100 182 35 170 Z"
+                  fill="url(#body${uid})" stroke="${color}" stroke-width="2.5"/>
+
+            <rect x="94" y="95" width="12" height="80" fill="url(#gold${uid})"/>
+            <rect x="94" y="95" width="12" height="80" fill="#000" opacity="0.25"/>
+
+            <!-- Замок -->
+            <circle cx="100" cy="95" r="16" fill="url(#gold${uid})" stroke="#8a6a00" stroke-width="1.5"/>
+            <circle cx="100" cy="93" r="5.5" fill="#0a0a0a"/>
+            <rect x="96" y="93" width="8" height="12" rx="1" fill="#0a0a0a"/>
+
+            <!-- Угловые пластины -->
+            <path d="M 35 95 L 52 95 L 52 112 L 35 112 Z" fill="url(#gold${uid})" opacity="0.85"/>
+            <path d="M 148 95 L 165 95 L 165 112 L 148 112 Z" fill="url(#gold${uid})" opacity="0.85"/>
+            <path d="M 35 155 L 52 155 L 52 170 L 35 170 Z" fill="url(#gold${uid})" opacity="0.85"/>
+            <path d="M 148 155 L 165 155 L 165 170 L 148 170 Z" fill="url(#gold${uid})" opacity="0.85"/>
+
+            <!-- Искры -->
+            <circle cx="55" cy="45" r="2" fill="${color}" opacity="0.9"/>
+            <circle cx="145" cy="40" r="2.5" fill="${color}" opacity="0.85"/>
+            <circle cx="170" cy="130" r="2" fill="${color}" opacity="0.7"/>
+            <circle cx="30" cy="140" r="1.8" fill="${color}" opacity="0.7"/>
+        </svg>
+    `;
+}
+
+// ────────────────────────────────────────────────────────────
+// ЭКРАН КЕЙСОВ
+// ────────────────────────────────────────────────────────────
 async function openCasesScreen() {
     if (!currentUser) {
         showToast('⚠️ Профиль ещё не загружен');
@@ -25674,122 +25865,498 @@ async function openCasesScreen() {
     switchPage('cases');
     const container = document.getElementById('casesContent');
     if (!container) return;
-    container.innerHTML = skeleton ? skeleton('card', 3) : '<div class="empty">Загрузка...</div>';
+    container.innerHTML = '<div class="empty">Загрузка кейсов...</div>';
 
-    const freeInfo = await canOpenFreeCase();
+    try {
+        const { data, error } = await sb.from('cases')
+            .select('*').eq('is_available', true)
+            .order('sort_order');
+        if (error) throw error;
+        _casesCache = data || [];
 
-    // История последних 10 открытий
-    const { data: history } = await sb.from('case_openings')
-        .select('*')
-        .eq('telegram_id', currentUser.telegram_id)
-        .order('opened_at', { ascending: false })
-        .limit(10);
+        // Проверка daily
+        const dailyInfo = await canOpenFreeCase();
 
-    const formatTimeLeft = (ms) => {
-        const h = Math.floor(ms / 3600000);
-        const m = Math.floor((ms % 3600000) / 60000);
-        if (h > 0) return `${h}ч ${m}м`;
-        return `${m}м`;
-    };
+        const adminBtn = isCurrentUserAdmin() ? `
+            <button class="phc-icon-btn" onclick="openCaseCreateSheet()" title="Создать кейс"
+                    style="position: absolute; top: 14px; right: 14px;">
+                <svg viewBox="0 0 24 24" style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+            </button>
+        ` : '';
 
-    const historyHTML = (history || []).map(h => {
-        const meta = {
-            common:    { c: '#9aa7b5', l: 'C' },
-            rare:      { c: '#4fc3f7', l: 'R' },
-            epic:      { c: '#a78bfa', l: 'E' },
-            legendary: { c: '#ffd700', l: 'L' },
-        }[h.item_rarity] || { c: '#9aa7b5', l: '?' };
-
-        return `
-            <div class="case-history-row">
-                <div class="case-history-rarity" style="color: ${meta.c}; border-color: ${meta.c};">${meta.l}</div>
-                <div class="case-history-info">
-                    <div class="case-history-name">${escapeHtml(h.item_id)}</div>
-                    <div class="case-history-time">${formatTimeAgo(h.opened_at)}</div>
+        container.innerHTML = `
+            <div class="cases-hero-v2">
+                ${adminBtn}
+                <div class="cases-hero-v2-title">КЕЙСЫ</div>
+                <div class="cases-hero-v2-sub">Открывай · Получай · Коллекционируй</div>
+                <div style="margin-top: 16px;">
+                    <div class="cases-header-balance" onclick="openShop()">
+                        💰 ${currentUser.coins || 0}
+                    </div>
                 </div>
+            </div>
+
+            <div class="cases-grid-v2" id="casesGridV2">
+                ${_casesCache.map((c, i) => renderCaseCardV2(c, dailyInfo, i)).join('')}
+            </div>
+
+            <button class="profile-action-btn cancel" onclick="switchPage('dashboard')" style="margin-top: 16px;">
+                ← НАЗАД
+            </button>
+        `;
+    } catch (e) {
+        console.error('openCasesScreen:', e);
+        container.innerHTML = `
+            <div class="empty" style="color: var(--red); padding: 20px;">
+                ❌ Ошибка загрузки кейсов<br>
+                <span style="font-size: 11px; color: var(--hint);">${escapeHtml(e.message || '')}</span>
             </div>
         `;
-    }).join('');
+    }
+}
 
-    container.innerHTML = `
-        <div class="cases-hero">
-            <div class="cases-hero-icon">${getCaseSvg(56)}</div>
-            <div class="cases-hero-title">КЕЙСЫ</div>
-            <div class="cases-hero-sub">Открывай кейсы и получай эксклюзивные предметы</div>
+// ────────────────────────────────────────────────────────────
+// КАРТОЧКА КЕЙСА
+// ────────────────────────────────────────────────────────────
+function renderCaseCardV2(c, dailyInfo, index) {
+    const isDaily = c.cooldown === 'daily';
+    const canOpenDaily = isDaily && dailyInfo?.can === true;
+
+    let actionHTML;
+    if (isDaily) {
+        if (canOpenDaily) {
+            actionHTML = `<button class="case-card-v2-action free" onclick="event.stopPropagation(); openCaseById('${c.id}')">
+                🎁 ОТКРЫТЬ БЕСПЛАТНО
+            </button>`;
+        } else {
+            const hoursLeft = Math.ceil((dailyInfo?.timeLeft || 0) / 3600000);
+            actionHTML = `<button class="case-card-v2-action cooldown" disabled>
+                ⏳ ДОСТУПНО ЧЕРЕЗ ${hoursLeft} Ч
+            </button>`;
+        }
+    } else {
+        actionHTML = `<button class="case-card-v2-action buy" onclick="event.stopPropagation(); openCaseById('${c.id}')">
+            💰 ${c.price} МОНЕТ
+        </button>`;
+    }
+
+    // Бейдж редкости
+    let badge = '';
+    const catLabels = {
+        daily: 'ALL-IN',
+        frames: 'Рамки',
+        backgrounds: 'Фоны',
+        titles: 'Титулы',
+        badges: 'Значки',
+        elite: 'ЭПИК+',
+        cybersport: 'TOP',
+    };
+    badge = catLabels[c.category] || 'NEW';
+
+    return `
+        <div class="case-card-v2"
+             style="--case-color: ${c.accent_color}; --case-rgb: ${c.accent_rgb}; animation-delay: ${index * 0.05}s;"
+             onclick="openCaseById('${c.id}')">
+            ${isCurrentUserAdmin() ? `
+                <button class="case-card-v2-badge" style="left: 8px; right: auto; cursor: pointer;"
+                        onclick="event.stopPropagation(); openCaseAdmin('${c.id}')"
+                        title="Редактировать">
+                    ⚙️
+                </button>
+            ` : ''}
+            <div class="case-card-v2-badge">${badge}</div>
+            ${renderCaseChest(c.accent_color, c.accent_rgb)}
+            <div class="case-card-v2-name">${escapeHtml(c.name)}</div>
+            <div class="case-card-v2-sub">${escapeHtml(c.subtitle || '')}</div>
+            ${actionHTML}
         </div>
-
-        <!-- Ежедневный бесплатный -->
-        <div class="case-card daily ${freeInfo.can ? 'available' : 'cooldown'}">
-            <div class="case-card-glow"></div>
-            <div class="case-card-icon">${getCaseSvg(48)}</div>
-            <div class="case-card-info">
-                <div class="case-card-name">🎁 Ежедневный кейс</div>
-                <div class="case-card-desc">Раз в день — бесплатно</div>
-                <div class="case-card-chances">
-                    <span class="cc common">60%</span>
-                    <span class="cc rare">28%</span>
-                    <span class="cc epic">10%</span>
-                    <span class="cc legendary">2%</span>
-                </div>
-            </div>
-            ${freeInfo.can
-                ? `<button class="case-card-btn free" onclick="openCase('daily_free')">ОТКРЫТЬ</button>`
-                : `<button class="case-card-btn cooldown" disabled>⏳ ${formatTimeLeft(freeInfo.timeLeft)}</button>`
-            }
-        </div>
-
-        <!-- Обычный -->
-        <div class="case-card common">
-            <div class="case-card-glow"></div>
-            <div class="case-card-icon">${getCaseSvg(48)}</div>
-            <div class="case-card-info">
-                <div class="case-card-name">Обычный кейс</div>
-                <div class="case-card-desc">Шанс на редкость</div>
-                <div class="case-card-chances">
-                    <span class="cc common">50%</span>
-                    <span class="cc rare">30%</span>
-                    <span class="cc epic">15%</span>
-                    <span class="cc legendary">5%</span>
-                </div>
-            </div>
-            <button class="case-card-btn buy" onclick="openCase('common')">
-                💰 500
-            </button>
-        </div>
-
-        <!-- Премиум -->
-        <div class="case-card premium">
-            <div class="case-card-glow"></div>
-            <div class="case-card-icon">${getCaseSvg(48)}</div>
-            <div class="case-card-info">
-                <div class="case-card-name">⭐ Премиум кейс</div>
-                <div class="case-card-desc">Повышенный шанс на эпик</div>
-                <div class="case-card-chances">
-                    <span class="cc common">20%</span>
-                    <span class="cc rare">35%</span>
-                    <span class="cc epic">30%</span>
-                    <span class="cc legendary">15%</span>
-                </div>
-            </div>
-            <button class="case-card-btn buy premium" onclick="openCase('premium')">
-                💰 1500
-            </button>
-        </div>
-
-        <!-- История -->
-        ${history?.length ? `
-            <div class="section-title" style="margin-top: 20px;">📜 История открытий</div>
-            <div class="case-history-list">
-                ${historyHTML}
-            </div>
-        ` : ''}
-
-        <button class="profile-action-btn cancel" onclick="switchPage('dashboard')" style="margin-top: 20px;">
-            ← НАЗАД
-        </button>
     `;
-}  
+}
 
+// ────────────────────────────────────────────────────────────
+// ОТКРЫТИЕ КЕЙСА
+// ────────────────────────────────────────────────────────────
+async function openCaseById(caseId) {
+    if (!currentUser) return;
+
+    const { data: caseData, error: cErr } = await sb.from('cases')
+        .select('*').eq('id', caseId).single();
+    if (cErr || !caseData) { showToast('❌ Кейс не найден'); return; }
+
+    // Кулдаун для daily
+    if (caseData.cooldown === 'daily') {
+        const info = await canOpenFreeCase();
+        if (!info.can) {
+            showToast('⏳ Бесплатный кейс уже открыт. Возвращайся завтра!');
+            return;
+        }
+    }
+
+    // Списываем монеты
+    if (caseData.price > 0) {
+        if ((currentUser.coins || 0) < caseData.price) {
+            showToast('❌ Недостаточно монет');
+            haptic('heavy');
+            return;
+        }
+        if (!confirm(`Открыть «${caseData.name}» за ${caseData.price} монет?`)) return;
+
+        try {
+            await sb.rpc('add_coins', {
+                p_user_id: currentUser.telegram_id,
+                p_amount: -caseData.price,
+                p_reason: `case:${caseId}`,
+                p_meta: { case_id: caseId }
+            });
+            currentUser.coins -= caseData.price;
+            updateCoinsBadge();
+        } catch (e) {
+            showToast('❌ Ошибка списания');
+            return;
+        }
+    }
+
+    if (caseData.cooldown === 'daily') markDailyCaseOpened();
+
+    // Получаем предмет через RPC
+    const { data: picked, error: pErr } = await sb.rpc('pick_case_item', { p_case_id: caseId });
+    if (pErr || !picked?.ok) {
+        showToast('❌ Не удалось выбрать предмет');
+        console.error('pick_case_item:', pErr, picked);
+        return;
+    }
+
+    const item = {
+        id: picked.item_id,
+        name: picked.name,
+        category: picked.category,
+        rarity: picked.rarity,
+        value: picked.value,
+    };
+
+    // Проверка на дубликат
+    const { data: existing } = await sb.from('user_inventory')
+        .select('id')
+        .eq('telegram_id', currentUser.telegram_id)
+        .eq('item_id', item.id)
+        .maybeSingle();
+
+    let isDuplicate = false;
+    let refund = 0;
+
+    if (existing) {
+        isDuplicate = true;
+        const itemPrice = SHOP_ITEMS_CACHE[item.id]?.price
+            || (await sb.from('shop_items').select('price').eq('id', item.id).single()).data?.price
+            || 100;
+        refund = Math.round(itemPrice * 0.5);
+        try {
+            await sb.rpc('add_coins', {
+                p_user_id: currentUser.telegram_id,
+                p_amount: refund,
+                p_reason: `case_duplicate:${item.id}`,
+                p_meta: { item_id: item.id }
+            });
+            currentUser.coins += refund;
+            updateCoinsBadge();
+        } catch (e) {}
+    } else {
+        await sb.from('user_inventory').insert({
+            telegram_id: currentUser.telegram_id,
+            item_id: item.id,
+            is_equipped: false
+        });
+    }
+
+    // Логируем
+    try {
+        await sb.from('case_openings').insert({
+            telegram_id: currentUser.telegram_id,
+            case_type: caseId,
+            item_id: item.id,
+            item_rarity: item.rarity,
+            is_free: caseData.price === 0,
+            opened_at: new Date().toISOString()
+        });
+    } catch (e) {}
+
+    haptic('heavy');
+
+    // Загружаем пул из этого кейса для рулетки
+    const { data: poolRaw } = await sb.from('case_items')
+        .select('item_id, weight, shop_items!inner(id, name, category, rarity, value)')
+        .eq('case_id', caseId);
+
+    const pool = (poolRaw || [])
+        .map(r => ({ ...r.shop_items, weight: r.weight }))
+        .filter(i => i && i.id);
+    // Обязательно загружаем в кеш для рендера
+    pool.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+
+    // Показываем анимацию (существующая функция showCaseOpening)
+    showCaseOpening(item, item.rarity, isDuplicate, refund, caseId, pool);
+}
+
+// ────────────────────────────────────────────────────────────
+// ОБНОВЛЁННАЯ АНИМАЦИЯ С ПУЛОМ КЕЙСА
+// ────────────────────────────────────────────────────────────
+// Замени старую showCaseOpening — ей теперь передаётся 6-й параметр pool
+// Найди старую функцию showCaseOpening и замени сигнатуру:
+//
+// БЫЛО:  function showCaseOpening(item, rarity, isDuplicate, refund) { ... }
+// СТАЛО: function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool) { ... }
+//
+// Внутри, где строка:
+//    const pool = Object.values(SHOP_ITEMS_CACHE).filter(...)
+// замени на:
+//    const reelPool = (pool && pool.length) ? pool : Object.values(SHOP_ITEMS_CACHE).filter(i => i && i.id && i.name);
+//
+// И далее используй reelPool вместо pool.
+
+// ────────────────────────────────────────────────────────────
+// АДМИН: РЕДАКТИРОВАНИЕ КЕЙСА
+// ────────────────────────────────────────────────────────────
+async function openCaseAdmin(caseId) {
+    if (!isCurrentUserAdmin()) { showToast('Только админ'); return; }
+
+    const caseData = _casesCache.find(c => c.id === caseId);
+    if (!caseData) return;
+
+    const { data: items } = await sb.from('case_items')
+        .select('id, item_id, weight, shop_items!inner(id, name, category, rarity, value, price)')
+        .eq('case_id', caseId)
+        .order('weight', { ascending: false });
+
+    document.getElementById('caseAdminOverlay')?.remove();
+    document.getElementById('caseAdminSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'caseAdminOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeCaseAdmin(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'caseAdminSheet';
+    sheet.style.zIndex = '810';
+    sheet.style.maxHeight = '90vh';
+    sheet.style.overflowY = 'auto';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">⚙️ ${escapeHtml(caseData.name)}</div>
+
+        <div style="margin-bottom: 10px;">
+            <label class="field-label">Название</label>
+            <input type="text" class="field-input" id="admCaseName" value="${escapeHtml(caseData.name)}">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label class="field-label">Подзаголовок</label>
+            <input type="text" class="field-input" id="admCaseSub" value="${escapeHtml(caseData.subtitle || '')}">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div>
+                <label class="field-label">Цена</label>
+                <input type="number" class="field-input" id="admCasePrice" value="${caseData.price}" min="0">
+            </div>
+            <div>
+                <label class="field-label">Доступен</label>
+                <select class="field-input" id="admCaseAvail" style="padding: 12px;">
+                    <option value="true" ${caseData.is_available ? 'selected' : ''}>Да</option>
+                    <option value="false" ${!caseData.is_available ? 'selected' : ''}>Нет</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin: 16px 0 10px;">
+            <label class="field-label">Предметы (${(items || []).length})</label>
+            <div style="max-height: 40vh; overflow-y: auto; margin-top: 6px;">
+                ${(items || []).map(it => {
+                    const si = it.shop_items || {};
+                    return `
+                        <div class="case-admin-item">
+                            <div class="case-admin-item-info">
+                                <div class="case-admin-item-name">${escapeHtml(si.name || '—')}</div>
+                                <div class="case-admin-item-meta">${si.category} · ${si.rarity} · 📦 ${si.price || 0}</div>
+                            </div>
+                            <input type="number" class="case-admin-item-weight" value="${it.weight}"
+                                   min="1" max="9999" data-ci-id="${it.id}"
+                                   onchange="updateCaseItemWeight(${it.id}, this.value)">
+                            <button class="case-admin-item-remove" onclick="removeCaseItem(${it.id}, '${caseId}')">×</button>
+                        </div>
+                    `;
+                }).join('') || '<div class="empty" style="font-size: 11px;">Нет предметов</div>'}
+            </div>
+        </div>
+
+        <button class="profile-action-btn save" onclick="saveCaseAdmin('${caseId}')">
+            💾 СОХРАНИТЬ
+        </button>
+        <button class="profile-action-btn cancel" style="margin-top: 8px;"
+                onclick="openAddCaseItemSheet('${caseId}')">
+            ➕ ДОБАВИТЬ ПРЕДМЕТ
+        </button>
+        <button class="sheet-cancel" onclick="closeCaseAdmin()">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    haptic('medium');
+}
+
+function closeCaseAdmin() {
+    document.getElementById('caseAdminOverlay')?.remove();
+    document.getElementById('caseAdminSheet')?.remove();
+}
+
+async function saveCaseAdmin(caseId) {
+    const name = document.getElementById('admCaseName')?.value.trim();
+    const subtitle = document.getElementById('admCaseSub')?.value.trim();
+    const price = parseInt(document.getElementById('admCasePrice')?.value, 10) || 0;
+    const is_available = document.getElementById('admCaseAvail')?.value === 'true';
+
+    try {
+        const { error } = await sb.from('cases').update({
+            name, subtitle, price, is_available
+        }).eq('id', caseId);
+        if (error) throw error;
+        showToast('✅ Сохранено');
+        closeCaseAdmin();
+        openCasesScreen();
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+async function updateCaseItemWeight(ciId, newWeight) {
+    const w = Math.max(1, parseInt(newWeight, 10) || 1);
+    try {
+        await sb.from('case_items').update({ weight: w }).eq('id', ciId);
+    } catch (e) {}
+}
+
+async function removeCaseItem(ciId, caseId) {
+    if (!confirm('Удалить предмет из кейса?')) return;
+    try {
+        await sb.from('case_items').delete().eq('id', ciId);
+        showToast('🗑️ Удалено');
+        closeCaseAdmin();
+        setTimeout(() => openCaseAdmin(caseId), 200);
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// АДМИН: ДОБАВИТЬ ПРЕДМЕТ В КЕЙС
+// ────────────────────────────────────────────────────────────
+async function openAddCaseItemSheet(caseId) {
+    const { data: items } = await sb.from('shop_items')
+        .select('id, name, category, rarity, price')
+        .eq('is_available', true)
+        .order('category').order('name');
+
+    const { data: existing } = await sb.from('case_items')
+        .select('item_id').eq('case_id', caseId);
+    const inCase = new Set((existing || []).map(e => e.item_id));
+
+    document.getElementById('addCaseItemOverlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'addCaseItemOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.style.zIndex = '815';
+    sheet.style.maxHeight = '85vh';
+    sheet.style.overflowY = 'auto';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">➕ Добавить предмет</div>
+        <input type="text" class="field-input" id="addCiSearch" placeholder="🔍 Поиск..." style="margin-bottom: 10px;"
+               oninput="(function(v){document.querySelectorAll('#addCiList [data-name]').forEach(el => {
+                   el.style.display = el.dataset.name.toLowerCase().includes(v.toLowerCase()) ? '' : 'none';
+               });})(this.value)">
+        <div id="addCiList">
+            ${(items || []).filter(i => !inCase.has(i.id)).map(i => `
+                <button class="sheet-option" data-name="${escapeHtml(i.name)}"
+                        onclick="addCaseItem('${caseId}', '${i.id}', this)">
+                    <span style="font-size: 16px;">📦</span>
+                    <div style="flex:1;text-align:left;">
+                        <div style="font-weight:800;font-size:13px;">${escapeHtml(i.name)}</div>
+                        <div style="font-size:10px;color:var(--hint);">${i.category} · ${i.rarity}</div>
+                    </div>
+                </button>
+            `).join('') || '<div class="empty" style="font-size: 12px;">Все предметы уже в кейсе</div>'}
+        </div>
+        <button class="sheet-cancel" onclick="document.getElementById('addCaseItemOverlay')?.remove()">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+}
+
+async function addCaseItem(caseId, itemId, btn) {
+    if (btn?.disabled) return;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+    try {
+        await sb.from('case_items').insert({
+            case_id: caseId, item_id: itemId, weight: 100
+        });
+        showToast('✅ Добавлено');
+        if (btn) btn.style.background = 'rgba(var(--emerald-rgb), 0.15)';
+    } catch (e) {
+        showToast('❌ ' + e.message);
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// АДМИН: СОЗДАТЬ НОВЫЙ КЕЙС
+// ────────────────────────────────────────────────────────────
+function openCaseCreateSheet() {
+    if (!isCurrentUserAdmin()) return;
+    const name = prompt('Название кейса:');
+    if (!name) return;
+    const id = prompt('ID кейса (латиница, без пробелов):', 'custom_' + Date.now());
+    if (!id) return;
+    const price = parseInt(prompt('Цена (0 = бесплатно):', '500')) || 0;
+    const color = prompt('Цвет (#00e08a):', '#00e08a') || '#00e08a';
+    const rgb = hexToRgbString(color);
+
+    sb.from('cases').insert({
+        id, name, price, category: 'custom',
+        subtitle: 'Кастомный кейс',
+        accent_color: color,
+        accent_rgb: rgb,
+        sort_order: 200,
+    }).then(() => {
+        showToast('✅ Кейс создан');
+        openCasesScreen();
+    }).catch(e => showToast('❌ ' + e.message));
+}
+
+function hexToRgbString(hex) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    return `${r},${g},${b}`;
+}
+
+window.openCasesScreen = openCasesScreen;
+window.openCaseById = openCaseById;
+window.openCaseAdmin = openCaseAdmin;
+window.closeCaseAdmin = closeCaseAdmin;
+window.saveCaseAdmin = saveCaseAdmin;
+window.updateCaseItemWeight = updateCaseItemWeight;
+window.removeCaseItem = removeCaseItem;
+window.openAddCaseItemSheet = openAddCaseItemSheet;
+window.addCaseItem = addCaseItem;
+window.openCaseCreateSheet = openCaseCreateSheet;
 // ============================================================
 // 🎯 КВЕСТЫ — конфиг
 // ============================================================
