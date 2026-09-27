@@ -33016,9 +33016,9 @@ async function renderReadyCheck() {
     const userMap = {};
     (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
 
-    // Таймер
+    // Таймер — от серверного времени
     const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
-    const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+    const elapsed = Math.floor((serverNow() - startedAt) / 1000);
     const timeLeft = Math.max(0, READY_CHECK_DURATION - elapsed);
 
     const minutes = Math.floor(timeLeft / 60);
@@ -33230,55 +33230,6 @@ async function confirmReady() {
         showToast('Ошибка: ' + e.message);
         if (btn) { btn.disabled = false; btn.textContent = '✅ Я ГОТОВ'; }
     }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ⏱️ ТАЙМЕР — от СЕРВЕРНОГО времени
-// ═══════════════════════════════════════════════════════════════
-function startReadyCheckCountdown() {
-    if (_readyCheckTimer) clearInterval(_readyCheckTimer);
-
-    if (!_serverTimeSynced) syncServerTime();
-
-    let deadline = null;
-
-    _readyCheckTimer = setInterval(async () => {
-        if (!currentMatch || currentMatch.status !== 'ready_check') {
-            clearInterval(_readyCheckTimer);
-            _readyCheckTimer = null;
-            return;
-        }
-
-        const startedAt = new Date(currentMatch.ready_check_started_at).getTime();
-        if (deadline === null) {
-            deadline = startedAt + READY_CHECK_DURATION * 1000;
-        }
-
-        const remainingMs = deadline - serverNow();
-        const timeLeft = Math.max(0, Math.ceil(remainingMs / 1000));
-
-        const minutes = Math.floor(timeLeft / 60);
-        const seconds = timeLeft % 60;
-        const timeText = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-
-        const timerEl = document.querySelector('#vetoContent [style*="Orbitron"]');
-        if (timerEl && timerEl.textContent !== timeText) {
-            timerEl.textContent = timeText;
-            if (timeLeft <= 30) {
-                timerEl.style.color = 'var(--red)';
-                timerEl.style.textShadow = '0 0 24px rgba(255,84,112,0.6)';
-            } else {
-                timerEl.style.color = 'var(--emerald)';
-                timerEl.style.textShadow = '0 0 24px rgba(var(--emerald-rgb),0.6)';
-            }
-        }
-
-        if (timeLeft <= 0) {
-            clearInterval(_readyCheckTimer);
-            _readyCheckTimer = null;
-            await finishReadyCheck(false);
-        }
-    }, 250);
 }
 
 window.startReadyCheckCountdown = startReadyCheckCountdown;
