@@ -26435,20 +26435,26 @@ async function openCaseAdmin(caseId) {
     if (!caseData) { showToast('Кейс не найден'); return; }
 
     // 🔥 Два отдельных запроса — надёжнее чем JOIN
-    const { data: ciRows } = await sb.from('case_items')
+    const { data: ciRows, error: ciErr } = await sb.from('case_items')
         .select('id, item_id, weight')
         .eq('case_id', caseId)
         .order('weight', { ascending: false });
 
+    if (ciErr) {
+        console.error('openCaseAdmin case_items:', ciErr);
+        showToast('❌ ' + ciErr.message);
+        return;
+    }
+
     const itemIds = (ciRows || []).map(r => r.item_id);
     let shopMap = {};
     if (itemIds.length) {
-        const { data: shopItems } = await sb.from('shop_items')
+        const { data: shopItems, error: shopErr } = await sb.from('shop_items')
             .select('id, name, category, rarity, value, price')
             .in('id', itemIds);
+        if (shopErr) console.warn('openCaseAdmin shop_items:', shopErr);
         (shopItems || []).forEach(s => shopMap[s.id] = s);
     }
-
     const items = (ciRows || []).map(r => ({
         id: r.id,
         item_id: r.item_id,
@@ -26713,6 +26719,15 @@ async function openCaseCategoryAdd(caseId, category) {
             .order('name'),
         sb.from('case_items').select('item_id').eq('case_id', caseId)
     ]);
+
+    if (itemsRes.error) {
+        console.error('openCaseCategoryAdd shop_items:', itemsRes.error);
+        showToast('❌ ' + itemsRes.error.message);
+        return;
+    }
+    if (inCaseRes.error) {
+        console.warn('openCaseCategoryAdd case_items:', inCaseRes.error);
+    }
 
     const items = itemsRes.data || [];
     const inCase = new Set((inCaseRes.data || []).map(e => e.item_id));
@@ -57328,16 +57343,43 @@ async function openCaseDetail(caseId) {
 
     page.innerHTML = '<div class="empty">Загрузка...</div>';
 
-    // Загружаем предметы кейса
-    const { data: caseItemsRaw } = await sb.from('case_items')
-        .select('item_id, weight, shop_items!inner(id, name, category, rarity, value, price)')
+    // Загружаем предметы кейса (2 запроса — без JOIN)
+    const { data: ciRows, error: ciErr } = await sb.from('case_items')
+        .select('item_id, weight')
         .eq('case_id', caseId);
 
-    const items = (caseItemsRaw || [])
-        .map(r => ({ ...r.shop_items, weight: r.weight }))
-        .filter(i => i && i.id);
-    items.forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+    if (ciErr) {
+        console.error('case_items load:', ciErr);
+        page.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка загрузки: ' + escapeHtml(ciErr.message) + '</div>';
+        return;
+    }
 
+    const itemIds = (ciRows || []).map(r => r.item_id);
+    let items = [];
+
+    if (itemIds.length) {
+        const { data: shopRows, error: shopErr } = await sb.from('shop_items')
+            .select('id, name, category, rarity, value, price')
+            .in('id', itemIds);
+
+        if (shopErr) console.warn('shop_items load:', shopErr);
+
+        const shopMap = {};
+        (shopRows || []).forEach(s => {
+            shopMap[s.id] = s;
+            SHOP_ITEMS_CACHE[s.id] = s;
+        });
+
+        items = (ciRows || [])
+            .map(r => {
+                const s = shopMap[r.item_id];
+                if (!s) return null;
+                return { ...s, weight: r.weight };
+            })
+            .filter(Boolean);
+
+        console.log('📦 openCaseDetail: загружено', items.length, 'предметов');
+    }
     // Проверка daily
     const isDaily = caseData.cooldown === 'daily';
     const dailyInfo = isDaily ? await canOpenFreeCase() : null;
