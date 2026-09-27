@@ -27907,7 +27907,9 @@ function tgAlert(message) {
 function openAdminShopMenu() {
     if (!isCurrentUserAdmin()) return;
 
+    // Чистим всё старое
     document.getElementById('adminShopOverlay')?.remove();
+    document.getElementById('adminShopSheet')?.remove();
 
     const overlay = document.createElement('div');
     overlay.className = 'sheet-overlay active';
@@ -27916,11 +27918,15 @@ function openAdminShopMenu() {
 
     const sheet = document.createElement('div');
     sheet.className = 'sheet active';
+    sheet.id = 'adminShopSheet';           // 🔥 ДОБАВИЛИ ID
     sheet.style.zIndex = '9001';
     sheet.innerHTML = `
         <div class="sheet-title">🛠️ Админ-меню магазина</div>
         <button class="sheet-option" onclick="closeAdminShopMenu(); openAddCustomBackgroundSheet();">
             <span style="font-size: 18px;">🌄</span> Добавить фон шапки
+        </button>
+        <button class="sheet-option" onclick="closeAdminShopMenu(); openAddDxpChartBackgroundSheet();">
+            <span style="font-size: 18px;">📈</span> Добавить фон графика DXP
         </button>
         <button class="sheet-option" onclick="closeAdminShopMenu(); openAddAnyShopItemSheet();">
             <span style="font-size: 18px;">✨</span> Добавить любой товар
@@ -27934,7 +27940,8 @@ function openAdminShopMenu() {
 
 function closeAdminShopMenu() {
     document.getElementById('adminShopOverlay')?.remove();
-}            
+    document.getElementById('adminShopSheet')?.remove();     // 🔥 УДАЛЯЕМ SHEET
+}      
 
 // ============================================================
 // 💀 SKELETON LOADER
@@ -50959,7 +50966,6 @@ function closeAddCustomBackgroundSheet() {
     const ov = document.getElementById('addBgOverlay');
     const sh = document.getElementById('addBgSheet');
     if (ov) ov.remove();
-    if (sh) sh.remove();
     AppState.newBgBlob = null;
 
     // Сброс инпутов
