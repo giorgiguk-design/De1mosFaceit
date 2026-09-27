@@ -56912,5 +56912,214 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 })();
 </script>
 
+<!-- ============================================================ -->
+<!-- 🔧 BADGE VISIBILITY FIX — значок профиля теперь виден          -->
+<!-- ============================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // 1. CSS-ФИКС — разрешаем display:inline-flex когда значок не пустой
+    // ============================================================
+    if (!document.getElementById('badgeFixStyle')) {
+        const style = document.createElement('style');
+        style.id = 'badgeFixStyle';
+        style.textContent = `
+            /* Показываем значок ТОЛЬКО когда он не пустой */
+            .phc-title-row .profile-equipped-badge:not(:empty),
+            .pm2-name-row .pm2-badge:not(:empty),
+            [data-equipped-badge]:not(:empty),
+            [data-list-badge]:not(:empty) {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+
+            /* SVG/img внутри значка всегда заполняют контейнер */
+            .phc-title-row .profile-equipped-badge svg,
+            .phc-title-row .profile-equipped-badge img,
+            .pm2-name-row .pm2-badge svg,
+            .pm2-name-row .pm2-badge img,
+            [data-equipped-badge] svg,
+            [data-equipped-badge] img,
+            [data-list-badge] svg,
+            [data-list-badge] img {
+                width: 100% !important;
+                height: 100% !important;
+                display: block !important;
+                overflow: visible !important;
+            }
+
+            /* .badge-svg-wrap — обёртка для SVG */
+            [data-equipped-badge] .badge-svg-wrap,
+            [data-list-badge] .badge-svg-wrap,
+            .pm2-badge .badge-svg-wrap {
+                width: 100% !important;
+                height: 100% !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // ============================================================
+    // 2. ФУНКЦИЯ ОТРИСОВКИ ЗНАЧКА (с принудительным display)
+    // ============================================================
+    async function forceRenderBadge(scopeEl, user, isList = false) {
+        if (!scopeEl || !user) return;
+
+        const eq = user.equipped_items || {};
+        const badgeId = eq.badge;
+        const selector = isList ? '[data-list-badge]' : '[data-equipped-badge]';
+        const badgeEls = scopeEl.querySelectorAll(selector);
+        if (!badgeEls.length) return;
+
+        // 🔥 Если товара нет в кэше — подгружаем из БД
+        if (badgeId && !SHOP_ITEMS_CACHE[badgeId]) {
+            try {
+                const { data } = await sb.from('shop_items')
+                    .select('id, category, value')
+                    .eq('id', badgeId)
+                    .maybeSingle();
+                if (data) SHOP_ITEMS_CACHE[data.id] = data;
+            } catch (e) {
+                console.warn('badge fetch fail:', e);
+            }
+        }
+
+        if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
+            const val = SHOP_ITEMS_CACHE[badgeId].value || {};
+            const emojiSize = isList ? 14 : 20;
+
+            badgeEls.forEach(el => {
+                let html = '';
+                if (val.url) {
+                    html = `<img src="${val.url}" style="width:100%;height:100%;object-fit:contain;display:block;">`;
+                } else if (val.svg) {
+                    const svg = (typeof uniquifySvgIds === 'function')
+                        ? uniquifySvgIds(val.svg)
+                        : val.svg;
+                    html = `<div class="badge-svg-wrap">${svg}</div>`;
+                } else if (val.emoji) {
+                    html = `<span style="font-size:${emojiSize}px;line-height:1;">${val.emoji}</span>`;
+                } else {
+                    html = `<span style="font-size:${emojiSize}px;line-height:1;">🏅</span>`;
+                }
+                el.innerHTML = html;
+
+                // 🔥 ГЛАВНОЕ — !important, чтобы перебить stylesheet
+                el.style.setProperty('display', 'inline-flex', 'important');
+                el.style.setProperty('align-items', 'center', 'important');
+                el.style.setProperty('justify-content', 'center', 'important');
+                el.style.setProperty('visibility', 'visible', 'important');
+                el.style.setProperty('opacity', '1', 'important');
+            });
+        } else {
+            // Нет значка — очищаем и скрываем
+            badgeEls.forEach(el => {
+                el.innerHTML = '';
+                el.style.setProperty('display', 'none', 'important');
+            });
+        }
+    }
+
+    // ============================================================
+    // 3. ПАТЧИМ ФУНКЦИИ (без перезаписи, через обёртку)
+    // ============================================================
+    function patchBadgeApply() {
+        // — Свой/чужой профиль —
+        if (typeof window.applyCustomizationToElement === 'function'
+            && !window._badgeApplyPatched) {
+
+            const _orig = window.applyCustomizationToElement;
+            window.applyCustomizationToElement = async function(scopeEl, user) {
+                await _orig.apply(this, arguments);
+                await forceRenderBadge(scopeEl, user, false);
+            };
+            window._badgeApplyPatched = true;
+            console.log('✅ Badge fix: applyCustomizationToElement');
+        }
+
+        // — Списки (лидерборд, чат, комната) —
+        if (typeof window.applyListCustomization === 'function'
+            && !window._badgeListPatched) {
+
+            const _orig = window.applyListCustomization;
+            window.applyListCustomization = function(scopeEl, user) {
+                _orig.apply(this, arguments);
+                forceRenderBadge(scopeEl, user, true);
+            };
+            window._badgeListPatched = true;
+            console.log('✅ Badge fix: applyListCustomization');
+        }
+    }
+
+    patchBadgeApply();
+
+    // Если функции ещё не подгрузились — патчим по таймеру
+    let _attempts = 0;
+    const _t = setInterval(() => {
+        _attempts++;
+        patchBadgeApply();
+        if (window._badgeApplyPatched && window._badgeListPatched) {
+            clearInterval(_t);
+        }
+        if (_attempts > 50) clearInterval(_t);
+    }, 200);
+
+    // ============================================================
+    // 4. ПЕРЕРИСОВКА УЖЕ ОТКРЫТОГО ПРОФИЛЯ
+    // ============================================================
+    setTimeout(() => {
+        if (typeof currentUser === 'undefined' || !currentUser) return;
+
+        // Свой профиль
+        const myProfile = document.getElementById('profileContent');
+        if (myProfile && myProfile.innerHTML
+            && typeof applyCustomizationToElement === 'function') {
+            applyCustomizationToElement(myProfile, currentUser).catch(() => {});
+        }
+
+        // Все списки
+        if (typeof applyListCustomization === 'function') {
+            document.querySelectorAll('[data-user-id]').forEach(el => {
+                const uid = Number(el.dataset.userId);
+                if (uid === Number(currentUser.telegram_id)) {
+                    applyListCustomization(el, currentUser);
+                }
+            });
+        }
+    }, 800);
+
+    // ============================================================
+    // 5. УТИЛИТА ДЛЯ ОТЛАДКИ
+    // ============================================================
+    window.debugBadge = function() {
+        console.log('=== BADGE DEBUG ===');
+        console.log('currentUser.equipped_items:', currentUser?.equipped_items);
+        console.log('badgeId:', currentUser?.equipped_items?.badge);
+        console.log('SHOP_ITEMS_CACHE[badgeId]:',
+            SHOP_ITEMS_CACHE[currentUser?.equipped_items?.badge]);
+
+        const el = document.querySelector('[data-equipped-badge]');
+        console.log('badge element:', el);
+        if (el) {
+            console.log('  innerHTML:', el.innerHTML.slice(0, 100));
+            console.log('  display:', getComputedStyle(el).display);
+            console.log('  visibility:', getComputedStyle(el).visibility);
+            console.log('  size:', el.offsetWidth + '×' + el.offsetHeight);
+        }
+    };
+
+    window.forceRenderBadge = forceRenderBadge;
+    console.log('🔧 Badge visibility fix установлен. Отладка: debugBadge()');
+})();
+</script>
+
 </body>
 </html>
