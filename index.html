@@ -27991,9 +27991,7 @@ if (tg?.BackButton) {
         loadProfile(currentUser);
         loadLeaderboard();
 	startOnlineHeartbeat();
-	loadOnlineCount();
-	// Обновление счётчика каждые 30 секунд
-	setInterval(loadOnlineCount, 30000);
+	initOnlineRealtime();
         updateQuestsBadge();
         updateCasesBadge();
 
@@ -55731,31 +55729,154 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 })();
 
 // ═══════════════════════════════════════════════════════════════
-// 🟢 ОНЛАЙН-СЧЁТЧИК
+// 🟢 REALTIME ОНЛАЙН — Supabase Presence
 // ═══════════════════════════════════════════════════════════════
-const ONLINE_WINDOW_MS = 2 * 60 * 1000;   // 2 минуты — считаем "в сети"
+const ONLINE_WINDOW_MS = 2 * 60 * 1000;   // fallback окно
 
-async function loadOnlineCount() {
+let onlineChannel = null;
+const onlineUsers = new Map();            // telegram_id -> presence meta
+let onlineInMatches = 0;
+let onlineInRooms = 0;
+let _onlineSheetOpen = false;
+
+// ────────────────────────────────────────────────────────────
+// ИНИЦИАЛИЗАЦИЯ PRESENCE
+// ────────────────────────────────────────────────────────────
+async function initOnlineRealtime() {
+    if (!currentUser || onlineChannel) return;
+
+    onlineChannel = sb.channel('online_presence', {
+        config: {
+            presence: { key: String(currentUser.telegram_id) },
+        },
+    });
+
+    onlineChannel
+        .on('presence', { event: 'sync' }, () => {
+            const state = onlineChannel.presenceState();
+            onlineUsers.clear();
+            Object.entries(state).forEach(([key, metas]) => {
+                if (metas && metas.length) {
+                    onlineUsers.set(Number(key), metas[0]);
+                }
+            });
+            updateOnlineCounters();
+            if (_onlineSheetOpen) renderOnlineSheet();
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+            newPresences.forEach(p => onlineUsers.set(Number(key), p));
+            updateOnlineCounters();
+            if (_onlineSheetOpen) renderOnlineSheet();
+        })
+        .on('presence', { event: 'leave' }, ({ key }) => {
+            onlineUsers.delete(Number(key));
+            updateOnlineCounters();
+            if (_onlineSheetOpen) renderOnlineSheet();
+        })
+        .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await trackPresence();
+            }
+        });
+
+    // Heartbeat каждые 20 сек
+    setInterval(() => {
+        if (onlineChannel) trackPresence();
+    }, 20000);
+
+    // Обновление комнат/матчей раз в 20 сек (для цифр "в игре")
+    setInterval(refreshRoomsCount, 20000);
+    refreshRoomsCount();
+}
+
+async function trackPresence() {
+    if (!onlineChannel || !currentUser) return;
     try {
-        const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS).toISOString();
-        const { count, error } = await sb.from('users')
-            .select('telegram_id', { count: 'exact', head: true })
-            .gte('last_seen', cutoff);
-
-        if (error) return;
-
-        const val = document.getElementById('headerOnlineValue');
-        if (val) val.textContent = count || 0;
+        await onlineChannel.track({
+            telegram_id: Number(currentUser.telegram_id),
+            display_name: currentUser.display_name || 'Игрок',
+            custom_avatar: currentUser.custom_avatar || null,
+            photo_url: currentUser.photo_url || null,
+            elo: currentUser.elo || 1000,
+            online_at: new Date().toISOString(),
+        });
     } catch (e) {}
 }
 
+// Обновление счётчиков в шапке
+function updateOnlineCounters() {
+    const val = document.getElementById('headerOnlineValue');
+    if (val) {
+        const count = onlineUsers.size;
+        if (val.textContent !== String(count)) {
+            val.textContent = count;
+            val.animate(
+                [{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }],
+                { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
+            );
+        }
+    }
+}
+
+// Загрузка из БД счётчиков "в игре" / "свободны"
+async function refreshRoomsCount() {
+    try {
+        const { data: rooms } = await sb.from('rooms')
+            .select('id, status')
+            .in('status', ['open', 'ready_check', 'veto', 'side_pick', 'waiting_link', 'in_game', 'result']);
+
+        const roomIds = (rooms || []).map(r => r.id);
+        const gameRoomIds = (rooms || [])
+            .filter(r => ['in_game', 'result', 'waiting_link'].includes(r.status))
+            .map(r => r.id);
+
+        if (!roomIds.length) {
+            onlineInRooms = 0;
+            onlineInMatches = 0;
+            return;
+        }
+
+        const { data: players } = await sb.from('room_players')
+            .select('telegram_id, room_id')
+            .in('room_id', roomIds);
+
+        onlineInRooms = new Set((players || []).map(p => p.telegram_id)).size;
+        onlineInMatches = new Set(
+            (players || []).filter(p => gameRoomIds.includes(p.room_id)).map(p => p.telegram_id)
+        ).size;
+
+        if (_onlineSheetOpen) renderOnlineSheet();
+    } catch (e) {}
+}
+
+// При закрытии — отписываемся
+window.addEventListener('beforeunload', () => {
+    if (onlineChannel) {
+        try { onlineChannel.untrack(); } catch (e) {}
+    }
+});
+
+// ────────────────────────────────────────────────────────────
+// ЗАМЕР ПИНГА
+// ────────────────────────────────────────────────────────────
+async function measurePing() {
+    const t0 = performance.now();
+    try {
+        await sb.from('users').select('telegram_id').limit(1);
+        return Math.round(performance.now() - t0);
+    } catch (e) {
+        return null;
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// ОТКРЫТИЕ SHEET
+// ────────────────────────────────────────────────────────────
 async function openOnlineSheet() {
-    // Гасим другие шиты
     document.querySelectorAll('.sheet').forEach(s => s.classList.remove('active'));
     const overlay = document.getElementById('sheetOverlay');
     if (overlay) overlay.classList.add('active');
 
-    // Создаём или переиспользуем sheet
     let sheet = document.getElementById('onlineSheet');
     if (!sheet) {
         sheet = document.createElement('div');
@@ -55770,179 +55891,150 @@ async function openOnlineSheet() {
         <div id="onlineSheetContent">
             <div class="empty">Загрузка...</div>
         </div>
-        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+        <button class="sheet-cancel" onclick="closeOnlineSheet()">ЗАКРЫТЬ</button>
     `;
 
     requestAnimationFrame(() => sheet.classList.add('active'));
+    _onlineSheetOpen = true;
 
+    await refreshRoomsCount();
     await renderOnlineSheet();
 }
 
+function closeOnlineSheet() {
+    _onlineSheetOpen = false;
+    const sheet = document.getElementById('onlineSheet');
+    if (sheet) sheet.classList.remove('active');
+    closeAllSheets();
+}
+
+// ────────────────────────────────────────────────────────────
+// РЕНДЕР SHEET (из presence — без запросов)
+// ────────────────────────────────────────────────────────────
 async function renderOnlineSheet() {
     const el = document.getElementById('onlineSheetContent');
     if (!el) return;
 
-    try {
-        const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS).toISOString();
-
-        // ────────────────────────────────────────────────────────
-        // 1. Онлайн-игроки (кто был активен последние 2 минуты)
-        // ────────────────────────────────────────────────────────
-        const { data: users } = await sb.from('users')
-            .select('telegram_id, display_name, custom_avatar, photo_url, elo, last_seen, standoff_id')
-            .gte('last_seen', cutoff)
-            .order('last_seen', { ascending: false })
-            .limit(200);
-
-        const list = users || [];
-
-        // ────────────────────────────────────────────────────────
-        // 2. Игроки в комнатах (все статусы кроме finished/cancelled)
-        // ────────────────────────────────────────────────────────
-        let inMatches = 0;
-        let inRooms = 0;
+    // Если presence пуст — fallback на last_seen
+    let list = [];
+    if (onlineUsers.size > 0) {
+        list = Array.from(onlineUsers.values())
+            .sort((a, b) => new Date(b.online_at || 0) - new Date(a.online_at || 0));
+    } else {
+        // Fallback: игроки с last_seen < 2 мин
         try {
-            const { data: rooms } = await sb.from('rooms')
-                .select('id, status')
-                .in('status', ['open', 'ready_check', 'veto', 'side_pick', 'waiting_link', 'in_game', 'result']);
-
-            const roomIds = (rooms || []).map(r => r.id);
-            const inGameIds = (rooms || [])
-                .filter(r => ['in_game', 'result', 'waiting_link'].includes(r.status))
-                .map(r => r.id);
-
-            if (roomIds.length) {
-                const { data: players } = await sb.from('room_players')
-                    .select('telegram_id, room_id')
-                    .in('room_id', roomIds);
-
-                const uniqueAll = new Set((players || []).map(p => p.telegram_id));
-                const uniqueGame = new Set(
-                    (players || [])
-                        .filter(p => inGameIds.includes(p.room_id))
-                        .map(p => p.telegram_id)
-                );
-
-                inRooms = uniqueAll.size;
-                inMatches = uniqueGame.size;
-            }
-        } catch (e) {
-            console.warn('online rooms:', e);
-        }
-
-        const totalOnline = list.length;
-        const inQueue = Math.max(0, totalOnline - inRooms);
-
-        // ────────────────────────────────────────────────────────
-        // 3. Пинг до сервера
-        // ────────────────────────────────────────────────────────
-        const ping = await measurePing();
-        const pingColor = ping == null ? 'var(--hint)' :
-                          ping < 200  ? '#22c55e' :
-                          ping < 500  ? '#ffd700' : '#ff5470';
-
-        // ────────────────────────────────────────────────────────
-        // 4. Рендер
-        // ────────────────────────────────────────────────────────
-        const now = Date.now();
-
-        el.innerHTML = `
-            <!-- СВОДКА -->
-            <div class="online-summary">
-                <div class="online-summary-item">
-                    <div class="online-summary-value">${totalOnline}</div>
-                    <div class="online-summary-label">Онлайн</div>
-                </div>
-                <div class="online-summary-item">
-                    <div class="online-summary-value">${inMatches}</div>
-                    <div class="online-summary-label">В игре</div>
-                </div>
-                <div class="online-summary-item">
-                    <div class="online-summary-value">${inQueue}</div>
-                    <div class="online-summary-label">Свободны</div>
-                </div>
-                <div class="online-summary-item">
-                    <div class="online-summary-value" style="color: ${pingColor}; text-shadow: 0 0 10px ${pingColor}88;">
-                        ${ping ?? '—'}<span style="font-size: 12px; opacity: 0.7; margin-left: 1px;">ms</span>
-                    </div>
-                    <div class="online-summary-label">Пинг</div>
-                </div>
-            </div>
-
-            <!-- СПИСОК ИГРОКОВ -->
-            ${totalOnline === 0 ? `
-                <div class="empty" style="padding: 30px 16px;">
-                    🟢 Сейчас никого нет онлайн<br>
-                    <span style="font-size: 11px; color: var(--hint); margin-top: 6px; display: inline-block;">
-                        Зайди позже — обычно вечером людно
-                    </span>
-                </div>
-            ` : `
-                <div style="
-                    font-size: 11px;
-                    color: var(--hint);
-                    font-weight: 800;
-                    letter-spacing: 1px;
-                    text-transform: uppercase;
-                    padding: 6px 4px;
-                    margin-bottom: 4px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                ">
-                    <span>В сети (${totalOnline})</span>
-                    <span style="flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent);"></span>
-                </div>
-                ${list.map(u => {
-                    const src = u.custom_avatar || u.photo_url;
-                    const initial = (u.display_name || 'U')[0].toUpperCase();
-                    const av = src ? `<img src="${src}" alt="">` : initial;
-
-                    const lastSeenMs = u.last_seen ? new Date(u.last_seen).getTime() : 0;
-                    const diff = Math.max(0, now - lastSeenMs);
-                    const isFresh = diff < 30 * 1000;   // моложе 30 сек — "прямо сейчас"
-                    const status = isFresh ? 'В сети' : 'Активен ' + formatTimeAgo(u.last_seen);
-
-                    const elo = u.elo ?? 1000;
-                    const lvl = eloToLevel(elo);
-                    const isMe = currentUser && Number(u.telegram_id) === Number(currentUser.telegram_id);
-
-                    return `
-                        <div class="online-player-row"
-                             ${isMe ? 'style="border-left-color: var(--emerald); background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.10), rgba(0,0,0,0.4));"' : ''}
-                             onclick="closeAllSheets(); setTimeout(() => openPlayerProfile(${u.telegram_id}), 250);">
-                            <div class="online-player-avatar">
-                                ${av}
-                                <div class="online-dot online-dot-sm" style="bottom:0; right:0; width:10px; height:10px; border-width:1.5px;"></div>
-                            </div>
-                            <div class="online-player-info">
-                                <div class="online-player-name">
-                                    ${escapeHtml(u.display_name || 'Игрок')}
-                                    ${isMe ? '<span style="color: var(--emerald); font-size: 10px; font-weight: 900;">· ТЫ</span>' : ''}
-                                </div>
-                                <div class="online-player-status">
-                                    <span class="online-player-status-dot" ${isFresh ? '' : 'style="opacity:0.4;"'}></span>
-                                    <span>${status}</span>
-                                    <span style="opacity:0.6;">· ⚡ ур. ${lvl}</span>
-                                </div>
-                            </div>
-                            <div class="online-player-elo">${elo}</div>
-                        </div>
-                    `;
-                }).join('')}
-            `}
-        `;
-    } catch (e) {
-        console.error('renderOnlineSheet:', e);
-        el.innerHTML = `
-            <div class="empty" style="color: var(--red); padding: 20px;">
-                ❌ Ошибка загрузки<br>
-                <span style="font-size: 11px; color: var(--hint);">${escapeHtml(e.message || '')}</span>
-            </div>
-        `;
+            const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS).toISOString();
+            const { data } = await sb.from('users')
+                .select('telegram_id, display_name, custom_avatar, photo_url, elo, last_seen')
+                .gte('last_seen', cutoff)
+                .order('last_seen', { ascending: false })
+                .limit(200);
+            list = data || [];
+        } catch (e) {}
     }
-}
-// ═══════════════════════════════════════════════════════════════
+
+    const totalOnline = list.length;
+    const inMatches = onlineInMatches;
+    const inQueue = Math.max(0, totalOnline - onlineInRooms);
+
+    const ping = await measurePing();
+    const pingColor = ping == null ? 'var(--hint)' :
+                      ping < 200  ? '#22c55e' :
+                      ping < 500  ? '#ffd700' : '#ff5470';
+
+    const now = Date.now();
+
+    el.innerHTML = `
+        <div class="online-summary" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="online-summary-item">
+                <div class="online-summary-value">${totalOnline}</div>
+                <div class="online-summary-label">Онлайн</div>
+            </div>
+            <div class="online-summary-item">
+                <div class="online-summary-value">${inMatches}</div>
+                <div class="online-summary-label">В игре</div>
+            </div>
+            <div class="online-summary-item">
+                <div class="online-summary-value">${inQueue}</div>
+                <div class="online-summary-label">Свободны</div>
+            </div>
+            <div class="online-summary-item">
+                <div class="online-summary-value" style="color: ${pingColor}; text-shadow: 0 0 10px ${pingColor}88;">
+                    ${ping ?? '—'}<span style="font-size: 12px; opacity: 0.7; margin-left: 1px;">ms</span>
+                </div>
+                <div class="online-summary-label">Пинг</div>
+            </div>
+        </div>
+
+        ${totalOnline === 0 ? `
+            <div class="empty" style="padding: 30px 16px;">
+                🟢 Сейчас никого нет онлайн<br>
+                <span style="font-size: 11px; color: var(--hint); margin-top: 6px; display: inline-block;">
+                    Зайди позже — обычно вечером людно
+                </span>
+            </div>
+        ` : `
+            <div style="
+                font-size: 11px;
+                color: var(--hint);
+                font-weight: 800;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                padding: 6px 4px;
+                margin-bottom: 4px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            ">
+                <span>В сети (${totalOnline})</span>
+                <span style="flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent);"></span>
+                <span style="color: #22c55e; font-size: 10px; display: inline-flex; align-items: center; gap: 4px;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e;"></span>
+                    LIVE
+                </span>
+            </div>
+            ${list.map(u => {
+                const src = u.custom_avatar || u.photo_url;
+                const initial = (u.display_name || 'U')[0].toUpperCase();
+                const av = src ? `<img src="${src}" alt="">` : initial;
+
+                const lastSeenMs = u.online_at
+                    ? new Date(u.online_at).getTime()
+                    : (u.last_seen ? new Date(u.last_seen).getTime() : 0);
+                const diff = Math.max(0, now - lastSeenMs);
+                const isFresh = diff < 60 * 1000;
+                const status = isFresh ? 'В сети' : 'Активен ' + formatTimeAgo(u.online_at || u.last_seen);
+
+                const elo = u.elo ?? 1000;
+                const lvl = eloToLevel(elo);
+                const isMe = currentUser && Number(u.telegram_id) === Number(currentUser.telegram_id);
+
+                return `
+                    <div class="online-player-row"
+                         ${isMe ? 'style="border-left-color: var(--emerald); background: linear-gradient(180deg, rgba(var(--emerald-rgb), 0.10), rgba(0,0,0,0.4));"' : ''}
+                         onclick="closeOnlineSheet(); setTimeout(() => openPlayerProfile(${u.telegram_id}), 250);">
+                        <div class="online-player-avatar">
+                            ${av}
+                            <div class="online-dot online-dot-sm" style="bottom:0; right:0; width:10px; height:10px; border-width:1.5px;"></div>
+                        </div>
+                        <div class="online-player-info">
+                            <div class="online-player-name">
+                                ${escapeHtml(u.display_name || 'Игрок')}
+                                ${isMe ? '<span style="color: var(--emerald); font-size: 10px; font-weight: 900;">· ТЫ</span>' : ''}
+                            </div>
+                            <div class="online-player-status">
+                                <span class="online-player-status-dot"></span>
+                                <span>${status}</span>
+                                <span style="opacity:0.6;">· ⚡ ур. ${lvl}</span>
+                            </div>
+                        </div>
+                        <div class="online-player-elo">${elo}</div>
+                    </div>
+                `;
+            }).join('')}
+        `}
+    `;
+}// ═══════════════════════════════════════════════════════════════
 // ⬆️ КНОПКА "НАВЕРХ"
 // ═══════════════════════════════════════════════════════════════
 (function() {
