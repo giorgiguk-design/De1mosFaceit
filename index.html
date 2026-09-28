@@ -3958,236 +3958,341 @@ body::after {
         transparent 65%);
 }
 
-/* ============ CYBER PLAY BUTTON ============ */
+/* ============ CYBER PLAY BUTTON v2 — ГЛАВНАЯ КНОПКА ============ */
 .play-btn-cyber {
     position: relative;
     width: 100%;
     padding: 0;
-    border: 2px solid var(--emerald);
-    border-radius: 0px;
+    border: none;
+    border-radius: 0;
     cursor: pointer;
     font-family: inherit;
     overflow: hidden;
     isolation: isolate;
     margin-bottom: 20px;
-    background:
-        linear-gradient(180deg,
-            rgba(var(--emerald-rgb), 0.28) 0%,
-            rgba(var(--emerald-rgb), 0.10) 45%,
-            rgba(0, 0, 0, 0.65) 100%);
-    box-shadow:
-        inset 0 0 0 1px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 6px 26px rgba(var(--emerald-rgb), 0.35),
-        0 0 40px rgba(var(--emerald-rgb), 0.15);
-    transition: transform 0.18s ease,
-                border-color 0.25s ease,
-                box-shadow 0.3s ease;
+    background: #04140e;
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
     clip-path: polygon(
-        14px 0, 100% 0, 100% calc(100% - 14px),
-        calc(100% - 14px) 100%, 0 100%, 0 14px
+        22px 0, 100% 0, 100% calc(100% - 22px),
+        calc(100% - 22px) 100%, 0 100%, 0 22px
     );
-    animation: playBtnPulse 2.6s ease-in-out infinite;
 }
 
-@keyframes playBtnPulse {
-    0%, 100% {
-        box-shadow:
-            inset 0 0 0 1px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 6px 26px rgba(var(--emerald-rgb), 0.35),
-            0 0 40px rgba(var(--emerald-rgb), 0.15);
-    }
-    50% {
-        box-shadow:
-            inset 0 0 0 1px rgba(0, 0, 0, 0.4),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            0 8px 32px rgba(var(--emerald-rgb), 0.55),
-            0 0 60px rgba(var(--emerald-rgb), 0.35);
-    }
-}
-
-/* Верхняя неоновая полоска */
+/* 🌟 Главная аура вокруг кнопки */
 .play-btn-cyber::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        var(--emerald) 20%,
-        var(--emerald-3) 50%,
-        var(--emerald) 80%,
-        transparent 100%);
-    opacity: 0.55;
-    z-index: 2;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
+    inset: -3px;
+    background: linear-gradient(120deg,
+        var(--emerald) 0%,
+        var(--emerald-3) 25%,
+        var(--emerald) 50%,
+        var(--emerald-3) 75%,
+        var(--emerald) 100%);
+    background-size: 300% 100%;
+    animation: playAuraRotate 6s linear infinite;
+    z-index: -2;
+    filter: blur(14px);
+    opacity: 0.75;
 }
 
-/* Нижняя тонкая подложка */
+/* 🌈 Второй слой ауры — медленный */
 .play-btn-cyber::after {
     content: '';
     position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(var(--emerald-rgb), 0.35) 50%,
-        transparent 100%);
-    opacity: 0.6;
-    z-index: 2;
+    inset: 0;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.15) 0%,
+        rgba(var(--emerald-rgb), 0.02) 50%,
+        rgba(0, 0, 0, 0.7) 100%);
+    z-index: -1;
     pointer-events: none;
 }
 
-/* Углы-«скобки» */
+@keyframes playAuraRotate {
+    0%   { background-position: 0% 0; }
+    100% { background-position: 300% 0; }
+}
+
+/* ⚡ Внутренняя обводка — двойная рамка */
+.pbc-frame {
+    position: absolute;
+    inset: 3px;
+    border: 2px solid rgba(var(--emerald-rgb), 0.9);
+    clip-path: polygon(
+        20px 0, 100% 0, 100% calc(100% - 20px),
+        calc(100% - 20px) 100%, 0 100%, 0 20px
+    );
+    pointer-events: none;
+    z-index: 2;
+    box-shadow:
+        inset 0 0 30px rgba(var(--emerald-rgb), 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    animation: playFramePulse 2.6s ease-in-out infinite;
+}
+
+@keyframes playFramePulse {
+    0%, 100% {
+        box-shadow:
+            inset 0 0 30px rgba(var(--emerald-rgb), 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        border-color: rgba(var(--emerald-rgb), 0.9);
+    }
+    50% {
+        box-shadow:
+            inset 0 0 50px rgba(var(--emerald-rgb), 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        border-color: var(--emerald-3);
+    }
+}
+
+/* 🔷 Двойные углы-скобки */
 .pbc-corner {
     position: absolute;
-    width: 12px;
-    height: 12px;
-    border-color: var(--emerald);
+    width: 20px;
+    height: 20px;
+    border-color: var(--emerald-3);
     border-style: solid;
     border-width: 0;
-    opacity: 0.75;
-    z-index: 2;
+    opacity: 1;
+    z-index: 3;
     pointer-events: none;
-    transition: opacity 0.25s ease, border-color 0.25s ease;
+    filter: drop-shadow(0 0 6px var(--emerald));
+    transition: all 0.25s ease;
 }
-.pbc-corner-tl { top: 6px; left: 6px; border-top-width: 2px; border-left-width: 2px; }
-.pbc-corner-tr { top: 6px; right: 6px; border-top-width: 2px; border-right-width: 2px; }
-.pbc-corner-bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
-.pbc-corner-br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
+.pbc-corner-tl { top: 8px;    left: 8px;    border-top-width: 3px;    border-left-width: 3px; }
+.pbc-corner-tr { top: 8px;    right: 8px;   border-top-width: 3px;    border-right-width: 3px; }
+.pbc-corner-bl { bottom: 8px; left: 8px;    border-bottom-width: 3px; border-left-width: 3px; }
+.pbc-corner-br { bottom: 8px; right: 8px;   border-bottom-width: 3px; border-right-width: 3px; }
 
-/* Бегущая тонкая линия «сканирования» */
+/* 🎯 Скан-линия сверху */
 .pbc-scan {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
-    height: 1px;
+    height: 2px;
     background: linear-gradient(90deg,
         transparent 0%,
-        rgba(var(--emerald-rgb), 0.7) 50%,
+        var(--emerald-3) 50%,
         transparent 100%);
-    z-index: 3;
-    opacity: 0.6;
+    z-index: 4;
+    opacity: 0.9;
     pointer-events: none;
-    animation: pbcScan 5s linear infinite;
+    animation: pbcScan 3.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px var(--emerald));
 }
 
 @keyframes pbcScan {
     0%   { transform: translateY(0); opacity: 0; }
-    10%  { opacity: 0.6; }
-    50%  { opacity: 0.6; }
-    90%  { opacity: 0.6; }
-    100% { transform: translateY(calc(100% - 1px)); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(100px); opacity: 0; }
 }
 
-/* Содержимое */
+/* 💎 Содержимое */
 .pbc-content {
     position: relative;
-    z-index: 4;
+    z-index: 5;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 18px 22px;
-    color: var(--text);
+    gap: 16px;
+    padding: 22px 26px;
+    color: #fff;
     background:
         repeating-linear-gradient(
             135deg,
-            rgba(255, 255, 255, 0.012) 0px,
-            rgba(255, 255, 255, 0.012) 1px,
+            rgba(255, 255, 255, 0.015) 0px,
+            rgba(255, 255, 255, 0.015) 1px,
             transparent 1px,
             transparent 8px
-        );
+        ),
+        radial-gradient(ellipse at 30% 0%,
+            rgba(var(--emerald-rgb), 0.25) 0%,
+            transparent 60%);
+    min-height: 92px;
 }
 
+/* 🎮 Иконка геймпада */
 .pbc-icon {
-    font-size: 28px;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
     flex-shrink: 0;
-    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.9));
+    background: linear-gradient(135deg,
+        rgba(var(--emerald-rgb), 0.25),
+        rgba(var(--emerald-rgb), 0.05));
+    border: 2px solid var(--emerald);
+    clip-path: polygon(
+        8px 0, 100% 0, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 0 100%, 0 8px
+    );
+    box-shadow:
+        0 0 24px rgba(var(--emerald-rgb), 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    animation: pbcIconPulse 2.4s ease-in-out infinite;
     transition: transform 0.25s ease;
 }
+.pbc-icon svg {
+    width: 30px;
+    height: 30px;
+    stroke: var(--emerald-3);
+    filter: drop-shadow(0 0 8px var(--emerald));
+}
 
+@keyframes pbcIconPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 24px rgba(var(--emerald-rgb), 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow:
+            0 0 38px rgba(var(--emerald-rgb), 0.9),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+    }
+}
+
+/* 📝 Текст */
 .pbc-text {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 3px;
+    gap: 6px;
     min-width: 0;
     text-align: left;
 }
 
 .pbc-title {
-    font-size: 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 26px;
     font-weight: 900;
-    letter-spacing: 5px;
+    letter-spacing: 8px;
     line-height: 1;
     color: #fff;
     text-shadow:
-        0 0 8px rgba(var(--emerald-rgb), 0.6),
-        0 0 20px rgba(var(--emerald-rgb), 0.4),
-        0 2px 6px rgba(0, 0, 0, 0.8);
-    transition: letter-spacing 0.3s ease, text-shadow 0.3s ease;
+        0 0 12px rgba(var(--emerald-rgb), 0.9),
+        0 0 30px rgba(var(--emerald-rgb), 0.5),
+        0 2px 6px rgba(0, 0, 0, 0.9);
+    animation: pbcTitleGlow 3s ease-in-out infinite;
+}
+
+@keyframes pbcTitleGlow {
+    0%, 100% {
+        text-shadow:
+            0 0 12px rgba(var(--emerald-rgb), 0.9),
+            0 0 30px rgba(var(--emerald-rgb), 0.5),
+            0 2px 6px rgba(0, 0, 0, 0.9);
+    }
+    50% {
+        text-shadow:
+            0 0 20px rgba(var(--emerald-rgb), 1),
+            0 0 45px rgba(var(--emerald-rgb), 0.7),
+            0 2px 6px rgba(0, 0, 0, 0.9);
+    }
 }
 
 .pbc-sub {
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 1.6px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    color: var(--hint);
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: rgba(var(--emerald-rgb), 0.9);
+    line-height: 1;
 }
 
+/* ▶️ Стрелка */
 .pbc-arrow {
-    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    font-size: 26px;
     font-weight: 900;
     line-height: 1;
-    color: var(--emerald);
-    flex-shrink: 0;
-    transition: transform 0.25s ease, color 0.25s ease;
-    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+    color: #04140e;
+    background: linear-gradient(135deg, var(--emerald-3), var(--emerald));
+    clip-path: polygon(
+        0 0, calc(100% - 8px) 0, 100% 8px,
+        100% 100%, 8px 100%, 0 calc(100% - 8px)
+    );
+    box-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.6);
+    transition: transform 0.22s ease;
 }
 
-/* Hover — сдержанный */
+/* 🔥 Hover */
 .play-btn-cyber:hover {
-    border-color: var(--emerald);
-    box-shadow:
-        inset 0 0 0 1px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        0 6px 24px rgba(var(--emerald-rgb), 0.15),
-        0 0 0 1px rgba(var(--emerald-rgb), 0.25);
-    transform: translateY(-1px);
+    transform: translateY(-3px);
+}
+.play-btn-cyber:hover .pbc-arrow {
+    transform: translateX(6px);
+}
+.play-btn-cyber:hover .pbc-icon {
+    transform: scale(1.08) rotate(-4deg);
+}
+.play-btn-cyber:hover::before {
+    opacity: 1;
+    filter: blur(18px);
+}
+.play-btn-cyber:hover .pbc-corner {
+    width: 26px;
+    height: 26px;
 }
 
-.play-btn-cyber:hover::before { opacity: 1; }
-.play-btn-cyber:hover .pbc-corner { opacity: 1; }
-.play-btn-cyber:hover .pbc-arrow { transform: translateX(4px); color: var(--emerald-3); }
-.play-btn-cyber:hover .pbc-icon  { transform: scale(1.06); }
-
-/* Active */
+/* 💥 Active */
 .play-btn-cyber:active {
-    transform: scale(0.985);
-    box-shadow:
-        inset 0 0 0 1px rgba(0, 0, 0, 0.5),
-        inset 0 2px 8px rgba(0, 0, 0, 0.4),
-        0 2px 10px rgba(var(--emerald-rgb), 0.15);
+    transform: scale(0.98);
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .pbc-scan { animation: none; opacity: 0; }
-    .play-btn-cyber,
-    .pbc-icon,
-    .pbc-arrow { transition: none; }
+/* 📱 Адаптив */
+@media (max-width: 480px) {
+    .pbc-content {
+        padding: 18px 20px;
+        gap: 12px;
+        min-height: 82px;
+    }
+    .pbc-icon {
+        width: 50px;
+        height: 50px;
+    }
+    .pbc-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+    .pbc-title {
+        font-size: 20px;
+        letter-spacing: 5px;
+    }
+    .pbc-sub {
+        font-size: 9px;
+        letter-spacing: 1.5px;
+    }
+    .pbc-arrow {
+        width: 36px;
+        height: 36px;
+        font-size: 22px;
+    }
 }
 
+/* 🚀 Lite-mode */
+html.lite-mode .play-btn-cyber::before {
+    animation: none;
+    filter: blur(8px);
+    opacity: 0.5;
+}
+html.lite-mode .pbc-frame,
+html.lite-mode .pbc-icon,
+html.lite-mode .pbc-title,
+html.lite-mode .pbc-scan {
+    animation: none;
+}
     /* ============ CHOOSE TEAM HINT (cyber) ============ */
 .choose-team-hint {
     position: relative;
@@ -24023,6 +24128,235 @@ html.lite-mode .case-detail-open-btn {
     0%, 100% { opacity: 0.4; }
     50%      { opacity: 0.7; }
 }
+
+/* ============ DASH CASES BUTTON ============ */
+.dash-cases-btn {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg,
+        rgba(255, 215, 0, 0.15) 0%,
+        rgba(255, 140, 0, 0.08) 40%,
+        rgba(0, 0, 0, 0.7) 100%);
+    border: 1.5px solid rgba(255, 215, 0, 0.5);
+    border-radius: 0;
+    clip-path: polygon(
+        14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px
+    );
+    cursor: pointer;
+    font-family: inherit;
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow:
+        0 6px 20px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(255, 215, 0, 0.15);
+}
+
+/* 💫 Золотая аура */
+.dash-cases-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 240px;
+    height: 240px;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.35), transparent 65%);
+    filter: blur(30px);
+    pointer-events: none;
+    z-index: 0;
+    animation: dashCasesGlow 4s ease-in-out infinite alternate;
+}
+
+@keyframes dashCasesGlow {
+    0%   { opacity: 0.5; transform: translate(0, 0); }
+    100% { opacity: 1;   transform: translate(-20px, 20px); }
+}
+
+/* ⚡ Верхняя линия */
+.dash-cases-btn::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent, #ffd700 50%, transparent);
+    opacity: 0.9;
+    z-index: 3;
+    pointer-events: none;
+    animation: dashCasesShine 3s linear infinite;
+}
+
+@keyframes dashCasesShine {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* 🎁 Иконка */
+.dc-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    font-size: 26px;
+    background: linear-gradient(135deg,
+        rgba(255, 215, 0, 0.25),
+        rgba(255, 140, 0, 0.10));
+    border: 1.5px solid rgba(255, 215, 0, 0.6);
+    clip-path: polygon(
+        8px 0, 100% 0, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 0 100%, 0 8px
+    );
+    box-shadow:
+        0 0 20px rgba(255, 215, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    z-index: 2;
+    animation: dcIconFloat 3s ease-in-out infinite;
+}
+
+@keyframes dcIconFloat {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50%      { transform: translateY(-4px) rotate(3deg); }
+}
+
+/* 📝 Инфо */
+.dc-info {
+    flex: 1;
+    min-width: 0;
+    z-index: 2;
+    text-align: left;
+}
+
+.dc-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #ffd700;
+    text-shadow:
+        0 0 10px rgba(255, 215, 0, 0.8),
+        0 2px 4px rgba(0, 0, 0, 0.8);
+    line-height: 1.1;
+    margin-bottom: 3px;
+}
+
+.dc-sub {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.65);
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+
+/* 🆓 Badge — когда доступен бесплатный кейс */
+.dc-free-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+    padding: 3px 9px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #fff;
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.6);
+    animation: dcFreePulse 1.8s ease-in-out infinite;
+}
+
+.dc-free-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    animation: dcFreeDot 1.2s ease-in-out infinite;
+}
+
+@keyframes dcFreePulse {
+    0%, 100% { box-shadow: 0 0 14px rgba(34, 197, 94, 0.6); }
+    50%      { box-shadow: 0 0 22px rgba(34, 197, 94, 0.9); }
+}
+
+@keyframes dcFreeDot {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.4); }
+}
+
+/* ▶️ Стрелка */
+.dc-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    font-size: 24px;
+    font-weight: 900;
+    color: #000;
+    background: linear-gradient(135deg, #ffd700, #b8860b);
+    clip-path: polygon(
+        0 0, calc(100% - 8px) 0, 100% 8px,
+        100% 100%, 8px 100%, 0 calc(100% - 8px)
+    );
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    z-index: 2;
+    transition: transform 0.22s ease;
+}
+
+.dash-cases-btn:hover {
+    transform: translateY(-3px);
+}
+.dash-cases-btn:hover .dc-arrow {
+    transform: translateX(5px);
+}
+.dash-cases-btn:hover .dc-icon {
+    transform: scale(1.08) rotate(-8deg);
+}
+.dash-cases-btn:active {
+    transform: scale(0.98);
+}
+
+/* 📱 Адаптив */
+@media (max-width: 480px) {
+    .dash-cases-btn {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+    .dc-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+    .dc-title {
+        font-size: 14px;
+        letter-spacing: 2px;
+    }
+    .dc-sub {
+        font-size: 9.5px;
+    }
+    .dc-arrow {
+        width: 34px;
+        height: 34px;
+        font-size: 20px;
+    }
+}
+
+html.lite-mode .dash-cases-btn::before,
+html.lite-mode .dash-cases-btn::after,
+html.lite-mode .dc-icon,
+html.lite-mode .dc-free-badge {
+    animation: none;
+}
     
 </style>
 </head>
@@ -24114,8 +24448,21 @@ html.lite-mode .case-detail-open-btn {
         <div class="stat-label">Winrate</div>
     </div>
 </div>
+<!-- 🎁 КНОПКА КЕЙСОВ -->
+<button class="dash-cases-btn" id="dashCasesBtn" onclick="openCasesScreen()">
+    <span class="dc-icon">🎁</span>
+    <div class="dc-info">
+        <div class="dc-title">КЕЙСЫ</div>
+        <div class="dc-sub" id="dashCasesSub">Открывай · Получай предметы</div>
+        <span class="dc-free-badge" id="dashCasesFreeBadge" style="display: none;">
+            🎉 Бесплатный доступен
+        </span>
+    </div>
+    <span class="dc-arrow">›</span>
+</button>
 <button class="play-btn-cyber" id="playBtnMain" onclick="openPlayScreen()">
     <span class="btn-cover-bg"></span>
+    <span class="pbc-frame"></span>
     <span class="pbc-corner pbc-corner-tl"></span>
     <span class="pbc-corner pbc-corner-tr"></span>
     <span class="pbc-corner pbc-corner-bl"></span>
@@ -24123,20 +24470,19 @@ html.lite-mode .case-detail-open-btn {
     <span class="pbc-scan"></span>
     <span class="pbc-content">
         <span class="pbc-icon">
-    <svg class="cy-icon cy-xl" viewBox="0 0 24 24">
-        <path d="M6 11h4M8 9v4"/>
-        <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
-        <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
-    </svg>
-</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 11h4M8 9v4"/>
+                <path d="M15.5 12.5h.01M17.5 10.5h.01"/>
+                <path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59c-.03.24-.13.47-.13.72v6.38a3.3 3.3 0 0 0 3.32 3.31c.88 0 1.72-.35 2.34-.97L10 16h4l1.77 2.03c.62.62 1.46.97 2.34.97a3.3 3.3 0 0 0 3.32-3.31V9.31c0-.25-.1-.48-.13-.72A4 4 0 0 0 17.32 5Z"/>
+            </svg>
+        </span>
         <span class="pbc-text">
             <span class="pbc-title">ИГРАТЬ</span>
             <span class="pbc-sub" id="playBtnSub">Найти матч · Создать комнату</span>
         </span>
         <span class="pbc-arrow">›</span>
     </span>
-</button>
-<div class="section-title">Быстрые действия</div>
+</button><div class="section-title">Быстрые действия</div>
 <div class="menu-grid">
     <button class="menu-item menu-item-friends" onclick="openFriendsPage()">
     <span class="menu-item-glow"></span>
@@ -29847,8 +30193,33 @@ function renderDashboard(user) {
         if (typeof renderDashBattlePass === 'function') {
             renderDashBattlePass();
         }
+	        // 🎁 Проверяем бесплатный кейс
+        if (typeof updateDashCasesBadge === 'function') {
+            updateDashCasesBadge();
+        }
     }, 150);
 }
+
+async function updateDashCasesBadge() {
+    try {
+        const subEl = document.getElementById('dashCasesSub');
+        const badgeEl = document.getElementById('dashCasesFreeBadge');
+
+        // Всегда показываем кейсы
+        if (subEl) subEl.textContent = 'Открывай · Получай предметы';
+
+        // Проверяем доступность бесплатного
+        if (typeof canOpenFreeCase === 'function') {
+            const info = await canOpenFreeCase();
+            if (badgeEl) {
+                badgeEl.style.display = info.can ? 'inline-flex' : 'none';
+            }
+        }
+    } catch (e) {
+        console.warn('updateDashCasesBadge:', e);
+    }
+}
+window.updateDashCasesBadge = updateDashCasesBadge;
 
         // ============================================================
         // PROFILE
@@ -56875,10 +57246,13 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
         for (const b of PREMIUM_BADGES) {
             try {
+                // 🔥 Проверяем и по id, И по имени — защита от дублей
                 const { data: existing } = await sb.from('shop_items')
-                    .select('id').eq('id', b.id).maybeSingle();
-                if (existing) { skipped++; continue; }
-                const { error } = await sb.from('shop_items').insert({
+                    .select('id')
+                    .or(`id.eq.${b.id},and(category.eq.badge,name.eq.${b.name})`)
+                    .limit(1)
+                    .maybeSingle();
+                if (existing) { skipped++; continue; }                const { error } = await sb.from('shop_items').insert({
                     id: b.id, category: 'badge', name: b.name,
                     description: 'Премиум-значок De1mos Faceit',
                     price: b.price, rarity: b.rarity,
@@ -56890,12 +57264,22 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             } catch (e) { console.warn('badge seed:', b.id, e); failed++; }
         }
 
-        for (const t of PREMIUM_TITLES) {
-            try {
-                const { data: existing } = await sb.from('shop_items')
-                    .select('id').eq('id', t.id).maybeSingle();
-                if (existing) { skipped++; continue; }
-                const { error } = await sb.from('shop_items').insert({
+const { data: existing } = await sb.from('shop_items')
+    .select('id, name')
+    .eq('id', b.id)
+    .maybeSingle();
+
+// Дополнительная проверка по имени (второй запрос)
+const { data: byName } = await sb.from('shop_items')
+    .select('id')
+    .eq('category', 'badge')
+    .eq('name', b.name)
+    .limit(1);
+
+if (existing || (byName && byName.length > 0)) {
+    skipped++;
+    continue;
+}                const { error } = await sb.from('shop_items').insert({
                     id: t.id, category: 'title', name: t.text,
                     description: 'Премиум-титул De1mos Faceit',
                     price: t.price, rarity: t.rarity,
@@ -56918,8 +57302,10 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     window.PREMIUM_TITLES = PREMIUM_TITLES;
 
     // ────────────────────────────────────────────────────────────
-    // 🪝 ХУК В АДМИН-МЕНЮ МАГАЗИНА
+    // 🪝 Кнопка сидинга убрана — значки и титулы уже загружены
     // ────────────────────────────────────────────────────────────
+    // (если нужно перезалить — раскомментируй блок ниже)
+    /*
     if (typeof window.openAdminShopMenu === 'function') {
         const _origAdmin = window.openAdminShopMenu;
         window.openAdminShopMenu = function() {
@@ -56942,7 +57328,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
             }, 60);
         };
     }
-
+    */
     // ────────────────────────────────────────────────────────────
     // 🔧 ФИКС ОТРИСОВКИ ЗНАЧКА
     // ────────────────────────────────────────────────────────────
