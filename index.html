@@ -403,20 +403,9 @@ body::after {
     }
 }
 
+/* 🔥 Убираем полоску — она портит вид */
 .leaderboard-champion::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg,
-        transparent, #ffd700 20%, #fff5cc 50%, #ffd700 80%, transparent);
-    background-size: 200% 100%;
-    animation: champShine 3s linear infinite;
-}
-
-@keyframes champShine {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    display: none !important;
 }
 
 .leaderboard-champion:hover {
@@ -14161,65 +14150,8 @@ body.app-fullscreen:hover .fs-exit-btn {
     /* ============================================================ */
 /* 🎬 ПЛАВНАЯ АНИМАЦИЯ СПЕЦ-РАМОК ПРИ СКРОЛЛЕ                    */
 /* ============================================================ */
-.list-frame-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) translateZ(0);
-    /* 🔥 Маленький размер под аватарку лидерборда */
-    width: 54px;
-    height: 54px;
-    pointer-events: none;
-    z-index: 4;
-    overflow: visible;
-    will-change: transform;
-    animation: listFrameIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-}
-
-/* 🔥 SVG рендерится 1-в-1 как в профиле, просто масштабируется */
-.list-frame-overlay svg {
-    width: 100%;
-    height: 100%;
-    overflow: visible;   /* 🔥 обязательно — не обрезать выходящее */
-    display: block;
-}
 
     
-/* ============================================================ */
-/* 🔥 УСИЛЕНИЕ ОБВОДОК для маленьких рамок в списках          */
-/* ============================================================ */
-
-/* По умолчанию — все обводки ×2 от исходных */
-.list-frame-overlay svg path,
-.list-frame-overlay svg circle,
-.list-frame-overlay svg line,
-.list-frame-overlay svg ellipse,
-.list-frame-overlay svg polygon,
-.list-frame-overlay svg rect,
-.list-frame-overlay svg polyline {
-    stroke-width: 3;
-}
-
-/* Тонкие внутренние кольца — чуть жирнее, чтобы не пропали */
-.list-frame-overlay svg .fs-ring-1,
-.list-frame-overlay svg .fs-ring-2,
-.list-frame-overlay svg .fs-ring-3 {
-    stroke-width: 3;
-}
-
-/* Мощные кольца (молния, яд, паук) — самые жирные */
-.list-frame-overlay svg .thunder-ring,
-.list-frame-overlay svg .poison-ring {
-    stroke-width: 5;
-}
-
-/* Спирали вихря — средняя толщина */
-.list-frame-overlay svg .vtx-arc {
-    stroke-width: 4;
-}
-
 @keyframes listFrameIn {
     from {
         opacity: 0;
@@ -14229,21 +14161,6 @@ body.app-fullscreen:hover .fs-exit-btn {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
     }
-}
-
-/* 🔥 Оптимизация для длинных списков — уменьшаем нагрузку */
-.leaderboard-item .list-frame-overlay svg,
-.club-member-row .list-frame-overlay svg {
-    width: 100%;
-    height: 100%;
-}
-
-/* 🔥 Отключаем анимацию в Lite */
-html.lite-mode .list-frame-overlay {
-    animation: none !important;
-}
-html.lite-mode .list-frame-overlay svg * {
-    animation: none !important;
 }
 
 /* ============ SHOP CATEGORY MODAL ============ */
@@ -14446,55 +14363,6 @@ button[disabled] {
     display: block;
 }
 
-/* В лидерборде и списках — только размер, без изменения пропорций */
-.list-frame-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) translateZ(0);
-    pointer-events: none;
-    z-index: 5;
-    overflow: visible;
-    animation: listFrameIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    
-    /* 🔥 ЖЁСТКИЙ РАЗМЕР — не больше аватара */
-    width: 44px !important;
-    height: 44px !important;
-    max-width: 44px !important;
-    max-height: 44px !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-}
-
-/* 🔥 SVG внутри — тоже фиксируем */
-.list-frame-overlay svg,
-.list-frame-overlay .fr-svg {
-    width: 44px !important;
-    height: 44px !important;
-    max-width: 44px !important;
-    max-height: 44px !important;
-}
-
-.list-frame-overlay svg,
-.list-frame-overlay .fr-svg {
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    display: block;
-}
-
-@keyframes frameFloatIn {
-    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(-20deg); }
-    55%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
-    100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-}
-
-@keyframes listFrameIn {
-    from { opacity: 0; transform: translate(-50%, -50%) scale(0.75); }
-    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
 
 /* ============================================================ */
 /* 🎬 УНИВЕРСАЛЬНЫЕ АНИМАЦИИ — работают для ВСЕХ рамок           */
@@ -24357,6 +24225,75 @@ html.lite-mode .dc-icon,
 html.lite-mode .dc-free-badge {
     animation: none;
 }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* 🖼️ АВАТАР В ЛИДЕРБОРДЕ + СПЕЦ-РАМКА                        */
+/* ═══════════════════════════════════════════════════════════ */
+.lb-avatar-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    margin-right: 4px;
+    overflow: visible;
+}
+
+.lb-avatar-wrap .lb-avatar {
+    position: relative;
+    z-index: 2;
+    width: 38px;
+    height: 38px;
+    margin: 0 !important;
+}
+
+/* 🔥 Полная SVG-рамка вокруг аватара в списке */
+.lb-frame-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateZ(0);
+    width: 62px;
+    height: 62px;
+    pointer-events: none;
+    z-index: 3;
+    overflow: visible;
+    animation: lbFrameIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.lb-frame-overlay svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+}
+
+@keyframes lbFrameIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Усиливаем обводки — чтоб рамка читалась в мелком размере */
+.lb-frame-overlay svg path,
+.lb-frame-overlay svg circle,
+.lb-frame-overlay svg line,
+.lb-frame-overlay svg polygon,
+.lb-frame-overlay svg ellipse,
+.lb-frame-overlay svg rect {
+    stroke-width: 3;
+}
+
+html.lite-mode .lb-frame-overlay {
+    animation: none;
+}
+html.lite-mode .lb-frame-overlay svg * {
+    animation: none !important;
+}
     
 </style>
 </head>
@@ -31446,24 +31383,44 @@ function renderLbItem(user, rank, isMe = false) {
     const isDev = isDevClubMember(user.telegram_id);
     const rankIcon = getRankEmblem(lvl, 22, false);
 
-    // 🟢 Онлайн-индикатор
     const lastSeen = user.last_seen ? new Date(user.last_seen).getTime() : 0;
     const isOnline = Date.now() - lastSeen < 2 * 60 * 1000;
     const onlineDot = isOnline ? '<div class="online-dot online-dot-sm"></div>' : '';
 
-return `
+    // 🔥 Спец-рамка — если надета, показываем её полностью
+    const eq = user.equipped_items || {};
+    const frameId = eq.avatar_frame;
+    let frameHTML = '';
+    if (frameId && SHOP_ITEMS_CACHE[frameId]) {
+        const item = SHOP_ITEMS_CACHE[frameId];
+        const val = item.value || {};
+        if (val.special === true && typeof getSpecialFrameHTML === 'function') {
+            const svg = getSpecialFrameHTML(val.special_type || 'default', val.color || '#fff');
+            frameHTML = `
+                <div class="lb-frame-overlay" aria-hidden="true">
+                    ${svg}
+                </div>
+            `;
+        }
+    }
+
+    return `
     <div class="leaderboard-item ${isMe ? 'is-me' : ''}" onclick="openPlayerProfile(${user.telegram_id})"
          data-user-id="${user.telegram_id}">
         <span class="leaderboard-rank">#${rank}</span>
-        <div class="lb-avatar" data-list-avatar>${av}${onlineDot}</div>
+
+        <div class="lb-avatar-wrap" data-list-avatar>
+            <div class="lb-avatar">${av}${onlineDot}</div>
+            ${frameHTML}
+        </div>
 
         <div class="lb-info-compact">
             <div class="lb-row-top">
                 <span class="lb-rank-emblem"
-      onclick="event.stopPropagation(); openRankInfoSheet(${lvl});"
-      title="Ранг: ${RANK_CONFIG.LEVELS[lvl-1].name}"
-      style="flex-shrink: 0; display: inline-flex; width: 22px; height: 22px; cursor: pointer; vertical-align: middle;"
-      data-rank-emblem>${rankIcon}</span>
+                      onclick="event.stopPropagation(); openRankInfoSheet(${lvl});"
+                      title="Ранг: ${RANK_CONFIG.LEVELS[lvl-1].name}"
+                      style="flex-shrink: 0; display: inline-flex; width: 22px; height: 22px; cursor: pointer; vertical-align: middle;"
+                      data-rank-emblem>${rankIcon}</span>
                 <span class="lb-nick-inline" data-list-nick>
                     ${myClubTagHTML(user.telegram_id)}${escapeHtml(user.display_name || 'Игрок')}
                 </span>
@@ -31480,7 +31437,6 @@ return `
         <span class="leaderboard-DXP-value">${user.elo}</span>
     </div>`;
 }
-
 async function openFullLeaderboard() {
     switchPage('leaderboard');
     const c = document.getElementById('leaderboardFull');
@@ -38026,6 +37982,410 @@ async function renderAdminPanel() {
     container.innerHTML = html;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 💰 АДМИН-ПАНЕЛЬ МОНЕТ
+// ═══════════════════════════════════════════════════════════════
+async function openAdminCoinsPanel() {
+    if (!isCurrentUserAdmin()) { showToast('❌ Только для админа'); return; }
+
+    document.getElementById('admCoinsOverlay')?.remove();
+    document.getElementById('admCoinsSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'admCoinsOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeAdminCoinsPanel(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'admCoinsSheet';
+    sheet.style.zIndex = '10000';
+    sheet.style.maxHeight = '92vh';
+    sheet.style.overflowY = 'auto';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">💰 Управление монетами</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+            Найди игрока и выдай/спиши монеты
+        </div>
+
+        <input type="text" class="field-input" id="admCoinsSearch"
+               placeholder="🔍 Ник, @username или Standoff ID"
+               autocomplete="off" style="margin-bottom: 12px;"
+               oninput="debouncedAdminCoinsSearch()">
+
+        <div id="admCoinsResults">
+            <div class="empty">Введи минимум 2 символа</div>
+        </div>
+
+        <button class="sheet-cancel" onclick="closeAdminCoinsPanel()">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    setTimeout(() => document.getElementById('admCoinsSearch')?.focus(), 250);
+    haptic('medium');
+}
+
+function closeAdminCoinsPanel() {
+    document.getElementById('admCoinsOverlay')?.remove();
+    document.getElementById('admCoinsSheet')?.remove();
+}
+
+let _admCoinsTimer = null;
+function debouncedAdminCoinsSearch() {
+    clearTimeout(_admCoinsTimer);
+    _admCoinsTimer = setTimeout(doAdminCoinsSearch, 350);
+}
+
+async function doAdminCoinsSearch() {
+    const q = document.getElementById('admCoinsSearch')?.value.trim() || '';
+    const el = document.getElementById('admCoinsResults');
+    if (!el) return;
+
+    if (q.length < 2) {
+        el.innerHTML = '<div class="empty">Введи минимум 2 символа</div>';
+        return;
+    }
+
+    el.innerHTML = '<div class="empty">Поиск...</div>';
+
+    const safe = q.replace(/[%_]/g, '');
+    const { data: users, error } = await sb.from('users')
+        .select('telegram_id, display_name, username, custom_avatar, photo_url, coins, elo, standoff_id')
+        .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%,standoff_id.ilike.%${safe}%`)
+        .limit(20);
+
+    if (error) {
+        el.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + escapeHtml(error.message) + '</div>';
+        return;
+    }
+    if (!users?.length) {
+        el.innerHTML = '<div class="empty">Не найдено</div>';
+        return;
+    }
+
+    el.innerHTML = users.map(u => {
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        const av = src ? `<img src="${src}" alt="">` : initial;
+        const coins = u.coins || 0;
+
+        return `
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                margin-bottom: 8px;
+                background: linear-gradient(180deg, rgba(255,215,0,0.06), rgba(0,0,0,0.4));
+                border: 1px solid rgba(255,215,0,0.25);
+                border-radius: 12px;
+            ">
+                <div style="
+                    width: 44px; height: 44px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                    display: flex; align-items: center; justify-content: center;
+                    font-weight: 900; color: #04140e; font-size: 16px;
+                ">${av}</div>
+
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${escapeHtml(u.display_name || 'Игрок')}
+                    </div>
+                    <div style="font-size:11px;color:var(--hint);margin-top:2px;">
+                        ID: ${u.telegram_id}
+                        ${u.standoff_id ? ' · S2: ' + escapeHtml(u.standoff_id) : ''}
+                    </div>
+                    <div style="font-size:14px;font-weight:900;color:#ffd700;margin-top:4px;font-family:var(--font-mono);">
+                        💰 ${coins.toLocaleString('ru-RU')}
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <button onclick="openCoinsGiveSheet(${u.telegram_id})" style="
+                        width: 38px; height: 38px;
+                        border-radius: 10px;
+                        background: rgba(34,197,94,0.15);
+                        border: 1px solid rgba(34,197,94,0.5);
+                        color: #22c55e;
+                        font-size: 20px;
+                        font-weight: 900;
+                        cursor: pointer;
+                        font-family: inherit;
+                        padding: 0;
+                    " title="Начислить">+</button>
+                    <button onclick="openCoinsTakeSheet(${u.telegram_id})" style="
+                        width: 38px; height: 38px;
+                        border-radius: 10px;
+                        background: rgba(255,84,112,0.15);
+                        border: 1px solid rgba(255,84,112,0.5);
+                        color: var(--red);
+                        font-size: 20px;
+                        font-weight: 900;
+                        cursor: pointer;
+                        font-family: inherit;
+                        padding: 0;
+                    " title="Списать">−</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ────────────────────────────────────────────────────────────────
+// 💚 НАЧИСЛИТЬ / ❤️ СПИСАТЬ
+// ────────────────────────────────────────────────────────────────
+async function openCoinsGiveSheet(userId) {
+    await openCoinsActionSheet(userId, 'give');
+}
+async function openCoinsTakeSheet(userId) {
+    await openCoinsActionSheet(userId, 'take');
+}
+
+async function openCoinsActionSheet(userId, mode) {
+    if (!isCurrentUserAdmin()) return;
+
+    const { data: u } = await sb.from('users')
+        .select('telegram_id, display_name, coins')
+        .eq('telegram_id', userId)
+        .single();
+
+    if (!u) { showToast('❌ Игрок не найден'); return; }
+
+    const isGive = mode === 'give';
+    const color = isGive ? '#22c55e' : '#ff5470';
+    const rgb = isGive ? '34,197,94' : '255,84,112';
+    const sign = isGive ? '+' : '−';
+    const label = isGive ? 'НАЧИСЛИТЬ' : 'СПИСАТЬ';
+    const icon = isGive ? '💰' : '💸';
+
+    document.getElementById('coinsActionOverlay')?.remove();
+    document.getElementById('coinsActionSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'coinsActionOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeCoinsActionSheet(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'coinsActionSheet';
+    sheet.style.zIndex = '10001';
+    sheet.style.maxHeight = '90vh';
+    sheet.style.overflowY = 'auto';
+
+    sheet.innerHTML = `
+        <div style="
+            display:flex; align-items:center; gap:14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, rgba(${rgb},0.12), rgba(0,0,0,0.4));
+            border: 1px solid rgba(${rgb},0.4);
+            border-radius: 14px;
+        ">
+            <div style="
+                width: 52px; height: 52px;
+                border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 26px;
+                background: linear-gradient(135deg, rgba(${rgb},0.25), rgba(${rgb},0.08));
+                border: 1.5px solid rgba(${rgb},0.5);
+                flex-shrink: 0;
+            ">${icon}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size: 16px; font-weight: 900; color: ${color}; letter-spacing: 1px;">
+                    ${label}
+                </div>
+                <div style="font-size: 12px; color: var(--hint); margin-top: 3px;">
+                    ${escapeHtml(u.display_name || 'Игрок')}
+                </div>
+                <div style="font-size: 13px; font-weight: 800; color: #ffd700; margin-top: 4px; font-family: var(--font-mono);">
+                    💰 Сейчас: ${(u.coins || 0).toLocaleString('ru-RU')}
+                </div>
+            </div>
+        </div>
+
+        <label class="field-label" style="margin-bottom: 8px; display:block;">СУММА</label>
+        <input type="text"
+               class="field-input"
+               id="coinsActionAmount"
+               inputmode="numeric"
+               placeholder="1000"
+               autocomplete="off"
+               style="text-align:center;font-size:22px;font-weight:900;font-family:var(--font-mono);margin-bottom:12px;">
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">
+            ${[100, 500, 1000, 5000].map(v => `
+                <button onclick="document.getElementById('coinsActionAmount').value='${v}'"
+                        style="
+                            padding: 10px;
+                            background: rgba(${rgb},0.08);
+                            border: 1px solid rgba(${rgb},0.3);
+                            border-radius: 10px;
+                            color: ${color};
+                            font-family: inherit;
+                            font-size: 12px;
+                            font-weight: 800;
+                            cursor: pointer;
+                        ">${v}</button>
+            `).join('')}
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;">
+            ${[10000, 50000, 100000, 1000000].map(v => `
+                <button onclick="document.getElementById('coinsActionAmount').value='${v}'"
+                        style="
+                            padding: 10px;
+                            background: rgba(${rgb},0.08);
+                            border: 1px solid rgba(${rgb},0.3);
+                            border-radius: 10px;
+                            color: ${color};
+                            font-family: inherit;
+                            font-size: 11px;
+                            font-weight: 800;
+                            cursor: pointer;
+                        ">${v >= 1000000 ? (v/1000000) + 'M' : (v/1000) + 'K'}</button>
+            `).join('')}
+        </div>
+
+        <label class="field-label" style="margin-bottom: 8px; display:block;">ПРИЧИНА (необязательно)</label>
+        <input type="text"
+               class="field-input"
+               id="coinsActionReason"
+               placeholder="Например: за активность"
+               maxlength="80"
+               autocomplete="off"
+               style="margin-bottom:16px;">
+
+        <button onclick="submitCoinsAction(${userId}, '${mode}')"
+                id="coinsActionSubmit"
+                style="
+                    width: 100%;
+                    padding: 16px;
+                    background: linear-gradient(135deg, ${color}, rgba(${rgb},0.7));
+                    border: none;
+                    border-radius: 14px;
+                    color: ${isGive ? '#000' : '#fff'};
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 14px;
+                    font-weight: 900;
+                    letter-spacing: 1.5px;
+                    cursor: pointer;
+                    box-shadow: 0 6px 22px rgba(${rgb},0.4);
+                ">
+            ${sign}${label}
+        </button>
+
+        <button class="sheet-cancel" onclick="closeCoinsActionSheet()" style="margin-top:10px;">ОТМЕНА</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    setTimeout(() => document.getElementById('coinsActionAmount')?.focus(), 250);
+    haptic('medium');
+}
+
+function closeCoinsActionSheet() {
+    document.getElementById('coinsActionOverlay')?.remove();
+    document.getElementById('coinsActionSheet')?.remove();
+}
+
+async function submitCoinsAction(userId, mode) {
+    if (!isCurrentUserAdmin()) return;
+
+    const amountEl = document.getElementById('coinsActionAmount');
+    const reasonEl = document.getElementById('coinsActionReason');
+    const btn = document.getElementById('coinsActionSubmit');
+
+    const amount = parseInt(String(amountEl?.value || '').replace(/\D/g, ''), 10);
+    const reason = reasonEl?.value.trim() || '';
+
+    if (!amount || amount <= 0) {
+        showToast('⚠️ Введи сумму больше 0');
+        return;
+    }
+
+    const isGive = mode === 'give';
+    const delta = isGive ? amount : -amount;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ ОБРАБОТКА...';
+
+    try {
+        // RPC add_coins — списывает/начисляет атомарно
+        const { error } = await sb.rpc('add_coins', {
+            p_user_id: userId,
+            p_amount: delta,
+            p_reason: isGive ? 'admin_give' : 'admin_take',
+            p_meta: {
+                from: 'admin',
+                admin_id: currentUser.telegram_id,
+                note: reason || null
+            }
+        });
+
+        if (error) throw error;
+
+        // 🔔 Уведомление игроку в приложении
+        await sb.from('user_notifications').insert({
+            telegram_id: userId,
+            title: isGive ? '💰 Вам начислили монеты' : '💸 У вас списали монеты',
+            text: isGive
+                ? `Администрация начислила вам <b>${amount.toLocaleString('ru-RU')}</b> монет.${reason ? ' Причина: ' + escapeHtml(reason) : ''}`
+                : `Администрация списала <b>${amount.toLocaleString('ru-RU')}</b> монет.${reason ? ' Причина: ' + escapeHtml(reason) : ''}`,
+            amount: delta,
+            type: isGive ? 'coins_give' : 'coins_take',
+            is_read: false,
+        });
+
+        // 🔔 Уведомление через бота
+        if (typeof notify === 'function') {
+            await notify(userId,
+                isGive
+                    ? `💰 <b>Вам начислено ${amount.toLocaleString('ru-RU')} монет</b>\n${reason ? 'Причина: ' + reason : ''}`
+                    : `💸 <b>У вас списано ${amount.toLocaleString('ru-RU')} монет</b>\n${reason ? 'Причина: ' + reason : ''}`,
+                'party'
+            ).catch(() => {});
+        }
+
+        haptic('heavy');
+        showToast(isGive ? `✅ +${amount.toLocaleString('ru-RU')}` : `✅ −${amount.toLocaleString('ru-RU')}`);
+
+        closeCoinsActionSheet();
+
+        // Обновляем результат поиска, чтобы увидеть новый баланс
+        doAdminCoinsSearch();
+
+        // Если это я — обновляю свой бейдж
+        if (String(userId) === String(currentUser.telegram_id)) {
+            const { data: fresh } = await sb.from('users')
+                .select('coins').eq('telegram_id', userId).single();
+            if (fresh) {
+                currentUser.coins = fresh.coins;
+                updateCoinsBadge();
+            }
+        }
+
+    } catch (e) {
+        console.error('submitCoinsAction:', e);
+        showToast('❌ ' + e.message);
+        btn.disabled = false;
+        btn.textContent = (isGive ? '+' : '−') + (isGive ? 'НАЧИСЛИТЬ' : 'СПИСАТЬ');
+    }
+}
+
+window.openAdminCoinsPanel = openAdminCoinsPanel;
+window.closeAdminCoinsPanel = closeAdminCoinsPanel;
+window.debouncedAdminCoinsSearch = debouncedAdminCoinsSearch;
+window.openCoinsGiveSheet = openCoinsGiveSheet;
+window.openCoinsTakeSheet = openCoinsTakeSheet;
+window.submitCoinsAction = submitCoinsAction;
+
 async function revokeModerator(userId) {
     if (!confirm('Снять модератора?')) return;
     try {
@@ -42666,6 +43026,155 @@ const { data: unreadMsgs } = await sb.from('messages')
     }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 🔔 УВЕДОМЛЕНИЯ ПОЛЬЗОВАТЕЛЯ (coin give/take)
+// ═══════════════════════════════════════════════════════════════
+async function loadUserNotifications() {
+    if (!currentUser) return [];
+    try {
+        const { data } = await sb.from('user_notifications')
+            .select('*')
+            .eq('telegram_id', currentUser.telegram_id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+        return data || [];
+    } catch (e) {
+        return [];
+    }
+}
+
+async function updateUserNotifBadge() {
+    if (!currentUser) return;
+    try {
+        const { count } = await sb.from('user_notifications')
+            .select('id', { count: 'exact', head: true })
+            .eq('telegram_id', currentUser.telegram_id)
+            .eq('is_read', false);
+
+        const badge = document.getElementById('userNotifBadge');
+        const btn = document.getElementById('userNotifBtn');
+        if (!badge || !btn) return;
+
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'flex';
+            btn.classList.add('has-notif');
+        } else {
+            badge.style.display = 'none';
+            btn.classList.remove('has-notif');
+        }
+    } catch (e) {}
+}
+
+// Realtime — моментально ловим новые
+function subscribeUserNotifications() {
+    if (!currentUser) return;
+    if (window._userNotifChannel) sb.removeChannel(window._userNotifChannel);
+
+    window._userNotifChannel = sb.channel('user_notif_' + currentUser.telegram_id)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'user_notifications',
+            filter: `telegram_id=eq.${currentUser.telegram_id}`
+        }, (payload) => {
+            const n = payload.new;
+            if (!n) return;
+
+            updateUserNotifBadge();
+            if (typeof SFX !== 'undefined') SFX.play('notification');
+            if (typeof haptic === 'function') haptic('medium');
+
+            // Красивая всплывашка
+            showUserNotifPopup(n);
+        })
+        .subscribe();
+}
+
+// Красивое всплывающее уведомление
+function showUserNotifPopup(n) {
+    document.getElementById('userNotifPopup')?.remove();
+
+    const popup = document.createElement('div');
+    popup.id = 'userNotifPopup';
+    const isGive = (n.amount || 0) > 0;
+
+    popup.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        z-index: 100000;
+        width: min(420px, calc(100vw - 32px));
+        padding: 16px 18px;
+        background: linear-gradient(135deg,
+            rgba(${isGive ? '34,197,94' : '255,84,112'}, 0.25) 0%,
+            rgba(0,0,0,0.95) 100%);
+        border: 1.5px solid ${isGive ? '#22c55e' : '#ff5470'};
+        border-radius: 16px;
+        box-shadow:
+            0 12px 40px rgba(0,0,0,0.7),
+            0 0 40px ${isGive ? 'rgba(34,197,94,0.4)' : 'rgba(255,84,112,0.4)'};
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: inherit;
+        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+        opacity: 0;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    `;
+
+    popup.innerHTML = `
+        <div style="
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px;
+            background: ${isGive
+                ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                : 'linear-gradient(135deg, #ff5470, #cc1e38)'};
+            box-shadow: 0 0 24px ${isGive ? 'rgba(34,197,94,0.6)' : 'rgba(255,84,112,0.6)'};
+        ">${isGive ? '💰' : '💸'}</div>
+
+        <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 12px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: ${isGive ? '#22c55e' : '#ff5470'}; margin-bottom: 4px;">
+                ${isGive ? 'НАЧИСЛЕНИЕ' : 'СПИСАНИЕ'}
+            </div>
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: #fff; line-height: 1;">
+                ${isGive ? '+' : ''}${(n.amount || 0).toLocaleString('ru-RU')} 💰
+            </div>
+            ${n.text ? `<div style="font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 5px; line-height: 1.4;">${n.text}</div>` : ''}
+        </div>
+
+        <button onclick="document.getElementById('userNotifPopup')?.remove()" style="
+            position: absolute;
+            top: 8px; right: 8px;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+        ">×</button>
+    `;
+
+    document.body.appendChild(popup);
+
+    requestAnimationFrame(() => {
+        popup.style.opacity = '1';
+        popup.style.transform = 'translateX(-50%) translateY(0)';
+    });
+
+    // Авто-скрытие через 5 сек
+    setTimeout(() => {
+        popup.style.transform = 'translateX(-50%) translateY(-100px)';
+        popup.style.opacity = '0';
+        setTimeout(() => popup
+
 async function updateNotifBadge() {
     const list = await loadNotifications();
 
@@ -47288,20 +47797,23 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
 }
 
 // ============================================================
-// 🎨 ПРИМЕНЕНИЕ КАСТОМИЗАЦИИ К АВАТАРУ + НИКУ + ФОНУ (для списков)
+// 🎨 ПРИМЕНЕНИЕ КАСТОМИЗАЦИИ К ЭЛЕМЕНТУ СПИСКА
+// Работает для лидерборда, чатов, друзей, клана и т.д.
 // ============================================================
 function applyListCustomization(scopeEl, user) {
     if (!scopeEl || !user) return;
 
     const eq = user.equipped_items || {};
 
-    // --- Ник ---
+    // ============================================================
+    // 1. ЦВЕТ НИКА
+    // ============================================================
     const colorId = eq.nickname_color;
     const nickEls = scopeEl.querySelectorAll('[data-list-nick]');
     if (colorId && SHOP_ITEMS_CACHE[colorId]) {
         const val = SHOP_ITEMS_CACHE[colorId].value || {};
         nickEls.forEach(el => {
-            if (val.gradient) {
+            if (val.gradient && Array.isArray(val.gradient) && val.gradient.length) {
                 el.style.background = `linear-gradient(90deg, ${val.gradient.join(',')})`;
                 el.style.webkitBackgroundClip = 'text';
                 el.style.backgroundClip = 'text';
@@ -47317,13 +47829,29 @@ function applyListCustomization(scopeEl, user) {
                 el.style.textShadow = `0 0 10px ${val.color}`;
             }
         });
+    } else {
+        nickEls.forEach(el => {
+            el.style.background = '';
+            el.style.webkitBackgroundClip = '';
+            el.style.backgroundClip = '';
+            el.style.webkitTextFillColor = '';
+            el.style.color = '';
+            el.style.textShadow = '';
+        });
     }
 
     // ============================================================
-    // РАМКА АВАТАРА
+    // 2. РАМКА АВАТАРА
+    // Только для обычных (не special) — обводка через box-shadow.
+    // Спец-рамки (SVG) рисуются через renderLbItem → .lb-frame-overlay
     // ============================================================
     const frameId = eq.avatar_frame;
     const avEls = scopeEl.querySelectorAll('[data-list-avatar]');
+
+    // Сбрасываем старые обводки у аватара
+    scopeEl.querySelectorAll('.lb-avatar').forEach(a => {
+        a.style.boxShadow = '';
+    });
 
     if (frameId && SHOP_ITEMS_CACHE[frameId]) {
         const item = SHOP_ITEMS_CACHE[frameId];
@@ -47331,79 +47859,24 @@ function applyListCustomization(scopeEl, user) {
         const frameStyle = val.style || 'glow';
         const color = val.color || '#fff';
 
-        if (val.special === true) {
-            // 🔥 СПЕЦ-РАМКА — создаём обёртку вокруг аватара
-            avEls.forEach(el => {
-                let wrap = el.parentElement;
-                if (!wrap.classList.contains('avatar-frame-wrap')) {
-                    const newWrap = document.createElement('div');
-                    newWrap.className = 'avatar-frame-wrap';
-                    const w = el.offsetWidth || 34;
-                    const h = el.offsetHeight || 34;
-                    newWrap.style.cssText = `
-                        position: relative;
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        flex-shrink: 0;
-                        width: ${w}px;
-                        height: ${h}px;
-                        isolation: isolate;
-                    `;
-                    el.parentNode.insertBefore(newWrap, el);
-                    newWrap.appendChild(el);
-                    wrap = newWrap;
-                }
-
-                // Аватар — базовый слой
-                el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 12px ${color}`;
-                el.style.position = 'relative';
-                el.style.zIndex = '2';
-
-                // Убираем старый overlay
-                wrap.querySelectorAll('.list-frame-overlay').forEach(o => o.remove());
-
-                // 🔥 Размер оверлея — 2× от аватара (как в профиле)
-                const avatarSize = el.offsetWidth || 34;
-                const overlaySize = Math.max(56, avatarSize * 1.75);
-
-                // Создаём новый
-                const overlay = document.createElement('div');
-                overlay.className = `list-frame-overlay special-frame-${val.special_type || 'default'}`;
-overlay.style.cssText = `
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: ${overlaySize}px;
-    height: ${overlaySize}px;
-    min-width: ${overlaySize}px;
-    min-height: ${overlaySize}px;
-    pointer-events: none;
-    z-index: 5;
-    overflow: visible;
-`;
-overlay.innerHTML = getSpecialFrameHTML(val.special_type || 'default', color);
-syncFrameAnimation(overlay);
-
-// 🔥 Вставляем ПОСЛЕ аватара — overlay сверху
-wrap.appendChild(overlay);
-            });
-        } else if (frameStyle === 'ring') {
-            avEls.forEach(el => {
-                el.style.boxShadow = `0 0 0 2px ${color}, 0 0 14px ${color}, inset 0 0 8px ${color}`;
-            });
-        } else if (frameStyle === 'double') {
-            avEls.forEach(el => {
-                el.style.boxShadow = `0 0 0 1.5px ${color}, 0 0 0 3px rgba(0,0,0,0.7), 0 0 0 4px ${color}, 0 0 14px ${color}`;
-            });
-        } else if (val.color) {
-            avEls.forEach(el => {
-                el.style.boxShadow = `0 0 0 2px ${color}, 0 0 12px ${color}`;
+        // Обычные рамки — обводка
+        if (val.special !== true) {
+            let boxShadow = `0 0 0 3px ${color}, 0 0 18px ${color}`;
+            if (frameStyle === 'ring') {
+                boxShadow = `0 0 0 3px ${color}, inset 0 0 14px ${color}, 0 0 22px ${color}`;
+            } else if (frameStyle === 'double') {
+                boxShadow = `0 0 0 2px ${color}, 0 0 0 4px rgba(0,0,0,0.55), 0 0 0 6px ${color}, 0 0 20px ${color}`;
+            }
+            scopeEl.querySelectorAll('.lb-avatar').forEach(a => {
+                a.style.boxShadow = boxShadow;
             });
         }
+        // Спец-рамка — уже нарисована в renderLbItem через .lb-frame-overlay
     }
 
-    // --- Значок ---
+    // ============================================================
+    // 3. ЗНАЧОК
+    // ============================================================
     const badgeId = eq.badge;
     const badgeEls = scopeEl.querySelectorAll('[data-list-badge]');
     if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
@@ -47417,20 +47890,26 @@ wrap.appendChild(overlay);
                 el.innerHTML = val.emoji || '🏅';
             }
             el.style.display = 'inline-flex';
+            el.style.alignItems = 'center';
+            el.style.justifyContent = 'center';
+        });
+    } else {
+        badgeEls.forEach(el => {
+            el.style.display = 'none';
+            el.innerHTML = '';
         });
     }
 
     // ============================================================
-    // 🌄 ФОН ПРОФИЛЯ — на всю плашку
+    // 4. ФОН ПРОФИЛЯ (плашка элемента)
     // ============================================================
-    const bgId2 = eq.profile_bg;
+    const bgId = eq.profile_bg;
     const itemEl = scopeEl;
     const oldBg = itemEl.querySelector('.list-item-bg');
 
-    if (bgId2 && SHOP_ITEMS_CACHE[bgId2]) {
-        const bgVal = SHOP_ITEMS_CACHE[bgId2].value || {};
+    if (bgId && SHOP_ITEMS_CACHE[bgId]) {
+        const bgVal = SHOP_ITEMS_CACHE[bgId].value || {};
         if (bgVal.url) {
-            // Создаём слой с фоном (если его нет)
             let bgLayer = oldBg;
             if (!bgLayer) {
                 bgLayer = document.createElement('div');
@@ -47447,8 +47926,27 @@ wrap.appendChild(overlay);
         if (oldBg) oldBg.remove();
         itemEl.classList.remove('has-list-bg');
     }
-}
 
+    // ============================================================
+    // 5. ТИТУЛ (в списках обычно не показывается, но на всякий)
+    // ============================================================
+    const titleId = eq.title;
+    const titleEls = scopeEl.querySelectorAll('[data-list-title]');
+    if (titleId && SHOP_ITEMS_CACHE[titleId]) {
+        const val = SHOP_ITEMS_CACHE[titleId].value || {};
+        titleEls.forEach(el => {
+            el.textContent = val.text || '';
+            el.style.color = val.color || 'var(--gold)';
+            el.style.textShadow = `0 0 10px ${val.color || 'var(--gold)'}`;
+            el.style.display = 'inline-block';
+        });
+    } else {
+        titleEls.forEach(el => {
+            el.style.display = 'none';
+            el.textContent = '';
+        });
+    }
+}
 // ============================================================
 // 🔄 СИНХРОНИЗАЦИЯ АНИМАЦИЙ РАМОК
 // Устанавливает одинаковую фазу для всех SVG-анимаций внутри рамки
