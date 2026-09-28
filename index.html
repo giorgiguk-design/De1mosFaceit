@@ -13503,6 +13503,59 @@ html.lite-mode .has-list-bg {
         transition: transform 0.32s cubic-bezier(0.34, 1.3, 0.64, 1),
                     visibility 0s linear 0.32s;
     }
+
+/* 🎵 МУЗЫКА И ЗВУКИ — на ПК центрированная модалка */
+@media (min-width: 768px) {
+    #snmSheet.sheet {
+        left: 50% !important;
+        right: auto !important;
+        top: 50% !important;
+        bottom: auto !important;
+        width: 460px !important;
+        max-width: calc(100vw - 40px) !important;
+        max-height: 85vh !important;
+        border-radius: 22px !important;
+        border: 1px solid var(--border-strong) !important;
+        border-top: 1px solid var(--border-strong) !important;
+        padding: 26px 24px 28px !important;
+        overflow-y: auto !important;
+        transform: translate(-50%, calc(-50% + 30px)) !important;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition:
+            transform 0.4s cubic-bezier(0.34, 1.3, 0.64, 1),
+            opacity 0.28s ease,
+            visibility 0s linear 0.4s;
+    }
+
+    #snmSheet.sheet.active {
+        transform: translate(-50%, -50%) !important;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition-delay: 0s;
+    }
+
+    #snmSheet .sheet-option {
+        padding: 15px 18px;
+        font-size: 14px;
+        border-radius: 14px;
+        margin-bottom: 10px;
+    }
+    #snmSheet .sheet-title {
+        font-size: 16px;
+        margin-bottom: 20px;
+        letter-spacing: 2.5px;
+    }
+    #snmSheet .sheet-cancel {
+        padding: 14px;
+        font-size: 13px;
+        border-radius: 14px;
+        margin-top: 16px;
+    }
+}
+
     .sheet.active {
         transform: translateX(0);
         pointer-events: auto;
@@ -23718,7 +23771,6 @@ html.lite-mode .case-card-v2:hover {
     .cdc-item { padding: 6px 8px; gap: 6px; }
     .cdc-dot { width: 8px; height: 8px; }
 }
-
 .case-detail-hero::before {
     content: '';
     position: absolute;
@@ -58104,14 +58156,24 @@ async function previewCaseItem(itemId) {
     };
 
     window.Music = {
-        start() {
+                start() {
             musicEnabled = true;
             localStorage.setItem(K.MUSIC, '1');
+            localStorage.removeItem('musicWidgetHidden');   // 🔥 возвращаем виджет
+
+            setTimeout(() => {
+                if (typeof window.showMusicWidget === 'function') window.showMusicWidget();
+                if (typeof window.refreshMusicWidget === 'function') window.refreshMusicWidget();
+            }, 50);
+
             return Promise.resolve();
         },
         stop() {
             musicEnabled = false;
             localStorage.setItem(K.MUSIC, '0');
+            if (typeof window.hideMusicWidget === 'function') {
+                window.hideMusicWidget();
+            }
             if (typeof window.stopStudioPlayback === 'function') {
                 try { window.stopStudioPlayback(); } catch (e) {}
             }
@@ -58742,9 +58804,12 @@ async function previewCaseItem(itemId) {
         let px = Number.isFinite(savedX) ? savedX : defaultX;
         let py = Number.isFinite(savedY) ? savedY : defaultY;
 
+        // 🔥 Если сохранённая позиция вне текущего экрана — сбрасываем
+        if (px < 0 || px > window.innerWidth - SIZE) px = defaultX;
+        if (py < TOP_SAFE || py > window.innerHeight - SIZE - 20) py = defaultY;
+
         px = Math.max(6, Math.min(window.innerWidth - SIZE - 6, px));
         py = Math.max(TOP_SAFE, Math.min(window.innerHeight - SIZE - 6, py));
-
         w.style.left = px + 'px';
         w.style.top = py + 'px';
 
@@ -58869,13 +58934,38 @@ async function previewCaseItem(itemId) {
         const w = document.getElementById('musicFloatingWidget');
         if (!w) return;
 
-        const shouldShow = window.Music?.isEnabled() && state.currentId;
+        // 🔥 Если пользователь скрыл виджет — не показываем
+        if (localStorage.getItem('musicWidgetHidden') === '1') {
+            w.style.display = 'none';
+            return;
+        }
+
+        // 🔥 Показываем виджет, когда музыка разрешена и есть хоть один трек
+        const enabled = !!window.Music?.isEnabled();
+        const shouldShow = enabled && state.tracks.length > 0;
+
         w.style.display = shouldShow ? 'flex' : 'none';
         if (!shouldShow) return;
 
         const track = state.tracks.find(t => t.id === state.currentId);
-        if (!track) return;
 
+        // Если трек не выбран — нейтральная иконка, но виджет виден
+        if (!track) {
+            const cover = document.getElementById('musicWidgetCover');
+            if (cover) cover.textContent = '🎵';
+            const icon = document.getElementById('musicWidgetIcon');
+            if (icon) {
+                icon.style.transform = 'scale(1)';
+                icon.style.opacity = '0.55';
+            }
+            const pulse = document.getElementById('musicWidgetPulse');
+            if (pulse) {
+                pulse.style.opacity = '0';
+                pulse.style.animation = 'none';
+            }
+            w.title = 'Музыка · нажми, чтобы открыть';
+            return;
+        }
         const cover = document.getElementById('musicWidgetCover');
         if (cover) {
             if (track.cover_url) {
@@ -59177,6 +59267,7 @@ async function previewCaseItem(itemId) {
             <button id="mpLibrary" style="width:100%;padding:14px;background:rgba(var(--emerald-rgb),0.08);border:1px solid var(--border-strong);border-radius:12px;color:var(--emerald);font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;">🎧 Открыть библиотеку</button>
 
             <button id="mpClose" style="width:100%;padding:14px;background:transparent;border:1px solid var(--border);border-radius:12px;color:var(--hint);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;">СВЕРНУТЬ</button>
+            <button id="mpHideWidget" style="width:100%;padding:10px;background:transparent;border:none;color:var(--hint);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;margin-top:6px;letter-spacing:0.5px;">СКРЫТЬ КРУЖОК НА ЭКРАНЕ</button>
         `;
 
         panel.querySelector('#mpPlay').onclick = togglePlayPause;
@@ -59237,6 +59328,13 @@ async function previewCaseItem(itemId) {
             setTimeout(() => openMusicLibrary(), 200);
         };
         panel.querySelector('#mpClose').onclick = closeMusicPanel;
+        panel.querySelector('#mpHideWidget').onclick = () => {
+            const w = document.getElementById('musicFloatingWidget');
+            if (w) w.style.display = 'none';
+            localStorage.setItem('musicWidgetHidden', '1');
+            if (typeof haptic === 'function') haptic('light');
+            if (typeof showToast === 'function') showToast('🔇 Виджет скрыт · вернуть: Настройки → Музыка');
+        };
 
         if (showSeek) startProgressTimer();
         else stopProgressTimer();
@@ -59772,16 +59870,18 @@ async function previewCaseItem(itemId) {
             updateWidget();
         }
 
+        // 🔥 Проверяем состояние виджета каждые 500мс
         setInterval(() => {
-            const shouldShow = window.Music?.isEnabled() && state.currentId;
+            const enabled = !!window.Music?.isEnabled();
             const w = document.getElementById('musicFloatingWidget');
-            if (shouldShow && (!w || w.style.display === 'none')) {
-                ensureWidget();
+
+            if (enabled && state.tracks.length > 0) {
+                if (!w) ensureWidget();
                 updateWidget();
-            } else if (!window.Music?.isEnabled() && w) {
+            } else if (!enabled && w) {
                 w.style.display = 'none';
             }
-        }, 2000);
+        }, 500);
 
         console.log('🎧 Music Player v3 готов');
     }
