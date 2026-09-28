@@ -43092,13 +43092,18 @@ function subscribeUserNotifications() {
 }
 
 // Красивое всплывающее уведомление
+// ============================================================
+// 🔔 КРАСИВОЕ ВСПЛЫВАЮЩЕЕ УВЕДОМЛЕНИЕ
+// ============================================================
 function showUserNotifPopup(n) {
+    if (!n) return;
+
     document.getElementById('userNotifPopup')?.remove();
+
+    const isGive = (n.amount || 0) > 0;
 
     const popup = document.createElement('div');
     popup.id = 'userNotifPopup';
-    const isGive = (n.amount || 0) > 0;
-
     popup.style.cssText = `
         position: fixed;
         top: 20px;
@@ -43123,6 +43128,7 @@ function showUserNotifPopup(n) {
         opacity: 0;
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+        pointer-events: auto;
     `;
 
     popup.innerHTML = `
@@ -43159,6 +43165,10 @@ function showUserNotifPopup(n) {
             font-size: 14px;
             cursor: pointer;
             padding: 0;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         ">×</button>
     `;
 
@@ -43169,12 +43179,24 @@ function showUserNotifPopup(n) {
         popup.style.transform = 'translateX(-50%) translateY(0)';
     });
 
-    // Авто-скрытие через 5 сек
+    // Авто-скрытие через 5 секунд
     setTimeout(() => {
         popup.style.transform = 'translateX(-50%) translateY(-100px)';
         popup.style.opacity = '0';
-        setTimeout(() => popup
+        setTimeout(() => {
+            popup.remove();
+        }, 500);
+    }, 5000);
 
+    // Тап по плашке — тоже закрывает
+    popup.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        popup.style.transform = 'translateX(-50%) translateY(-100px)';
+        popup.style.opacity = '0';
+        setTimeout(() => popup.remove(), 500);
+    });
+}
+window.showUserNotifPopup = showUserNotifPopup;
 async function updateNotifBadge() {
     const list = await loadNotifications();
 
