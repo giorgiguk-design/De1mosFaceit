@@ -57244,15 +57244,29 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
 
         let added = 0, skipped = 0, failed = 0;
 
+        // ═══════════════════════════════════════════════════════════
+        // 1. ЗНАЧКИ
+        // ═══════════════════════════════════════════════════════════
         for (const b of PREMIUM_BADGES) {
             try {
-                // 🔥 Проверяем и по id, И по имени — защита от дублей
-                const { data: existing } = await sb.from('shop_items')
+                // Проверяем и по id, и по имени
+                const { data: byId } = await sb.from('shop_items')
                     .select('id')
-                    .or(`id.eq.${b.id},and(category.eq.badge,name.eq.${b.name})`)
-                    .limit(1)
+                    .eq('id', b.id)
                     .maybeSingle();
-                if (existing) { skipped++; continue; }                const { error } = await sb.from('shop_items').insert({
+
+                const { data: byName } = await sb.from('shop_items')
+                    .select('id')
+                    .eq('category', 'badge')
+                    .eq('name', b.name)
+                    .limit(1);
+
+                if (byId || (byName && byName.length > 0)) {
+                    skipped++;
+                    continue;
+                }
+
+                const { error } = await sb.from('shop_items').insert({
                     id: b.id, category: 'badge', name: b.name,
                     description: 'Премиум-значок De1mos Faceit',
                     price: b.price, rarity: b.rarity,
@@ -57261,25 +57275,34 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 });
                 if (error) throw error;
                 added++;
-            } catch (e) { console.warn('badge seed:', b.id, e); failed++; }
+            } catch (e) {
+                console.warn('badge seed:', b.id, e);
+                failed++;
+            }
         }
 
-const { data: existing } = await sb.from('shop_items')
-    .select('id, name')
-    .eq('id', b.id)
-    .maybeSingle();
+        // ═══════════════════════════════════════════════════════════
+        // 2. ТИТУЛЫ
+        // ═══════════════════════════════════════════════════════════
+        for (const t of PREMIUM_TITLES) {
+            try {
+                const { data: byId } = await sb.from('shop_items')
+                    .select('id')
+                    .eq('id', t.id)
+                    .maybeSingle();
 
-// Дополнительная проверка по имени (второй запрос)
-const { data: byName } = await sb.from('shop_items')
-    .select('id')
-    .eq('category', 'badge')
-    .eq('name', b.name)
-    .limit(1);
+                const { data: byName } = await sb.from('shop_items')
+                    .select('id')
+                    .eq('category', 'title')
+                    .eq('name', t.text)
+                    .limit(1);
 
-if (existing || (byName && byName.length > 0)) {
-    skipped++;
-    continue;
-}                const { error } = await sb.from('shop_items').insert({
+                if (byId || (byName && byName.length > 0)) {
+                    skipped++;
+                    continue;
+                }
+
+                const { error } = await sb.from('shop_items').insert({
                     id: t.id, category: 'title', name: t.text,
                     description: 'Премиум-титул De1mos Faceit',
                     price: t.price, rarity: t.rarity,
@@ -57288,19 +57311,25 @@ if (existing || (byName && byName.length > 0)) {
                 });
                 if (error) throw error;
                 added++;
-            } catch (e) { console.warn('title seed:', t.id, e); failed++; }
+            } catch (e) {
+                console.warn('title seed:', t.id, e);
+                failed++;
+            }
         }
 
         if (typeof showToast === 'function') {
             showToast('✅ Добавлено: ' + added + ', пропущено: ' + skipped + (failed ? ', ошибок: ' + failed : ''));
         }
-        if (typeof loadShopItemsCache === 'function') { try { await loadShopItemsCache(); } catch (e) {} }
-        if (typeof openShop === 'function') { try { openShop(); } catch (e) {} }
+        if (typeof loadShopItemsCache === 'function') {
+            try { await loadShopItemsCache(); } catch (e) {}
+        }
+        if (typeof openShop === 'function') {
+            try { openShop(); } catch (e) {}
+        }
     }
     window.seedPremiumBadgesAndTitles = seedPremiumBadgesAndTitles;
     window.PREMIUM_BADGES = PREMIUM_BADGES;
     window.PREMIUM_TITLES = PREMIUM_TITLES;
-
     // ────────────────────────────────────────────────────────────
     // 🪝 Кнопка сидинга убрана — значки и титулы уже загружены
     // ────────────────────────────────────────────────────────────
