@@ -21185,6 +21185,146 @@ html.lite-mode .case-open-reel-item[data-rarity="legendary"] {
 }
 html.lite-mode .case-open-reel { filter: none !important; }
 
+/* ============================================================ */
+/* 🎰 МУЛЬТИ-БАРАБАНЫ КЕЙСА                                       */
+/* ============================================================ */
+.case-multi-reels {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    margin-bottom: 14px;
+}
+.case-multi-reels-2 { grid-template-columns: 1fr 1fr; }
+.case-multi-reels-3 { grid-template-columns: repeat(3, 1fr); }
+.case-multi-reels-4 { grid-template-columns: repeat(2, 1fr); }
+.case-multi-reels-5 { grid-template-columns: repeat(3, 1fr); }
+
+.case-multi-cell {
+    position: relative;
+    height: 110px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(0,0,0,0.9), rgba(10,15,25,0.8), rgba(0,0,0,0.9));
+    border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 10px;
+}
+.case-multi-marker {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, #ffd700 30%, #fff 50%, #ffd700 70%, transparent);
+    transform: translateX(-50%);
+    z-index: 5;
+    pointer-events: none;
+    box-shadow: 0 0 12px rgba(255,215,0,0.85);
+}
+.case-multi-reel {
+    display: flex;
+    gap: 6px;
+    padding: 10px 0;
+    height: 100%;
+    align-items: center;
+    will-change: transform, filter;
+    transform: translate3d(0,0,0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+.case-multi-item {
+    flex: 0 0 100px;
+    width: 100px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.6));
+    border: 1.5px solid rgba(154,167,181,0.5);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+.case-multi-item[data-rarity="rare"] { border-color: rgba(79,195,247,0.6); }
+.case-multi-item[data-rarity="epic"] { border-color: rgba(167,139,250,0.7); }
+.case-multi-item[data-rarity="legendary"] { border-color: rgba(255,215,0,0.85); box-shadow: 0 0 10px rgba(255,215,0,0.4); }
+.case-multi-item.won {
+    transform: scale(1.05);
+    border-color: #fff !important;
+    box-shadow: 0 0 22px var(--rarity-color, #ffd700), inset 0 0 15px rgba(255,255,255,0.18);
+}
+.case-multi-item-preview {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px;
+}
+.case-multi-item-preview > * { max-width: 100%; max-height: 100%; }
+
+.case-multi-result-badge {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    border: 1.5px solid;
+    z-index: 10;
+    animation: bounceIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.case-multi-results { padding: 0 16px 16px; }
+.case-multi-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+.case-multi-result {
+    padding: 10px 8px;
+    border: 1.5px solid;
+    border-radius: 12px;
+    text-align: center;
+    position: relative;
+    animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.case-multi-result-num {
+    position: absolute;
+    top: 4px; right: 6px;
+    font-size: 9px; font-weight: 900;
+    color: var(--hint); opacity: 0.7;
+}
+.case-multi-result-preview {
+    height: 60px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 6px;
+}
+.case-multi-result-preview > * { max-width: 100%; max-height: 100%; }
+.case-multi-result-name {
+    font-size: 10px; font-weight: 800;
+    color: var(--text); line-height: 1.15;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.case-multi-result-rarity {
+    font-size: 8px; font-weight: 900;
+    letter-spacing: 0.5px; margin-top: 4px;
+}
+.case-multi-result-dup {
+    font-size: 10px; font-weight: 800;
+    color: var(--gold); margin-top: 2px;
+}
+
+@media (max-width: 480px) {
+    .case-multi-reels-3 { grid-template-columns: repeat(2, 1fr); }
+    .case-multi-reels-4 { grid-template-columns: repeat(2, 1fr); }
+    .case-multi-reels-5 { grid-template-columns: repeat(2, 1fr); }
+    .case-multi-cell { height: 95px; }
+    .case-multi-item { flex: 0 0 85px; width: 85px; height: 75px; }
+    .case-multi-results-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+
     /* ============================================================ */
 /* 🎰 ЛЕНТА КЕЙСА — ОПТИМИЗАЦИЯ SVG                              */
 /* ============================================================ */
@@ -26162,23 +26302,7 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool, opts =
 
     if (typeof SFX !== 'undefined') SFX.play('swipe');
 
-    let tickCount = 0;
-    const totalTicks = 42;
-    const playTick = () => {
-        if (tickCount >= totalTicks) return;
 
-        const progress = tickCount / totalTicks;
-        // 🔥 Плавное замедление интервалов (60мс → 680мс)
-        const interval = 60 + Math.pow(progress, 1.6) * 620;
-
-        // 🔥 Скорость для звука — плавно растёт с 0 до 1
-        const speed = Math.pow(progress, 1.4);
-
-        tickCount++;
-        if (typeof SFX !== 'undefined') SFX.play('caseTick', { speed });
-        setTimeout(playTick, interval);
-    };
-    setTimeout(playTick, 80);
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             startCaseReel({
@@ -26225,12 +26349,17 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
     const offset = (Math.random() - 0.5) * 60;
     const finalX = viewportW / 2 - winnerCenterX - offset;
 
-    const duration = 6200;
+    // 🔥 Разная длительность: 6–10 секунд
+    const duration = opts.duration || (6000 + Math.random() * 4000);
+
     const startTime = performance.now();
     let lastX = 0;
     let lastTime = startTime;
+    let lastTickTime = 0;
+    let lastItemIdx = -1;
+    const TICK_INTERVAL = 30;   // не чаще 1 тика в 30мс
 
-    const easeOutExpo = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
+    const easeOutExpo = (t) => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
 
     function frame(now) {
         const t = Math.min((now - startTime) / duration, 1);
@@ -26239,11 +26368,22 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
 
         reel.style.transform = `translate3d(${x}px, 0, 0)`;
 
+        // Blur по скорости
         const dt = Math.max(now - lastTime, 1);
         const dx = x - lastX;
         const velocity = Math.abs(dx / dt);
         const blur = Math.min(velocity * 0.9, 7);
         reel.style.filter = blur > 0.4 ? `blur(${blur.toFixed(2)}px)` : 'none';
+
+        // 🔥 ТИК ПО ПРЕДМЕТУ: считаем какой предмет сейчас под маркером
+        const itemsPassed = Math.floor((-x + viewportW / 2) / ITEM_TOTAL);
+        if (itemsPassed !== lastItemIdx && now - lastTickTime >= TICK_INTERVAL) {
+            lastItemIdx = itemsPassed;
+            lastTickTime = now;
+            // velocity высокая → tickSpeed 0 (быстрый высокий), низкая → 1 (медленный низкий)
+            const tickSpeed = Math.max(0, Math.min(1, 1 - velocity * 2));
+            if (typeof SFX !== 'undefined') SFX.play('caseTick', { speed: tickSpeed });
+        }
 
         lastX = x;
         lastTime = now;
@@ -26251,7 +26391,7 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
         if (t < 1) {
             requestAnimationFrame(frame);
         } else {
-            // 🔥 Момент остановки — легкая "отдача" ленты
+            // Остановка — отскок
             reel.style.filter = 'none';
             reel.style.transform = `translate3d(${finalX + 8}px, 0, 0)`;
 
@@ -26269,7 +26409,6 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
 
     requestAnimationFrame(frame);
 }
-
 function finishCaseReel(item, rarity, isDuplicate, refund, meta, opts = {}) {
     haptic('heavy');
 
@@ -27242,8 +27381,8 @@ async function openMultipleCases(caseId, count) {
 
         haptic('heavy');
 
-        // Запускаем последовательный показ
-        showCaseSequence(results, caseId, pool, 0);
+        // 🔥 Мульти-открытие — все барабаны одновременно
+        showCaseMultiOpen(results, caseId, pool);
 
     } catch (e) {
         console.error('openMultipleCases:', e);
@@ -27253,38 +27392,250 @@ async function openMultipleCases(caseId, count) {
     }
 }
 
-// Последовательный показ N кейсов
-function showCaseSequence(results, caseId, pool, index) {
-    if (index >= results.length) {
-        // Все показаны
-        openCasesScreen();
-        return;
-    }
+// ============================================================
+// 🎰 МУЛЬТИ-ОТКРЫТИЕ — все барабаны крутятся одновременно
+// ============================================================
+function showCaseMultiOpen(results, caseId, pool) {
+    if (!results.length) return;
 
-    const r = results[index];
+    document.getElementById('caseMultiOverlay')?.remove();
 
-    showCaseOpening(
-        r.item,
-        r.item.rarity,
-        r.isDuplicate,
-        r.refund,
-        caseId,
-        pool,
-        {
-            total: results.length,
-            current: index + 1,
-            onNext: () => {
-                // Небольшая пауза перед следующим
-                setTimeout(() => showCaseSequence(results, caseId, pool, index + 1), 250);
-            },
-            onFinish: () => {
-                // Финальная галерея — показываем все результаты
-                setTimeout(() => showCaseGallery(results, caseId), 300);
-            }
+    if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+
+    const N = results.length;
+
+    const REEL_LEN   = 40;
+    const WINNER_IDX = 32;
+    const ITEM_W     = 100;
+    const ITEM_GAP   = 6;
+    const ITEM_TOTAL = ITEM_W + ITEM_GAP;
+
+    const durations = results.map(() => 6000 + Math.random() * 4000);
+
+    const reelsHTML = results.map((r, idx) => {
+        const winner = { ...r.item, _winner: true };
+        const items = [];
+        for (let i = 0; i < REEL_LEN; i++) {
+            if (i === WINNER_IDX) items.push(winner);
+            else items.push({ ...pool[Math.floor(Math.random() * pool.length)] });
         }
-    );
+
+        const rarityColor = {
+            common: '#9aa7b5', rare: '#4fc3f7', epic: '#a78bfa', legendary: '#ffd700'
+        }[r.item.rarity] || '#9aa7b5';
+
+        return `
+            <div class="case-multi-cell" data-idx="${idx}" style="--rarity-color: ${rarityColor};">
+                <div class="case-multi-marker"></div>
+                <div class="case-multi-reel" id="caseMultiReel_${idx}">
+                    ${items.map(it => `
+                        <div class="case-multi-item" data-rarity="${it.rarity || 'common'}" ${it._winner ? 'data-winner="1"' : ''}>
+                            <div class="case-multi-item-preview">${renderCaseItemPreview(it)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="case-multi-result-badge" id="caseMultiBadge_${idx}" style="display: none;"></div>
+            </div>
+        `;
+    }).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'case-open-overlay';
+    overlay.id = 'caseMultiOverlay';
+
+    overlay.innerHTML = `
+        <div class="case-open-modal" style="max-width: ${N <= 2 ? 700 : 900}px;">
+            <div class="case-open-header">
+                <div class="case-open-eyebrow">ОТКРЫТИЕ ×${N}</div>
+                <div class="case-open-title">
+                    ${getCaseSvg(24)}
+                    <span>УДАЧИ!</span>
+                </div>
+            </div>
+
+            <div class="case-multi-reels case-multi-reels-${N}" id="caseMultiReels">
+                ${reelsHTML}
+            </div>
+
+            <div class="case-open-status" id="caseMultiStatus">
+                <div class="case-open-spinner"></div>
+                <span>Крутим ${N} барабана...</span>
+            </div>
+
+            <div class="case-multi-results" id="caseMultiResults" style="display: none;">
+                <div class="case-multi-results-grid">
+                    ${results.map((r, i) => {
+                        const meta = {
+                            common:    { color: '#9aa7b5', label: 'ОБЫЧНЫЙ',     emoji: '⚪' },
+                            rare:      { color: '#4fc3f7', label: 'РЕДКИЙ',      emoji: '🔵' },
+                            epic:      { color: '#a78bfa', label: 'ЭПИЧЕСКИЙ',   emoji: '🟣' },
+                            legendary: { color: '#ffd700', label: 'ЛЕГЕНДАРНЫЙ', emoji: '🟡' },
+                        }[r.item.rarity] || { color: '#9aa7b5', label: 'ОБЫЧНЫЙ', emoji: '⚪' };
+                        return `
+                            <div class="case-multi-result" style="border-color: ${meta.color}66; background: linear-gradient(180deg, ${meta.color}15, rgba(0,0,0,0.5)); animation-delay: ${i * 0.05}s;">
+                                <div class="case-multi-result-num">#${i + 1}</div>
+                                <div class="case-multi-result-preview">${renderCaseItemPreview(r.item)}</div>
+                                <div class="case-multi-result-name">${escapeHtml(r.item.name)}</div>
+                                <div class="case-multi-result-rarity" style="color: ${meta.color};">${meta.label}</div>
+                                ${r.isDuplicate ? `<div class="case-multi-result-dup">+${r.refund} 💰</div>` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="case-result-actions">
+                    <button class="case-btn-primary" id="caseMultiCloseBtn">🎉 ЗАБРАТЬ ВСЕ</button>
+                    <button class="case-btn-secondary" id="caseMultiAgainBtn">ЕЩЁ ×${N}</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    if (typeof SFX !== 'undefined') SFX.play('swipe');
+
+    let finishedCount = 0;
+    const onAnyFinish = () => {
+        finishedCount++;
+        if (finishedCount === N) {
+            setTimeout(() => showMultiResults(results, overlay), 400);
+        }
+    };
+
+    results.forEach((r, idx) => {
+        startMiniReel({
+            idx,
+            winnerIdx: WINNER_IDX,
+            ITEM_TOTAL,
+            ITEM_W,
+            item: r.item,
+            duration: durations[idx],
+            onFinish: onAnyFinish,
+        });
+    });
+
+    overlay.querySelector('#caseMultiCloseBtn').onclick = () => {
+        if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+        overlay.remove();
+        openCasesScreen();
+    };
+
+    overlay.querySelector('#caseMultiAgainBtn').onclick = () => {
+        if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+        overlay.remove();
+        setTimeout(() => openMultipleCases(caseId, N), 200);
+    };
 }
 
+// 🔧 Отдельный мини-барабан (для мульти-открытия)
+function startMiniReel({ idx, winnerIdx, ITEM_TOTAL, ITEM_W, item, duration, onFinish }) {
+    const wrap = document.querySelector(`.case-multi-cell[data-idx="${idx}"]`);
+    const reel = document.getElementById(`caseMultiReel_${idx}`);
+    if (!wrap || !reel) { if (onFinish) onFinish(); return; }
+
+    const viewportW = wrap.clientWidth;
+    const winnerCenterX = winnerIdx * ITEM_TOTAL + ITEM_W / 2;
+    const offset = (Math.random() - 0.5) * (ITEM_W * 0.6);
+    const finalX = viewportW / 2 - winnerCenterX - offset;
+
+    const startTime = performance.now();
+    let lastX = 0;
+    let lastTime = startTime;
+    let lastTickTime = 0;
+    let lastItemIdx = -1;
+    const TICK_INTERVAL = 35;
+
+    const easeOutExpo = (t) => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+
+    function frame(now) {
+        const t = Math.min((now - startTime) / duration, 1);
+        const eased = easeOutExpo(t);
+        const x = finalX * eased;
+
+        reel.style.transform = `translate3d(${x}px, 0, 0)`;
+
+        const dt = Math.max(now - lastTime, 1);
+        const dx = x - lastX;
+        const velocity = Math.abs(dx / dt);
+        const blur = Math.min(velocity * 0.7, 5);
+        reel.style.filter = blur > 0.4 ? `blur(${blur.toFixed(2)}px)` : 'none';
+
+        // 🔥 ТИК ПО ФАКТУ ПРОЛЁТА предмета
+        const itemsPassed = Math.floor((-x + viewportW / 2) / ITEM_TOTAL);
+        if (itemsPassed !== lastItemIdx && now - lastTickTime >= TICK_INTERVAL) {
+            lastItemIdx = itemsPassed;
+            lastTickTime = now;
+            const tickSpeed = Math.max(0, Math.min(1, 1 - velocity * 2.5));
+            if (typeof SFX !== 'undefined') SFX.play('caseTick', { speed: tickSpeed });
+        }
+
+        lastX = x;
+        lastTime = now;
+
+        if (t < 1) {
+            requestAnimationFrame(frame);
+        } else {
+            reel.style.filter = 'none';
+
+            const winnerEl = reel.querySelector('[data-winner="1"]');
+            if (winnerEl) winnerEl.classList.add('won');
+
+            const rarity = item.rarity || 'common';
+            setTimeout(() => {
+                if (typeof SFX === 'undefined') return;
+                if (rarity === 'legendary') SFX.play('caseRevealLegendary');
+                else if (rarity === 'epic') SFX.play('caseRevealEpic');
+                else if (rarity === 'rare') SFX.play('caseRevealRare');
+                else SFX.play('caseRevealCommon');
+            }, 60);
+
+            const badge = document.getElementById(`caseMultiBadge_${idx}`);
+            if (badge) {
+                const meta = {
+                    common:    { color: '#9aa7b5', emoji: '⚪' },
+                    rare:      { color: '#4fc3f7', emoji: '🔵' },
+                    epic:      { color: '#a78bfa', emoji: '🟣' },
+                    legendary: { color: '#ffd700', emoji: '🟡' },
+                }[rarity] || { color: '#9aa7b5', emoji: '⚪' };
+                badge.style.display = 'flex';
+                badge.style.background = `linear-gradient(135deg, ${meta.color}55, ${meta.color}22)`;
+                badge.style.borderColor = meta.color;
+                badge.textContent = meta.emoji;
+            }
+
+            if (onFinish) onFinish();
+        }
+    }
+
+    requestAnimationFrame(frame);
+}
+
+
+// Показ финальных результатов после всех барабанов
+function showMultiResults(results, overlay) {
+    const statusEl = document.getElementById('caseMultiStatus');
+    if (statusEl) statusEl.style.display = 'none';
+
+    const resultsEl = document.getElementById('caseMultiResults');
+    if (resultsEl) {
+        resultsEl.style.display = 'block';
+        resultsEl.style.animation = 'caseResultIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    }
+
+    const reelsEl = overlay.querySelector('.case-multi-reels');
+    if (reelsEl) {
+        reelsEl.style.transition = 'opacity 0.35s ease';
+        reelsEl.style.opacity = '0';
+        setTimeout(() => reelsEl.style.display = 'none', 350);
+    }
+
+    if (typeof SFX !== 'undefined') SFX.play('reward');
+
+    const hasLegendary = results.some(r => r.item.rarity === 'legendary');
+    const hasEpic = results.some(r => r.item.rarity === 'epic');
+    if (hasLegendary) setTimeout(() => spawnCaseParticles('legendary'), 300);
+    else if (hasEpic) setTimeout(() => spawnCaseParticles('epic'), 300);
+}
 // Финальная галерея всех выигранных предметов
 function showCaseGallery(results, caseId) {
     const rarityMeta = {
