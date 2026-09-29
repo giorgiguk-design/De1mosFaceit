@@ -26344,10 +26344,40 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
     const reel = document.getElementById('caseOpenReel');
     if (!wrap || !reel) return;
 
-    const viewportW = wrap.clientWidth;
-    const winnerCenterX = winnerIdx * ITEM_TOTAL + ITEM_W / 2;
-    const offset = (Math.random() - 0.5) * 60;
+    // 🔥 Ждём, пока контейнер получит реальную ширину (важно для мобильных)
+    let viewportW = wrap.clientWidth;
+    if (viewportW === 0) {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicate, refund, meta, opts });
+            });
+        });
+        return;
+    }
+
+    // 🔥 ИЗМЕРЯЕМ РЕАЛЬНУЮ ширину предмета и gap (а не хардкодим 130)
+    const firstItem = reel.querySelector('.case-open-reel-item');
+    const actualItemW = firstItem ? firstItem.offsetWidth : ITEM_W;
+    const computedStyle = getComputedStyle(reel);
+    const gapStr = computedStyle.columnGap || computedStyle.gap || '8';
+    const gap = parseFloat(gapStr) || 8;
+    const actualItemTotal = actualItemW + gap;
+
+    // Теперь используем РЕАЛЬНЫЕ значения
+    const winnerCenterX = winnerIdx * actualItemTotal + actualItemW / 2;
+    // Offset — не больше 20% ширины предмета (чтобы не уйти на соседний)
+    const offset = (Math.random() - 0.5) * (actualItemW * 0.4);
     const finalX = viewportW / 2 - winnerCenterX - offset;
+
+    console.log('🎰 Reel:', {
+        viewportW,
+        actualItemW,
+        gap,
+        actualItemTotal,
+        winnerIdx,
+        winnerCenterX,
+        finalX,
+    });
 
     // 🔥 Разная длительность: 6–10 секунд
     const duration = opts.duration || (6000 + Math.random() * 4000);
@@ -26357,7 +26387,7 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
     let lastTime = startTime;
     let lastTickTime = 0;
     let lastItemIdx = -1;
-    const TICK_INTERVAL = 30;   // не чаще 1 тика в 30мс
+    const TICK_INTERVAL = 30;
 
     const easeOutExpo = (t) => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
 
@@ -26368,19 +26398,17 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
 
         reel.style.transform = `translate3d(${x}px, 0, 0)`;
 
-        // Blur по скорости
         const dt = Math.max(now - lastTime, 1);
         const dx = x - lastX;
         const velocity = Math.abs(dx / dt);
         const blur = Math.min(velocity * 0.9, 7);
         reel.style.filter = blur > 0.4 ? `blur(${blur.toFixed(2)}px)` : 'none';
 
-        // 🔥 ТИК ПО ПРЕДМЕТУ: считаем какой предмет сейчас под маркером
-        const itemsPassed = Math.floor((-x + viewportW / 2) / ITEM_TOTAL);
+        // 🔥 ТИК ПО РЕАЛЬНОМУ ИНДЕКСУ предмета
+        const itemsPassed = Math.floor((-x + viewportW / 2) / actualItemTotal);
         if (itemsPassed !== lastItemIdx && now - lastTickTime >= TICK_INTERVAL) {
             lastItemIdx = itemsPassed;
             lastTickTime = now;
-            // velocity высокая → tickSpeed 0 (быстрый высокий), низкая → 1 (медленный низкий)
             const tickSpeed = Math.max(0, Math.min(1, 1 - velocity * 2));
             if (typeof SFX !== 'undefined') SFX.play('caseTick', { speed: tickSpeed });
         }
@@ -26391,7 +26419,6 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
         if (t < 1) {
             requestAnimationFrame(frame);
         } else {
-            // Остановка — отскок
             reel.style.filter = 'none';
             reel.style.transform = `translate3d(${finalX + 8}px, 0, 0)`;
 
@@ -26409,6 +26436,7 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
 
     requestAnimationFrame(frame);
 }
+
 function finishCaseReel(item, rarity, isDuplicate, refund, meta, opts = {}) {
     haptic('heavy');
 
@@ -27533,9 +27561,27 @@ function startMiniReel({ idx, winnerIdx, ITEM_TOTAL, ITEM_W, item, duration, onF
     const reel = document.getElementById(`caseMultiReel_${idx}`);
     if (!wrap || !reel) { if (onFinish) onFinish(); return; }
 
-    const viewportW = wrap.clientWidth;
-    const winnerCenterX = winnerIdx * ITEM_TOTAL + ITEM_W / 2;
-    const offset = (Math.random() - 0.5) * (ITEM_W * 0.6);
+    // 🔥 Ждём реальную ширину
+    let viewportW = wrap.clientWidth;
+    if (viewportW === 0) {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                startMiniReel({ idx, winnerIdx, ITEM_TOTAL, ITEM_W, item, duration, onFinish });
+            });
+        });
+        return;
+    }
+
+    // 🔥 ИЗМЕРЯЕМ реальную ширину мини-предмета
+    const firstItem = reel.querySelector('.case-multi-item');
+    const actualItemW = firstItem ? firstItem.offsetWidth : ITEM_W;
+    const computedStyle = getComputedStyle(reel);
+    const gapStr = computedStyle.columnGap || computedStyle.gap || '6';
+    const gap = parseFloat(gapStr) || 6;
+    const actualItemTotal = actualItemW + gap;
+
+    const winnerCenterX = winnerIdx * actualItemTotal + actualItemW / 2;
+    const offset = (Math.random() - 0.5) * (actualItemW * 0.4);
     const finalX = viewportW / 2 - winnerCenterX - offset;
 
     const startTime = performance.now();
@@ -27560,8 +27606,7 @@ function startMiniReel({ idx, winnerIdx, ITEM_TOTAL, ITEM_W, item, duration, onF
         const blur = Math.min(velocity * 0.7, 5);
         reel.style.filter = blur > 0.4 ? `blur(${blur.toFixed(2)}px)` : 'none';
 
-        // 🔥 ТИК ПО ФАКТУ ПРОЛЁТА предмета
-        const itemsPassed = Math.floor((-x + viewportW / 2) / ITEM_TOTAL);
+        const itemsPassed = Math.floor((-x + viewportW / 2) / actualItemTotal);
         if (itemsPassed !== lastItemIdx && now - lastTickTime >= TICK_INTERVAL) {
             lastItemIdx = itemsPassed;
             lastTickTime = now;
