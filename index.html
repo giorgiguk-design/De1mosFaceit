@@ -26061,7 +26061,39 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool, opts =
     // 🔥 Стопим все звуки с прошлого кейса
     if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
 
-    // 🔥 Мультирежим: показываем счётчик "1 / 5" сверху
+    const rarityMeta = {
+        common:    { color: '#9aa7b5', label: 'ОБЫЧНЫЙ',     emoji: '⚪' },
+        rare:      { color: '#4fc3f7', label: 'РЕДКИЙ',      emoji: '🔵' },
+        epic:      { color: '#a78bfa', label: 'ЭПИЧЕСКИЙ',   emoji: '🟣' },
+        legendary: { color: '#ffd700', label: 'ЛЕГЕНДАРНЫЙ', emoji: '🟡' },
+    };
+    const meta = rarityMeta[rarity] || rarityMeta.common;
+
+    const winnerItem = JSON.parse(JSON.stringify(item || {}));
+    const reelPool = (pool && pool.length) ? pool : [winnerItem];
+
+    if (!reelPool.length) {
+        console.error('❌ Пустой пул');
+        return;
+    }
+
+    const REEL_LEN   = 60;
+    const WINNER_IDX = 52;
+    const ITEM_W     = 130;
+    const ITEM_GAP   = 8;
+    const ITEM_TOTAL = ITEM_W + ITEM_GAP;
+
+    const reelItems = [];
+    for (let i = 0; i < REEL_LEN; i++) {
+        if (i === WINNER_IDX) {
+            reelItems.push({ ...winnerItem, _winner: true });
+        } else {
+            const rand = reelPool[Math.floor(Math.random() * reelPool.length)];
+            reelItems.push({ ...rand });
+        }
+    }
+
+    // 🔥 Бейдж "1 / 5" в мультирежиме
     const multiBadge = (opts.total && opts.total > 1)
         ? `<div style="
               position: absolute;
@@ -26080,41 +26112,6 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool, opts =
               z-index: 100;
           ">${opts.current || 1} / ${opts.total}</div>`
         : '';
-
-    const rarityMeta = {
-        common:    { color: '#9aa7b5', label: 'ОБЫЧНЫЙ',     emoji: '⚪' },
-        rare:      { color: '#4fc3f7', label: 'РЕДКИЙ',      emoji: '🔵' },
-        epic:      { color: '#a78bfa', label: 'ЭПИЧЕСКИЙ',   emoji: '🟣' },
-        legendary: { color: '#ffd700', label: 'ЛЕГЕНДАРНЫЙ', emoji: '🟡' },
-    };
-    const meta = rarityMeta[rarity] || rarityMeta.common;
-
-    // 🔥 ФИКС: клонируем item, чтобы кэш его не затирал
-    const winnerItem = JSON.parse(JSON.stringify(item || {}));
-
-    const reelPool = (pool && pool.length) ? pool : [winnerItem];
-
-    if (!reelPool.length) {
-        console.error('❌ Пустой пул');
-        return;
-    }
-
-    const REEL_LEN   = 60;
-    const WINNER_IDX = 52;
-    const ITEM_W     = 130;
-    const ITEM_GAP   = 8;
-    const ITEM_TOTAL = ITEM_W + ITEM_GAP;
-
-    const reelItems = [];
-    for (let i = 0; i < REEL_LEN; i++) {
-        if (i === WINNER_IDX) {
-            // 🔥 КЛОНИРУЕМ, а не ссылку — иначе _winner заражает оригинал в пуле
-            reelItems.push({ ...winnerItem, _winner: true });
-        } else {
-            const rand = reelPool[Math.floor(Math.random() * reelPool.length)];
-            reelItems.push({ ...rand });
-        }
-    }
 
     const overlay = document.createElement('div');
     overlay.className = 'case-open-overlay';
@@ -26176,15 +26173,16 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool, opts =
         setTimeout(playTick, interval);
     };
     setTimeout(playTick, 100);
+
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             startCaseReel({
                 winnerIdx: WINNER_IDX,
                 ITEM_TOTAL,
                 ITEM_W,
-                // 🔥 Передаём клон, а не оригинал
                 item: winnerItem,
-                rarity, isDuplicate, refund, meta
+                rarity, isDuplicate, refund, meta,
+                opts
             });
         });
     });
@@ -26212,7 +26210,7 @@ function renderCaseReelItem(item, isWinner) {
     `;
 }
 
-function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicate, refund, meta }) {
+function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicate, refund, meta, opts }) {
     const wrap = document.getElementById('caseReelWrap');
     const reel = document.getElementById('caseOpenReel');
     if (!wrap || !reel) return;
@@ -26249,14 +26247,14 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
             requestAnimationFrame(frame);
         } else {
             reel.style.filter = 'none';
-            finishCaseReel(item, rarity, isDuplicate, refund, meta);
+            finishCaseReel(item, rarity, isDuplicate, refund, meta, opts);
         }
     }
 
     requestAnimationFrame(frame);
 }
 
-function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
+function finishCaseReel(item, rarity, isDuplicate, refund, meta, opts = {}) {
     haptic('heavy');
 
     if (typeof SFX !== 'undefined') {
@@ -26292,10 +26290,13 @@ function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
             : `<span style="color: var(--emerald); font-weight: 900;">✓ Добавлено в инвентарь</span>`;
     }
 
+    // ============================================================
+    // 🔥 КНОПКИ
+    // ============================================================
     const closeBtn = document.getElementById('caseCloseBtn');
     if (closeBtn) {
-        // В мультирежиме показываем "СЛЕДУЮЩИЙ" вместо "ЗАБРАТЬ"
         if (opts.total && opts.current < opts.total && typeof opts.onNext === 'function') {
+            // Мультирежим — есть ещё кейсы
             closeBtn.textContent = `СЛЕДУЮЩИЙ (${opts.current + 1}/${opts.total}) →`;
             closeBtn.onclick = () => {
                 if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
@@ -26303,9 +26304,11 @@ function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
                 opts.onNext();
             };
         } else {
-            // Последний — "ЗАБРАТЬ ВСЕ"
+            // Последний кейс или одиночный режим
             if (opts.total && opts.total > 1) {
                 closeBtn.textContent = `🎉 ЗАБРАТЬ ВСЕ (${opts.total})`;
+            } else {
+                closeBtn.textContent = 'ЗАБРАТЬ';
             }
             closeBtn.onclick = () => {
                 if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
@@ -26315,10 +26318,11 @@ function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
             };
         }
     }
+
     const againBtn = document.getElementById('caseOpenAgainBtn');
     if (againBtn) {
-        // В мультирежиме скрываем "Ещё раз"
         if (opts.total && opts.total > 1) {
+            // Мультирежим — скрываем "Ещё раз"
             againBtn.style.display = 'none';
         } else {
             canOpenFreeCase().then(info => {
@@ -26327,27 +26331,19 @@ function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
                     return;
                 }
                 againBtn.onclick = () => {
+                    if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
                     document.getElementById('caseOpenOverlay')?.remove();
                     setTimeout(() => openCase('daily_free'), 200);
                 };
             });
         }
     }
-            if (!info.can) {
-                againBtn.style.display = 'none';
-                return;
-            }
-            againBtn.onclick = () => {
-                document.getElementById('caseOpenOverlay')?.remove();
-                setTimeout(() => openCase('daily_free'), 200);
-            };
-        });
-    }
 
     if (rarity === 'legendary' || rarity === 'epic') {
         spawnCaseParticles(rarity);
     }
 }
+
 // ============================================================
 // Частицы — эффект салюта
 // ============================================================
