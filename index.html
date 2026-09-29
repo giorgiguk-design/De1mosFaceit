@@ -28530,6 +28530,207 @@ const _rankSvgCache = {};
 // ============================================================
 const _rankEmblemCache = {};
 
+// ============================================================
+// 🏅 МОДАЛКА ИНФО О РАНГЕ
+// ============================================================
+function openRankInfoSheet(level, event) {
+    if (event) event.stopPropagation();
+    level = Math.max(1, Math.min(10, Number(level) || 1));
+
+    const info = RANK_CONFIG.LEVELS[level - 1];
+    if (!info) return;
+
+    const color = info.color || '#00e08a';
+    const emblem = getRankEmblem(level, 100, true);
+
+    // Уровни диапазон
+    const minDxp = info.min;
+    const maxDxp = info.max === Infinity ? '∞' : info.max;
+
+    // Предыдущий и следующий ранги
+    const prevLevel = level > 1 ? RANK_CONFIG.LEVELS[level - 2] : null;
+    const nextLevel = level < 10 ? RANK_CONFIG.LEVELS[level] : null;
+
+    // Описания — какие фичи открываются
+    const perkMap = {
+        1:  ['Игра против новичков', 'Доступ к кейсам', 'Базовые рамки'],
+        2:  ['Открыт лидерборд', 'Доступ к 2x2 режиму'],
+        3:  ['Улучшенный матчмейкинг', 'Цвет ника в чате'],
+        4:  ['Приоритет в очереди', 'Ветеранский значок'],
+        5:  ['Мастер-статус', 'Кастомные фоны профиля'],
+        6:  ['Элитный подбор игроков', 'Эксклюзивные рамки'],
+        7:  ['Про-статус', 'Только с такими же профи'],
+        8:  ['Легендарный ранг', 'Особые анимации профиля'],
+        9:  ['Грандмастер', 'Топ-1% игроков', 'Особый значок на карте'],
+        10: ['★ БОГ ★', 'Максимальный ранг', 'Особые титулы'],
+    };
+    const perks = perkMap[level] || [];
+
+    // Удаляем старую
+    document.getElementById('rankInfoOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'share-preview-overlay active';
+    overlay.id = 'rankInfoOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="share-preview-modal" style="max-width: 420px;">
+            <div class="share-preview-body" style="padding: 28px 22px; text-align: center;">
+
+                <!-- Эмблема -->
+                <div style="
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 140px;
+                    height: 140px;
+                    margin-bottom: 16px;
+                    filter: drop-shadow(0 0 24px ${color});
+                    animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+                ">${emblem}</div>
+
+                <!-- Название -->
+                <div style="
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 26px;
+                    font-weight: 900;
+                    color: ${color};
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                    text-shadow: 0 0 20px ${color};
+                    margin-bottom: 4px;
+                ">${info.name}</div>
+
+                <!-- Уровень -->
+                <div style="
+                    font-size: 12px;
+                    font-weight: 800;
+                    letter-spacing: 3px;
+                    color: var(--hint);
+                    margin-bottom: 20px;
+                ">УРОВЕНЬ ${level} · 10</div>
+
+                <!-- DXP Range -->
+                <div style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 20px;
+                    background: linear-gradient(135deg, ${color}22, ${color}08);
+                    border: 1px solid ${color}66;
+                    border-radius: 999px;
+                    margin-bottom: 20px;
+                ">
+                    <span style="font-size: 11px; color: var(--hint); font-weight: 800;">DXP:</span>
+                    <span style="
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 16px;
+                        font-weight: 900;
+                        color: ${color};
+                        letter-spacing: 1px;
+                        text-shadow: 0 0 10px ${color}88;
+                    ">${minDxp}${maxDxp !== '∞' ? ' – ' + maxDxp : '+'}</span>
+                </div>
+
+                <!-- Перки -->
+                ${perks.length ? `
+                    <div style="
+                        text-align: left;
+                        background: rgba(0,0,0,0.3);
+                        border: 1px solid var(--border);
+                        border-radius: 12px;
+                        padding: 14px 16px;
+                        margin-bottom: 18px;
+                    ">
+                        <div style="
+                            font-size: 10px;
+                            font-weight: 900;
+                            letter-spacing: 2px;
+                            color: var(--hint);
+                            margin-bottom: 10px;
+                            text-transform: uppercase;
+                        ">Что открывается:</div>
+                        ${perks.map(p => `
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                                padding: 6px 0;
+                                font-size: 12.5px;
+                                color: var(--text);
+                                font-weight: 600;
+                            ">
+                                <span style="color: ${color}; font-weight: 900;">✓</span>
+                                <span>${escapeHtml(p)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- Навигация: пред / след -->
+                <div style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 8px;
+                    margin-bottom: 14px;
+                ">
+                    ${prevLevel ? `
+                        <button onclick="openRankInfoSheet(${level - 1})" style="
+                            padding: 10px;
+                            background: rgba(255,255,255,0.05);
+                            border: 1px solid var(--border);
+                            border-radius: 10px;
+                            color: var(--text);
+                            font-family: inherit;
+                            font-size: 11px;
+                            font-weight: 800;
+                            cursor: pointer;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 2px;
+                        ">
+                            <span style="font-size: 14px; color: var(--hint);">←</span>
+                            <span style="font-size: 10px; color: var(--hint);">${prevLevel.name}</span>
+                        </button>
+                    ` : '<div></div>'}
+                    ${nextLevel ? `
+                        <button onclick="openRankInfoSheet(${level + 1})" style="
+                            padding: 10px;
+                            background: linear-gradient(135deg, ${color}22, ${color}08);
+                            border: 1px solid ${color}66;
+                            border-radius: 10px;
+                            color: ${color};
+                            font-family: inherit;
+                            font-size: 11px;
+                            font-weight: 800;
+                            cursor: pointer;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 2px;
+                        ">
+                            <span style="font-size: 14px;">→</span>
+                            <span style="font-size: 10px;">${nextLevel.name}</span>
+                        </button>
+                    ` : '<div></div>'}
+                </div>
+
+                <button class="profile-action-btn cancel" onclick="document.getElementById('rankInfoOverlay').remove()" style="width: 100%;">
+                    ЗАКРЫТЬ
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    haptic('medium');
+    if (typeof SFX !== 'undefined') SFX.play('open');
+}
+
+window.openRankInfoSheet = openRankInfoSheet;
+
 function getRankEmblem(level, size = 32, glow = true) {
     level = Math.max(1, Math.min(10, level));
     const key = `${level}_${size}_${glow}`;
