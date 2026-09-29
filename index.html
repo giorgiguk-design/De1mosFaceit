@@ -30793,6 +30793,46 @@ if (!user) {
 }
 
     // ============================================================
+    // 🔥 ПРОВЕРКА: не удалял ли игрок аккаунт за последние 24 часа
+    // ============================================================
+    try {
+        const { data: deleted } = await sb.from('deleted_accounts')
+            .select('deleted_at')
+            .eq('telegram_id', user.id)
+            .maybeSingle();
+
+        if (deleted && deleted.deleted_at) {
+            const deletedAt = new Date(deleted.deleted_at).getTime();
+            const hoursSince = (Date.now() - deletedAt) / (1000 * 60 * 60);
+
+            if (hoursSince < 24) {
+                const hoursLeft = Math.ceil(24 - hoursSince);
+                console.warn('🚫 Аккаунт удалён, вход заблокирован на', hoursLeft, 'ч.');
+
+                showFatalErrorScreen(
+                    '🚫 Аккаунт удалён',
+                    `Ты удалил аккаунт недавно.<br><br>
+                     Повторная регистрация будет доступна через
+                     <b style="color: #00e08a;">${hoursLeft} ч.</b><br><br>
+                     <span style="font-size: 12px; color: #6d8a80;">
+                         Если это ошибка — обратись в поддержку @Mark1zell
+                     </span>`
+                );
+                return;
+            } else {
+                // 24 часа прошло — чистим запись, разрешаем ре-регистрацию
+                try {
+                    await sb.from('deleted_accounts').delete().eq('telegram_id', user.id);
+                    console.log('✅ Кулдаун удаления истёк, можно снова регистрироваться');
+                } catch (e) {}
+            }
+        }
+    } catch (e) {
+        console.warn('deleted_accounts check:', e);
+        // Не блокируем вход, если что-то пошло не так
+    }
+
+    // ============================================================
 // 📱 TELEGRAM BACK BUTTON — регистрация обработчика
 // ============================================================
 if (tg?.BackButton) {
