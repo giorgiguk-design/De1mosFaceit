@@ -30797,16 +30797,17 @@ if (!user) {
     return;
 }
 
+
     // ============================================================
-    // 🔥 ПРОВЕРКА: не удалял ли игрок аккаунт за последние 24 часа
+    // 🚫 ПРОВЕРКА: не удалял ли игрок аккаунт за последние 24 часа
     // ============================================================
     try {
         const { data: deleted } = await sb.from('deleted_accounts')
-            .select('deleted_at')
+            .select('deleted_at, restored_at')
             .eq('telegram_id', user.id)
             .maybeSingle();
 
-        if (deleted && deleted.deleted_at) {
+        if (deleted && deleted.deleted_at && !deleted.restored_at) {
             const deletedAt = new Date(deleted.deleted_at).getTime();
             const hoursSince = (Date.now() - deletedAt) / (1000 * 60 * 60);
 
@@ -30828,16 +30829,15 @@ if (!user) {
                 // 24 часа прошло — чистим запись, разрешаем ре-регистрацию
                 try {
                     await sb.from('deleted_accounts').delete().eq('telegram_id', user.id);
-                    console.log('✅ Кулдаун удаления истёк, можно снова регистрироваться');
+                    console.log('✅ Кулдаун удаления истёк, можно регистрироваться заново');
                 } catch (e) {}
             }
         }
     } catch (e) {
         console.warn('deleted_accounts check:', e);
-        // Не блокируем вход, если что-то пошло не так
     }
 
-    // ============================================================
+ // ============================================================
 // 📱 TELEGRAM BACK BUTTON — регистрация обработчика
 // ============================================================
 if (tg?.BackButton) {
