@@ -26342,26 +26342,47 @@ function renderCaseReelItem(item, isWinner) {
 function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicate, refund, meta, opts }) {
     const wrap = document.getElementById('caseReelWrap');
     const reel = document.getElementById('caseOpenReel');
-    if (!wrap || !reel) return;
+    if (!wrap || !reel) {
+        console.warn('❌ startCaseReel: нет wrap или reel');
+        // Всё равно показываем результат, чтобы игра не сломалась
+        setTimeout(() => finishCaseReel(item, rarity, isDuplicate, refund, meta, opts), 500);
+        return;
+    }
 
-    // 🔥 Ждём, пока контейнер получит реальную ширину (важно для мобильных)
+    // 🔥 Ждём реальные размеры (не только viewportW, но и предметов)
     let viewportW = wrap.clientWidth;
-    if (viewportW === 0) {
+    const firstItem = reel.querySelector('.case-open-reel-item');
+    const actualItemW = firstItem ? firstItem.offsetWidth : 0;
+
+    // Если что-то ещё не готово — повторяем через RAF (макс 10 попыток)
+    const retryCount = arguments[1]?.__retry || 0;
+    if ((viewportW === 0 || actualItemW === 0) && retryCount < 10) {
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicate, refund, meta, opts });
-            });
+            startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicate, refund, meta, opts }, { __retry: retryCount + 1 });
         });
         return;
     }
 
-    // 🔥 ИЗМЕРЯЕМ РЕАЛЬНУЮ ширину предмета и gap (а не хардкодим 130)
-    const firstItem = reel.querySelector('.case-open-reel-item');
-    const actualItemW = firstItem ? firstItem.offsetWidth : ITEM_W;
+    // Если после 10 попыток ширина всё ещё 0 — используем fallback
+    const effectiveItemW = actualItemW || ITEM_W;
     const computedStyle = getComputedStyle(reel);
     const gapStr = computedStyle.columnGap || computedStyle.gap || '8';
     const gap = parseFloat(gapStr) || 8;
-    const actualItemTotal = actualItemW + gap;
+    const actualItemTotal = effectiveItemW + gap;
+
+    const winnerCenterX = winnerIdx * actualItemTotal + effectiveItemW / 2;
+    const offset = (Math.random() - 0.5) * (effectiveItemW * 0.4);
+    const finalX = viewportW / 2 - winnerCenterX - offset;
+
+    console.log('🎰 Reel:', {
+        viewportW,
+        actualItemW: effectiveItemW,
+        gap,
+        actualItemTotal,
+        winnerIdx,
+        finalX,
+        retry: retryCount,
+    });
 
     // Теперь используем РЕАЛЬНЫЕ значения
     const winnerCenterX = winnerIdx * actualItemTotal + actualItemW / 2;
@@ -26438,6 +26459,15 @@ function startCaseReel({ winnerIdx, ITEM_TOTAL, ITEM_W, item, rarity, isDuplicat
 }
 
 function finishCaseReel(item, rarity, isDuplicate, refund, meta, opts = {}) {
+    // 🔥 Страховка от невалидного item
+    if (!item) {
+        console.error('❌ finishCaseReel: item = null');
+        document.getElementById('caseOpenOverlay')?.remove();
+        if (typeof openCasesScreen === 'function') openCasesScreen();
+        return;
+    }
+    if (!meta) meta = { color: '#00e08a', label: 'ПРЕДМЕТ', emoji: '🎁' };
+
     haptic('heavy');
 
     // 🔥 Стопим отложенные тики, чтобы они не накладывались на reveal
