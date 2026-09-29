@@ -60138,165 +60138,242 @@ async function previewCaseItem(itemId) {
     // ============================================================
     // АВТОХУКИ
     // ============================================================
-    function installAutoHooks() {
-        document.addEventListener('click', (e) => {
-            const target = e.target.closest(
-                'button, [onclick], [role="button"], .nav-item, ' +
-                '.menu-item, .menu-drawer-btn, .leaderboard-item, ' +
-                '.chat-list-item, .shop-item, .shop-cat-btn, ' +
-                '.play-room-card, .rv-icon-btn, .mode-card, .side-card, ' +
-                '.sheet-option, .winner-btn, .report-reason-btn, ' +
-                '.theme-option, .onboard-theme, .mode-selector .mode-card'
-            );
-            if (!target) return;
-            if (target.disabled) return;
+function installAutoHooks() {
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest(
+            'button, [onclick], [role="button"], .nav-item, ' +
+            '.menu-item, .menu-drawer-btn, .leaderboard-item, ' +
+            '.chat-list-item, .shop-item, .shop-cat-btn, ' +
+            '.play-room-card, .rv-icon-btn, .mode-card, .side-card, ' +
+            '.sheet-option, .winner-btn, .report-reason-btn, ' +
+            '.theme-option, .onboard-theme, .mode-selector .mode-card'
+        );
+        if (!target) return;
+        if (target.disabled) return;
 
-            if (target.classList.contains('nav-item')) { SFX.play('nav'); return; }
-            if (target.classList.contains('menu-drawer-btn')) { SFX.play('click'); return; }
-            if (target.classList.contains('chat-back-btn') ||
-                target.closest('.chat-view-header') ||
-                (target.classList.contains('profile-action-btn') && target.classList.contains('cancel'))) {
-                SFX.play('back');
-                return;
-            }            if (target.classList.contains('theme-option') ||
-                target.classList.contains('onboard-theme')) { SFX.play('click'); return; }
-            if (target.classList.contains('mode-card')) { SFX.play('tap'); return; }
-            if (target.classList.contains('shop-btn') && target.classList.contains('buy')) return;
-            if (target.classList.contains('sheet-cancel')) {
-                SFX.play('close'); return;
-            }            if (target.classList.contains('profile-action-btn') &&
-                (target.classList.contains('save') || target.classList.contains('edit'))) {
-                SFX.play('click'); return;
-            }
-            if (target.classList.contains('winner-btn')) { SFX.play('tap'); return; }
+        // === НАВИГАЦИЯ ===
+        if (target.classList.contains('nav-item')) {
+            SFX.play('nav');
+            return;
+        }
+        if (target.classList.contains('menu-drawer-btn')) {
+            SFX.play('click');
+            return;
+        }
 
+        // === НАЗАД ===
+        if (target.classList.contains('chat-back-btn') ||
+            target.classList.contains('room-chat-back-btn') ||
+            target.closest('.chat-view-header') ||
+            (target.classList.contains('profile-action-btn') &&
+             target.classList.contains('cancel'))) {
+            SFX.play('back');
+            return;
+        }
+
+        // === ТЕМА / ОНБОРДИНГ ===
+        if (target.classList.contains('theme-option') ||
+            target.classList.contains('onboard-theme')) {
+            SFX.play('click');
+            return;
+        }
+
+        // === РЕЖИМ ИГРЫ ===
+        if (target.classList.contains('mode-card')) {
             SFX.play('tap');
-        }, { passive: true });
-
-        if (typeof window.showToast === 'function') {
-            const origToast = window.showToast;
-            window.showToast = function(msg, type) {
-                const m = String(msg || '');
-                if (/✅|готово|сохранено|успешно|куплено|принято|добавлено|надето|забрано|выполнен/i.test(m)) {
-                    SFX.play('success');
-                } else if (/❌|🚫|ошибка|не удалось|запрещено|заполнен|забанен|нельзя/i.test(m)) {
-                    SFX.play('error');
-                } else if (/⚠️|⏰|внимание|подожди|ещё рано|уже/i.test(m)) {
-                    SFX.play('warning');
-                } else if (/💰|монет|казна/i.test(m) || /[+]\d+\s*монет/i.test(m)) {
-                    SFX.play('coin');
-                } else if (/🏆|победа|выиграл|win/i.test(m)) {
-                    SFX.play('victory');
-                } else if (/💀|поражение|проиграл|loss/i.test(m)) {
-                    SFX.play('defeat');
-                } else if (/🔔|📨|📬|уведомление|приглашение|пригласил/i.test(m)) {
-                    SFX.play('notification');
-                } else if (/💬|сообщение/i.test(m)) {
-                    SFX.play('message');
-                } else if (/🎁|кейс|открыт/i.test(m)) {
-                    SFX.play('openCase');
-                } else if (/⭐|уровень|level up/i.test(m)) {
-                    SFX.play('levelUp');
-                }
-                else if (/🎯|прогноз|прогноз/i.test(m)) {
-                    SFX.play('epicDrop');
-                }
-                return origToast.apply(this, arguments);
-            };
+            return;
         }
 
-        if (typeof window.sendMessage === 'function') {
-            const origSend = window.sendMessage;
-            window.sendMessage = function() {
-                const input = document.getElementById('chatInput');
-                if (input && input.value.trim()) SFX.play('send');
-                return origSend.apply(this, arguments);
-            };
+        // === ПОКУПКА (свой звук покупки) ===
+        if (target.classList.contains('shop-btn') &&
+            target.classList.contains('buy')) {
+            return;
         }
 
-        if (typeof window.sendRoomMessage === 'function') {
-            const origSendRoom = window.sendRoomMessage;
-            window.sendRoomMessage = function() {
-                const input = document.getElementById('roomChatInput');
-                if (input && input.value.trim()) SFX.play('send');
-                return origSendRoom.apply(this, arguments);
-            };
+        // === ЗАКРЫТИЕ ===
+        if (target.classList.contains('sheet-cancel')) {
+            SFX.play('close');
+            return;
         }
 
-        if (typeof window.appendMessage === 'function') {
-            const origAppend = window.appendMessage;
-            window.appendMessage = async function(m) {
-                const me = currentUser?.telegram_id;
-                if (m && m.sender_id !== me) SFX.play('message');
-                return origAppend.apply(this, arguments);
-            };
+        // === СОХРАНЕНИЕ / РЕДАКТИРОВАНИЕ ===
+        if (target.classList.contains('profile-action-btn') &&
+            (target.classList.contains('save') || target.classList.contains('edit'))) {
+            SFX.play('click');
+            return;
         }
 
-        if (typeof window.finishMatch === 'function') {
-            const origFinish = window.finishMatch;
-            window.finishMatch = async function(matchId, result) {
-                try {
-                    const me = Number(currentUser?.telegram_id);
-                    const { data: match } = await sb.from('game_matches')
-                        .select('team_a_players, team_b_players').eq('id', matchId).single();
-                    if (match) {
-                        const inA = (match.team_a_players || []).some(p => Number(p.telegram_id) === me);
-                        const inB = (match.team_b_players || []).some(p => Number(p.telegram_id) === me);
-                        const myTeam = inA ? 'A' : inB ? 'B' : null;
-                        if (myTeam === result.winner) SFX.play('victory');
-                        else if (myTeam) SFX.play('defeat');
-                    }
-                } catch (e) {}
-                return origFinish.apply(this, arguments);
-            };
+        // === ВЫБОР ПОБЕДИТЕЛЯ ===
+        if (target.classList.contains('winner-btn')) {
+            SFX.play('tap');
+            return;
         }
 
-        ['buyShopItem', 'equipShopItem', 'claimQuestReward', 'openCase'].forEach(fnName => {
-            if (typeof window[fnName] === 'function') {
-                const orig = window[fnName];
-                window[fnName] = async function() {
-                    SFX.play('tap');
-                    return orig.apply(this, arguments);
-                };
-            }
-        });
+        // === ВСЁ ОСТАЛЬНОЕ ===
+        SFX.play('tap');
+    }, { passive: true });
 
-        if (typeof window.showCaseOpening === 'function') {
-            const origShowCase = window.showCaseOpening;
-            window.showCaseOpening = function() {
-                setTimeout(() => SFX.play('openCase'), 200);
-                return origShowCase.apply(this, arguments);
-            };
-        }
+    // ============================================================
+    // 🎵 ОБЁРТКА showToast — правильные звуки на события
+    // ============================================================
+    if (typeof window.showToast === 'function') {
+        const origToast = window.showToast;
+        window.showToast = function(msg, type) {
+            const m = String(msg || '');
 
-        ['openShop', 'openSeason', 'openCasesScreen', 'openQuestsScreen',
-         'openNotificationsSheet', 'openSettingsSheet', 'openPrivacySheet',
-         'openThemeSheet', 'openFaqSheet', 'openCoverPickerSheet'].forEach(fnName => {
-            if (typeof window[fnName] === 'function') {
-                const orig = window[fnName];
-                window[fnName] = function() {
-                    SFX.play('open');
-                    return orig.apply(this, arguments);
-                };
-            }
-        });
-
-        if (typeof window.onMatchFound === 'function') {
-            const origMF = window.onMatchFound;
-            window.onMatchFound = function() {
-                SFX.play('matchFound');
-                return origMF.apply(this, arguments);
-            };
-        }
-
-        if (typeof window.showDailyRewardModal === 'function') {
-            const origDR = window.showDailyRewardModal;
-            window.showDailyRewardModal = function(streak, reward) {
+            if (/✅|готово|сохранено|успешно|куплено|принято|добавлено|надето|забрано|выполнен/i.test(m)) {
+                SFX.play('success');
+            } else if (/❌|🚫|ошибка|не удалось|запрещено|заполнен|забанен|нельзя/i.test(m)) {
+                SFX.play('error');
+            } else if (/⚠️|⏰|внимание|подожди|ещё рано|уже/i.test(m)) {
+                SFX.play('warning');
+            } else if (/💰|монет|казна/i.test(m) || /[+]\d+\s*монет/i.test(m)) {
+                SFX.play('coin');
+            } else if (/🏆|победа|выиграл|win/i.test(m)) {
+                SFX.play('victory');
+            } else if (/💀|поражение|проиграл|loss/i.test(m)) {
+                SFX.play('defeat');
+            } else if (/🔔|📨|📬|уведомление|приглашение|пригласил/i.test(m)) {
+                SFX.play('notification');
+            } else if (/💬|сообщение/i.test(m)) {
+                SFX.play('message');
+            } else if (/🎁|кейс|открыт/i.test(m)) {
+                SFX.play('openCase');
+            } else if (/⭐|уровень|level up/i.test(m)) {
                 SFX.play('levelUp');
-                return origDR.apply(this, arguments);
+            } else if (/🎯|прогноз/i.test(m)) {
+                SFX.play('epicDrop');
+            } else if (/ℹ️|инфо/i.test(m)) {
+                SFX.play('info');
+            } else if (/🎉|награда|reward/i.test(m)) {
+                SFX.play('reward');
+            }
+
+            return origToast.apply(this, arguments);
+        };
+    }
+
+    // ============================================================
+    // 📨 ОБЁРТКА sendMessage
+    // ============================================================
+    if (typeof window.sendMessage === 'function') {
+        const origSend = window.sendMessage;
+        window.sendMessage = function() {
+            const input = document.getElementById('chatInput');
+            if (input && input.value.trim()) SFX.play('send');
+            return origSend.apply(this, arguments);
+        };
+    }
+
+    // ============================================================
+    // 📨 ОБЁРТКА sendRoomMessage
+    // ============================================================
+    if (typeof window.sendRoomMessage === 'function') {
+        const origSendRoom = window.sendRoomMessage;
+        window.sendRoomMessage = function() {
+            const input = document.getElementById('roomChatInput');
+            if (input && input.value.trim()) SFX.play('send');
+            return origSendRoom.apply(this, arguments);
+        };
+    }
+
+    // ============================================================
+    // 💬 ОБЁРТКА appendMessage — звук входящего
+    // ============================================================
+    if (typeof window.appendMessage === 'function') {
+        const origAppend = window.appendMessage;
+        window.appendMessage = async function(m) {
+            const me = currentUser?.telegram_id;
+            if (m && m.sender_id !== me) SFX.play('message');
+            return origAppend.apply(this, arguments);
+        };
+    }
+
+    // ============================================================
+    // 🏆 ОБЁРТКА finishMatch — победа/поражение
+    // ============================================================
+    if (typeof window.finishMatch === 'function') {
+        const origFinish = window.finishMatch;
+        window.finishMatch = async function(matchId, result) {
+            try {
+                const me = Number(currentUser?.telegram_id);
+                const { data: match } = await sb.from('game_matches')
+                    .select('team_a_players, team_b_players')
+                    .eq('id', matchId).single();
+                if (match) {
+                    const inA = (match.team_a_players || []).some(p => Number(p.telegram_id) === me);
+                    const inB = (match.team_b_players || []).some(p => Number(p.telegram_id) === me);
+                    const myTeam = inA ? 'A' : inB ? 'B' : null;
+                    if (myTeam === result.winner) SFX.play('victory');
+                    else if (myTeam) SFX.play('defeat');
+                }
+            } catch (e) {}
+            return origFinish.apply(this, arguments);
+        };
+    }
+
+    // ============================================================
+    // 🛒 ОБЁРТКИ покупок/кейсов/квестов — короткий tap
+    // ============================================================
+    ['buyShopItem', 'equipShopItem', 'claimQuestReward'].forEach(fnName => {
+        if (typeof window[fnName] === 'function') {
+            const orig = window[fnName];
+            window[fnName] = async function() {
+                SFX.play('tap');
+                return orig.apply(this, arguments);
             };
         }
+    });
+
+    // ============================================================
+    // 🎁 ОБЁРТКА showCaseOpening — не дублируем тик
+    // ============================================================
+    if (typeof window.showCaseOpening === 'function') {
+        const origShowCase = window.showCaseOpening;
+        window.showCaseOpening = function() {
+            setTimeout(() => SFX.play('openCase'), 200);
+            return origShowCase.apply(this, arguments);
+        };
     }
+
+    // ============================================================
+    // 📂 ОБЁРТКИ открытия разделов — звук "open"
+    // ============================================================
+    ['openShop', 'openSeason', 'openCasesScreen', 'openQuestsScreen',
+     'openNotificationsSheet', 'openSettingsSheet', 'openPrivacySheet',
+     'openThemeSheet', 'openFaqSheet', 'openCoverPickerSheet',
+     'openMusicLibrary', 'openSoundMusicSheet'].forEach(fnName => {
+        if (typeof window[fnName] === 'function') {
+            const orig = window[fnName];
+            window[fnName] = function() {
+                SFX.play('open');
+                return orig.apply(this, arguments);
+            };
+        }
+    });
+
+    // ============================================================
+    // 🎮 ОБЁРТКА onMatchFound — эпичный матч-файнд
+    // ============================================================
+    if (typeof window.onMatchFound === 'function') {
+        const origMF = window.onMatchFound;
+        window.onMatchFound = function() {
+            SFX.play('matchFound');
+            return origMF.apply(this, arguments);
+        };
+    }
+
+    // ============================================================
+    // 🎉 ОБЁРТКА showDailyRewardModal — ежедневная награда
+    // ============================================================
+    if (typeof window.showDailyRewardModal === 'function') {
+        const origDR = window.showDailyRewardModal;
+        window.showDailyRewardModal = function(streak, reward) {
+            SFX.play('levelUp');
+            return origDR.apply(this, arguments);
+        };
+    }
+}
 
     // ============================================================
     // 🎵 РАЗДЕЛ "МУЗЫКА И ЗВУКИ"
