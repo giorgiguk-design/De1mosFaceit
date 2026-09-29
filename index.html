@@ -29427,6 +29427,11 @@ ${currentUser.is_admin ? `
                             style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;">
                         💰 Управление монетами
                     </button>
+                    <button class="club-full-btn club-btn-edit"
+                            onclick="openAdminBpPanel()"
+                            style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;">
+                        🎫 Начислить очки BP
+                    </button>
                 </div>
             ` : ''}
         </div>
@@ -39069,6 +39074,423 @@ async function renderAdminPanel() {
     html += `<button class="profile-action-btn cancel" style="margin-top:20px;" onclick="switchPage('dashboard')">◀ Назад</button>`;
     container.innerHTML = html;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 🎫 АДМИН-ПАНЕЛЬ: НАЧИСЛЕНИЕ ОЧКОВ БОЕВОГО ПРОПУСКА
+// ═══════════════════════════════════════════════════════════════
+let _admBpTargetUser = null;
+
+async function openAdminBpPanel() {
+    if (!isCurrentUserAdmin()) { showToast('❌ Только для админа'); return; }
+
+    // Проверяем активный сезон
+    const { data: seasonRes } = await sb.rpc('get_active_season');
+    if (!seasonRes?.ok || !seasonRes.season) {
+        showToast('⚠️ Нет активного сезона — начисление невозможно');
+        return;
+    }
+
+    document.getElementById('admBpOverlay')?.remove();
+    document.getElementById('admBpSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'admBpOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeAdminBpPanel(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'admBpSheet';
+    sheet.style.zIndex = '10000';
+    sheet.style.maxHeight = '92vh';
+    sheet.style.overflowY = 'auto';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🎫 Начисление очков BP</div>
+
+        <div style="
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            background: linear-gradient(135deg, rgba(167,139,250,0.10), rgba(0,0,0,0.4));
+            border: 1px solid rgba(167,139,250,0.4);
+            border-radius: 12px;
+            text-align: center;
+        ">
+            <div style="font-size: 10px; letter-spacing: 2px; color: #a78bfa; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">
+                АКТИВНЫЙ СЕЗОН
+            </div>
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 900; color: #a78bfa; text-shadow: 0 0 12px rgba(167,139,250,0.5);">
+                ${escapeHtml(seasonRes.season.name)}
+            </div>
+        </div>
+
+        <input type="text" class="field-input" id="admBpSearch"
+               placeholder="🔍 Ник, @username или Standoff ID"
+               autocomplete="off" style="margin-bottom: 12px;"
+               oninput="debouncedAdminBpSearch()">
+
+        <div id="admBpResults">
+            <div class="empty">Введи минимум 2 символа</div>
+        </div>
+
+        <button class="sheet-cancel" onclick="closeAdminBpPanel()">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    setTimeout(() => document.getElementById('admBpSearch')?.focus(), 250);
+    haptic('medium');
+}
+
+function closeAdminBpPanel() {
+    document.getElementById('admBpOverlay')?.remove();
+    document.getElementById('admBpSheet')?.remove();
+}
+
+let _admBpTimer = null;
+function debouncedAdminBpSearch() {
+    clearTimeout(_admBpTimer);
+    _admBpTimer = setTimeout(doAdminBpSearch, 350);
+}
+
+async function doAdminBpSearch() {
+    const q = document.getElementById('admBpSearch')?.value.trim() || '';
+    const el = document.getElementById('admBpResults');
+    if (!el) return;
+
+    if (q.length < 2) {
+        el.innerHTML = '<div class="empty">Введи минимум 2 символа</div>';
+        return;
+    }
+
+    el.innerHTML = '<div class="empty">Поиск...</div>';
+
+    const safe = q.replace(/[%_]/g, '');
+    const { data: users, error } = await sb.from('users')
+        .select('telegram_id, display_name, username, custom_avatar, photo_url, standoff_id')
+        .or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%,standoff_id.ilike.%${safe}%`)
+        .limit(20);
+
+    if (error) {
+        el.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + escapeHtml(error.message) + '</div>';
+        return;
+    }
+    if (!users?.length) {
+        el.innerHTML = '<div class="empty">Не найдено</div>';
+        return;
+    }
+
+    // Подтянем прогресс BP для этих игроков
+    const { data: seasonRes } = await sb.rpc('get_active_season');
+    const seasonId = seasonRes?.season?.id;
+    let progressMap = {};
+
+    if (seasonId) {
+        const ids = users.map(u => u.telegram_id);
+        const { data: progresses } = await sb.from('battle_pass_progress')
+            .select('telegram_id, points, premium_unlocked')
+            .eq('season_id', seasonId)
+            .in('telegram_id', ids);
+
+        (progresses || []).forEach(p => {
+            progressMap[p.telegram_id] = p;
+        });
+    }
+
+    el.innerHTML = users.map(u => {
+        const src = u.custom_avatar || u.photo_url;
+        const initial = (u.display_name || 'U')[0].toUpperCase();
+        const av = src ? `<img src="${src}" alt="">` : initial;
+
+        const p = progressMap[u.telegram_id];
+        const points = p?.points || 0;
+        const level = 1 + Math.floor(points / 100);
+        const isPremium = p?.premium_unlocked === true;
+
+        return `
+            <div style="
+                display: flex; align-items: center; gap: 12px;
+                padding: 12px; margin-bottom: 8px;
+                background: linear-gradient(180deg, rgba(167,139,250,0.08), rgba(0,0,0,0.4));
+                border: 1px solid rgba(167,139,250,0.3);
+                border-radius: 12px;
+                cursor: pointer;
+                transition: transform 0.15s ease, background 0.2s ease;
+            " onclick="openBpGiveSheet(${u.telegram_id})">
+                <div style="
+                    width: 44px; height: 44px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                    background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+                    display: flex; align-items: center; justify-content: center;
+                    font-weight: 900; color: #fff; font-size: 16px;
+                ">${av}</div>
+
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${escapeHtml(u.display_name || 'Игрок')}
+                        ${isPremium ? '<span style="color:#ffd700;font-size:10px;margin-left:4px;">⭐ PREMIUM</span>' : ''}
+                    </div>
+                    <div style="font-size:11px;color:var(--hint);margin-top:2px;">
+                        ID: ${u.telegram_id}
+                        ${u.standoff_id ? ' · S2: ' + escapeHtml(u.standoff_id) : ''}
+                    </div>
+                    <div style="font-size:12px;font-weight:800;color:#a78bfa;margin-top:4px;font-family:var(--font-mono);">
+                        ⚡ LVL ${level} · ${points} очков
+                    </div>
+                </div>
+
+                <span style="color:#a78bfa; font-size: 20px; flex-shrink: 0;">→</span>
+            </div>
+        `;
+    }).join('');
+}
+
+// ────────────────────────────────────────────────────────────
+// 💜 Ввод очков для игрока
+// ────────────────────────────────────────────────────────────
+async function openBpGiveSheet(userId) {
+    if (!isCurrentUserAdmin()) return;
+
+    const { data: u } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url')
+        .eq('telegram_id', userId)
+        .single();
+
+    if (!u) { showToast('❌ Игрок не найден'); return; }
+
+    _admBpTargetUser = u;
+
+    // Текущий прогресс
+    const { data: seasonRes } = await sb.rpc('get_active_season');
+    const season = seasonRes?.season;
+    if (!season) { showToast('❌ Нет активного сезона'); return; }
+
+    const { data: progressRes } = await sb.rpc('get_bp_progress', {
+        p_user_id: userId,
+        p_season_id: season.id,
+    });
+
+    const points = progressRes?.points || 0;
+    const level = progressRes?.level || 1;
+    const isPremium = progressRes?.premium_unlocked === true;
+
+    document.getElementById('bpGiveOverlay')?.remove();
+    document.getElementById('bpGiveSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'bpGiveOverlay';
+    overlay.style.zIndex = '10001';
+    overlay.onclick = (e) => { if (e.target === overlay) closeBpGiveSheet(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'bpGiveSheet';
+    sheet.style.zIndex = '10002';
+    sheet.style.maxHeight = '90vh';
+    sheet.style.overflowY = 'auto';
+
+    const src = u.custom_avatar || u.photo_url;
+    const initial = (u.display_name || 'U')[0].toUpperCase();
+    const av = src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover;">` : initial;
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🎫 Начислить очки BP</div>
+
+        <!-- Игрок -->
+        <div style="
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px; margin-bottom: 14px;
+            background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(0,0,0,0.4));
+            border: 1px solid rgba(167,139,250,0.4);
+            border-radius: 14px;
+        ">
+            <div style="
+                width: 52px; height: 52px;
+                border-radius: 50%;
+                overflow: hidden;
+                flex-shrink: 0;
+                background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+                display: flex; align-items: center; justify-content: center;
+                font-weight: 900; color: #fff; font-size: 20px;
+            ">${av}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:15px;font-weight:900;color:var(--text);">
+                    ${escapeHtml(u.display_name || 'Игрок')}
+                    ${isPremium ? '<span style="color:#ffd700;font-size:11px;">⭐</span>' : ''}
+                </div>
+                <div style="font-size:11px;color:var(--hint);margin-top:3px;">ID: ${u.telegram_id}</div>
+                <div style="
+                    display: inline-flex; align-items: center; gap: 6px;
+                    margin-top: 6px;
+                    padding: 4px 10px;
+                    background: rgba(167,139,250,0.15);
+                    border: 1px solid rgba(167,139,250,0.4);
+                    border-radius: 8px;
+                    font-family: var(--font-mono);
+                    font-size: 12px; font-weight: 900;
+                    color: #a78bfa;
+                ">
+                    ⚡ LVL ${level} · ${points} очков
+                </div>
+            </div>
+        </div>
+
+        <div style="
+            font-size: 11px; color: var(--hint);
+            text-align: center; margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(167,139,250,0.05);
+            border-radius: 8px;
+        ">
+            Сезон: <b style="color:#a78bfa;">${escapeHtml(season.name)}</b><br>
+            <span style="color: var(--gold);">⚠️ Можно вводить отрицательные значения для списания</span>
+        </div>
+
+        <!-- Сумма -->
+        <label class="field-label" style="margin-bottom: 8px; display:block;">ОЧКИ</label>
+        <input type="text"
+               class="field-input"
+               id="bpGiveAmount"
+               inputmode="numeric"
+               placeholder="500"
+               autocomplete="off"
+               style="text-align:center;font-size:22px;font-weight:900;font-family:var(--font-mono);margin-bottom:12px;">
+
+        <!-- Быстрые кнопки + -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">
+            ${[100, 500, 1000, 5000].map(v => `
+                <button onclick="document.getElementById('bpGiveAmount').value='${v}'"
+                        style="padding:10px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.3);
+                               border-radius:10px;color:#a78bfa;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;">
+                    +${v}
+                </button>
+            `).join('')}
+        </div>
+
+        <!-- Быстрые кнопки − -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;">
+            ${[-100, -500, -1000, -5000].map(v => `
+                <button onclick="document.getElementById('bpGiveAmount').value='${v}'"
+                        style="padding:10px;background:rgba(255,84,112,0.08);border:1px solid rgba(255,84,112,0.3);
+                               border-radius:10px;color:#ff5470;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;">
+                    ${v}
+                </button>
+            `).join('')}
+        </div>
+
+        <button class="profile-action-btn save"
+                id="bpGiveSubmitBtn"
+                onclick="submitBpGive()"
+                style="width:100%;background:linear-gradient(135deg,#a78bfa,#8b5cf6);color:#fff;font-weight:900;">
+            ✅ НАЧИСЛИТЬ
+        </button>
+
+        <button class="sheet-cancel" onclick="closeBpGiveSheet()" style="margin-top:10px;">← НАЗАД</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+    setTimeout(() => document.getElementById('bpGiveAmount')?.focus(), 250);
+    haptic('medium');
+}
+
+function closeBpGiveSheet() {
+    document.getElementById('bpGiveOverlay')?.remove();
+    document.getElementById('bpGiveSheet')?.remove();
+}
+
+async function submitBpGive() {
+    if (!isCurrentUserAdmin()) return;
+    if (!_admBpTargetUser) return;
+
+    const amountEl = document.getElementById('bpGiveAmount');
+    const btn = document.getElementById('bpGiveSubmitBtn');
+
+    const raw = String(amountEl?.value || '').trim();
+    const amount = parseInt(raw, 10);
+
+    if (!amount || isNaN(amount)) {
+        showToast('⚠️ Введи число (можно отрицательное)');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ ОБРАБОТКА...';
+
+    try {
+        const { data, error } = await sb.rpc('add_bp_points', {
+            p_user_id: _admBpTargetUser.telegram_id,
+            p_points: amount,
+        });
+
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'no_active_season') {
+                showToast('❌ Нет активного сезона');
+            } else if (err === 'season_not_found') {
+                showToast('❌ Сезон не найден');
+            } else {
+                showToast('❌ Ошибка: ' + err);
+            }
+            btn.disabled = false;
+            btn.textContent = '✅ НАЧИСЛИТЬ';
+            return;
+        }
+
+        // Уведомление игроку в приложении
+        const isGive = amount > 0;
+        try {
+            await sb.from('user_notifications').insert({
+                telegram_id: _admBpTargetUser.telegram_id,
+                title: isGive ? '🎫 Вам начислили очки BP' : '🎫 У вас списали очки BP',
+                text: isGive
+                    ? `Администрация начислила вам <b>${amount}</b> очков боевого пропуска.`
+                    : `Администрация списала <b>${Math.abs(amount)}</b> очков боевого пропуска.`,
+                amount: amount,
+                type: isGive ? 'bp_give' : 'bp_take',
+                is_read: false,
+            });
+        } catch (e) {}
+
+        // Уведомление через бота
+        if (typeof notify === 'function') {
+            await notify(_admBpTargetUser.telegram_id,
+                isGive
+                    ? `🎫 <b>Вам начислили ${amount} очков боевого пропуска</b>\n\nНовый уровень: <b>${data.level}</b> (${data.points} очков)`
+                    : `🎫 <b>У вас списали ${Math.abs(amount)} очков боевого пропуска</b>\n\nТекущий уровень: <b>${data.level}</b> (${data.points} очков)`,
+                'party'
+            ).catch(() => {});
+        }
+
+        haptic('heavy');
+        showToast(isGive
+            ? `✅ +${amount} очков · LVL ${data.level}`
+            : `✅ −${Math.abs(amount)} очков · LVL ${data.level}`);
+
+        // Возвращаемся к списку
+        closeBpGiveSheet();
+        setTimeout(() => doAdminBpSearch(), 200);
+
+    } catch (e) {
+        console.error('submitBpGive:', e);
+        showToast('❌ ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '✅ НАЧИСЛИТЬ';
+    }
+}
+
+window.openAdminBpPanel = openAdminBpPanel;
+window.closeAdminBpPanel = closeAdminBpPanel;
+window.debouncedAdminBpSearch = debouncedAdminBpSearch;
+window.openBpGiveSheet = openBpGiveSheet;
+window.closeBpGiveSheet = closeBpGiveSheet;
+window.submitBpGive = submitBpGive;
 
 // ═══════════════════════════════════════════════════════════════
 // 💰 АДМИН-ПАНЕЛЬ МОНЕТ
