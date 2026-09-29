@@ -59515,9 +59515,7 @@ async function openCaseDetail(caseId) {
         .select('*').eq('id', caseId).single();
     if (!caseData) { showToast('❌ Кейс не найден'); return; }
 
-    switchPage('case-detail');
-
-    // Создаём страницу если её нет
+    // 🔥 СНАЧАЛА создаём страницу, ПОТОМ переключаемся
     let page = document.getElementById('page-case-detail');
     if (!page) {
         page = document.createElement('div');
@@ -59529,6 +59527,8 @@ async function openCaseDetail(caseId) {
 
     page.innerHTML = '<div class="empty">Загрузка...</div>';
 
+    // 🔥 ТЕПЕРЬ переключаемся — страница уже в DOM
+    switchPage('case-detail');
     // ============================================================
     // 🔥 ЗАГРУЖАЕМ ПРЕДМЕТЫ КЕЙСА (2 запроса — без JOIN)
     // ============================================================
