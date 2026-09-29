@@ -8120,6 +8120,77 @@ html.lite-mode * {
     white-space: nowrap;
 }
 
+/* ============================================================ */
+/* 🔒 ПОЛНАЯ БЛОКИРОВКА ВО ВРЕМЯ МАТЧА                          */
+/* ============================================================ */
+body.match-locked .header .avatar,
+body.match-locked .header .notif-btn,
+body.match-locked .header .header-coins,
+body.match-locked .header .header-online,
+body.match-locked .header .header-title {
+    opacity: 0.35;
+    filter: grayscale(80%);
+    pointer-events: none;
+    cursor: not-allowed;
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* Индикатор комнаты оставляем — через него можно вернуться в матч */
+body.match-locked .header .header-room-indicator {
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
+}
+
+/* Визуальный намёк сверху */
+body.match-locked .header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent,
+        var(--emerald) 50%,
+        transparent);
+    opacity: 0.8;
+    animation: matchLockPulse 2.4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes matchLockPulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+}
+
+/* Плашка "матч идёт" под хедером */
+body.match-locked::after {
+    content: '⚔️ МАТЧ АКТИВЕН';
+    position: fixed;
+    top: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 14px;
+    background: linear-gradient(135deg, rgba(var(--emerald-rgb), 0.15), rgba(0,0,0,0.6));
+    border: 1px solid rgba(var(--emerald-rgb), 0.5);
+    border-radius: 999px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--emerald);
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);
+    z-index: 99;
+    pointer-events: none;
+    animation: matchLockBadge 2.4s ease-in-out infinite;
+}
+
+@keyframes matchLockBadge {
+    0%, 100% { opacity: 0.7; }
+    50%      { opacity: 1; box-shadow: 0 0 20px rgba(var(--emerald-rgb), 0.4); }
+}
+
+
     /* ============ БЛОКИРОВКА НАВИГАЦИИ ВО ВРЕМЯ МАТЧА ============ */
 .bottom-nav.nav-locked .nav-item {
     opacity: 0.35;
@@ -36019,9 +36090,10 @@ function getSidePickerTeam(match) {
 // Открытие экрана veto
 // ============================================================
 function showVetoScreen() {
+    lockNav();   // 🔥 Блокируем навигацию
+
     const screen = document.getElementById('playScreen');
-    if (screen) screen.classList.remove('active');
-    const enterFloat = document.getElementById('playEnterFloat');
+    if (screen) screen.classList.remove('active');    const enterFloat = document.getElementById('playEnterFloat');
     if (enterFloat) enterFloat.classList.remove('active');
 
     // 🔥 НЕ трогаем подписки — они управляются снаружи через subscribeMatchRealtime
@@ -36102,6 +36174,8 @@ window.syncServerTime = syncServerTime;
 window._onReadyCheckScreen = false;
 
 function showReadyCheckScreen() {
+    lockNav();   // 🔥 Блокируем навигацию
+
     if (_readyCheckTimer) { clearInterval(_readyCheckTimer); _readyCheckTimer = null; }
     if (_readyCheckRefreshTimer) { clearInterval(_readyCheckRefreshTimer); _readyCheckRefreshTimer = null; }
 
@@ -37390,9 +37464,10 @@ showVetoCancelledScreen('veto_timeout');
             
 function showVetoCancelledScreen(reason) {
     stopWaitingLinkChannel();
-    stopVetoPolling(); 
-    const content = document.getElementById('vetoContent');
-    if (!content) return;
+    stopVetoPolling();
+    unlockNav();   // 🔥 Разблокируем — матч отменён
+
+    const content = document.getElementById('vetoContent');    if (!content) return;
 
     // 🔥 Расширенная карта причин
     const reasonsMap = {
@@ -37657,10 +37732,8 @@ function stopVetoPolling() {
 function showResultScreen() {
     stopVetoPolling();
 
-    // 🔥 Дошли до результатов — разблокируем навигацию
-    unlockNav();
-    if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
-
+    // 🔥 НЕ разблокируем — ждём пока матч не будет finished или cancelled
+    lockNav();
     selectedWinner = null;
     switchPage('result');
     renderResultScreen();
@@ -38923,10 +38996,17 @@ async function openAppealDialog() {
         // CHECK ACTIVE MATCH (при входе)
         // ============================================================
 async function checkActiveMatch() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        unlockNav();
+        return;
+    }
+
     try {
         const me = currentUser.telegram_id;
 
+        // ============================================================
+        // 1. ПРОВЕРЯЕМ, В КОМНАТЕ ЛИ Я
+        // ============================================================
         const { data: player } = await sb.from('room_players')
             .select('room_id, is_ready, team')
             .eq('telegram_id', me)
@@ -38936,89 +39016,118 @@ async function checkActiveMatch() {
             const { data: room } = await sb.from('rooms')
                 .select('*').eq('id', player.room_id).maybeSingle();
 
-            if (room && room.status !== 'cancelled') {
+            // Комната жива?
+            if (room && room.status !== 'cancelled' && room.status !== 'finished') {
                 await restoreRoomScreen(room, player);
                 return;
             }
 
-            if (!room || room.status === 'cancelled') {
+            // Комната мертва — чистим себя
+            if (!room || room.status === 'cancelled' || room.status === 'finished') {
                 try {
-                    await sb.from('room_players').delete()
-                        .eq('telegram_id', me);
+                    await sb.from('room_players').delete().eq('telegram_id', me);
                 } catch (e) {}
+                unlockNav();
                 if (room) showCancelledOnce(room.id);
                 return;
             }
         }
 
+        // ============================================================
+        // 2. ПРОВЕРЯЕМ АКТИВНЫЕ МАТЧИ
+        // ============================================================
         const { data: matches } = await sb.from('game_matches')
             .select('*')
-            .in('status', ['confirm', 'veto', 'side_pick', 'ready', 'in_game', 'result', 'finished'])
+            .in('status', ['confirm', 'ready_check', 'veto', 'side_pick', 'ready', 'in_game', 'result', 'finished'])
             .order('created_at', { ascending: false })
             .limit(20);
 
         for (const m of matches || []) {
             const ids = [...(m.team_a_players || []), ...(m.team_b_players || [])]
                 .map(p => Number(p.telegram_id));
-            if (ids.includes(Number(me))) {
-                currentMatch = m;
 
-                if (m.status === 'confirm') {
-                    showConfirmScreen();
-                    subscribeMatchRealtime();
-                    return;
-                }
-                if (m.status === 'ready_check') {
-                    showReadyCheckScreen();
-                    subscribeMatchRealtime();
-                    return;
-                }
+            if (!ids.includes(Number(me))) continue;
 
-                if (m.status === 'ready_check') {
-                    showReadyCheckScreen();
-                    subscribeMatchRealtime();
+            currentMatch = m;
+
+            // === READY_CHECK ===
+            if (m.status === 'ready_check') {
+                showReadyCheckScreen();   // ← вызовет lockNav() внутри
+                subscribeMatchRealtime();
                 return;
-                }
-                
-                if (m.status === 'veto') {
-                    showVetoScreen();   // ← внутри сам подпишется
-                    subscribeMatchRealtime();
+            }
+
+            // === CONFIRM ===
+            if (m.status === 'confirm') {
+                lockNav();
+                showConfirmScreen();
+                subscribeMatchRealtime();
+                return;
+            }
+
+            // === VETO ===
+            if (m.status === 'veto') {
+                showVetoScreen();          // ← вызовет lockNav() внутри
+                subscribeMatchRealtime();
+                return;
+            }
+
+            // === SIDE_PICK ===
+            if (m.status === 'side_pick') {
+                showVetoScreen();          // ← вызовет lockNav() внутри
+                subscribeMatchRealtime();
+                return;
+            }
+
+            // === READY ===
+            if (m.status === 'ready') {
+                lockNav();
+                showMatchScreen();
+                subscribeMatchRealtime();
+                return;
+            }
+
+            // === IN_GAME ===
+            if (m.status === 'in_game') {
+                lockNav();
+                showInGameScreen(m.room_id, m);
+                subscribeMatchRealtime();
+                return;
+            }
+
+            // === RESULT ===
+            if (m.status === 'result') {
+                lockNav();
+                showResultScreen();
+                subscribeMatchRealtime();
+                return;
+            }
+
+            // === FINISHED ===
+            if (m.status === 'finished') {
+                if (wasResultShown(m.id)) {
+                    // Уже видел результат — не показываем снова
+                    currentMatch = null;
+                    unlockNav();
                     return;
                 }
-                if (m.status === 'side_pick') {
-                    showVetoScreen();   // ← внутри сам подпишется
-                    subscribeMatchRealtime();
-                    return;
-                }
-                if (m.status === 'ready') {
-                    showMatchScreen();
-                    subscribeMatchRealtime();
-                    return;
-                }
-                if (m.status === 'in_game') {
-                    showInGameScreen(m.room_id, m);
-                    subscribeMatchRealtime();
-                    return;
-                }
-                if (m.status === 'result') {
-                    showResultScreen();
-                    subscribeMatchRealtime();
-                    return;
-                }
-                if (m.status === 'finished') {
-                    if (wasResultShown(m.id)) {
-                        currentMatch = null;
-                        return;
-                    }
-                    markResultShown(m.id);
-                    showFinishedScreen();
-                    subscribeMatchRealtime();
-                    return;
-                }
+                markResultShown(m.id);
+                showFinishedScreen();    // ← внутри unlockNav()
+                subscribeMatchRealtime();
+                return;
             }
         }
+
+        // ============================================================
+        // 3. НЕТ АКТИВНОГО МАТЧА — СНИМАЕМ БЛОКИРОВКУ
+        // ============================================================
+        unlockNav();
+        currentMatch = null;
+
     } catch (e) {
         console.warn('checkActiveMatch:', e);
+        // 🔥 При ошибке тоже снимаем блокировку, чтобы игрок не застрял
+        unlockNav();
     }
 }
 
@@ -42672,17 +42781,83 @@ function formatMMSS(ms) {
 }
 
 // ============================================================
-// БЛОКИРОВКА НАВИГАЦИИ ВО ВРЕМЯ МАТЧА
+// 🔒 БЛОКИРОВКА НАВИГАЦИИ ВО ВРЕМЯ МАТЧА
 // ============================================================
+window._matchLockActive = false;
+
 function lockNav() {
+    window._matchLockActive = true;
     const nav = document.querySelector('.bottom-nav');
     if (nav) nav.classList.add('nav-locked');
+    document.body.classList.add('match-locked');
+    console.log('🔒 Навигация заблокирована (матч идёт)');
 }
 
 function unlockNav() {
+    window._matchLockActive = false;
     const nav = document.querySelector('.bottom-nav');
     if (nav) nav.classList.remove('nav-locked');
-} 
+    document.body.classList.remove('match-locked');
+    console.log('🔓 Навигация разблокирована');
+}
+
+// 🔥 Перехват switchPage — блокируем переходы
+(function patchSwitchPageMatchLock() {
+    if (window._switchPageMatchLockPatched) return;
+    if (typeof window.switchPage !== 'function') {
+        setTimeout(patchSwitchPageMatchLock, 200);
+        return;
+    }
+    const _origSwitchPage = window.switchPage;
+    window.switchPage = function(page, options) {
+        options = options || {};
+        if (window._matchLockActive && !options.force) {
+            const matchPages = ['veto', 'ingame', 'result', 'finished', 'match', 'confirm', 'search', 'room'];
+            if (!matchPages.includes(page)) {
+                showToast('🚫 Завершите матч или дождитесь результата');
+                if (typeof haptic === 'function') haptic('heavy');
+                if (typeof SFX !== 'undefined') SFX.play('warning');
+                return;
+            }
+        }
+        return _origSwitchPage.apply(this, arguments);
+    };
+    window._switchPageMatchLockPatched = true;
+})();
+
+// 🔥 Перехват кликов по хедеру и nav — блокируем жёстко
+(function patchHeaderClicksMatchLock() {
+    if (window._headerClicksMatchLockPatched) return;
+    window._headerClicksMatchLockPatched = true;
+
+    document.addEventListener('click', (e) => {
+        if (!window._matchLockActive) return;
+
+        const blocked = e.target.closest(
+            '.header .avatar, ' +
+            '.header .notif-btn, ' +
+            '.header .header-coins, ' +
+            '.header .header-online, ' +
+            '.header .header-title, ' +
+            '.bottom-nav .nav-item, ' +
+            '.menu-drawer-btn, ' +
+            '.menu-item'
+        );
+
+        if (!blocked) return;
+
+        // Не блокируем кнопку возврата к матчу
+        if (blocked.classList.contains('header-room-indicator')) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        showToast('🚫 Завершите матч или дождитесь результата');
+        if (typeof haptic === 'function') haptic('heavy');
+        if (typeof SFX !== 'undefined') SFX.play('warning');
+    }, true);
+})();
 
 // Кнопка "Зайти в игру" — открывает ссылку и переводит всех на результат
 // Просто открывает ссылку, НЕ переводит в result
@@ -43725,6 +43900,7 @@ async function checkActiveRoom() {
     // Жёсткое гашение всего UI комнаты
     const killAllRoomUI = () => {
         activeRoomId = null;
+        unlockNav();   // 🔥 Снимаем блокировку
         const banner = document.getElementById('activeRoomBanner');
         if (banner) banner.classList.remove('active');
         const indicator = document.getElementById('headerRoomIndicator');
