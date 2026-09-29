@@ -26054,9 +26054,32 @@ function resetDailyCaseLocal() {
 // ============================================================
 // 🎰 КРАСИВАЯ АНИМАЦИЯ ОТКРЫТИЯ КЕЙСА (CS:GO style)
 // ============================================================
-function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool) {
+function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool, opts = {}) {
     document.getElementById('caseModal')?.remove();
     document.getElementById('caseOpenOverlay')?.remove();
+
+    // 🔥 Стопим все звуки с прошлого кейса
+    if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+
+    // 🔥 Мультирежим: показываем счётчик "1 / 5" сверху
+    const multiBadge = (opts.total && opts.total > 1)
+        ? `<div style="
+              position: absolute;
+              top: 12px; left: 50%;
+              transform: translateX(-50%);
+              padding: 6px 16px;
+              background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(255,215,0,0.08));
+              border: 1px solid rgba(255,215,0,0.6);
+              border-radius: 999px;
+              font-family: 'Orbitron', sans-serif;
+              font-size: 12px;
+              font-weight: 900;
+              letter-spacing: 2px;
+              color: #ffd700;
+              text-shadow: 0 0 10px rgba(255,215,0,0.7);
+              z-index: 100;
+          ">${opts.current || 1} / ${opts.total}</div>`
+        : '';
 
     const rarityMeta = {
         common:    { color: '#9aa7b5', label: 'ОБЫЧНЫЙ',     emoji: '⚪' },
@@ -26099,6 +26122,7 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool) {
 
     overlay.innerHTML = `
         <div class="case-open-modal">
+            ${multiBadge}
             <div class="case-open-header">
                 <div class="case-open-eyebrow">ОТКРЫТИЕ КЕЙСА</div>
                 <div class="case-open-title">
@@ -26270,15 +26294,45 @@ function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
 
     const closeBtn = document.getElementById('caseCloseBtn');
     if (closeBtn) {
-        closeBtn.onclick = () => {
-            document.getElementById('caseOpenOverlay')?.remove();
-            openCasesScreen();
-        };
+        // В мультирежиме показываем "СЛЕДУЮЩИЙ" вместо "ЗАБРАТЬ"
+        if (opts.total && opts.current < opts.total && typeof opts.onNext === 'function') {
+            closeBtn.textContent = `СЛЕДУЮЩИЙ (${opts.current + 1}/${opts.total}) →`;
+            closeBtn.onclick = () => {
+                if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+                document.getElementById('caseOpenOverlay')?.remove();
+                opts.onNext();
+            };
+        } else {
+            // Последний — "ЗАБРАТЬ ВСЕ"
+            if (opts.total && opts.total > 1) {
+                closeBtn.textContent = `🎉 ЗАБРАТЬ ВСЕ (${opts.total})`;
+            }
+            closeBtn.onclick = () => {
+                if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+                document.getElementById('caseOpenOverlay')?.remove();
+                if (typeof opts.onFinish === 'function') opts.onFinish();
+                else openCasesScreen();
+            };
+        }
     }
-
     const againBtn = document.getElementById('caseOpenAgainBtn');
     if (againBtn) {
-        canOpenFreeCase().then(info => {
+        // В мультирежиме скрываем "Ещё раз"
+        if (opts.total && opts.total > 1) {
+            againBtn.style.display = 'none';
+        } else {
+            canOpenFreeCase().then(info => {
+                if (!info.can) {
+                    againBtn.style.display = 'none';
+                    return;
+                }
+                againBtn.onclick = () => {
+                    document.getElementById('caseOpenOverlay')?.remove();
+                    setTimeout(() => openCase('daily_free'), 200);
+                };
+            });
+        }
+    }
             if (!info.can) {
                 againBtn.style.display = 'none';
                 return;
@@ -27023,6 +27077,290 @@ async function openCaseFromBp(caseId) {
 }
 
 window.openCaseFromBp = openCaseFromBp;
+
+// ============================================================
+// 🎁 МУЛЬТИОТКРЫТИЕ КЕЙСОВ (до 5 за раз)
+// ============================================================
+async function openMultipleCases(caseId, count) {
+    if (!currentUser) return;
+    if (count < 2 || count > 5) { showToast('⚠️ От 2 до 5 кейсов'); return; }
+    if (AppState.buyInProgress?.has('case_' + caseId)) return;
+    if (!AppState.buyInProgress) AppState.buyInProgress = new Set();
+    AppState.buyInProgress.add('case_' + caseId);
+
+    try {
+        // Загружаем кейс
+        const { data: caseData } = await sb.from('cases')
+            .select('*').eq('id', caseId).single();
+        if (!caseData) { showToast('❌ Кейс не найден'); return; }
+
+        // Кулдаун для daily
+        if (caseData.cooldown === 'daily') {
+            showToast('⚠️ Бесплатный кейс можно открыть только 1 раз');
+            return;
+        }
+
+        const totalPrice = caseData.price * count;
+        if ((currentUser.coins || 0) < totalPrice) {
+            showToast(`❌ Нужно ${totalPrice} монет (у тебя ${currentUser.coins || 0})`);
+            haptic('heavy');
+            return;
+        }
+
+        if (!(await tgConfirm(`Открыть ${count} кейсов?\n\nЦена: ${totalPrice} монет`))) return;
+
+        showToast(`⏳ Открываем ${count} кейсов...`);
+
+        // Списываем монеты
+        const { error: coinErr } = await sb.rpc('add_coins', {
+            p_user_id: currentUser.telegram_id,
+            p_amount: -totalPrice,
+            p_reason: `case_multi:${caseId}x${count}`,
+            p_meta: { case_id: caseId, count }
+        });
+        if (coinErr) throw coinErr;
+
+        currentUser.coins -= totalPrice;
+        updateCoinsBadge();
+
+        // Загружаем пул
+        const { data: poolRows } = await sb.from('case_items')
+            .select('item_id').eq('case_id', caseId);
+        const poolItemIds = (poolRows || []).map(r => r.item_id);
+        let pool = [];
+
+        if (poolItemIds.length) {
+            const { data: shopRows } = await sb.from('shop_items')
+                .select('id, name, category, rarity, value')
+                .in('id', poolItemIds);
+            const shopMap = {};
+            (shopRows || []).forEach(s => {
+                shopMap[s.id] = s;
+                SHOP_ITEMS_CACHE[s.id] = s;
+            });
+            pool = (poolRows || [])
+                .map(r => shopMap[r.item_id])
+                .filter(Boolean);
+        }
+
+        if (!pool.length) {
+            showToast('❌ Кейс пуст');
+            return;
+        }
+
+        // Забираем все предметы с сервера
+        const results = [];
+        for (let i = 0; i < count; i++) {
+            const { data: picked, error: pErr } = await sb.rpc('pick_case_item', {
+                p_case_id: caseId
+            });
+            if (pErr || !picked?.ok) {
+                console.warn('pick error', i, pErr, picked);
+                continue;
+            }
+
+            const item = {
+                id: picked.item_id,
+                name: picked.name,
+                category: picked.category,
+                rarity: picked.rarity,
+                value: picked.value,
+            };
+
+            // Проверка дубликата
+            const { data: existing } = await sb.from('user_inventory')
+                .select('id')
+                .eq('telegram_id', currentUser.telegram_id)
+                .eq('item_id', item.id)
+                .maybeSingle();
+
+            let isDuplicate = false;
+            let refund = 0;
+
+            if (existing) {
+                isDuplicate = true;
+                const itemPrice = SHOP_ITEMS_CACHE[item.id]?.price
+                    || (await sb.from('shop_items').select('price').eq('id', item.id).single()).data?.price
+                    || 100;
+                refund = Math.round(itemPrice * 0.5);
+
+                try {
+                    await sb.rpc('add_coins', {
+                        p_user_id: currentUser.telegram_id,
+                        p_amount: refund,
+                        p_reason: `case_duplicate:${item.id}`,
+                        p_meta: { item_id: item.id }
+                    });
+                    currentUser.coins += refund;
+                } catch (e) {}
+            } else {
+                await sb.from('user_inventory').insert({
+                    telegram_id: currentUser.telegram_id,
+                    item_id: item.id,
+                    is_equipped: false
+                });
+            }
+
+            // Логируем
+            try {
+                await sb.from('case_openings').insert({
+                    telegram_id: currentUser.telegram_id,
+                    case_type: caseId,
+                    item_id: item.id,
+                    item_rarity: item.rarity,
+                    is_free: false,
+                    opened_at: new Date().toISOString()
+                });
+            } catch (e) {}
+
+            results.push({ item, isDuplicate, refund });
+        }
+
+        updateCoinsBadge();
+
+        if (!results.length) {
+            showToast('❌ Не удалось получить предметы');
+            return;
+        }
+
+        haptic('heavy');
+
+        // Запускаем последовательный показ
+        showCaseSequence(results, caseId, pool, 0);
+
+    } catch (e) {
+        console.error('openMultipleCases:', e);
+        showToast('❌ ' + (e.message || 'Ошибка'));
+    } finally {
+        AppState.buyInProgress.delete('case_' + caseId);
+    }
+}
+
+// Последовательный показ N кейсов
+function showCaseSequence(results, caseId, pool, index) {
+    if (index >= results.length) {
+        // Все показаны
+        openCasesScreen();
+        return;
+    }
+
+    const r = results[index];
+
+    showCaseOpening(
+        r.item,
+        r.item.rarity,
+        r.isDuplicate,
+        r.refund,
+        caseId,
+        pool,
+        {
+            total: results.length,
+            current: index + 1,
+            onNext: () => {
+                // Небольшая пауза перед следующим
+                setTimeout(() => showCaseSequence(results, caseId, pool, index + 1), 250);
+            },
+            onFinish: () => {
+                // Финальная галерея — показываем все результаты
+                setTimeout(() => showCaseGallery(results, caseId), 300);
+            }
+        }
+    );
+}
+
+// Финальная галерея всех выигранных предметов
+function showCaseGallery(results, caseId) {
+    const rarityMeta = {
+        common:    { color: '#9aa7b5', label: 'ОБЫЧНЫЙ',     emoji: '⚪' },
+        rare:      { color: '#4fc3f7', label: 'РЕДКИЙ',      emoji: '🔵' },
+        epic:      { color: '#a78bfa', label: 'ЭПИЧЕСКИЙ',   emoji: '🟣' },
+        legendary: { color: '#ffd700', label: 'ЛЕГЕНДАРНЫЙ', emoji: '🟡' },
+    };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'case-open-overlay';
+    overlay.id = 'caseGalleryOverlay';
+
+    const totalRefund = results.reduce((s, r) => s + (r.refund || 0), 0);
+    const newCount = results.filter(r => !r.isDuplicate).length;
+    const dupCount = results.filter(r => r.isDuplicate).length;
+
+    overlay.innerHTML = `
+        <div class="case-open-modal" style="max-width: 560px;">
+            <div class="case-open-header">
+                <div class="case-open-eyebrow">ВСЕ ОТКРЫТЫЕ КЕЙСЫ</div>
+                <div class="case-open-title" style="font-size: 20px;">
+                    ${getCaseSvg(24)}
+                    <span>РЕЗУЛЬТАТЫ</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 12px; color: var(--hint); font-weight: 700;">
+                    Открыто ${results.length} · Новых: <span style="color: var(--emerald);">${newCount}</span>
+                    ${dupCount ? ` · Дубликатов: <span style="color: var(--gold);">${dupCount}</span>` : ''}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(${Math.min(results.length, 5)}, 1fr); gap: 8px; padding: 16px 8px; max-height: 320px; overflow-y: auto;">
+                ${results.map((r, i) => {
+                    const meta = rarityMeta[r.item.rarity] || rarityMeta.common;
+                    return `
+                        <div style="
+                            display: flex; flex-direction: column; align-items: center; gap: 6px;
+                            padding: 12px 6px;
+                            background: linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
+                            border: 1.5px solid ${meta.color}66;
+                            border-radius: 12px;
+                            position: relative;
+                            min-height: 120px;
+                        ">
+                            <div style="position: absolute; top: 4px; right: 6px; font-size: 9px; font-weight: 900; color: var(--hint);">#${i + 1}</div>
+                            <div style="width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
+                                ${renderCaseItemPreview(r.item)}
+                            </div>
+                            <div style="font-size: 10px; font-weight: 800; color: var(--text); text-align: center; line-height: 1.15; padding: 0 2px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                ${escapeHtml(r.item.name)}
+                            </div>
+                            <div style="font-size: 8px; font-weight: 900; letter-spacing: 0.5px; color: ${meta.color}; text-transform: uppercase;">
+                                ${meta.label}
+                            </div>
+                            ${r.isDuplicate ? `
+                                <div style="font-size: 9px; color: var(--gold); font-weight: 800;">+${r.refund}💰</div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            ${totalRefund > 0 ? `
+                <div style="text-align: center; padding: 10px; font-size: 12px; color: var(--gold); font-weight: 800;">
+                    💰 Возвращено за дубликаты: +${totalRefund}
+                </div>
+            ` : ''}
+
+            <div class="case-result-actions" style="padding: 0 20px 20px;">
+                <button class="case-btn-primary" id="caseGalleryClose">🎉 ЗАБРАТЬ ВСЕ</button>
+                <button class="case-btn-secondary" id="caseGalleryAgain">ЕЩЁ ×5</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    if (typeof SFX !== 'undefined') SFX.play('victory');
+
+    document.getElementById('caseGalleryClose').onclick = () => {
+        if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+        overlay.remove();
+        openCasesScreen();
+    };
+
+    document.getElementById('caseGalleryAgain').onclick = () => {
+        if (typeof SFX !== 'undefined' && SFX.stopAll) SFX.stopAll();
+        overlay.remove();
+        setTimeout(() => openMultipleCases(caseId, 5), 200);
+    };
+}
+
+window.openMultipleCases = openMultipleCases;
 
 // ────────────────────────────────────────────────────────────
 // ОБНОВЛЁННАЯ АНИМАЦИЯ С ПУЛОМ КЕЙСА
@@ -58936,6 +59274,54 @@ async function openCaseDetail(caseId) {
         </div>
     `;
 
+    // 🔥 Кнопки мультиоткрытия
+    let multiButtonsHTML = '';
+    if (!isDaily && items.length > 0) {
+        multiButtonsHTML = `
+            <div style="display: flex; gap: 6px; justify-content: center; margin-top: 12px; flex-wrap: wrap;">
+                <span style="font-size: 11px; color: var(--hint); font-weight: 700; align-self: center; margin-right: 4px;">Открыть сразу:</span>
+                <button onclick="openMultipleCases('${caseId}', 2)" style="
+                    padding: 8px 14px;
+                    background: linear-gradient(135deg, rgba(var(--emerald-rgb),0.15), rgba(var(--emerald-rgb),0.05));
+                    border: 1px solid var(--emerald);
+                    border-radius: 10px;
+                    color: var(--emerald);
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 12px;
+                    font-weight: 900;
+                    letter-spacing: 1px;
+                    cursor: pointer;
+                ">×2</button>
+                <button onclick="openMultipleCases('${caseId}', 3)" style="
+                    padding: 8px 14px;
+                    background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05));
+                    border: 1px solid #a78bfa;
+                    border-radius: 10px;
+                    color: #a78bfa;
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 12px;
+                    font-weight: 900;
+                    letter-spacing: 1px;
+                    cursor: pointer;
+                ">×3</button>
+                <button onclick="openMultipleCases('${caseId}', 5)" style="
+                    padding: 8px 14px;
+                    background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,215,0,0.05));
+                    border: 1px solid #ffd700;
+                    border-radius: 10px;
+                    color: #ffd700;
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 12px;
+                    font-weight: 900;
+                    letter-spacing: 1px;
+                    cursor: pointer;
+                    box-shadow: 0 0 12px rgba(255,215,0,0.3);
+                ">×5 🔥</button>
+            </div>
+        `;
+    }
+
+
     // Кнопка открытия
     let actionHTML;
     if (isDaily) {
@@ -59017,6 +59403,7 @@ async function openCaseDetail(caseId) {
             ${chancesHTML}
 
             ${actionHTML}
+            ${multiButtonsHTML}
         </div>
 
         <div class="case-detail-items-section">
@@ -59154,6 +59541,22 @@ async function previewCaseItem(itemId) {
     }
 
     // ============================================================
+    // 🔥 ОТСЛЕЖИВАНИЕ АКТИВНЫХ ЗВУКОВ (для остановки)
+    // ============================================================
+    const _activeNodes = new Set();
+    const _activeTimers = new Set();
+
+    // Безопасный setTimeout — можно отменить
+    function sTimeout(fn, delay) {
+        const id = setTimeout(() => {
+            _activeTimers.delete(id);
+            try { fn(); } catch (e) {}
+        }, delay);
+        _activeTimers.add(id);
+        return id;
+    }
+
+    // ============================================================
     // ГЕНЕРАТОРЫ
     // ============================================================
     function tone(opt) {
@@ -59188,6 +59591,9 @@ async function previewCaseItem(itemId) {
         g.connect(sfxGain);
         osc.start(t0);
         osc.stop(t0 + rel + 0.05);
+
+        _activeNodes.add(osc);
+        osc.onended = () => _activeNodes.delete(osc);
     }
 
     function noise(opt) {
@@ -59210,8 +59616,10 @@ async function previewCaseItem(itemId) {
         src.connect(f); f.connect(g); g.connect(sfxGain);
         src.start(t0);
         src.stop(t0 + duration + 0.05);
-    }
 
+        _activeNodes.add(src);
+        src.onended = () => _activeNodes.delete(src);
+    }
     // ============================================================
     // 🔥 ХЕЛПЕРЫ ДЛЯ ЭПИЧНЫХ ЗВУКОВ
     // ============================================================
@@ -59414,7 +59822,7 @@ async function previewCaseItem(itemId) {
                 tone({ freq: 1500 + Math.random() * 600, type: 'triangle', duration: 0.02, volume: 0.14, delay: t });
                 if (i % 3 === 0) noise({ duration: 0.028, volume: 0.08, filter: 9000, delay: t });
             }
-            setTimeout(() => {
+            sTimeout(() => {
                 subBass(45, 0.75, 0.95);
                 [784, 1047, 1319, 1568, 2093].forEach((f, i) =>
                     tone({ freq: f, type: 'sawtooth', duration: 0.65, volume: 0.42, delay: i * 0.05, release: 0.8 })
@@ -59481,7 +59889,21 @@ async function previewCaseItem(itemId) {
             localStorage.setItem(K.SFX_V, String(sfxVolume));
             if (sfxGain) sfxGain.gain.value = sfxVolume;
         },
-        getVolume() { return sfxVolume; },
+                getVolume() { return sfxVolume; },
+
+        // 🔥 НОВОЕ: остановить все активные звуки (при закрытии кейса и т.д.)
+        stopAll() {
+            // Отменяем запланированные звуки
+            _activeTimers.forEach(id => clearTimeout(id));
+            _activeTimers.clear();
+
+            // Глушим активные источники
+            _activeNodes.forEach(node => {
+                try { node.stop(0); } catch (e) {}
+                try { node.disconnect(); } catch (e) {}
+            });
+            _activeNodes.clear();
+        },
     };
 
     window.Music = {
