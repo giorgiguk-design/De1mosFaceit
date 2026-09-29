@@ -29426,35 +29426,39 @@ async function renderModeratorPanel() {
                 <span class="moderator-stat">⭐ Модеров: ${mods.length}</span>
                 <span class="moderator-stat">🚫 В бане: ${banned.length}</span>
             </div>
-${currentUser.is_admin ? `
+            ${isModerator(currentUser) ? `
                 <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="club-full-btn club-btn-edit" onclick="openCoverPickerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                        🎨 Обложки кнопок
-                    </button>
-                    <button class="club-full-btn club-btn-edit" onclick="openAddCustomBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                        🌄 Добавить фон шапки
-                    </button>
-                    <button class="club-full-btn club-btn-edit" onclick="openAddDxpChartBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                        📈 Добавить фон графика DXP
-                    </button>
+                    ${currentUser.is_admin ? `
+                        <button class="club-full-btn club-btn-edit" onclick="openCoverPickerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
+                            🎨 Обложки кнопок
+                        </button>
+                        <button class="club-full-btn club-btn-edit" onclick="openAddCustomBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
+                            🌄 Добавить фон шапки
+                        </button>
+                        <button class="club-full-btn club-btn-edit" onclick="openAddDxpChartBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
+                            📈 Добавить фон графика DXP
+                        </button>
+                    ` : ''}
                     <button class="club-full-btn club-btn-danger" onclick="openModBanPlayerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
                         🚫 Забанить игрока
                     </button>
-                    <button class="club-full-btn club-btn-edit"
-                            onclick="openAdminCoinsPanel()"
-                            style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;">
-                        💰 Управление монетами
-                    </button>
-                    <button class="club-full-btn club-btn-edit"
-                            onclick="openAdminBpPanel()"
-                            style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;">
-                        🎫 Начислить очки BP
-                    </button>
-                    <button class="club-full-btn club-btn-edit"
-                            onclick="openDeletedAccountsPanel()"
-                            style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,84,112,0.15), rgba(255,84,112,0.05)); border-color: rgba(255,84,112,0.5); color: var(--red);">
-                        🗑️ Удалённые аккаунты
-                    </button>
+                    ${currentUser.is_admin ? `
+                        <button class="club-full-btn club-btn-edit"
+                                onclick="openAdminCoinsPanel()"
+                                style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;">
+                            💰 Управление монетами
+                        </button>
+                        <button class="club-full-btn club-btn-edit"
+                                onclick="openAdminBpPanel()"
+                                style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;">
+                            🎫 Начислить очки BP
+                        </button>
+                        <button class="club-full-btn club-btn-edit"
+                                onclick="openDeletedAccountsPanel()"
+                                style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,84,112,0.15), rgba(255,84,112,0.05)); border-color: rgba(255,84,112,0.5); color: var(--red);">
+                            🗑️ Удалённые аккаунты
+                        </button>
+                    ` : ''}
                 </div>
             ` : ''}
         </div>
@@ -31143,12 +31147,114 @@ function switchPage(page) {
         }
 
 // ============================================================
+// 🚫 ОБНОВИТЬ КНОПКУ ИГРАТЬ С УЧЁТОМ БАНА
+// ============================================================
+function updatePlayBtnForBan(user) {
+    const playBtn = document.getElementById('playBtnMain');
+    if (!playBtn) return;
+
+    const banUntil = user?.match_ban_until
+        ? new Date(user.match_ban_until).getTime()
+        : 0;
+    const now = Date.now();
+    const isBanned = banUntil > now;
+
+    // Убираем старые баннеры/статусы
+    playBtn.querySelectorAll('.play-ban-overlay').forEach(e => e.remove());
+    playBtn.querySelectorAll('.pbc-title, .pbc-sub, .pbc-icon, .pbc-arrow').forEach(e => e.style.opacity = '');
+
+    if (isBanned) {
+        const leftMs = banUntil - now;
+        const leftText = formatBanTime(leftMs);
+        const reason = user.match_ban_reason || '';
+
+        playBtn.disabled = true;
+        playBtn.style.cursor = 'not-allowed';
+        playBtn.style.position = 'relative';
+
+        // Прячем обычный контент
+        playBtn.querySelector('.pbc-title').textContent = 'ЗАБАНЕН';
+        playBtn.querySelector('.pbc-sub').textContent = `До разбана: ${leftText}`;
+        playBtn.querySelector('.pbc-title').style.color = '#ff5470';
+        playBtn.querySelector('.pbc-title').style.textShadow = '0 0 20px rgba(255,84,112,0.7)';
+
+        // 🔥 Live-обновление каждую секунду
+        if (playBtn._banTimer) clearInterval(playBtn._banTimer);
+        playBtn._banTimer = setInterval(() => {
+            const left = banUntil - Date.now();
+            if (left <= 0) {
+                clearInterval(playBtn._banTimer);
+                playBtn._banTimer = null;
+                // Обновляем currentUser
+                if (currentUser) currentUser.match_ban_until = null;
+                updatePlayBtnForBan(currentUser);
+                return;
+            }
+            const sub = playBtn.querySelector('.pbc-sub');
+            if (sub) sub.textContent = `До разбана: ${formatBanTime(left)}`;
+        }, 1000);
+
+        // Причина — если есть, добавляем плашку
+        if (reason) {
+            const overlay = document.createElement('div');
+            overlay.className = 'play-ban-overlay';
+            overlay.style.cssText = `
+                position: absolute;
+                bottom: -8px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 4px 12px;
+                background: rgba(255,84,112,0.15);
+                border: 1px solid rgba(255,84,112,0.5);
+                border-radius: 999px;
+                font-size: 10px;
+                font-weight: 800;
+                color: #ff5470;
+                white-space: nowrap;
+                max-width: 90%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                z-index: 10;
+            `;
+            overlay.textContent = `Причина: ${reason}`;
+            playBtn.appendChild(overlay);
+        }
+    } else {
+        playBtn.disabled = false;
+        playBtn.style.cursor = '';
+        if (playBtn._banTimer) {
+            clearInterval(playBtn._banTimer);
+            playBtn._banTimer = null;
+        }
+
+        const titleEl = playBtn.querySelector('.pbc-title');
+        const subEl = playBtn.querySelector('.pbc-sub');
+        if (titleEl) {
+            titleEl.textContent = 'ИГРАТЬ';
+            titleEl.style.color = '';
+            titleEl.style.textShadow = '';
+        }
+        if (subEl) {
+            subEl.textContent = 'Найти матч · Создать комнату';
+        }
+    }
+}
+
+window.updatePlayBtnForBan = updatePlayBtnForBan;
+
+// ============================================================
 // DASHBOARD
 // ============================================================
 function renderDashboard(user) {
     const winrate = user.matches_played > 0
         ? Math.round((user.wins / user.matches_played) * 100)
         : 0;
+
+
+    // ============================================================
+    // 🚫 ПРОВЕРКА БАНА ОТ МАТЧЕЙ
+    // ============================================================
+    updatePlayBtnForBan(user);
 
     // Убираем "—", если есть
     const eloEl = document.getElementById('eloValue');
@@ -46244,6 +46350,8 @@ function subscribeUsersRealtime() {
 
             const eloChanged = u.elo !== currentUser.elo;
             const coinsChanged = u.coins !== currentUser.coins;
+            const banChanged = u.match_ban_until !== currentUser.match_ban_until
+                            || u.match_ban_reason !== currentUser.match_ban_reason;
             const equipChanged = JSON.stringify(u.equipped_items || {}) !== JSON.stringify(currentUser.equipped_items || {});
             const statsChanged = u.wins !== currentUser.wins
                 || u.matches_played !== currentUser.matches_played
@@ -46252,10 +46360,14 @@ function subscribeUsersRealtime() {
 
             currentUser = { ...currentUser, ...u };
 
+            // 🚫 Бан
+            if (banChanged) {
+                updatePlayBtnForBan(currentUser);
+            }
+
             if (coinsChanged) updateCoinsBadge();
 
             if (equipChanged) {
-                // Догружаем ВСЕ предметы
                 const itemIds = Object.values(currentUser.equipped_items || {}).filter(Boolean);
                 if (itemIds.length) {
                     const { data: items } = await sb.from('shop_items')
@@ -46268,18 +46380,17 @@ function subscribeUsersRealtime() {
                 applyCustomization();
                 refreshAllMyAppearances();
 
-                // 🔥 ПОЛНЫЙ РЕРЕНДЕР ПРОФИЛЯ
                 if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
                     renderProfileView(currentUser).catch(() => {});
                 }
             }
 
             if (eloChanged || statsChanged) {
-if (document.getElementById('page-dashboard')?.classList.contains('active')) {
-    renderDashboard(currentUser);
-    updatePlayBtnSub();
-    renderDashBattlePass();          // 🔥 НОВОЕ
-}
+                if (document.getElementById('page-dashboard')?.classList.contains('active')) {
+                    renderDashboard(currentUser);
+                    updatePlayBtnSub();
+                    renderDashBattlePass();
+                }
                 if (document.getElementById('page-profile')?.classList.contains('active') && !profileEditMode) {
                     renderProfileView(currentUser);
                 }
@@ -54471,61 +54582,113 @@ async function openModBanDuration(targetId) {
 }
 
 async function doModBan(targetId, durationMs, closeReportId) {
+    if (!isModerator(currentUser)) {
+        showToast('❌ Только для модератора');
+        return;
+    }
+
     const reason = document.getElementById('modBanReason')?.value.trim() || '';
     const until = new Date(Date.now() + durationMs).toISOString();
 
-    const btn = document.querySelector('#modBanSheet .ban-duration-btn:hover');
     try {
+        // 🔥 Вызов RPC с p_admin_id — проверка на сервере
         const { data: banResult, error: banErr } = await sb.rpc('mod_set_ban', {
+            p_admin_id: currentUser.telegram_id,
             p_user_id: targetId,
             p_until: until,
             p_reason: reason || null
         });
-        if (banErr) throw banErr;
-        if (!banResult?.ok) throw new Error('Не удалось забанить');
 
-        // Уведомляем
+        if (banErr) throw banErr;
+        if (!banResult?.ok) {
+            const err = banResult?.error || 'unknown';
+            if (err === 'not_moderator') showToast('❌ Нет прав модератора');
+            else if (err === 'user_not_found') showToast('❌ Игрок не найден');
+            else showToast('❌ ' + err);
+            return;
+        }
+
+        // Уведомляем через бота
         const label = BAN_DURATIONS.find(d => d.ms === durationMs)?.label || 'некоторое время';
         await notify(targetId,
             `🚫 <b>Тебя отстранили от матчей на ${label}.</b>\n` +
             `${reason ? `Причина: ${reason}` : ''}\n\n` +
             `Пока бан активен, ты не можешь заходить в комнаты Faceit.`,
             'party'
-        );
+        ).catch(() => {});
 
         // Закрываем жалобу, если открыта из неё
         if (closeReportId) {
             await sb.from('match_reports')
-                .update({ status: 'closed', closed_at: new Date().toISOString(), closed_by: currentUser.telegram_id })
+                .update({
+                    status: 'closed',
+                    closed_at: new Date().toISOString(),
+                    closed_by: currentUser.telegram_id
+                })
                 .eq('id', closeReportId);
+        }
+
+        // 🔥 Если это я сам — обновляем локально
+        if (currentUser && Number(currentUser.telegram_id) === Number(targetId)) {
+            currentUser.match_ban_until = until;
+            currentUser.match_ban_reason = reason || '';
+            updatePlayBtnForBan(currentUser);
         }
 
         showToast(`🚫 Забанен на ${label}`);
         haptic('heavy');
         closeModBanSheet();
+
+        // Обновляем панель
         renderModeratorPanel();
     } catch (e) {
-        showToast('Ошибка: ' + e.message);
+        console.error('doModBan:', e);
+        showToast('Ошибка: ' + (e.message || e));
     }
 }
 
 async function unbanPlayerFromMatch(userId) {
+    if (!isModerator(currentUser)) {
+        showToast('❌ Только для модератора');
+        return;
+    }
+
     if (!confirm('Снять бан с игрока?')) return;
+
     try {
         const { data, error } = await sb.rpc('mod_set_ban', {
+            p_admin_id: currentUser.telegram_id,
             p_user_id: userId,
             p_until: null,
             p_reason: null
         });
-        if (error) throw error;
-        if (!data?.ok) throw new Error('Не удалось снять бан');
 
-        await notify(userId, `✅ <b>Твой бан от матчей снят.</b> Можешь снова играть.`, 'party');
+        if (error) throw error;
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'not_moderator') showToast('❌ Нет прав модератора');
+            else if (err === 'user_not_found') showToast('❌ Игрок не найден');
+            else showToast('❌ ' + err);
+            return;
+        }
+
+        await notify(userId,
+            `✅ <b>Твой бан от матчей снят.</b> Можешь снова играть.`,
+            'party'
+        ).catch(() => {});
+
+        // 🔥 Если это я сам — обновляем локально
+        if (currentUser && Number(currentUser.telegram_id) === Number(userId)) {
+            currentUser.match_ban_until = null;
+            currentUser.match_ban_reason = null;
+            updatePlayBtnForBan(currentUser);
+        }
+
         showToast('✅ Бан снят');
         renderModeratorPanel();
     } catch (e) {
         console.error('unbanPlayerFromMatch:', e);
-        showToast('Ошибка: ' + e.message);
+        showToast('Ошибка: ' + (e.message || e));
     }
 }
 
