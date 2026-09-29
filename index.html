@@ -29450,6 +29450,11 @@ ${currentUser.is_admin ? `
                             style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;">
                         🎫 Начислить очки BP
                     </button>
+                    <button class="club-full-btn club-btn-edit"
+                            onclick="openDeletedAccountsPanel()"
+                            style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,84,112,0.15), rgba(255,84,112,0.05)); border-color: rgba(255,84,112,0.5); color: var(--red);">
+                        🗑️ Удалённые аккаунты
+                    </button>
                 </div>
             ` : ''}
         </div>
@@ -39136,6 +39141,238 @@ async function renderAdminPanel() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 🗑️ АДМИН-ПАНЕЛЬ: УДАЛЁННЫЕ АККАУНТЫ
+// ═══════════════════════════════════════════════════════════════
+
+async function openDeletedAccountsPanel() {
+    if (!isCurrentUserAdmin()) { showToast('❌ Только для админа'); return; }
+
+    document.getElementById('delAccOverlay')?.remove();
+    document.getElementById('delAccSheet')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'delAccOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeDeletedAccountsPanel(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'delAccSheet';
+    sheet.style.zIndex = '10000';
+    sheet.style.maxHeight = '92vh';
+    sheet.style.overflowY = 'auto';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🗑️ Удалённые аккаунты</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 14px;">
+            Восстановить можно в течение 24 часов. После — аккаунт удаляется навсегда.
+        </div>
+        <div id="delAccList">
+            <div class="empty">Загрузка...</div>
+        </div>
+        <button class="sheet-cancel" onclick="closeDeletedAccountsPanel()">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    await renderDeletedAccounts();
+    haptic('medium');
+}
+
+function closeDeletedAccountsPanel() {
+    document.getElementById('delAccOverlay')?.remove();
+    document.getElementById('delAccSheet')?.remove();
+}
+
+async function renderDeletedAccounts() {
+    const el = document.getElementById('delAccList');
+    if (!el) return;
+
+    try {
+        const { data, error } = await sb.from('deleted_accounts')
+            .select('*')
+            .order('deleted_at', { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+        if (!data?.length) {
+            el.innerHTML = '<div class="empty">Удалённых аккаунтов нет</div>';
+            return;
+        }
+
+        el.innerHTML = data.map(u => {
+            const deletedAt = new Date(u.deleted_at);
+            const hoursSince = (Date.now() - deletedAt.getTime()) / (1000 * 60 * 60);
+            const isRestored = u.restored_at !== null;
+            const canRestore = !isRestored && hoursSince < 24;
+            const timeLeft = Math.max(0, 24 - hoursSince);
+
+            const src = u.custom_avatar || u.photo_url;
+            const initial = (u.display_name || 'U')[0].toUpperCase();
+            const av = src
+                ? `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+                : initial;
+
+            let statusHTML = '';
+            if (isRestored) {
+                statusHTML = `<div style="font-size: 10px; font-weight: 900; color: var(--emerald); margin-top: 4px;">✅ ВОССТАНОВЛЕН</div>`;
+            } else if (canRestore) {
+                statusHTML = `<div style="font-size: 10px; font-weight: 800; color: var(--gold); margin-top: 4px;">⏳ Осталось ${Math.ceil(timeLeft)} ч</div>`;
+            } else {
+                statusHTML = `<div style="font-size: 10px; font-weight: 800; color: var(--red); margin-top: 4px;">🚫 Кулдаун истёк</div>`;
+            }
+
+            const snapshot = u.snapshot || {};
+            const stats = [];
+            if (snapshot.user_inventory) stats.push(`🎨 ${snapshot.user_inventory.length}`);
+            if (snapshot.friendships) stats.push(`👥 ${snapshot.friendships.length}`);
+            if (snapshot.club_members?.length) stats.push(`🛡️`);
+            if (snapshot.battle_pass_progress?.length) stats.push(`🎫`);
+
+            return `
+                <div style="
+                    display: flex; align-items: center; gap: 12px;
+                    padding: 12px; margin-bottom: 8px;
+                    background: linear-gradient(180deg, rgba(255,84,112,0.06), rgba(0,0,0,0.4));
+                    border: 1px solid rgba(255,84,112,0.25);
+                    border-radius: 12px;
+                    ${!canRestore ? 'opacity: 0.6;' : ''}
+                ">
+                    <div style="
+                        width: 44px; height: 44px;
+                        border-radius: 50%;
+                        overflow: hidden;
+                        flex-shrink: 0;
+                        background: linear-gradient(135deg, var(--red), #cc1e38);
+                        display: flex; align-items: center; justify-content: center;
+                        font-weight: 900; color: #fff; font-size: 16px;
+                    ">${av}</div>
+
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${escapeHtml(u.display_name || 'Без имени')}
+                        </div>
+                        <div style="font-size:10.5px;color:var(--hint);margin-top:2px;">
+                            ID: ${u.telegram_id}
+                            ${u.username ? ' · @' + escapeHtml(u.username) : ''}
+                        </div>
+                        <div style="font-size:10px;color:var(--hint);margin-top:2px;font-family:var(--font-mono);">
+                            🗓 ${deletedAt.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            ${stats.length ? ' · ' + stats.join(' ') : ''}
+                        </div>
+                        ${statusHTML}
+                    </div>
+
+                    ${canRestore ? `
+                        <button onclick="restoreDeletedAccount(${u.telegram_id}, this)" style="
+                            padding: 10px 14px;
+                            background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                            border: none;
+                            border-radius: 10px;
+                            color: #04140e;
+                            font-family: inherit;
+                            font-size: 11px;
+                            font-weight: 900;
+                            letter-spacing: 0.5px;
+                            cursor: pointer;
+                            flex-shrink: 0;
+                        ">↩️ ВЕРНУТЬ</button>
+                    ` : isRestored ? `
+                        <div style="font-size: 20px; flex-shrink: 0;">✅</div>
+                    ` : `
+                        <button disabled style="
+                            padding: 10px 14px;
+                            background: rgba(255,255,255,0.05);
+                            border: 1px solid var(--border);
+                            border-radius: 10px;
+                            color: var(--hint);
+                            font-family: inherit;
+                            font-size: 11px;
+                            font-weight: 900;
+                            cursor: not-allowed;
+                            flex-shrink: 0;
+                        ">ИСТЁК</button>
+                    `}
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('renderDeletedAccounts:', e);
+        el.innerHTML = '<div class="empty" style="color: var(--red);">Ошибка: ' + escapeHtml(e.message) + '</div>';
+    }
+}
+
+async function restoreDeletedAccount(telegramId, btnEl) {
+    if (!isCurrentUserAdmin()) return;
+
+    const ok = await tgConfirm(
+        `Восстановить аккаунт ID ${telegramId}?\n\n` +
+        `Игрок получит обратно:\n` +
+        `• Профиль и статистику\n` +
+        `• Инвентарь и покупки\n` +
+        `• Членство в клане\n` +
+        `• Список друзей`
+    );
+    if (!ok) return;
+
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = '⏳...';
+    }
+
+    try {
+        const { data, error } = await sb.rpc('admin_restore_account', {
+            p_admin_id: currentUser.telegram_id,
+            p_telegram_id: telegramId,
+        });
+
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'not_found') showToast('❌ Аккаунт не найден');
+            else if (err === 'already_restored') showToast('⚠️ Уже восстановлен');
+            else if (err === 'no_snapshot') showToast('⚠️ Нет снапшота данных');
+            else if (err === 'not_admin') showToast('❌ Нет прав');
+            else showToast('❌ ' + err);
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.textContent = '↩️ ВЕРНУТЬ';
+            }
+            return;
+        }
+
+        haptic('heavy');
+        showToast('✅ Аккаунт восстановлен');
+
+        // Уведомление игроку через бота
+        if (typeof notify === 'function') {
+            await notify(telegramId,
+                `✅ <b>Ваш аккаунт восстановлен администратором.</b>\n\n` +
+                `Все данные вернулись: профиль, статистика, инвентарь, друзья.`,
+                null,
+                { force: true, bypassSettings: true }
+            ).catch(() => {});
+        }
+
+        await renderDeletedAccounts();
+    } catch (e) {
+        console.error('restoreDeletedAccount:', e);
+        showToast('❌ ' + e.message);
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = '↩️ ВЕРНУТЬ';
+        }
+    }
+}
+
+window.openDeletedAccountsPanel = openDeletedAccountsPanel;
+window.closeDeletedAccountsPanel = closeDeletedAccountsPanel;
+window.renderDeletedAccounts = renderDeletedAccounts;
+window.restoreDeletedAccount = restoreDeletedAccount;
+
+// ═══════════════════════════════════════════════════════════════
 // 🎫 АДМИН-ПАНЕЛЬ: НАЧИСЛЕНИЕ ОЧКОВ БОЕВОГО ПРОПУСКА
 // ═══════════════════════════════════════════════════════════════
 let _admBpTargetUser = null;
@@ -45646,12 +45883,71 @@ async function confirmAccountDeletion() {
         await sb.from('messages').delete()
             .or(`sender_id.eq.${currentUser.telegram_id},recipient_id.eq.${currentUser.telegram_id}`);
 
-        // Фиксируем удаление (для кулдауна)
+        // 🔥 СОБИРАЕМ СНАПШОТ всех данных перед удалением
+        console.log('📸 Собираем снапшот данных...');
+
+        const snapshot = {};
+
+        // Пользователь
+        try {
+            const { data: userRow } = await sb.from('users')
+                .select('*')
+                .eq('telegram_id', currentUser.telegram_id)
+                .single();
+            snapshot.user = userRow;
+        } catch (e) { console.warn('snapshot.user:', e); }
+
+        // Инвентарь
+        try {
+            const { data: inventory } = await sb.from('user_inventory')
+                .select('*')
+                .eq('telegram_id', currentUser.telegram_id);
+            snapshot.user_inventory = inventory || [];
+        } catch (e) { console.warn('snapshot.inventory:', e); }
+
+        // Клан
+        try {
+            const { data: club } = await sb.from('club_members')
+                .select('*')
+                .eq('telegram_id', currentUser.telegram_id);
+            snapshot.club_members = club || [];
+        } catch (e) { console.warn('snapshot.club:', e); }
+
+        // Друзья
+        try {
+            const { data: friends } = await sb.from('friendships')
+                .select('*')
+                .or(`requester_id.eq.${currentUser.telegram_id},addressee_id.eq.${currentUser.telegram_id}`);
+            snapshot.friendships = friends || [];
+        } catch (e) { console.warn('snapshot.friends:', e); }
+
+        // Battle Pass прогресс
+        try {
+            const { data: bp } = await sb.from('battle_pass_progress')
+                .select('*')
+                .eq('telegram_id', currentUser.telegram_id);
+            snapshot.battle_pass_progress = bp || [];
+        } catch (e) { console.warn('snapshot.bp:', e); }
+
+        console.log('📸 Снапшот собран:', Object.keys(snapshot).map(k =>
+            `${k}: ${Array.isArray(snapshot[k]) ? snapshot[k].length : 1}`
+        ).join(', '));
+
+        // Фиксируем удаление + сохраняем снапшот
         await sb.from('deleted_accounts').upsert({
             telegram_id: currentUser.telegram_id,
-            deleted_at: new Date().toISOString()
+            deleted_at: new Date().toISOString(),
+            display_name: currentUser.display_name,
+            username: currentUser.username,
+            custom_avatar: currentUser.custom_avatar,
+            photo_url: currentUser.photo_url,
+            elo: currentUser.elo,
+            coins: currentUser.coins,
+            matches_played: currentUser.matches_played,
+            wins: currentUser.wins,
+            snapshot: snapshot,
+            restored_at: null,
         }, { onConflict: 'telegram_id' });
-
         // Удаляем юзера
         await sb.from('users').delete().eq('telegram_id', currentUser.telegram_id);
 
