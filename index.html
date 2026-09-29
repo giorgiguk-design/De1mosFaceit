@@ -26142,19 +26142,16 @@ function showCaseOpening(item, rarity, isDuplicate, refund, caseId, pool) {
     if (typeof SFX !== 'undefined') SFX.play('swipe');
 
     let tickCount = 0;
-    const totalTicks = 20;
+    const totalTicks = 40;
     const playTick = () => {
         if (tickCount >= totalTicks) return;
         const progress = tickCount / totalTicks;
-        const interval = 100 + progress * progress * 400;
+        const interval = 60 + progress * progress * 620;
         tickCount++;
-        if (typeof SFX !== 'undefined' && SFX.isEnabled?.()) {
-            try { if (typeof SFX.play === 'function') SFX.play('tap'); } catch (e) {}
-        }
+        if (typeof SFX !== 'undefined') SFX.play('caseTick');
         setTimeout(playTick, interval);
     };
     setTimeout(playTick, 100);
-
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             startCaseReel({
@@ -26239,9 +26236,9 @@ function finishCaseReel(item, rarity, isDuplicate, refund, meta) {
     haptic('heavy');
 
     if (typeof SFX !== 'undefined') {
-        if (rarity === 'legendary') SFX.play('victory');
-        else if (rarity === 'epic') SFX.play('levelUp');
-        else if (rarity === 'rare') SFX.play('success');
+        if (rarity === 'legendary') SFX.play('caseRevealLegendary');
+        else if (rarity === 'epic') SFX.play('caseRevealEpic');
+        else if (rarity === 'rare') SFX.play('caseRevealRare');
         else SFX.play('coin');
     }
 
@@ -26922,6 +26919,111 @@ async function openCaseById(caseId) {
     // Показываем анимацию с ТОЛЬКО предметами кейса
     showCaseOpening(item, item.rarity, isDuplicate, refund, caseId, pool);
 }
+
+// ============================================================
+// 🎁 ОТКРЫТИЕ КЕЙСА ИЗ БОЕВОГО ПРОПУСКА (бесплатно)
+// ============================================================
+async function openCaseFromBp(caseId) {
+    if (!currentUser) return;
+
+    const { data: caseData } = await sb.from('cases')
+        .select('*').eq('id', caseId).single();
+    if (!caseData) { showToast('❌ Кейс не найден'); return; }
+
+    const { data: picked, error: pErr } = await sb.rpc('pick_case_item', {
+        p_case_id: caseId
+    });
+
+    if (pErr || !picked?.ok) {
+        console.error('pick_case_item:', pErr, picked);
+        showToast('❌ Не удалось выбрать предмет');
+        return;
+    }
+
+    const item = {
+        id: picked.item_id,
+        name: picked.name,
+        category: picked.category,
+        rarity: picked.rarity,
+        value: picked.value,
+    };
+
+    // Дубликат
+    const { data: existing } = await sb.from('user_inventory')
+        .select('id')
+        .eq('telegram_id', currentUser.telegram_id)
+        .eq('item_id', item.id)
+        .maybeSingle();
+
+    let isDuplicate = false;
+    let refund = 0;
+
+    if (existing) {
+        isDuplicate = true;
+        const itemPrice = SHOP_ITEMS_CACHE[item.id]?.price
+            || (await sb.from('shop_items').select('price').eq('id', item.id).single()).data?.price
+            || 100;
+        refund = Math.round(itemPrice * 0.5);
+
+        try {
+            await sb.rpc('add_coins', {
+                p_user_id: currentUser.telegram_id,
+                p_amount: refund,
+                p_reason: `bp_duplicate:${item.id}`,
+                p_meta: { item_id: item.id, from: 'battle_pass' }
+            });
+            currentUser.coins += refund;
+            updateCoinsBadge();
+        } catch (e) {}
+    } else {
+        await sb.from('user_inventory').insert({
+            telegram_id: currentUser.telegram_id,
+            item_id: item.id,
+            is_equipped: false
+        });
+    }
+
+    try {
+        await sb.from('case_openings').insert({
+            telegram_id: currentUser.telegram_id,
+            case_type: caseId,
+            item_id: item.id,
+            item_rarity: item.rarity,
+            is_free: true,
+            opened_at: new Date().toISOString()
+        });
+    } catch (e) {}
+
+    // Пул для ленты
+    const { data: poolRows } = await sb.from('case_items')
+        .select('item_id').eq('case_id', caseId);
+
+    const poolItemIds = (poolRows || []).map(r => r.item_id);
+    let pool = [];
+
+    if (poolItemIds.length) {
+        const { data: shopRows } = await sb.from('shop_items')
+            .select('id, name, category, rarity, value')
+            .in('id', poolItemIds);
+
+        const shopMap = {};
+        (shopRows || []).forEach(s => {
+            shopMap[s.id] = s;
+            SHOP_ITEMS_CACHE[s.id] = s;
+        });
+
+        pool = (poolRows || [])
+            .map(r => shopMap[r.item_id])
+            .filter(Boolean);
+    }
+
+    if (!pool.length) pool = [item];
+
+    showCaseOpening(item, item.rarity, isDuplicate, refund, caseId, pool);
+}
+
+window.openCaseFromBp = openCaseFromBp;
+
 // ────────────────────────────────────────────────────────────
 // ОБНОВЛЁННАЯ АНИМАЦИЯ С ПУЛОМ КЕЙСА
 // ────────────────────────────────────────────────────────────
@@ -51088,13 +51190,16 @@ function renderRewardCell({ tier, level, reward, reached, claimed, hasPremium })
     if (reward.reward_type === 'coins') {
         iconHTML = '💰';
         displayText = String(val.amount || 0);
+    } else if (reward.reward_type === 'case') {
+        iconHTML = '🎁';
+        const cName = val.case_name || 'Кейс';
+        displayText = cName.length > 10 ? cName.slice(0, 9) + '…' : cName;
     } else if (reward.reward_type === 'item') {
         const item = SHOP_ITEMS_CACHE[val.item_id];
         displayText = item?.name || 'Предмет';
         if (displayText.length > 10) displayText = displayText.slice(0, 9) + '…';
         if (item) iconHTML = renderBpItemIcon(item);
     }
-
     // ============================================================
     // 🎯 Определяем состояние ячейки
     // ============================================================
@@ -51331,12 +51436,24 @@ async function claimBpReward(level, tier) {
             currentUser.coins = (currentUser.coins || 0) + amount;
             updateCoinsBadge();
             showToast(`💰 +${amount} монет`);
+            haptic('heavy');
+
+        // 🎁 Кейс — открываем бесплатно
+        } else if (data.reward_type === 'case') {
+            const caseId = data.reward_value?.case_id;
+            if (!caseId) {
+                showToast('⚠️ Кейс не найден в награде');
+                return;
+            }
+            haptic('heavy');
+            showToast('🎁 Открываем кейс...');
+            await openCaseFromBp(caseId);
+
+        // Обычный предмет
         } else {
             showToast('🎁 Награда получена');
+            haptic('heavy');
         }
-
-        haptic('heavy');
-
         // Перерисовываем оба экрана
         if (document.getElementById('seasonContent')) {
             renderBattlePass(document.getElementById('seasonContent'));
@@ -51466,9 +51583,15 @@ function formatAdminReward(reward) {
         return `💰 ${amount}`;
     }
 
+    // 🎁 Кейс
+    if (reward.reward_type === 'case') {
+        const cName = val.case_name || 'Кейс';
+        const short = cName.length > 12 ? cName.slice(0, 11) + '…' : cName;
+        return `🎁 ${escapeHtml(short)}`;
+    }
+
     // 🎨 Предмет из магазина
-    if (reward.reward_type === 'item') {
-        const itemId = val.item_id;
+    if (reward.reward_type === 'item') {        const itemId = val.item_id;
         if (!itemId) return '🎁 ?';
 
         const item = (typeof SHOP_ITEMS_CACHE !== 'undefined')
@@ -51579,6 +51702,10 @@ async function editBpReward(level, tier) {
         </button>
         <button class="sheet-option" onclick="showBpItemPicker()">
             <span style="font-size: 18px;">🎨</span> Предмет из магазина
+        </button>
+
+        <button class="sheet-option" onclick="showBpCasePicker()">
+            <span style="font-size: 18px;">🎁</span> Открытие кейса
         </button>
 
         ${existing ? `
@@ -51757,6 +51884,99 @@ async function pickBpItem(itemId) {
     closeAllBpSheets();
     await saveBpReward(ctx.level, ctx.tier, 'item', { item_id: itemId });
 }
+
+// ============================================================
+// 🎁 ПИКЕР КЕЙСА для награды BP
+// ============================================================
+async function showBpCasePicker() {
+    closeAllBpSheets();
+
+    const { level, tier } = _bpEditContext;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sheet-overlay active';
+    overlay.id = 'bpItemPickOverlay';
+    overlay.onclick = (e) => { if (e.target === overlay) returnToBpAdmin(); };
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sheet active';
+    sheet.id = 'bpItemPickSheet';
+    sheet.style.zIndex = '814';
+    sheet.style.maxHeight = '88vh';
+    sheet.style.overflowY = 'auto';
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🎁 Выбери кейс</div>
+        <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 12px;">
+            Уровень ${level} · ${tier === 'premium' ? 'Premium' : 'Free'}<br>
+            <span style="color: var(--gold);">При получении награды игрок откроет этот кейс</span>
+        </div>
+        <div class="empty">Загрузка...</div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(sheet);
+
+    try {
+        const { data: cases } = await sb.from('cases')
+            .select('id, name, subtitle, accent_color, accent_rgb, price, cooldown, category')
+            .eq('is_available', true)
+            .order('sort_order');
+
+        if (!cases?.length) {
+            sheet.innerHTML += `<div class="empty">Нет доступных кейсов</div>`;
+            return;
+        }
+
+        let html = `
+            <div class="sheet-title">🎁 Выбери кейс</div>
+            <div style="font-size: 11px; color: var(--hint); text-align: center; margin-bottom: 12px;">
+                Уровень ${level} · ${tier === 'premium' ? 'Premium' : 'Free'}<br>
+                <span style="color: var(--gold);">При получении награды игрок откроет этот кейс</span>
+            </div>
+        `;
+
+        html += cases.map(c => `
+            <button class="sheet-option" onclick="pickBpCase('${c.id}')" style="border-left: 3px solid ${c.accent_color};">
+                <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 10px; background: rgba(${c.accent_rgb}, 0.15); border: 1px solid rgba(${c.accent_rgb}, 0.4); font-size: 22px;">
+                    🎁
+                </div>
+                <div style="flex: 1; text-align: left; min-width: 0;">
+                    <div style="font-weight: 800; color: var(--text); font-size: 13px;">${escapeHtml(c.name)}</div>
+                    <div style="font-size: 10px; color: var(--hint); margin-top: 2px;">
+                        ${escapeHtml(c.subtitle || '')}
+                        ${c.cooldown === 'daily' ? ' · 🎉 Бесплатный' : ` · 💰 ${c.price || 0}`}
+                    </div>
+                </div>
+                <span style="color: var(--hint); font-size: 18px;">→</span>
+            </button>
+        `).join('');
+
+        html += `<button class="sheet-cancel" onclick="returnToBpAdmin()" style="margin-top: 12px;">← НАЗАД</button>`;
+
+        sheet.innerHTML = html;
+    } catch (e) {
+        sheet.innerHTML += `<div class="empty" style="color: var(--red);">Ошибка: ${e.message}</div>`;
+    }
+}
+
+async function pickBpCase(caseId) {
+    const ctx = _bpEditContext;
+    if (!ctx) return;
+
+    const { data: caseData } = await sb.from('cases')
+        .select('name').eq('id', caseId).maybeSingle();
+
+    closeAllBpSheets();
+
+    await saveBpReward(ctx.level, ctx.tier, 'case', {
+        case_id: caseId,
+        case_name: caseData?.name || 'Кейс',
+    });
+}
+
+window.showBpCasePicker = showBpCasePicker;
+window.pickBpCase = pickBpCase;
 
 // ============================================================
 // 💾 СОХРАНИТЬ НАГРАДУ
@@ -58992,108 +59212,248 @@ async function previewCaseItem(itemId) {
         src.stop(t0 + duration + 0.05);
     }
 
+    // ============================================================
+    // 🔥 ХЕЛПЕРЫ ДЛЯ ЭПИЧНЫХ ЗВУКОВ
+    // ============================================================
+
+    // Псевдо-реверб: несколько копий тона с задержкой
+    function reverbTone(opt, delays) {
+        const list = delays || [0.08, 0.16, 0.26, 0.4];
+        const vols = [0.42, 0.28, 0.16, 0.08];
+        list.forEach((d, i) => {
+            tone({ ...opt, volume: (opt.volume || 0.5) * vols[i], delay: (opt.delay || 0) + d });
+        });
+    }
+
+    // Суб-бас удар — добавляет «вес» и эпичность
+    function subBass(freq, duration, volume) {
+        const f = freq || 45;
+        const d = duration || 0.4;
+        const v = volume || 0.7;
+        tone({ freq: f,        type: 'sine',     duration: d,     volume: v,        release: d * 1.3 });
+        tone({ freq: f * 2,    type: 'triangle', duration: d * 0.7, volume: v * 0.4 });
+        tone({ freq: f * 0.5,  type: 'sine',     duration: d * 1.4, volume: v * 0.5, release: d * 1.6 });
+    }
+
+    // «Металлический» шлейф
+    function metalTail(baseFreq, count, delay, volume) {
+        for (let i = 0; i < count; i++) {
+            tone({
+                freq: baseFreq * (1 + i * 0.27),
+                type: 'sine',
+                duration: 0.35 + i * 0.06,
+                volume: volume * Math.pow(0.7, i),
+                delay: delay + i * 0.05,
+            });
+        }
+    }
+
+    // ============================================================
+    // 🎮 ЭПИЧНЫЕ ЗВУКИ — киберспортивный стиль
+    // ============================================================
     const Sounds = {
         tap() {
-            tone({ freq: 950, type: 'sine',     duration: 0.05, volume: 0.55, release: 0.06 });
-            tone({ freq: 1400, type: 'sine',    duration: 0.03, volume: 0.25, release: 0.04, delay: 0.012 });
+            tone({ freq: 1800, type: 'square',   duration: 0.015, volume: 0.3, release: 0.025 });
+            tone({ freq: 2400, type: 'sine',     duration: 0.03,  volume: 0.25, release: 0.05, delay: 0.008 });
+            noise({ duration: 0.025, volume: 0.1, filter: 9000 });
+            subBass(65, 0.1, 0.32);
         },
-        click() { tone({ freq: 720, type: 'triangle', duration: 0.06, volume: 0.45, release: 0.07 }); },
+        click() {
+            tone({ freq: 1400, type: 'square',   duration: 0.03, volume: 0.4, slideTo: 800, release: 0.05 });
+            tone({ freq: 2100, type: 'triangle', duration: 0.02, volume: 0.2, delay: 0.008 });
+            noise({ duration: 0.04, volume: 0.14, filter: 6500 });
+            subBass(80, 0.13, 0.3);
+        },
         nav() {
-            tone({ freq: 780,  type: 'triangle', duration: 0.06, volume: 0.4 });
-            tone({ freq: 1040, type: 'triangle', duration: 0.08, volume: 0.35, delay: 0.05 });
+            tone({ freq: 380, type: 'sawtooth', duration: 0.16, volume: 0.28, slideTo: 1900, release: 0.2 });
+            tone({ freq: 900, type: 'sine',     duration: 0.12, volume: 0.32, delay: 0.03, slideTo: 2300 });
+            noise({ duration: 0.13, volume: 0.13, filter: 7500 });
         },
         open() {
-            tone({ freq: 420, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 900 });
-            tone({ freq: 840, type: 'sine', duration: 0.1,  volume: 0.25, delay: 0.1 });
+            subBass(48, 0.55, 0.6);
+            tone({ freq: 180, type: 'sawtooth', duration: 0.55, volume: 0.32, slideTo: 1500, release: 0.65 });
+            tone({ freq: 420, type: 'sine',     duration: 0.5,  volume: 0.38, slideTo: 1900, delay: 0.05 });
+            tone({ freq: 820, type: 'triangle', duration: 0.42, volume: 0.28, slideTo: 2500, delay: 0.1 });
+            noise({ duration: 0.4, volume: 0.14, filter: 7000 });
+            reverbTone({ freq: 1650, type: 'sine', duration: 0.7, volume: 0.3, delay: 0.18 });
         },
-        close() { tone({ freq: 900, type: 'sine', duration: 0.14, volume: 0.4, slideTo: 420 }); },
-        swipe() { noise({ duration: 0.12, volume: 0.15, filter: 5500 }); },
+        close() {
+            tone({ freq: 1650, type: 'sawtooth', duration: 0.42, volume: 0.35, slideTo: 180, release: 0.5 });
+            tone({ freq: 950,  type: 'sine',     duration: 0.36, volume: 0.3,  slideTo: 140, delay: 0.03 });
+            subBass(55, 0.4, 0.45);
+            noise({ duration: 0.28, volume: 0.12, filter: 5000 });
+        },
+        swipe() {
+            noise({ duration: 0.16, volume: 0.22, filter: 9000 });
+            tone({ freq: 550, type: 'sawtooth', duration: 0.14, volume: 0.22, slideTo: 2100, release: 0.16 });
+            tone({ freq: 1100, type: 'sine',    duration: 0.1,  volume: 0.15, delay: 0.02, slideTo: 2800 });
+        },
         success() {
-            tone({ freq: 660,  type: 'sine', duration: 0.12, volume: 0.55 });
-            tone({ freq: 880,  type: 'sine', duration: 0.14, volume: 0.55, delay: 0.08 });
-            tone({ freq: 1320, type: 'sine', duration: 0.22, volume: 0.45, delay: 0.16 });
+            subBass(58, 0.4, 0.55);
+            [660, 830, 990, 1320].forEach((f, i) =>
+                tone({ freq: f, type: 'triangle', duration: 0.32, volume: 0.38, delay: i * 0.055, release: 0.4 })
+            );
+            tone({ freq: 1980, type: 'sine', duration: 0.5, volume: 0.28, delay: 0.22, release: 0.65 });
+            reverbTone({ freq: 1320, type: 'sine', duration: 0.55, volume: 0.25, delay: 0.28 });
         },
         error() {
-            tone({ freq: 240, type: 'sawtooth', duration: 0.16, volume: 0.4, slideTo: 110 });
-            tone({ freq: 180, type: 'square',   duration: 0.18, volume: 0.25, delay: 0.06 });
-            noise({ duration: 0.1, volume: 0.15, filter: 800 });
+            subBass(34, 0.55, 0.75);
+            tone({ freq: 230, type: 'sawtooth', duration: 0.26, volume: 0.4, slideTo: 75 });
+            tone({ freq: 175, type: 'square',   duration: 0.32, volume: 0.3, delay: 0.08, slideTo: 55 });
+            tone({ freq: 420, type: 'sawtooth', duration: 0.1,  volume: 0.28, delay: 0.2, slideTo: 100 });
+            noise({ duration: 0.22, volume: 0.22, filter: 950 });
+            tone({ freq: 220, type: 'square',   duration: 0.16, volume: 0.3, delay: 0.38, slideTo: 85 });
         },
         warning() {
-            tone({ freq: 520, type: 'square', duration: 0.14, volume: 0.35 });
-            tone({ freq: 520, type: 'square', duration: 0.14, volume: 0.35, delay: 0.2 });
+            subBass(62, 0.32, 0.4);
+            for (let i = 0; i < 2; i++) {
+                tone({ freq: 720, type: 'square', duration: 0.13, volume: 0.3, delay: i * 0.23 });
+                tone({ freq: 540, type: 'square', duration: 0.13, volume: 0.26, delay: i * 0.23 + 0.115 });
+                tone({ freq: 1080, type: 'triangle', duration: 0.08, volume: 0.18, delay: i * 0.23 + 0.06 });
+            }
         },
         notification() {
-            tone({ freq: 880,  type: 'sine', duration: 0.14, volume: 0.5 });
-            tone({ freq: 1174, type: 'sine', duration: 0.14, volume: 0.5, delay: 0.11 });
-            tone({ freq: 1568, type: 'sine', duration: 0.24, volume: 0.4, delay: 0.22 });
+            [1047, 1319, 1760].forEach((f, i) => {
+                tone({ freq: f, type: 'sine', duration: 0.28, volume: 0.5, delay: i * 0.08, release: 0.4 });
+                tone({ freq: f * 2, type: 'sine', duration: 0.16, volume: 0.16, delay: i * 0.08 });
+            });
+            reverbTone({ freq: 1760, type: 'sine', duration: 0.55, volume: 0.32, delay: 0.3 });
+            subBass(85, 0.16, 0.3);
         },
         message() {
-            tone({ freq: 1200, type: 'sine', duration: 0.07, volume: 0.5 });
-            tone({ freq: 1600, type: 'sine', duration: 0.09, volume: 0.4, delay: 0.06 });
+            tone({ freq: 1400, type: 'sine',     duration: 0.06, volume: 0.45, slideTo: 2000 });
+            tone({ freq: 2000, type: 'triangle', duration: 0.09, volume: 0.35, delay: 0.06, slideTo: 2600 });
+            tone({ freq: 2600, type: 'sine',     duration: 0.1,  volume: 0.25, delay: 0.12 });
+            noise({ duration: 0.05, volume: 0.09, filter: 8500 });
+            subBass(75, 0.12, 0.25);
         },
         send() {
-            tone({ freq: 1300, type: 'sine', duration: 0.09, volume: 0.5, slideTo: 2300 });
-            noise({ duration: 0.06, volume: 0.12, filter: 4500 });
+            tone({ freq: 500,  type: 'sawtooth', duration: 0.16, volume: 0.3, slideTo: 2500, release: 0.22 });
+            tone({ freq: 1000, type: 'sine',     duration: 0.13, volume: 0.26, delay: 0.03, slideTo: 3100 });
+            noise({ duration: 0.11, volume: 0.15, filter: 7500 });
+            subBass(70, 0.15, 0.3);
         },
         coin() {
-            tone({ freq: 1318, type: 'sine', duration: 0.09, volume: 0.5 });
-            tone({ freq: 1760, type: 'sine', duration: 0.12, volume: 0.5, delay: 0.07 });
-            tone({ freq: 2637, type: 'sine', duration: 0.22, volume: 0.3, delay: 0.16 });
+            [1318, 1760, 2637, 3520].forEach((f, i) => {
+                tone({ freq: f, type: 'sine', duration: 0.1 + i * 0.04, volume: 0.42 - i * 0.06, delay: i * 0.055, release: 0.15 });
+            });
+            metalTail(2200, 4, 0.14, 0.12);
+            reverbTone({ freq: 2637, type: 'sine', duration: 0.55, volume: 0.18, delay: 0.28 });
         },
         purchase() {
-            tone({ freq: 523, type: 'triangle', duration: 0.13, volume: 0.5 });
-            tone({ freq: 659, type: 'triangle', duration: 0.13, volume: 0.5, delay: 0.09 });
-            tone({ freq: 784, type: 'triangle', duration: 0.22, volume: 0.45, delay: 0.18 });
+            tone({ freq: 880,  type: 'square',   duration: 0.08, volume: 0.35 });
+            tone({ freq: 1174, type: 'square',   duration: 0.08, volume: 0.35, delay: 0.06 });
+            tone({ freq: 1568, type: 'square',   duration: 0.16, volume: 0.4, delay: 0.12, release: 0.2 });
+            tone({ freq: 2093, type: 'triangle', duration: 0.32, volume: 0.35, delay: 0.2 });
+            subBass(72, 0.22, 0.35);
+            reverbTone({ freq: 2093, type: 'sine', duration: 0.65, volume: 0.22, delay: 0.32 });
         },
         matchFound() {
-            [440, 554, 659, 880].forEach((f, i) =>
-                tone({ freq: f, type: 'triangle', duration: 0.45, volume: 0.4, delay: i * 0.06 })
-            );
-            noise({ duration: 0.35, volume: 0.15, filter: 3500 });
-            tone({ freq: 1318, type: 'sine', duration: 0.4, volume: 0.35, delay: 0.4 });
+            subBass(45, 0.8, 0.85);
+            [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
+                tone({ freq: f,       type: 'sawtooth', duration: 0.32, volume: 0.34, delay: i * 0.08 });
+                tone({ freq: f * 1.5, type: 'triangle', duration: 0.26, volume: 0.2,  delay: i * 0.08 });
+            });
+            noise({ duration: 0.5, volume: 0.2, filter: 6000, delay: 0.22 });
+            setTimeout(() => {
+                subBass(32, 0.9, 0.95);
+                tone({ freq: 1568, type: 'sawtooth', duration: 0.9, volume: 0.42, release: 1.1 });
+                reverbTone({ freq: 1568, type: 'sine', duration: 1.2, volume: 0.35, delay: 0.08 }, [0.14, 0.28, 0.45, 0.65]);
+            }, 620);
         },
         victory() {
+            subBass(50, 0.65, 0.85);
             [523, 659, 784, 1047].forEach((f, i) =>
-                tone({ freq: f, type: 'triangle', duration: 0.35, volume: 0.5, delay: i * 0.11 })
+                tone({ freq: f, type: 'triangle', duration: 0.55, volume: 0.42, delay: i * 0.1, release: 0.65 })
             );
             setTimeout(() => {
-                tone({ freq: 1319, type: 'triangle', duration: 0.55, volume: 0.5 });
-                tone({ freq: 1568, type: 'sine',     duration: 0.55, volume: 0.35, delay: 0.1 });
-            }, 460);
+                subBass(42, 0.9, 0.95);
+                [1319, 1568, 2093, 2637].forEach((f, i) =>
+                    tone({ freq: f, type: 'sine', duration: 0.75, volume: 0.5, delay: i * 0.05, release: 1.0 })
+                );
+                reverbTone({ freq: 1568, type: 'sine', duration: 1.4, volume: 0.38, delay: 0.12 }, [0.18, 0.34, 0.5, 0.75]);
+            }, 500);
         },
         defeat() {
-            [440, 392, 330, 262].forEach((f, i) =>
-                tone({ freq: f, type: 'sine', duration: 0.32, volume: 0.4, delay: i * 0.14 })
+            subBass(40, 1.3, 0.75);
+            [440, 392, 330, 262, 196].forEach((f, i) =>
+                tone({ freq: f, type: 'sawtooth', duration: 0.42, volume: 0.4, delay: i * 0.19, release: 0.55 })
             );
-            tone({ freq: 220, type: 'sine', duration: 0.7, volume: 0.35, delay: 0.6 });
+            setTimeout(() => {
+                subBass(28, 1.6, 0.7);
+                tone({ freq: 196, type: 'sine', duration: 1.6, volume: 0.32, release: 2.0 });
+                reverbTone({ freq: 98, type: 'sine', duration: 2.2, volume: 0.28, delay: 0.15 }, [0.24, 0.5, 0.8, 1.15]);
+            }, 850);
         },
         achievement() {
-            [784, 988, 1174, 1568].forEach((f, i) =>
-                tone({ freq: f, type: 'sine', duration: 0.28, volume: 0.5, delay: i * 0.075 })
-            );
-            setTimeout(() => {
-                [1568, 1976].forEach((f, i) =>
-                    tone({ freq: f, type: 'sine', duration: 0.4, volume: 0.4, delay: i * 0.1 })
-                );
-            }, 350);
+            subBass(60, 0.42, 0.55);
+            [784, 988, 1175, 1568, 1976, 2349].forEach((f, i) => {
+                tone({ freq: f,       type: 'sine',     duration: 0.32, volume: 0.35, delay: i * 0.06, release: 0.4 });
+                tone({ freq: f * 1.5, type: 'triangle', duration: 0.22, volume: 0.16, delay: i * 0.06 });
+            });
+            reverbTone({ freq: 2349, type: 'sine', duration: 0.9, volume: 0.32, delay: 0.42 });
         },
         levelUp() {
-            [523, 659, 784, 1047, 1319].forEach((f, i) =>
-                tone({ freq: f, type: 'sine', duration: 0.32, volume: 0.5, delay: i * 0.085 })
-            );
+            subBass(45, 0.5, 0.75);
+            [523, 659, 784, 1047, 1319].forEach((f, i) => {
+                tone({ freq: f,     type: 'sawtooth', duration: 0.36, volume: 0.4, delay: i * 0.095, release: 0.42 });
+                tone({ freq: f * 2, type: 'sine',     duration: 0.3,  volume: 0.2, delay: i * 0.095 });
+            });
+            setTimeout(() => {
+                subBass(50, 0.95, 0.9);
+                [1047, 1319, 1568, 2093].forEach((f, i) =>
+                    tone({ freq: f, type: 'triangle', duration: 0.9, volume: 0.42, delay: i * 0.045, release: 1.15 })
+                );
+                reverbTone({ freq: 1568, type: 'sine', duration: 1.5, volume: 0.38, delay: 0.12 }, [0.18, 0.36, 0.55, 0.8]);
+            }, 500);
         },
         openCase() {
-            for (let i = 0; i < 10; i++) {
-                tone({
-                    freq: 320 + i * 90, type: 'triangle',
-                    duration: 0.05, volume: 0.25, delay: i * 0.11
-                });
+            for (let i = 0; i < 16; i++) {
+                const t = i * 0.09;
+                tone({ freq: 800 + Math.random() * 500, type: 'square', duration: 0.028, volume: 0.24, delay: t });
+                tone({ freq: 1500 + Math.random() * 600, type: 'triangle', duration: 0.02, volume: 0.14, delay: t });
+                if (i % 3 === 0) noise({ duration: 0.028, volume: 0.08, filter: 9000, delay: t });
             }
             setTimeout(() => {
-                [659, 880, 1319].forEach((f, i) =>
-                    tone({ freq: f, type: 'sine', duration: 0.5, volume: 0.5, delay: i * 0.05 })
+                subBass(45, 0.75, 0.95);
+                [784, 1047, 1319, 1568, 2093].forEach((f, i) =>
+                    tone({ freq: f, type: 'sawtooth', duration: 0.65, volume: 0.42, delay: i * 0.05, release: 0.8 })
                 );
-            }, 1200);
+                reverbTone({ freq: 1568, type: 'sine', duration: 1.1, volume: 0.38, delay: 0.18 }, [0.16, 0.32, 0.5, 0.78]);
+            }, 1450);
+        },
+        caseTick() {
+            tone({ freq: 1600 + Math.random() * 800, type: 'square', duration: 0.012, volume: 0.18, release: 0.02 });
+            noise({ duration: 0.015, volume: 0.06, filter: 9000 });
+        },
+        caseRevealRare() {
+            subBass(58, 0.5, 0.5);
+            [880, 1174, 1568].forEach((f, i) =>
+                tone({ freq: f, type: 'triangle', duration: 0.42, volume: 0.4, delay: i * 0.07, release: 0.55 })
+            );
+            reverbTone({ freq: 1568, type: 'sine', duration: 0.7, volume: 0.3, delay: 0.2 });
+        },
+        caseRevealEpic() {
+            subBass(48, 0.7, 0.75);
+            [784, 988, 1175, 1568, 1976].forEach((f, i) => {
+                tone({ freq: f, type: 'sawtooth', duration: 0.5, volume: 0.38, delay: i * 0.06, release: 0.6 });
+                tone({ freq: f * 1.5, type: 'sine', duration: 0.4, volume: 0.22, delay: i * 0.06 });
+            });
+            reverbTone({ freq: 1976, type: 'sine', duration: 1.0, volume: 0.36, delay: 0.3 });
+        },
+        caseRevealLegendary() {
+            subBass(38, 1.2, 1.0);
+            [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => {
+                tone({ freq: f,     type: 'sawtooth', duration: 0.6, volume: 0.4,  delay: i * 0.075, release: 0.7 });
+                tone({ freq: f * 2, type: 'sine',     duration: 0.5, volume: 0.22, delay: i * 0.075 });
+            });
+            setTimeout(() => {
+                subBass(32, 1.6, 1.0);
+                [2093, 2637, 3136, 4186].forEach((f, i) =>
+                    tone({ freq: f, type: 'sine', duration: 1.4, volume: 0.4, delay: i * 0.06, release: 1.8 })
+                );
+                reverbTone({ freq: 2637, type: 'sine', duration: 2.0, volume: 0.4, delay: 0.15 }, [0.2, 0.4, 0.65, 1.0]);
+            }, 700);
         },
     };
 
