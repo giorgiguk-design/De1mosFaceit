@@ -38934,7 +38934,16 @@ if (hasConflict) {
     // ============================================================
     // REALTIME + FALLBACK POLLING
     // ============================================================
-    const votesCh = sb.channel('res_votes_' + currentMatch.id)
+     // 🔥 Убираем старый канал если он есть, чтобы не было "already subscribed"
+    if (window._resultVotesChannel) {
+        try { sb.removeChannel(window._resultVotesChannel); } catch (e) {}
+        window._resultVotesChannel = null;
+    }
+
+    // 🔥 Уникальное имя канала с timestamp — гарантированно не пересечётся
+    const channelName = 'res_votes_' + currentMatch.id + '_' + Date.now();
+
+    window._resultVotesChannel = sb.channel(channelName)
         .on('postgres_changes', {
             event: '*', schema: 'public', table: 'match_votes',
             filter: 'match_id=eq.' + currentMatch.id
@@ -38942,7 +38951,8 @@ if (hasConflict) {
             const { data } = await sb.from('game_matches')
                 .select('status, result_status').eq('id', currentMatch.id).single();
             if (data?.status === 'finished') {
-                sb.removeChannel(votesCh);
+                try { sb.removeChannel(window._resultVotesChannel); } catch (e) {}
+                window._resultVotesChannel = null;
                 if (matchPollTimer) { clearInterval(matchPollTimer); matchPollTimer = null; }
                 showFinishedScreen();
             } else {
