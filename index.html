@@ -36672,6 +36672,15 @@ async function syncServerTime() {
     samples.sort((a, b) => a.rtt - b.rtt);
     const best = samples[0];
 
+    // 🔥 ЗАЩИТА: если offset больше 3 секунд — что-то не так с часами
+    const MAX_OFFSET = 3000;
+    if (Math.abs(best.offset) > MAX_OFFSET) {
+        console.warn('⚠️ Часы сильно сдвинуты, игнорирую offset:', best.offset, 'ms');
+        _serverTimeOffset = 0;
+        _serverTimeSynced = false;
+        return;
+    }
+
     _serverTimeOffset = best.offset;
     _serverTimeRtt = best.rtt;
     _serverTimeSynced = true;
@@ -38313,6 +38322,17 @@ async function renderResultScreen() {
          capAVote.score_a !== capBVote.score_a ||
          capAVote.score_b !== capBVote.score_b);
 
+if (hasConflict) {
+    statusBlock = `
+        <div class="moderator-panel" style="margin-bottom: 12px; padding: 14px;">
+            <div class="moderator-title" style="font-size: 15px;">⚖️ РЕЗУЛЬТАТЫ РАСХОДЯТСЯ</div>
+            <div class="moderator-sub" style="font-size: 11px; margin-bottom: 0;">
+                Матч отправлен на проверку модераторам
+            </div>
+        </div>
+    `;
+}
+
     const bgUrl = mapBgUrl(currentMatch.final_map);
 
     // ============================================================
@@ -38859,17 +38879,28 @@ async function submitWinner() {
             .select('*').eq('id', currentMatch.id).single();
         if (fresh) currentMatch = fresh;
 
-        if (fresh?.status === 'finished' || fresh?.result_status === 'disputed') {
+        // ✅ Матч реально завершён — показываем финальный экран
+        if (fresh?.status === 'finished') {
             markResultShown(currentMatch.id);
             showFinishedScreen();
             selectedWinner = null;
             return;
         }
 
+        // ⚖️ Результаты разошлись — ОСТАЁМСЯ на экране результата
+        // Матч ждёт модератора, игрок видит «на проверке»
+        // НЕ ставим markResultShown — пусть позже увидит финал
+        if (fresh?.result_status === 'disputed') {
+            clearDraftScore();
+            renderResultScreen();
+            selectedWinner = null;
+            return;
+        }
+
+        // Обычное ожидание второго капитана
         clearDraftScore();
         renderResultScreen();
         selectedWinner = null;
-
     } catch (e) {
         console.error('submitWinner:', e);
         showToast('Ошибка: ' + (e?.message || e));
@@ -64244,6 +64275,47 @@ function installAutoHooks() {
 })();
 </script>
    
+<script>
+// ============================================================
+// 🖼️ УНИВЕРСАЛЬНЫЙ ФОЛБЭК ДЛЯ ВСЕХ КАРТИНОК
+// Если аватарка не загрузилась — показываем букву ника
+// ============================================================
+(function() {
+    document.addEventListener('error', (e) => {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG') return;
+        if (img.dataset.fbDone) return;
+        img.dataset.fbDone = '1';
+
+        const parent = img.parentElement;
+        if (!parent) return;
+
+        // Пытаемся найти ник в ближайшем окружении
+        let name = '';
+        const nameEl = parent.querySelector(
+            '.leaderboard-name, .chat-list-name, .club-member-name, ' +
+            '.tz-name, .pm2-name, .phc-name, .menu-drawer-name, ' +
+            '.notif-text, .report-card-name, [data-list-nick], [data-nickname]'
+        );
+        if (nameEl) name = nameEl.textContent.trim();
+
+        // Или берём из data-атрибута
+        if (!name) name = img.dataset.fbName || parent.dataset.fbName || '';
+
+        const initial = (name || '?')[0].toUpperCase();
+
+        img.style.display = 'none';
+
+        // Не дублируем фолбэк
+        if (parent.querySelector('.av-fallback-letter')) return;
+
+        const span = document.createElement('span');
+        span.className = 'av-fallback-letter';
+        span.textContent = initial;
+        parent.appendChild(span);
+    }, true); // capture: true — обязательно, чтобы ловить ошибки картинок
+})();
+</script>
 
 
 </body>
