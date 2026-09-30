@@ -30130,8 +30130,49 @@ async function submitResolveDispute(matchId) {
         if (error) throw error;
         if (!data?.ok) throw new Error(data?.error || 'Ошибка');
 
-        haptic('medium');
+         haptic('medium');
         showToast(`✅ Решено: ${a}:${b} → Команда ${winner}`);
+
+        // ============================================================
+        // 🎯 ОБНОВЛЯЕМ КВЕСТЫ ДЛЯ ВСЕХ ИГРОКОВ МАТЧА
+        // ============================================================
+        try {
+            const { data: freshMatch } = await sb.from('game_matches')
+                .select('team_a_players, team_b_players')
+                .eq('id', matchId)
+                .single();
+
+            if (freshMatch) {
+                const teamAIds = (freshMatch.team_a_players || []).map(p => Number(p.telegram_id));
+                const teamBIds = (freshMatch.team_b_players || []).map(p => Number(p.telegram_id));
+                const allIds = [...teamAIds, ...teamBIds];
+
+                console.log('🎯 Обновление квестов после решения спора:', allIds.length, 'игроков');
+
+                // Батчами по 5, чтобы не задушить Supabase
+                for (let i = 0; i < allIds.length; i += 5) {
+                    const batch = allIds.slice(i, i + 5);
+                    await Promise.all(batch.map(pId => {
+                        const isWinner = teamAIds.includes(pId)
+                            ? winner === 'A'
+                            : winner === 'B';
+
+                        return updateQuestsProgress(
+                            {
+                                matches_played: 1,
+                                wins: isWinner ? 1 : 0,
+                                mvps: 0,
+                            },
+                            { userId: pId }
+                        ).catch(e => console.warn('quest update fail:', pId, e));
+                    }));
+                }
+
+                console.log('✅ Квесты обновлены после решения спора');
+            }
+        } catch (e) {
+            console.warn('resolve quest update:', e);
+        }
 
         closeResolveDisputeSheet();
         setTimeout(() => renderModeratorPanel(), 200);
