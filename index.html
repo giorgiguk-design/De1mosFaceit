@@ -31236,6 +31236,7 @@ function applyHeaderAvatar(user) {
 }
 
 function switchPage(page) {
+
     // ============================================================
     // 🔥 ЗАКРЫВАЕМ ЧАТ ПРИ ПЕРЕХОДЕ НА ДРУГУЮ СТРАНИЦУ
     // ============================================================
@@ -38631,6 +38632,13 @@ if (hasConflict) {
                 onclick="openAppealDialog()">
             ⚖️ Апелляция по матчу
         </button>
+        ${isDisputed ? `
+            <button class="profile-action-btn edit"
+                    style="margin-top: 8px;"
+                    onclick="unlockNav(); switchPage('dashboard');">
+                🏠 НА ГЛАВНУЮ (матч на проверке)
+            </button>
+        ` : ''}
     `;
 
     // ============================================================
@@ -38895,7 +38903,8 @@ async function submitWinner() {
         // НЕ ставим markResultShown — пусть позже увидит финал
         if (fresh?.result_status === 'disputed') {
             clearDraftScore();
-            renderResultScreen();
+            unlockNav();
+            showResultScreen();
             selectedWinner = null;
             return;
         }
@@ -39154,7 +39163,6 @@ async function tryFinishMatch(matchId) {
                 result_status: 'disputed',
                 disputed_at: new Date().toISOString()
             }).eq('id', matchId);
-            markResultShown(matchId);
         }
     } catch (e) {
         console.warn('tryFinishMatch:', e);
@@ -39679,6 +39687,14 @@ async function checkActiveMatch() {
             if (m.status === 'in_game') {
                 lockNav();
                 showInGameScreen(m.room_id, m);
+                subscribeMatchRealtime();
+                return;
+            }
+
+            // === RESULT (включая disputed — показываем «на проверке») ===
+            if (m.status === 'result') {
+                lockNav();
+                showResultScreen();
                 subscribeMatchRealtime();
                 return;
             }
