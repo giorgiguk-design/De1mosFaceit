@@ -62178,9 +62178,51 @@ async function previewCaseItem(itemId) {
     haptic('light');
 }
 
+
+// ============================================================
+// 📸 OCR ПАРСИНГ СКРИНШОТА Standoff 2
+// ============================================================
+// ============================================================
+// 📸 OCR ПАРСИНГ СКРИНШОТА Standoff 2
+// ============================================================
+async function parseStandoffScreenshot(file) {
+    if (typeof Tesseract === 'undefined') {
+        throw new Error('OCR не загружен');
+    }
+
+    showToast('🔍 Обрабатываю изображение...');
+
+    const processedBlob = await preprocessStandoffImage(file);
+
+    showToast('📖 Распознаю текст (5-15 сек)...');
+
+    const worker = await Tesseract.createWorker('rus+eng', 1, {
+        logger: m => {
+            if (m.status === 'recognizing text') {
+                const pct = Math.round(m.progress * 100);
+                if (pct % 25 === 0) console.log(`OCR: ${pct}%`);
+            }
+        }
+    });
+
+    await worker.setParameters({
+        tessedit_pageseg_mode: '6',
+        preserve_interword_spaces: '1',
+    });
+
+    const imageUrl = URL.createObjectURL(processedBlob);
+    const { data: { text } } = await worker.recognize(imageUrl);
+    URL.revokeObjectURL(imageUrl);
+
+    await worker.terminate();
+
+    console.log('📝 OCR распознал:\n', text);
+
+    return parseStandoffText(text);
+}
+
 // ============================================================
 // 🎨 ПРЕПРОЦЕССИНГ СКРИНШОТА Standoff 2 (адаптивный)
-// Нормализует любое разрешение под оптимальное для OCR
 // ============================================================
 async function preprocessStandoffImage(file) {
     return new Promise((resolve, reject) => {
@@ -62189,101 +62231,54 @@ async function preprocessStandoffImage(file) {
 
         reader.onload = (e) => { img.src = e.target.result; };
         reader.onerror = reject;
-
         img.onerror = reject;
-        img.onload = () => {
-            // ============================================================
-            // 🎯 АДАПТИВНАЯ НОРМАЛИЗАЦИЯ РАЗМЕРА
-            // ============================================================
-            // Оптимальный размер для OCR — чтобы длинная сторона была
-            // около 2000-2500px. Это баланс между точностью и скоростью.
-            //
-            // Логика:
-            //   - маленькие скрины (720p) → апскейлим
-            //   - средние (1080p) → апскейлим чуть-чуть
-            //   - большие (2K+) → уменьшаем или оставляем
-            //   - огромные (4K+) → уменьшаем обязательно
-            // ============================================================
 
-            const TARGET_LONG_SIDE = 2200;   // целевая длина длинной стороны
-            const MIN_LONG_SIDE = 1200;      // ниже — точно апскейлим
-            const MAX_CANVAS_PIXELS = 16_000_000; // 16 МП — лимит браузеров
+        img.onload = () => {
+            const TARGET_LONG_SIDE = 2200;
+            const MIN_LONG_SIDE = 1200;
+            const MAX_CANVAS_PIXELS = 16_000_000;
 
             const srcW = img.width;
             const srcH = img.height;
             const longSide = Math.max(srcW, srcH);
-            const shortSide = Math.min(srcW, srcH);
 
             let scale = 1;
-
             if (longSide < MIN_LONG_SIDE) {
-                // Маленький скрин (телефон 720p) — увеличиваем x2
                 scale = 2;
             } else if (longSide < 1600) {
-                // Средний — увеличиваем до TARGET
-                scale = TARGET_LONG_SIDE / longSide;
-                scale = Math.min(scale, 2);
+                scale = Math.min(TARGET_LONG_SIDE / longSide, 2);
             } else if (longSide <= TARGET_LONG_SIDE) {
-                // Уже в оптимуме — не трогаем
                 scale = 1;
             } else {
-                // Большой (2K, 4K) — уменьшаем до TARGET
                 scale = TARGET_LONG_SIDE / longSide;
             }
 
             let newW = Math.round(srcW * scale);
             let newH = Math.round(srcH * scale);
 
-            // 🔥 Защита от превышения лимита canvas
             const totalPixels = newW * newH;
             if (totalPixels > MAX_CANVAS_PIXELS) {
                 const downscale = Math.sqrt(MAX_CANVAS_PIXELS / totalPixels);
                 newW = Math.round(newW * downscale);
                 newH = Math.round(newH * downscale);
-                console.warn('⚠️ Ограничил размер canvas из-за лимита пикселей');
             }
 
             console.log(`🎨 Препроцессинг: ${srcW}x${srcH} → ${newW}x${newH} (scale ${scale.toFixed(2)})`);
 
-            // ============================================================
-            // СОЗДАЁМ CANVAS И РИСУЕМ
-            // ============================================================
             const canvas = document.createElement('canvas');
             canvas.width = newW;
             canvas.height = newH;
-
             const ctx = canvas.getContext('2d');
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, newW, newH);
 
-            // Если уменьшаем — используем 'lanczos-подобное' сглаживание
-            // (многоступенчатое уменьшение даёт чётче результат)
-            if (scale < 0.7) {
-                // Двухступенчатое уменьшение: сначала в 2x больше целевого, потом финал
-                const tmpCanvas = document.createElement('canvas');
-                tmpCanvas.width = Math.round(newW * 1.4);
-                tmpCanvas.height = Math.round(newH * 1.4);
-                const tmpCtx = tmpCanvas.getContext('2d');
-                tmpCtx.imageSmoothingEnabled = true;
-                tmpCtx.imageSmoothingQuality = 'high';
-                tmpCtx.drawImage(img, 0, 0, tmpCanvas.width, tmpCanvas.height);
-
-                ctx.drawImage(tmpCanvas, 0, 0, newW, newH);
-            } else {
-                // Прямая отрисовка (апскейл или small downscale)
-                ctx.drawImage(img, 0, 0, newW, newH);
-            }
-
-            // ============================================================
-            // ГРАДИЕНТ И БИНАРИЗАЦИЯ (без изменений)
-            // ============================================================
             const imageData = ctx.getImageData(0, 0, newW, newH);
             const data = imageData.data;
 
             let min = 255, max = 0;
             const gray = new Uint8Array(newW * newH);
 
-            // Grayscale
             for (let i = 0; i < data.length; i += 4) {
                 const g = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
                 gray[i / 4] = g;
@@ -62291,10 +62286,8 @@ async function preprocessStandoffImage(file) {
                 if (g > max) max = g;
             }
 
-            // Растягиваем контраст
             const range = Math.max(1, max - min);
             const CONTRAST_BOOST = 1.8;
-
             for (let i = 0; i < gray.length; i++) {
                 let v = ((gray[i] - min) / range) * 255;
                 v = 128 + (v - 128) * CONTRAST_BOOST;
@@ -62302,7 +62295,6 @@ async function preprocessStandoffImage(file) {
                 gray[i] = v;
             }
 
-            // Otsu threshold
             const histogram = new Array(256).fill(0);
             for (let i = 0; i < gray.length; i++) histogram[gray[i]]++;
 
@@ -62326,19 +62318,14 @@ async function preprocessStandoffImage(file) {
                 }
             }
 
-            // Определяем: фон тёмный или светлый
             let darkCount = 0;
             for (let i = 0; i < 128; i++) darkCount += histogram[i];
             const isDarkBg = darkCount > total / 2;
 
-            // Бинаризация
             for (let i = 0; i < gray.length; i++) {
                 let v = gray[i];
-                if (isDarkBg) {
-                    v = v > threshold ? 0 : 255;
-                } else {
-                    v = v < threshold ? 0 : 255;
-                }
+                if (isDarkBg) v = v > threshold ? 0 : 255;
+                else v = v < threshold ? 0 : 255;
                 const idx = i * 4;
                 data[idx] = v;
                 data[idx + 1] = v;
@@ -62347,7 +62334,6 @@ async function preprocessStandoffImage(file) {
             }
 
             ctx.putImageData(imageData, 0, 0);
-
             console.log(`🎨 Готово: порог ${threshold}, фон ${isDarkBg ? 'тёмный' : 'светлый'}`);
 
             canvas.toBlob(
@@ -62360,58 +62346,6 @@ async function preprocessStandoffImage(file) {
         reader.readAsDataURL(file);
     });
 }
-
-// ============================================================
-// 📸 OCR ПАРСИНГ СКРИНШОТА Standoff 2
-// ============================================================
-async function parseStandoffScreenshot(file) {
-    if (typeof Tesseract === 'undefined') {
-        throw new Error('OCR не загружен');
-    }
-
-    showToast('🔍 Обрабатываю изображение...');
-
-    // ============================================================
-    // 🎨 ПРЕПРОЦЕССИНГ — улучшаем контраст перед OCR
-    // ============================================================
-    const processedBlob = await preprocessStandoffImage(file);
-
-    // ============================================================
-    // 🤖 ЗАПУСКАЕМ TESSERACT
-    // ============================================================
-    showToast('📖 Распознаю текст (5-15 сек)...');
-
-    try {
-        const worker = await Tesseract.createWorker('rus+eng', 1, {
-            logger: m => {
-                if (m.status === 'recognizing text') {
-                    const pct = Math.round(m.progress * 100);
-                    if (pct % 20 === 0) console.log(`OCR: ${pct}%`);
-                }
-            }
-        });
-
-        // 🔥 Без whitelist — читаем всё, потом фильтруем сами
-        // Это важно, потому что ники могут содержать любые символы
-        await worker.setParameters({
-            tessedit_pageseg_mode: '6',  // Единый блок текста
-            preserve_interword_spaces: '1',
-        });
-
-        const imageUrl = URL.createObjectURL(processedBlob);
-        const { data: { text } } = await worker.recognize(imageUrl);
-        URL.revokeObjectURL(imageUrl);
-
-        await worker.terminate();
-
-        console.log('📝 OCR распознал:\n', text);
-
-        return parseStandoffText(text);
-    } catch (e) {
-        throw e;
-    }
-}
-
 function parseStandoffText(text) {
     const result = {
         kills: 0,
