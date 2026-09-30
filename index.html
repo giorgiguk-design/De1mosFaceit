@@ -62178,6 +62178,114 @@ async function previewCaseItem(itemId) {
     haptic('light');
 }
 
+// ============================================================
+// 🖼️ МОДАЛКА РЕЗУЛЬТАТА OCR
+// ============================================================
+function showOcrResultModal(stats, matchId) {
+    document.getElementById('ocrResultModal')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'player-modal active';
+    overlay.id = 'ocrResultModal';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    const quality = stats.confidence >= 60 ? '🟢 Хорошо' :
+                    stats.confidence >= 30 ? '🟡 Средне' : '🔴 Плохо';
+
+    overlay.innerHTML = `
+        <div class="player-modal-inner" style="max-width: 440px;">
+            <button class="player-modal-close" onclick="document.getElementById('ocrResultModal').remove()">✕</button>
+
+            <h3 style="margin: 0 0 6px;">🔍 Распознавание</h3>
+            <div style="font-size: 12px; color: var(--hint); margin-bottom: 14px;">
+                Качество: <b style="color: var(--emerald);">${quality}</b>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
+                <div class="pmr-item">
+                    <span class="pmr-label">Убийства</span>
+                    <span class="pmr-value">${stats.kills}</span>
+                </div>
+                <div class="pmr-item">
+                    <span class="pmr-label">Смерти</span>
+                    <span class="pmr-value">${stats.deaths}</span>
+                </div>
+                <div class="pmr-item">
+                    <span class="pmr-label">Помощь</span>
+                    <span class="pmr-value">${stats.assists}</span>
+                </div>
+                <div class="pmr-item">
+                    <span class="pmr-label">Хедшоты</span>
+                    <span class="pmr-value">${stats.headshots}</span>
+                </div>
+                <div class="pmr-item">
+                    <span class="pmr-label">MVP</span>
+                    <span class="pmr-value">${stats.mvps}</span>
+                </div>
+                <div class="pmr-item">
+                    <span class="pmr-label">Очки</span>
+                    <span class="pmr-value">${stats.score}</span>
+                </div>
+            </div>
+
+            <div style="font-size: 11px; color: var(--hint); margin-bottom: 14px; line-height: 1.5;">
+                ⚠️ Проверь цифры. Если что-то не так — можешь поправить вручную ниже.
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+                <input type="number" class="field-input" id="ocrKills" value="${stats.kills}" placeholder="K">
+                <input type="number" class="field-input" id="ocrDeaths" value="${stats.deaths}" placeholder="D">
+                <input type="number" class="field-input" id="ocrAssists" value="${stats.assists}" placeholder="A">
+                <input type="number" class="field-input" id="ocrHS" value="${stats.headshots}" placeholder="HS">
+            </div>
+
+            <button class="profile-action-btn save" onclick="saveOcrStats(${matchId})">
+                ✅ СОХРАНИТЬ СТАТИСТИКУ
+            </button>
+            <button class="profile-action-btn cancel" onclick="document.getElementById('ocrResultModal').remove()">
+                ОТМЕНА
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+// ============================================================
+// 💾 СОХРАНЕНИЕ OCR СТАТИСТИКИ
+// ============================================================
+async function saveOcrStats(matchId) {
+    if (!currentUser || !currentMatch) return;
+
+    const me = Number(currentUser.telegram_id);
+    const myTeam = (currentMatch.team_a_players || []).some(p => Number(p.telegram_id) === me)
+        ? 'A' : 'B';
+
+    const kills = parseInt(document.getElementById('ocrKills').value) || 0;
+    const deaths = parseInt(document.getElementById('ocrDeaths').value) || 0;
+    const assists = parseInt(document.getElementById('ocrAssists').value) || 0;
+    const hs = parseInt(document.getElementById('ocrHS').value) || 0;
+
+    try {
+        await sb.from('match_player_stats').upsert({
+            match_id: matchId,
+            telegram_id: me,
+            team: myTeam,
+            kills, deaths, assists,
+            headshots: hs,
+            verified: false,
+        }, { onConflict: 'match_id,telegram_id' });
+
+        showToast('✅ Статистика сохранена');
+        haptic('medium');
+        document.getElementById('ocrResultModal')?.remove();
+        if (typeof renderResultScreen === 'function') renderResultScreen();
+    } catch (e) {
+        console.error('saveOcrStats:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
 
 // ============================================================
 // 📸 OCR ПАРСИНГ СКРИНШОТА Standoff 2
@@ -62234,8 +62342,7 @@ async function preprocessStandoffImage(file) {
         img.onerror = reject;
 
         img.onload = () => {
-            const TARGET_LONG_SIDE = 2200;
-            const MIN_LONG_SIDE = 1200;
+            const TARGET_LONG_SIDE = 2400;
             const MAX_CANVAS_PIXELS = 16_000_000;
 
             const srcW = img.width;
@@ -62243,24 +62350,18 @@ async function preprocessStandoffImage(file) {
             const longSide = Math.max(srcW, srcH);
 
             let scale = 1;
-            if (longSide < MIN_LONG_SIDE) {
-                scale = 2;
-            } else if (longSide < 1600) {
-                scale = Math.min(TARGET_LONG_SIDE / longSide, 2);
-            } else if (longSide <= TARGET_LONG_SIDE) {
-                scale = 1;
-            } else {
-                scale = TARGET_LONG_SIDE / longSide;
-            }
+            if (longSide < 1600) scale = Math.min(TARGET_LONG_SIDE / longSide, 2.5);
+            else if (longSide <= TARGET_LONG_SIDE) scale = TARGET_LONG_SIDE / longSide;
+            else scale = TARGET_LONG_SIDE / longSide;
 
             let newW = Math.round(srcW * scale);
             let newH = Math.round(srcH * scale);
 
             const totalPixels = newW * newH;
             if (totalPixels > MAX_CANVAS_PIXELS) {
-                const downscale = Math.sqrt(MAX_CANVAS_PIXELS / totalPixels);
-                newW = Math.round(newW * downscale);
-                newH = Math.round(newH * downscale);
+                const d = Math.sqrt(MAX_CANVAS_PIXELS / totalPixels);
+                newW = Math.round(newW * d);
+                newH = Math.round(newH * d);
             }
 
             console.log(`🎨 Препроцессинг: ${srcW}x${srcH} → ${newW}x${newH} (scale ${scale.toFixed(2)})`);
@@ -62276,218 +62377,193 @@ async function preprocessStandoffImage(file) {
             const imageData = ctx.getImageData(0, 0, newW, newH);
             const data = imageData.data;
 
-            let min = 255, max = 0;
-            const gray = new Uint8Array(newW * newH);
-
+            // ============================================================
+            // 🔥 ТОЛЬКО grayscale + лёгкое усиление контраста
+            // НЕ инвертируем фон, НЕ бинаризуем — Tesseract сам справится
+            // ============================================================
             for (let i = 0; i < data.length; i += 4) {
-                const g = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-                gray[i / 4] = g;
-                if (g < min) min = g;
-                if (g > max) max = g;
-            }
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
 
-            const range = Math.max(1, max - min);
-            const CONTRAST_BOOST = 1.8;
-            for (let i = 0; i < gray.length; i++) {
-                let v = ((gray[i] - min) / range) * 255;
-                v = 128 + (v - 128) * CONTRAST_BOOST;
+                // Grayscale
+                let v = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                // Лёгкое повышение контраста (мягкое, без "сжигания")
+                v = ((v / 255 - 0.5) * 1.4 + 0.5) * 255;
                 v = Math.max(0, Math.min(255, v));
-                gray[i] = v;
-            }
 
-            const histogram = new Array(256).fill(0);
-            for (let i = 0; i < gray.length; i++) histogram[gray[i]]++;
-
-            let sum = 0;
-            const total = gray.length;
-            for (let i = 0; i < 256; i++) sum += i * histogram[i];
-
-            let sumB = 0, wB = 0, maxVariance = 0, threshold = 128;
-            for (let t = 0; t < 256; t++) {
-                wB += histogram[t];
-                if (wB === 0) continue;
-                const wF = total - wB;
-                if (wF === 0) break;
-                sumB += t * histogram[t];
-                const mB = sumB / wB;
-                const mF = (sum - sumB) / wF;
-                const variance = wB * wF * (mB - mF) * (mB - mF);
-                if (variance > maxVariance) {
-                    maxVariance = variance;
-                    threshold = t;
-                }
-            }
-
-            let darkCount = 0;
-            for (let i = 0; i < 128; i++) darkCount += histogram[i];
-            const isDarkBg = darkCount > total / 2;
-
-            for (let i = 0; i < gray.length; i++) {
-                let v = gray[i];
-                if (isDarkBg) v = v > threshold ? 0 : 255;
-                else v = v < threshold ? 0 : 255;
-                const idx = i * 4;
-                data[idx] = v;
-                data[idx + 1] = v;
-                data[idx + 2] = v;
-                data[idx + 3] = 255;
+                data[i] = v;
+                data[i + 1] = v;
+                data[i + 2] = v;
+                data[i + 3] = 255;
             }
 
             ctx.putImageData(imageData, 0, 0);
-            console.log(`🎨 Готово: порог ${threshold}, фон ${isDarkBg ? 'тёмный' : 'светлый'}`);
+            console.log(`🎨 Препроцессинг готов`);
 
             canvas.toBlob(
                 (blob) => blob ? resolve(blob) : reject(new Error('Blob error')),
                 'image/png',
-                0.92
+                0.95
             );
         };
 
         reader.readAsDataURL(file);
     });
 }
+
 function parseStandoffText(text) {
     const result = {
-        kills: 0,
-        deaths: 0,
-        assists: 0,
-        headshots: 0,
-        score: 0,
-        mvps: 0,
-        raw: text,
-        confidence: 0,
-        // 🔥 Новые поля
-        isWin: false,
-        matchId: null,
-        scoreA: 0,    // счёт спецназа
-        scoreB: 0,    // счёт террористов
+        kills: 0, deaths: 0, assists: 0,
+        headshots: 0, score: 0, mvps: 0,
+        raw: text, confidence: 0,
+        isWin: false, matchId: null,
+        scoreA: 0, scoreB: 0,
     };
 
-    // Нормализуем: убираем лишние пробелы, кириллицу можно оставить
+    // Нормализуем
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const flat = lines.join(' ');
 
     // ============================================================
-    // 1️⃣ ID МАТЧА: "МАТЧ №1234567890"
+    // 1️⃣ ID МАТЧА
     // ============================================================
-    const matchIdMatch = flat.match(/МАТЧ\s*[№#]?\s*(\d{7,})/i) 
-                      || flat.match(/MATCH\s*[№#]?\s*(\d{7,})/i);
+    const matchIdMatch = flat.match(/МАТЧ\s*[№#]?\s*(\d{7,})/i);
     if (matchIdMatch) {
         result.matchId = matchIdMatch[1];
         result.confidence += 15;
     }
 
     // ============================================================
-    // 2️⃣ ПОБЕДА / ПОРАЖЕНИЕ
+    // 2️⃣ ПОБЕДА
     // ============================================================
-    if (/ПОБЕДА|ПЕРЕМОГА|VICTORY|ПОБЕД/i.test(flat)) {
+    if (/ПОБЕДА|VICTORY/i.test(flat)) {
         result.isWin = true;
         result.confidence += 10;
     }
 
     // ============================================================
-    // 3️⃣ СЧЁТ МАТЧА: "8 ... 6" (СПЕЦНАЗ победил со счётом 8:6)
-    // Ищем паттерн "ПОБЕДА 8 ... 6 ТЕРРОРИСТЫ"
+    // 3️⃣ СЧЁТ
     // ============================================================
-    const scoreMatch = flat.match(/(?:ПОБЕДА|ПЕРЕМОГА)?\s*(\d{1,2})\s+(\d{1,2})\s+(?:ТЕРРОРИСТ|Terrorist)/i);
+    const scoreMatch = flat.match(/(?:ПОБЕДА)?\s*(\d{1,2})\s+(\d{1,2})\s+ТЕРРОРИСТ/i);
     if (scoreMatch) {
         result.scoreA = parseInt(scoreMatch[1], 10) || 0;
         result.scoreB = parseInt(scoreMatch[2], 10) || 0;
-        result.confidence += 20;
+        result.confidence += 15;
     }
 
     // ============================================================
-    // 4️⃣ ПОИСК СТРОК ИГРОКОВ
+    // 4️⃣ 🔥 ГИБКИЙ ПОИСК СТРОК ИГРОКОВ
     // ============================================================
-    // Паттерн строки игрока после OCR:
-    // "1 ник какой-то 16 0 6 38 33" — У П С Счет Пинг
-    // Или "2 FirstFire45 2 0 11 6 42"
-    //
-    // Значит: [цифра номера] [имя] [цифры: У П С Счет Пинг]
-    //
-    // Ищем ВСЕ строки с 4-5 цифрами подряд в конце
+    // Ищем ЛЮБЫЕ последовательности 4+ чисел в строке
+    // (т.к. OCR может вставить между ними мусор)
+    // ============================================================
     const playerRows = [];
 
     lines.forEach((line, idx) => {
-        // Ищем 4+ числа, идущих подряд (разделённые пробелами)
-        // Возможные окончания: 
-        // - "16 0 6 38 33" (kills, assists, deaths, score, ping) — 5 чисел
-        // - "11 0 9 27 48" — 5 чисел
-        const numbersMatch = line.match(/(\d{1,3})(?:\s+(\d{1,3})){3,4}\s*$/);
-        if (!numbersMatch) return;
+        // Ищем ВСЕ числа в строке
+        const allNumbers = line.match(/\d{1,3}/g) || [];
 
-        // Извлекаем все числа с конца строки
-        const trailingNumbers = line.match(/(\d{1,3})(?:\s+(\d{1,3})){3,4}\s*$/);
-        if (!trailingNumbers) return;
+        // Нужно минимум 4 числа, чтобы это была строка игрока
+        // Формат: [номер] [kills] [assists] [deaths] [score] [ping]
+        // Например: "1 ник 13 1 7 27 35"
+        if (allNumbers.length < 4) return;
 
-        const numsStr = trailingNumbers[0].trim();
-        const nums = numsStr.split(/\s+/).map(n => parseInt(n, 10));
+        // Исключаем строку с "МАТЧ №..." (там тоже цифры)
+        if (/МАТЧ\s*[№#]?\s*\d{7,}/i.test(line)) return;
 
-        if (nums.length < 4) return;
+        // Исключаем строку заголовка таблицы
+        if (/Имя|Ранг|Пинг|Счет/i.test(line) && allNumbers.length < 6) return;
 
-        // Определяем структуру: 
-        // Standoff формат: У(убийства) П(помощи) С(смерти) Счет Пинг
-        // Т.е. последние 5 чисел — это stats. Если 4 числа — без ping.
-        let kills, assists, deaths, score, ping;
+        // Исключаем строки с очень большими числами (это скорее всего пинг)
+        const nums = allNumbers.map(n => parseInt(n, 10));
 
-        if (nums.length === 5) {
-            [kills, assists, deaths, score, ping] = nums;
-        } else if (nums.length === 4) {
-            [kills, assists, deaths, score] = nums;
-        } else {
-            return;
+        // Ищем последовательность подходящих чисел в конце строки
+        // Формат stats: kills(0-99) assists(0-99) deaths(0-99) score(0-999) ping(0-999)
+        // Берём последние 4-5 чисел
+        let stats = null;
+
+        // Пробуем взять 5 чисел с конца
+        const last5 = nums.slice(-5);
+        const last4 = nums.slice(-4);
+
+        // Проверяем что числа в реалистичных диапазонах
+        const isValidStats = (arr) => {
+            if (arr.length < 4) return false;
+            const [k, a, d, s] = arr;
+            // kills, assists, deaths — до 99
+            if (k > 99 || a > 99 || d > 99) return false;
+            // score — до 999
+            if (s > 999) return false;
+            return true;
+        };
+
+        if (isValidStats(last5)) stats = last5;
+        else if (isValidStats(last4)) stats = last4;
+        else return;
+
+        // Имя — между первым числом (номер строки) и первым из stats
+        const firstNumberIdx = line.search(/\d/);
+        const statsStartIdx = line.lastIndexOf(String(stats[0]));
+        
+        let nameRaw = '';
+        if (firstNumberIdx >= 0 && statsStartIdx > firstNumberIdx) {
+            nameRaw = line.substring(firstNumberIdx, statsStartIdx);
+            // Убираем начальный номер строки
+            nameRaw = nameRaw.replace(/^\d+\s*/, '').trim();
         }
 
-        // Имя = текст между номером строки и первым числом stats
-        // Убираем начальные номера (1, 2) и звёзды
-        let nameRaw = line.substring(0, line.indexOf(numsStr));
-        nameRaw = nameRaw.replace(/^\d+\s+/, '').trim(); // убираем "1 "
-        // Убираем звёзды, ромбы, эмодзи
-        nameRaw = nameRaw.replace(/[⭐★✦✧✩✪✫✬✭✮✯◆◇◈]/g, '').trim();
-
-        // Определяем, сколько звёзд (MVP indicator)
+        // Убираем звёзды и мусор из имени
         const starsMatch = line.match(/([⭐★✦✧✩✪✫✬✭✮✯]+)/);
         const stars = starsMatch ? starsMatch[1].length : 0;
+
+        nameRaw = nameRaw
+            .replace(/[⭐★✦✧✩✪✫✬✭✮✯◆◇◈|"'`@#№]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
 
         playerRows.push({
             lineIdx: idx,
             name: nameRaw,
-            kills,
-            assists,
-            deaths,
-            score,
-            ping: ping || 0,
+            kills: stats[0],
+            assists: stats[1],
+            deaths: stats[2],
+            score: stats[3],
+            ping: stats[4] || 0,
             stars,
+            rawLine: line,
         });
     });
 
     console.log('🎯 Найдено строк игроков:', playerRows.length);
-    playerRows.forEach(p => console.log(`  #${p.lineIdx}: ${p.name} — ${p.kills}/${p.deaths}/${p.assists}, score=${p.score}, stars=${p.stars}`));
+    playerRows.forEach(p => console.log(`  ${p.name} — ${p.kills}/${p.deaths}/${p.assists}, score=${p.score}, stars=${p.stars}`));
+    console.log('🎯 Сырые строки:');
+    lines.forEach((l, i) => console.log(`  [${i}] "${l}"`));
 
     // ============================================================
-    // 5️⃣ ОПРЕДЕЛЯЕМ МОЮ СТРОКУ
+    // 5️⃣ ИЩЕМ МОЮ СТРОКУ
     // ============================================================
-    // Ищем моё имя в списке (по нику из currentUser)
     const myName = (currentUser?.display_name || '').toLowerCase().trim();
+
     let myRow = null;
 
     if (myName) {
         // Точное совпадение
-        myRow = playerRows.find(p => p.name.toLowerCase().trim() === myName);
-        
-        // Или частичное (имя может обрезаться OCR)
+        myRow = playerRows.find(p => p.name.toLowerCase() === myName);
+
+        // Частичное
         if (!myRow && myName.length >= 3) {
             myRow = playerRows.find(p => {
-                const pName = p.name.toLowerCase().trim();
-                return pName.includes(myName.slice(0, 5)) 
-                    || myName.includes(pName.slice(0, 5));
+                const pn = p.name.toLowerCase();
+                return pn.includes(myName.slice(0, 5)) || myName.includes(pn.slice(0, 5));
             });
         }
     }
 
-    // Если не нашли по нику — берём первого с наибольшим K/D (наверное я MVP)
+    // Fallback — берём того, у кого больше всего kills (вероятно это я)
     if (!myRow && playerRows.length > 0) {
-        console.warn('⚠️ Не нашёл мою строку по нику, беру лучшего');
+        console.warn('⚠️ Не нашёл мою строку по нику, беру лучшего по kills');
         myRow = [...playerRows].sort((a, b) => b.kills - a.kills)[0];
     }
 
@@ -62501,15 +62577,13 @@ function parseStandoffText(text) {
         result.score = myRow.score;
         result.mvps = myRow.stars;
         result.confidence += 40;
-        console.log('✅ Нашёл мою строку:', myRow);
-    } else {
-        console.warn('❌ Не нашёл мою строку в таблице');
+        console.log('✅ Моя строка:', myRow);
     }
 
     result.confidence = Math.min(result.confidence, 100);
-
     return result;
-}            
+}
+
     </script>
 
 <!-- ============================================================ -->
