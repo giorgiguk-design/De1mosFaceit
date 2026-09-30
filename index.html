@@ -62189,7 +62189,7 @@ async function previewCaseItem(itemId) {
 }
 
 // ============================================================
-// 🖼️ МОДАЛКА РЕЗУЛЬТАТА OCR
+// 🖼️ МОДАЛКА OCR — с маппингом игроков
 // ============================================================
 function showOcrResultModal(stats, matchId) {
     document.getElementById('ocrResultModal')?.remove();
@@ -62197,56 +62197,132 @@ function showOcrResultModal(stats, matchId) {
     const overlay = document.createElement('div');
     overlay.className = 'player-modal active';
     overlay.id = 'ocrResultModal';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    overlay.style.cssText = 'z-index: 9999;';
 
-    const quality = stats.confidence >= 60 ? '🟢 Хорошо' :
-                    stats.confidence >= 30 ? '🟡 Средне' : '🔴 Плохо';
+    // Определяем счёт для команд A/B по сторонам матча
+    let scoreA = 0, scoreB = 0;
+    const sideA = currentMatch?.side_a || '';
+    const sideB = currentMatch?.side_b || '';
+
+    if (stats.specnazScore !== null && stats.terroristScore !== null) {
+        if (sideA === 'Спецназ') {
+            scoreA = stats.specnazScore;
+            scoreB = stats.terroristScore;
+        } else if (sideA === 'Террорист') {
+            scoreA = stats.terroristScore;
+            scoreB = stats.specnazScore;
+        }
+    }
+
+    // Строим список игроков матча для маппинга
+    const teamA = currentMatch?.team_a_players || [];
+    const teamB = currentMatch?.team_b_players || [];
+    const allMatchPlayers = [
+        ...teamA.map(p => ({ ...p, team: 'A' })),
+        ...teamB.map(p => ({ ...p, team: 'B' })),
+    ];
+
+    // Загружаем ники игроков
+    const playerOptions = allMatchPlayers.map(p => {
+        const u = SHOP_ITEMS_CACHE[`user_${p.telegram_id}`] || {};
+        return {
+            telegram_id: p.telegram_id,
+            team: p.team,
+            display_name: u.display_name || `Игрок ${p.telegram_id}`,
+        };
+    });
+
+    // Строим HTML для маппинга каждого найденного игрока
+    const mappingHTML = stats.players.map((row, i) => {
+        // Автоматически пытаемся найти совпадение
+        const ocrName = row.name.toLowerCase().trim();
+        const matched = playerOptions.find(p => {
+            const dn = p.display_name.toLowerCase().trim();
+            return dn === ocrName ||
+                dn.includes(ocrName.slice(0, 4)) ||
+                ocrName.includes(dn.slice(0, 4));
+        });
+
+        return `
+            <div style="
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                padding: 10px;
+                margin-bottom: 8px;
+                background: rgba(0,0,0,0.3);
+                border: 1px solid ${matched ? 'rgba(var(--emerald-rgb),0.4)' : 'rgba(255,84,112,0.4)'};
+                border-radius: 12px;
+            ">
+                <div style="display:flex;justify-content:space-between;gap:8px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:10px;color:var(--hint);font-weight:800;letter-spacing:1px;">СО СКРИНА</div>
+                        <div style="font-size:13px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            "${escapeHtml(row.name)}"
+                        </div>
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:14px;font-weight:900;color:var(--emerald);text-align:right;">
+                        ${row.kills}K / ${row.deaths}D<br>
+                        <span style="font-size:11px;color:var(--hint);">${row.assists}A · ${row.score}pts</span>
+                    </div>
+                </div>
+                <div>
+                    <label style="display:block;font-size:10px;color:var(--hint);font-weight:800;letter-spacing:1px;margin-bottom:4px;">
+                        ПРИВЯЗАТЬ К ИГРОКУ МАТЧА
+                    </label>
+                    <select class="field-input ocr-player-select" data-ocr-idx="${i}"
+                            style="padding:8px;font-size:12px;">
+                        <option value="">— Не привязывать —</option>
+                        ${playerOptions.map(p => `
+                            <option value="${p.telegram_id}" ${matched && matched.telegram_id === p.telegram_id ? 'selected' : ''}>
+                                [${p.team}] ${escapeHtml(p.display_name)}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+            </div>
+        `;
+    }).join('');
 
     overlay.innerHTML = `
-        <div class="player-modal-inner" style="max-width: 440px;">
+        <div class="player-modal-inner" style="max-width: 520px;">
             <button class="player-modal-close" onclick="document.getElementById('ocrResultModal').remove()">✕</button>
 
-            <h3 style="margin: 0 0 6px;">🔍 Распознавание</h3>
-            <div style="font-size: 12px; color: var(--hint); margin-bottom: 14px;">
-                Качество: <b style="color: var(--emerald);">${quality}</b>
+            <h3 style="margin:0 0 8px;font-size:16px;">🔍 Распознавание завершено</h3>
+
+            <div style="font-size:11px;color:var(--hint);margin-bottom:14px;line-height:1.5;">
+                Проверь, правильно ли OCR прочитал ники. Если нет — сам выбери нужного игрока из списка.
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
-                <div class="pmr-item">
-                    <span class="pmr-label">Убийства</span>
-                    <span class="pmr-value">${stats.kills}</span>
+            <!-- 🔥 Счёт -->
+            <div style="
+                padding:14px;
+                background:linear-gradient(135deg,rgba(var(--emerald-rgb),0.10),rgba(0,0,0,0.4));
+                border:1px solid var(--border-strong);
+                border-radius:12px;
+                margin-bottom:14px;
+            ">
+                <div style="font-size:10px;color:var(--hint);font-weight:900;letter-spacing:1.5px;margin-bottom:8px;text-align:center;">
+                    СЧЁТ ИЗ СКРИНА
                 </div>
-                <div class="pmr-item">
-                    <span class="pmr-label">Смерти</span>
-                    <span class="pmr-value">${stats.deaths}</span>
+                <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;">
+                    <input type="number" class="field-input" id="ocrScoreA" min="0" max="30"
+                           value="${scoreA}" style="text-align:center;font-size:22px;font-weight:900;padding:10px;">
+                    <div style="font-size:20px;font-weight:900;color:var(--hint);">:</div>
+                    <input type="number" class="field-input" id="ocrScoreB" min="0" max="30"
+                           value="${scoreB}" style="text-align:center;font-size:22px;font-weight:900;padding:10px;">
                 </div>
-                <div class="pmr-item">
-                    <span class="pmr-label">Помощь</span>
-                    <span class="pmr-value">${stats.assists}</span>
-                </div>
-                <div class="pmr-item">
-                    <span class="pmr-label">Хедшоты</span>
-                    <span class="pmr-value">${stats.headshots}</span>
-                </div>
-                <div class="pmr-item">
-                    <span class="pmr-label">MVP</span>
-                    <span class="pmr-value">${stats.mvps}</span>
-                </div>
-                <div class="pmr-item">
-                    <span class="pmr-label">Очки</span>
-                    <span class="pmr-value">${stats.score}</span>
+                <div style="font-size:9px;color:var(--hint);text-align:center;margin-top:6px;">
+                    Слева — команда A (${escapeHtml(sideA)}), справа — команда B (${escapeHtml(sideB)})
                 </div>
             </div>
 
-            <div style="font-size: 11px; color: var(--hint); margin-bottom: 14px; line-height: 1.5;">
-                ⚠️ Проверь цифры. Если что-то не так — можешь поправить вручную ниже.
+            <!-- 🔥 Маппинг игроков -->
+            <div style="font-size:10px;color:var(--hint);font-weight:900;letter-spacing:1.5px;margin-bottom:8px;">
+                ИГРОКИ (${stats.players.length})
             </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
-                <input type="number" class="field-input" id="ocrKills" value="${stats.kills}" placeholder="K">
-                <input type="number" class="field-input" id="ocrDeaths" value="${stats.deaths}" placeholder="D">
-                <input type="number" class="field-input" id="ocrAssists" value="${stats.assists}" placeholder="A">
-                <input type="number" class="field-input" id="ocrHS" value="${stats.headshots}" placeholder="HS">
+            <div style="max-height:40vh;overflow-y:auto;margin-bottom:14px;">
+                ${mappingHTML || '<div class="empty" style="font-size:12px;padding:20px;">Игроки не найдены</div>'}
             </div>
 
             <button class="profile-action-btn save" onclick="saveOcrStats(${matchId})">
@@ -62262,34 +62338,85 @@ function showOcrResultModal(stats, matchId) {
 }
 
 // ============================================================
-// 💾 СОХРАНЕНИЕ OCR СТАТИСТИКИ
+// 💾 СОХРАНЕНИЕ — stats для ВСЕХ + автозаполнение счёта
 // ============================================================
 async function saveOcrStats(matchId) {
     if (!currentUser || !currentMatch) return;
 
-    const me = Number(currentUser.telegram_id);
-    const myTeam = (currentMatch.team_a_players || []).some(p => Number(p.telegram_id) === me)
-        ? 'A' : 'B';
+    // Счёт
+    const scoreA = parseInt(document.getElementById('ocrScoreA').value) || 0;
+    const scoreB = parseInt(document.getElementById('ocrScoreB').value) || 0;
 
-    const kills = parseInt(document.getElementById('ocrKills').value) || 0;
-    const deaths = parseInt(document.getElementById('ocrDeaths').value) || 0;
-    const assists = parseInt(document.getElementById('ocrAssists').value) || 0;
-    const hs = parseInt(document.getElementById('ocrHS').value) || 0;
+    // Собираем все маппинги
+    const selects = document.querySelectorAll('#ocrResultModal .ocr-player-select');
+    const mappings = [];
+
+    // Парсим ещё раз, чтобы получить исходные stats
+    const rawText = document.getElementById('ocrResultModal')._rawStats;
+    // Мы не сохраняли его — берём из замыкания через глобал
+    const stats = window._lastOcrStats;
+    if (!stats) { showToast('❌ Нет данных OCR'); return; }
+
+    selects.forEach(sel => {
+        const ocrIdx = parseInt(sel.dataset.ocrIdx, 10);
+        const telegramId = parseInt(sel.value, 10);
+        if (!telegramId) return;
+
+        const row = stats.players[ocrIdx];
+        if (!row) return;
+
+        // Определяем команду игрока
+        const inTeamA = (currentMatch.team_a_players || [])
+            .some(p => Number(p.telegram_id) === telegramId);
+
+        mappings.push({
+            telegram_id: telegramId,
+            team: inTeamA ? 'A' : 'B',
+            kills: row.kills,
+            deaths: row.deaths,
+            assists: row.assists,
+            score: row.score,
+            mvps: row.stars,
+        });
+    });
+
+    if (mappings.length === 0) {
+        if (!confirm('Никто не привязан. Сохранить только счёт?')) return;
+    }
 
     try {
-        await sb.from('match_player_stats').upsert({
-            match_id: matchId,
-            telegram_id: me,
-            team: myTeam,
-            kills, deaths, assists,
-            headshots: hs,
-            verified: false,
-        }, { onConflict: 'match_id,telegram_id' });
+        // 🔥 1. Обновляем счёт матча
+        await sb.from('game_matches').update({
+            score_a: scoreA,
+            score_b: scoreB,
+        }).eq('id', matchId);
 
-        showToast('✅ Статистика сохранена');
+        // 🔥 2. Сохраняем stats каждого привязанного игрока
+        if (mappings.length > 0) {
+            const rows = mappings.map(m => ({
+                match_id: matchId,
+                telegram_id: m.telegram_id,
+                team: m.team,
+                kills: m.kills,
+                deaths: m.deaths,
+                assists: m.assists,
+                score: m.score,
+                mvps: m.mvps,
+                verified: false,
+            }));
+
+            const { error } = await sb.from('match_player_stats')
+                .upsert(rows, { onConflict: 'match_id,telegram_id' });
+
+            if (error) throw error;
+        }
+
+        showToast(`✅ Сохранено: счёт ${scoreA}:${scoreB}, игроков ${mappings.length}`);
         haptic('medium');
+
         document.getElementById('ocrResultModal')?.remove();
-        if (typeof renderResultScreen === 'function') renderResultScreen();
+        renderResultScreen();
+
     } catch (e) {
         console.error('saveOcrStats:', e);
         showToast('❌ ' + e.message);
@@ -62429,10 +62556,11 @@ function parseStandoffText(text) {
         headshots: 0, score: 0, mvps: 0,
         raw: text, confidence: 0,
         isWin: false, matchId: null,
-        scoreA: 0, scoreB: 0,
+        specnazScore: null,     // 🔥 счёт спецназа
+        terroristScore: null,   // 🔥 счёт террористов
+        players: [],            // 🔥 все найденные игроки
     };
 
-    // Нормализуем
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const flat = lines.join(' ');
 
@@ -62442,144 +62570,161 @@ function parseStandoffText(text) {
     const matchIdMatch = flat.match(/МАТЧ\s*[№#]?\s*(\d{7,})/i);
     if (matchIdMatch) {
         result.matchId = matchIdMatch[1];
-        result.confidence += 15;
-    }
-
-    // ============================================================
-    // 2️⃣ ПОБЕДА
-    // ============================================================
-    if (/ПОБЕДА|VICTORY/i.test(flat)) {
-        result.isWin = true;
         result.confidence += 10;
     }
 
     // ============================================================
-    // 3️⃣ СЧЁТ
+    // 2️⃣ ПОБЕДА / СЧЁТ
+    // Ловим "ПОБЕДА 8 | 5 ТЕРРОРИСТЫ" или "ПОБЕДА 8 5 ТЕРРОРИСТЫ"
     // ============================================================
-    const scoreMatch = flat.match(/(?:ПОБЕДА)?\s*(\d{1,2})\s+(\d{1,2})\s+ТЕРРОРИСТ/i);
+    if (/ПОБЕДА|VICTORY/i.test(flat)) {
+        result.isWin = true;
+        result.confidence += 5;
+    }
+
+    // Ищем счёт в формате "ПОБЕДА N  M" или "ПОБЕДА N | M"
+    const scoreMatch = flat.match(
+        /ПОБЕДА\s+(\d{1,2})\s*[|]?\s*(\d{1,2})\s*(?:ТЕРРОРИСТ|Terrorist)/i
+    );
     if (scoreMatch) {
-        result.scoreA = parseInt(scoreMatch[1], 10) || 0;
-        result.scoreB = parseInt(scoreMatch[2], 10) || 0;
-        result.confidence += 15;
+        result.specnazScore = parseInt(scoreMatch[1], 10);
+        result.terroristScore = parseInt(scoreMatch[2], 10);
+        result.confidence += 20;
+        console.log(`🎯 Счёт: СПЕЦНАЗ ${result.specnazScore} : ${result.terroristScore} ТЕРРОРИСТЫ`);
     }
 
     // ============================================================
-    // 4️⃣ 🔥 ГИБКИЙ ПОИСК СТРОК ИГРОКОВ
-    // ============================================================
-    // Ищем ЛЮБЫЕ последовательности 4+ чисел в строке
-    // (т.к. OCR может вставить между ними мусор)
+    // 3️⃣ СТРОКИ ИГРОКОВ — ищем "паттерн 5 чисел подряд"
     // ============================================================
     const playerRows = [];
 
-    lines.forEach((line, idx) => {
-        // Ищем ВСЕ числа в строке
-        const allNumbers = line.match(/\d{1,3}/g) || [];
-
-        // Нужно минимум 4 числа, чтобы это была строка игрока
-        // Формат: [номер] [kills] [assists] [deaths] [score] [ping]
-        // Например: "1 ник 13 1 7 27 35"
-        if (allNumbers.length < 4) return;
-
-        // Исключаем строку с "МАТЧ №..." (там тоже цифры)
+    lines.forEach((line, lineIdx) => {
+        // Пропускаем служебные
         if (/МАТЧ\s*[№#]?\s*\d{7,}/i.test(line)) return;
+        if (/^[#\s]+Имя|Ранг.*Пинг/i.test(line)) return;
+        if (/Союзники|Sandstone|августа|сентября|октября/i.test(line)) return;
 
-        // Исключаем строку заголовка таблицы
-        if (/Имя|Ранг|Пинг|Счет/i.test(line) && allNumbers.length < 6) return;
-
-        // Исключаем строки с очень большими числами (это скорее всего пинг)
-        const nums = allNumbers.map(n => parseInt(n, 10));
-
-        // Ищем последовательность подходящих чисел в конце строки
-        // Формат stats: kills(0-99) assists(0-99) deaths(0-99) score(0-999) ping(0-999)
-        // Берём последние 4-5 чисел
-        let stats = null;
-
-        // Пробуем взять 5 чисел с конца
-        const last5 = nums.slice(-5);
-        const last4 = nums.slice(-4);
-
-        // Проверяем что числа в реалистичных диапазонах
-        const isValidStats = (arr) => {
-            if (arr.length < 4) return false;
-            const [k, a, d, s] = arr;
-            // kills, assists, deaths — до 99
-            if (k > 99 || a > 99 || d > 99) return false;
-            // score — до 999
-            if (s > 999) return false;
-            return true;
-        };
-
-        if (isValidStats(last5)) stats = last5;
-        else if (isValidStats(last4)) stats = last4;
-        else return;
-
-        // Имя — между первым числом (номер строки) и первым из stats
-        const firstNumberIdx = line.search(/\d/);
-        const statsStartIdx = line.lastIndexOf(String(stats[0]));
-        
-        let nameRaw = '';
-        if (firstNumberIdx >= 0 && statsStartIdx > firstNumberIdx) {
-            nameRaw = line.substring(firstNumberIdx, statsStartIdx);
-            // Убираем начальный номер строки
-            nameRaw = nameRaw.replace(/^\d+\s*/, '').trim();
+        // Ищем все числа с позициями
+        const numRegex = /\d+/g;
+        const nums = [];
+        let m;
+        while ((m = numRegex.exec(line)) !== null) {
+            nums.push({
+                val: parseInt(m[0], 10),
+                idx: m.index,
+                str: m[0],
+            });
         }
 
-        // Убираем звёзды и мусор из имени
-        const starsMatch = line.match(/([⭐★✦✧✩✪✫✬✭✮✯]+)/);
-        const stars = starsMatch ? starsMatch[1].length : 0;
+        if (nums.length < 4) return;
 
+        // Ищем "окно" из 5 чисел где все в правильных диапазонах
+        let foundStats = null;
+        let statsIdx = -1;
+
+        // Сканируем с 0-й по (len-5)-ю позицию
+        for (let i = 0; i <= nums.length - 5; i++) {
+            const [k, a, d, s, p] = [
+                nums[i].val,
+                nums[i + 1].val,
+                nums[i + 2].val,
+                nums[i + 3].val,
+                nums[i + 4].val,
+            ];
+
+            // Kills, assists, deaths: 0-50
+            // Score: 5-300
+            // Ping: 5-500
+            if (k <= 50 && a <= 50 && d <= 50 &&
+                s >= 5 && s <= 300 &&
+                p >= 5 && p <= 500) {
+                foundStats = [k, a, d, s, p];
+                statsIdx = i;
+                break;
+            }
+        }
+
+        // Fallback — 4 числа без ping
+        if (!foundStats) {
+            for (let i = 0; i <= nums.length - 4; i++) {
+                const [k, a, d, s] = [
+                    nums[i].val,
+                    nums[i + 1].val,
+                    nums[i + 2].val,
+                    nums[i + 3].val,
+                ];
+                if (k <= 50 && a <= 50 && d <= 50 &&
+                    s >= 5 && s <= 300) {
+                    foundStats = [k, a, d, s, 0];
+                    statsIdx = i;
+                    break;
+                }
+            }
+        }
+
+        if (!foundStats) {
+            console.warn(`⚠️ Строка "${line}" — не найдены stats`);
+            return;
+        }
+
+        // Имя — текст ДО первого из stats-чисел
+        const firstStatIdx = nums[statsIdx].idx;
+        let nameRaw = line.substring(0, firstStatIdx).trim();
+
+        // Убираем номер строки в начале (1., 2., 1 , 2 )
+        nameRaw = nameRaw.replace(/^\d+[\.\s]+/, '').trim();
+
+        // Убираем служебные символы ранга, звёзды, разделители
         nameRaw = nameRaw
-            .replace(/[⭐★✦✧✩✪✫✬✭✮✯◆◇◈|"'`@#№]/g, '')
+            .replace(/[⭐★✦✧✩✪✫✬✭✮✯◆◇◈]/g, '')
+            .replace(/[|#"'`@©№]+/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
 
+        // Извлекаем кол-во звёзд (MVP)
+        const starsMatch = line.match(/[⭐★✦✧✩✪✫✬✭✮✯]/g);
+        const stars = starsMatch ? starsMatch.length : 0;
+
         playerRows.push({
-            lineIdx: idx,
+            lineIdx,
             name: nameRaw,
-            kills: stats[0],
-            assists: stats[1],
-            deaths: stats[2],
-            score: stats[3],
-            ping: stats[4] || 0,
+            kills: foundStats[0],
+            assists: foundStats[1],
+            deaths: foundStats[2],
+            score: foundStats[3],
+            ping: foundStats[4],
             stars,
             rawLine: line,
         });
     });
 
-    console.log('🎯 Найдено строк игроков:', playerRows.length);
-    playerRows.forEach(p => console.log(`  ${p.name} — ${p.kills}/${p.deaths}/${p.assists}, score=${p.score}, stars=${p.stars}`));
-    console.log('🎯 Сырые строки:');
-    lines.forEach((l, i) => console.log(`  [${i}] "${l}"`));
+    console.log(`🎯 Найдено строк игроков: ${playerRows.length}`);
+    playerRows.forEach(p =>
+        console.log(`   "${p.name}" → ${p.kills}K / ${p.deaths}D / ${p.assists}A · score=${p.score} · ⭐${p.stars}`)
+    );
+
+    result.players = playerRows;
 
     // ============================================================
-    // 5️⃣ ИЩЕМ МОЮ СТРОКУ
+    // 4️⃣ МОЯ СТРОКА (для быстрого превью)
     // ============================================================
     const myName = (currentUser?.display_name || '').toLowerCase().trim();
 
     let myRow = null;
-
     if (myName) {
-        // Точное совпадение
-        myRow = playerRows.find(p => p.name.toLowerCase() === myName);
-
-        // Частичное
-        if (!myRow && myName.length >= 3) {
-            myRow = playerRows.find(p => {
-                const pn = p.name.toLowerCase();
-                return pn.includes(myName.slice(0, 5)) || myName.includes(pn.slice(0, 5));
-            });
-        }
+        myRow = playerRows.find(p => {
+            const pn = p.name.toLowerCase();
+            return pn === myName ||
+                pn.includes(myName.slice(0, 4)) ||
+                myName.includes(pn.slice(0, 4));
+        });
     }
 
-    // Fallback — берём того, у кого больше всего kills (вероятно это я)
+    // Fallback — тот, у кого максимум kills
     if (!myRow && playerRows.length > 0) {
-        console.warn('⚠️ Не нашёл мою строку по нику, беру лучшего по kills');
         myRow = [...playerRows].sort((a, b) => b.kills - a.kills)[0];
     }
 
-    // ============================================================
-    // 6️⃣ ЗАПОЛНЯЕМ РЕЗУЛЬТАТ
-    // ============================================================
     if (myRow) {
         result.kills = myRow.kills;
         result.deaths = myRow.deaths;
@@ -62587,13 +62732,11 @@ function parseStandoffText(text) {
         result.score = myRow.score;
         result.mvps = myRow.stars;
         result.confidence += 40;
-        console.log('✅ Моя строка:', myRow);
     }
 
     result.confidence = Math.min(result.confidence, 100);
     return result;
 }
-
     </script>
 
 <!-- ============================================================ -->
@@ -65126,6 +65269,7 @@ document.addEventListener('change', async (e) => {
         console.log('📊 Распознано:', stats);
 
         // 4. Модалка
+        window._lastOcrStats = stats;   // 🔥 сохраняем для saveOcrStats
         showOcrResultModal(stats, currentMatch.id);
 
     } catch (err) {
