@@ -29461,7 +29461,20 @@ function clearDraftScore() {
             .in('status', ['veto', 'side_pick', 'waiting_link', 'in_game', 'result'])
             .lt('last_activity_at', longCutoff);
 
-        for (const room of stuckRooms || []) {
+        // 🔥 Убираем комнаты, у которых матч в статусе 'disputed' — их не трогаем
+        const roomIds = (stuckRooms || []).map(r => r.id);
+        let disputedRoomIds = new Set();
+        if (roomIds.length) {
+            const { data: disputedMatches } = await sb.from('game_matches')
+                .select('room_id')
+                .in('room_id', roomIds)
+                .eq('result_status', 'disputed');
+            disputedRoomIds = new Set((disputedMatches || []).map(m => m.room_id));
+        }
+
+        // Теперь stuckRooms без disputed
+        const safeStuckRooms = (stuckRooms || []).filter(r => !disputedRoomIds.has(r.id));
+                for (const room of safeStuckRooms) {
             // Отменяем матч
             await sb.from('game_matches')
                 .update({
@@ -29549,6 +29562,8 @@ const [disputedRes, reportsRes, modsRes, bansRes] = await Promise.all([
     ]);
 
     const disputed = disputedRes.data || [];
+const disputed = disputedRes.data || [];
+console.log('🎯 Спорных матчей загружено:', disputed.length, disputed);
     const reports = reportsRes.data || [];
     const mods = modsRes.data || [];
     const banned = bansRes.data || [];
