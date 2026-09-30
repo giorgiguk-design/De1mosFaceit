@@ -38311,6 +38311,11 @@ async function renderResultScreen() {
                  : teamB.some(p => Number(p.telegram_id) === me) ? 'B' : null;
     const mySide = myTeam === 'A' ? currentMatch.side_a
                  : myTeam === 'B' ? currentMatch.side_b : null;
+    // 🔥 Статусы матча — объявляем ЗДЕСЬ, до всех шаблонов
+    const isFinished  = currentMatch.status === 'finished';
+    const isDisputed  = currentMatch.result_status === 'disputed';
+    const isConfirmed = currentMatch.result_status === 'confirmed';
+    const isCancelled = currentMatch.status === 'cancelled';
 
     // Загружаем данные
     const allIds = [...teamA, ...teamB].map(p => Number(p.telegram_id)).filter(Boolean);
