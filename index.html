@@ -39,6 +39,7 @@
 <!-- Supabase — тоже лучше скачать локально, но CDN обычно работает -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 <style>
         /* ============================================================
    ТЕМЫ
@@ -24669,6 +24670,119 @@ html.lite-mode .lb-frame-overlay svg * {
         grid-column: 1 / -1;
     }
 }
+
+/* ============================================================ */
+/* 🎨 АНИМИРОВАННЫЕ ТИТУЛЫ                                       */
+/* ============================================================ */
+.phc-title[data-anim], .pm2-title[data-anim] {
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% auto;
+    display: inline-block;
+}
+
+/* 💫 Shimmer — золотой бегущий блик */
+.phc-title[data-anim="shimmer"] {
+    background-image: linear-gradient(
+        90deg,
+        #b8860b 0%,
+        #ffd700 25%,
+        #fff5cc 50%,
+        #ffd700 75%,
+        #b8860b 100%
+    );
+    animation: titleShimmer 3s linear infinite;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.7));
+}
+@keyframes titleShimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+/* 🌈 Rainbow — радужный перелив */
+.phc-title[data-anim="rainbow"] {
+    background-image: linear-gradient(
+        90deg,
+        #ff2e6d, #ff7a2e, #ffd700,
+        #8ce65a, #4fc3f7, #a78bfa, #ff2e6d
+    );
+    background-size: 300% auto;
+    animation: titleRainbow 4s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.6));
+}
+@keyframes titleRainbow {
+    0%   { background-position: 0% center; }
+    100% { background-position: 300% center; }
+}
+
+/* 🔥 Fire — огненный с пульсацией */
+.phc-title[data-anim="fire"] {
+    background-image: linear-gradient(
+        90deg,
+        #7f1d1d, #ff2e4d, #ff8c00, #ffe066, #ff8c00, #ff2e4d, #7f1d1d
+    );
+    background-size: 200% auto;
+    animation: titleFire 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(255, 140, 0, 0.8));
+}
+@keyframes titleFire {
+    0%, 100% { background-position: 0% center; filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.6)); }
+    50%      { background-position: 100% center; filter: drop-shadow(0 0 16px rgba(255, 140, 0, 1)); }
+}
+
+/* ❄️ Ice — ледяной с медленным блеском */
+.phc-title[data-anim="ice"] {
+    background-image: linear-gradient(
+        90deg,
+        #0369a1, #4fc3f7, #e0f7ff, #4fc3f7, #0369a1
+    );
+    background-size: 200% auto;
+    animation: titleIce 5s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(79, 195, 247, 0.7));
+}
+@keyframes titleIce {
+    0%, 100% { background-position: 0% center; }
+    50%      { background-position: 100% center; }
+}
+
+/* ⚡ Glitch — киберпанк-глитч */
+.phc-title[data-anim="glitch"] {
+    background-image: linear-gradient(
+        90deg,
+        #00e08a, #00b874, #22e8a4, #00e08a
+    );
+    background-size: 200% auto;
+    animation: titleGlitch 0.8s steps(4) infinite;
+    filter: drop-shadow(0 0 10px rgba(0, 224, 138, 0.9));
+}
+@keyframes titleGlitch {
+    0%   { background-position: 0% center; }
+    25%  { background-position: 50% center; filter: hue-rotate(0deg); }
+    50%  { background-position: 100% center; filter: hue-rotate(45deg); }
+    75%  { background-position: 50% center; filter: hue-rotate(-30deg); }
+    100% { background-position: 0% center; filter: hue-rotate(0deg); }
+}
+
+/* 💓 Pulse — пульсирующий */
+.phc-title[data-anim="pulse"] {
+    background-image: linear-gradient(
+        180deg, #fff 0%, #a78bfa 50%, #6d28d9 100%
+    );
+    animation: titlePulse 1.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.8));
+}
+@keyframes titlePulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.6)); }
+    50%      { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(167, 139, 250, 1)); }
+}
+
+/* 🚀 Lite-режим — отключаем анимации */
+html.lite-mode .phc-title[data-anim],
+html.lite-mode .pm2-title[data-anim] {
+    animation: none !important;
+    filter: none !important;
+}
     
 </style>
 </head>
@@ -38642,14 +38756,22 @@ if (hasConflict) {
                         ? 'Загрузи скриншот с результатом матча'
                         : 'Капитан не загрузил — можешь загрузить за команду'}
                 </div>
+
                 <button class="result-upload-btn" onclick="document.getElementById('screenshotInput').click()">
                     📤 ЗАГРУЗИТЬ
                 </button>
+
+                <button class="result-upload-btn"
+                        style="margin-top: 8px; background: linear-gradient(135deg, #a78bfa, #8b5cf6);"
+                        onclick="document.getElementById('ocrScreenshotInput').click()">
+                    🔍 ЗАГРУЗИТЬ И РАСПОЗНАТЬ
+                </button>
+
                 <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
+                <input type="file" id="ocrScreenshotInput" accept="image/*" style="display: none;">
             </div>
         `;
     };
-
     // ============================================================
     // 🎯 ФОРМА СЧЁТА С АВТО-ВЫБОРОМ ПОБЕДИТЕЛЯ
     // ============================================================
@@ -48870,26 +48992,32 @@ async function renderRecentMatches(userId) {
 async function loadLastMatchInlineUnified(userId) {
     const el = document.getElementById(`lmbKDInline_${userId}`);
     if (!el) return;
+
     try {
         const { data: matches } = await sb.from('game_matches')
-            .select('*').eq('status', 'finished')
-            .order('finished_at', { ascending: false }).limit(20);
+            .select('id, finished_at')
+            .eq('status', 'finished')
+            .order('finished_at', { ascending: false })
+            .limit(20);
 
-        const myMatch = (matches || []).find(m => {
-            const ids = [...(m.team_a_players || []), ...(m.team_b_players || [])]
-                .map(p => Number(p.telegram_id));
-            return ids.includes(Number(userId));
-        });
+        const myMatchIds = (matches || []).map(m => m.id);
+        if (!myMatchIds.length) { el.textContent = '— / —'; return; }
 
-        if (!myMatch) { el.textContent = '— / —'; return; }
+        const { data: stats } = await sb.from('match_player_stats')
+            .select('kills, deaths, match_id')
+            .eq('telegram_id', userId)
+            .in('match_id', myMatchIds)
+            .order('match_id', { ascending: false })
+            .limit(1);
 
-        const kills = 15, deaths = 5;
-        el.innerHTML = `<span style="color: var(--emerald);">${kills}</span> / <span style="color: var(--red);">${deaths}</span>`;
+        if (!stats?.length) { el.textContent = '— / —'; return; }
+
+        const s = stats[0];
+        el.innerHTML = `<span style="color: var(--emerald);">${s.kills}</span> / <span style="color: var(--red);">${s.deaths}</span>`;
     } catch (e) {
         el.textContent = '— / —';
     }
 }
-
 async function renderHeatmapUnified(userId) {
     const grid = document.getElementById(`heatmapGrid_${userId}`);
     if (!grid) return;
@@ -50695,20 +50823,44 @@ if (badgeId && SHOP_ITEMS_CACHE[badgeId]) {
 }
 
     // ============================================================
-    // 5. ТИТУЛ
+    // 5. ТИТУЛ (с поддержкой анимаций)
     // ============================================================
     const titleId = eq.title;
     const titleEls = scopeEl.querySelectorAll('[data-title]');
     if (titleId && SHOP_ITEMS_CACHE[titleId]) {
-        const val = SHOP_ITEMS_CACHE[titleId].value || {};
+        const item = SHOP_ITEMS_CACHE[titleId];
+        const val = item.value || {};
+        const anim = item.title_animation || null;
+
         titleEls.forEach(el => {
             el.textContent = val.text || '';
-            el.style.color = val.color || 'var(--gold)';
-            el.style.textShadow = `0 0 10px ${val.color || 'var(--gold)'}`;
             el.style.display = 'inline-block';
+
+            // Убираем старую анимацию
+            el.removeAttribute('data-anim');
+            el.style.background = '';
+            el.style.backgroundImage = '';
+            el.style.webkitTextFillColor = '';
+            el.style.webkitBackgroundClip = '';
+            el.style.backgroundClip = '';
+
+            if (anim) {
+                // 🎨 Анимированный титул — CSS сам всё сделает
+                el.setAttribute('data-anim', anim);
+                el.style.color = 'transparent';
+                el.style.textShadow = 'none';
+            } else {
+                // Обычный цветной титул
+                el.style.color = val.color || 'var(--gold)';
+                el.style.textShadow = `0 0 10px ${val.color || 'var(--gold)'}`;
+            }
         });
     } else {
-        titleEls.forEach(el => { el.style.display = 'none'; el.textContent = ''; });
+        titleEls.forEach(el => {
+            el.style.display = 'none';
+            el.textContent = '';
+            el.removeAttribute('data-anim');
+        });
     }
 }
 
@@ -56175,6 +56327,19 @@ async function openAddShopItemSheet(category) {
             </div>
         </div>
 
+        <div style="margin-bottom: 10px; display: ${category === 'title' ? 'block' : 'none'};">
+            <label class="field-label">АНИМАЦИЯ ТИТУЛА (только для title)</label>
+            <select class="field-input" id="shopItemAnim" style="padding: 12px;">
+                <option value="">— Без анимации —</option>
+                <option value="shimmer">💫 Shimmer (золотой блик)</option>
+                <option value="rainbow">🌈 Rainbow (радуга)</option>
+                <option value="fire">🔥 Fire (огненный)</option>
+                <option value="ice">❄️ Ice (ледяной)</option>
+                <option value="glitch">⚡ Glitch (киберпанк)</option>
+                <option value="pulse">💓 Pulse (пульсация)</option>
+            </select>
+        </div>
+
         <button class="profile-action-btn save"
                 id="shopItemSaveBtn"
                 onclick="saveShopItem('${category}', null)"
@@ -56254,6 +56419,19 @@ async function openEditShopItemSheet(itemId) {
             <label style="display: block; font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-bottom: 6px;">VALUE (JSON)</label>
             <textarea class="field-input" id="shopItemValue" style="min-height: 100px; font-family: 'Courier New', monospace; font-size: 12px;">${escapeHtml(JSON.stringify(item.value || {}, null, 2))}</textarea>
         </div>
+
+<div style="margin-bottom: 10px; display: ${item.category === 'title' ? 'block' : 'none'};">
+    <label class="field-label">АНИМАЦИЯ ТИТУЛА (только для title)</label>
+    <select class="field-input" id="shopItemAnim" style="padding: 12px;">
+        <option value="" ${!item.title_animation ? 'selected' : ''}>— Без анимации —</option>
+        <option value="shimmer" ${item.title_animation === 'shimmer' ? 'selected' : ''}>💫 Shimmer</option>
+        <option value="rainbow" ${item.title_animation === 'rainbow' ? 'selected' : ''}>🌈 Rainbow</option>
+        <option value="fire" ${item.title_animation === 'fire' ? 'selected' : ''}>🔥 Fire</option>
+        <option value="ice" ${item.title_animation === 'ice' ? 'selected' : ''}>❄️ Ice</option>
+        <option value="glitch" ${item.title_animation === 'glitch' ? 'selected' : ''}>⚡ Glitch</option>
+        <option value="pulse" ${item.title_animation === 'pulse' ? 'selected' : ''}>💓 Pulse</option>
+    </select>
+</div>
 
         <button class="profile-action-btn save" id="shopItemSaveBtn" onclick="saveShopItem('${item.category}', '${itemId}')">💾 СОХРАНИТЬ</button>
         <button class="sheet-cancel" onclick="closeShopItemSheet()">ОТМЕНА</button>
@@ -56412,6 +56590,11 @@ async function saveShopItem(category, itemId) {
     const rarity = document.getElementById('shopItemRarity')?.value || 'common';
     const valueRaw = document.getElementById('shopItemValue')?.value.trim();
 
+    // 🎨 Анимация титула (только для category === 'title')
+    const titleAnimation = category === 'title'
+        ? (document.getElementById('shopItemAnim')?.value || null)
+        : null;
+
     if (!name || name.length < 2) { showToast('Введи название'); return; }
 
     let value;
@@ -56430,7 +56613,13 @@ async function saveShopItem(category, itemId) {
         if (itemId) {
             // UPDATE
             const { error } = await sb.from('shop_items')
-                .update({ name, price, rarity, value })
+                .update({
+                    name,
+                    price,
+                    rarity,
+                    value,
+                    title_animation: titleAnimation,
+                })
                 .eq('id', itemId);
             if (error) throw error;
             showToast('✅ Товар обновлён');
@@ -56444,6 +56633,7 @@ async function saveShopItem(category, itemId) {
                 price,
                 rarity,
                 value,
+                title_animation: titleAnimation,
                 is_available: true,
                 sort_order: 100,
             });
@@ -56454,7 +56644,6 @@ async function saveShopItem(category, itemId) {
         closeShopItemSheet();
         haptic('medium');
 
-        // Перезагружаем кэш и магазин
         await loadShopItemsCache();
         setTimeout(() => openShop(), 200);
 
@@ -56465,7 +56654,6 @@ async function saveShopItem(category, itemId) {
         btn.textContent = itemId ? '💾 СОХРАНИТЬ' : '✅ ДОБАВИТЬ';
     }
 }
-
 // ============================================================
 // 🗑️ УДАЛЕНИЕ ТОВАРА — полная очистка у всех игроков
 // ============================================================
@@ -61988,6 +62176,97 @@ async function previewCaseItem(itemId) {
 
     document.body.appendChild(overlay);
     haptic('light');
+}
+
+// ============================================================
+// 📸 OCR ПАРСИНГ СКРИНШОТА Standoff 2
+// ============================================================
+async function parseStandoffScreenshot(file) {
+    if (typeof Tesseract === 'undefined') {
+        throw new Error('OCR не загружен');
+    }
+
+    showToast('🔍 Распознаю скриншот...');
+
+    // Сжимаем картинку до разумных размеров
+    const blob = await compressImage(file, 1400, 0.9);
+    const imageUrl = URL.createObjectURL(blob);
+
+    try {
+        const worker = await Tesseract.createWorker('rus+eng', 1, {
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    const pct = Math.round(m.progress * 100);
+                    console.log(`OCR: ${pct}%`);
+                }
+            }
+        });
+
+        // Улучшаем распознавание — цифры и K/D
+        await worker.setParameters({
+            tessedit_char_whitelist: '0123456789:/KDAkdaМАТЧЕЙПОБЕДЫ ',
+            preserve_interword_spaces: '1',
+        });
+
+        const { data: { text } } = await worker.recognize(imageUrl);
+        await worker.terminate();
+
+        URL.revokeObjectURL(imageUrl);
+
+        console.log('📝 OCR распознал:', text);
+
+        return parseStandoffText(text);
+    } catch (e) {
+        URL.revokeObjectURL(imageUrl);
+        throw e;
+    }
+}
+
+function parseStandoffText(text) {
+    const result = {
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+        headshots: 0,
+        score: 0,
+        mvps: 0,
+        raw: text,
+        confidence: 0,
+    };
+
+    // Ищем паттерн "K/D/A" — например "15/8/3" или "15 / 8 / 3"
+    const kdaMatch = text.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*(?:\/\s*(\d{1,2}))?/);
+    if (kdaMatch) {
+        result.kills = parseInt(kdaMatch[1], 10) || 0;
+        result.deaths = parseInt(kdaMatch[2], 10) || 0;
+        result.assists = parseInt(kdaMatch[3], 10) || 0;
+        result.confidence += 40;
+    }
+
+    // Ищем количество хедшотов (обычно рядом со словом HS или ⚡)
+    const hsMatch = text.match(/HS[\s:]*(\d{1,2})/i) 
+                 || text.match(/(\d{1,2})\s*(?:хедшот|headshot)/i);
+    if (hsMatch) {
+        result.headshots = parseInt(hsMatch[1], 10) || 0;
+        result.confidence += 20;
+    }
+
+    // MVP — обычно ✩ или 🏆
+    const mvpMatch = text.match(/MVP[\s:]*(\d{1,2})/i) 
+                  || text.match(/★[\s:]*(\d{1,2})/);
+    if (mvpMatch) {
+        result.mvps = parseInt(mvpMatch[1], 10) || 0;
+        result.confidence += 20;
+    }
+
+    // Общий счёт
+    const scoreMatch = text.match(/(\d{1,2})\s*[:]\s*(\d{1,2})/);
+    if (scoreMatch) {
+        result.score = parseInt(scoreMatch[1], 10) + parseInt(scoreMatch[2], 10);
+        result.confidence += 20;
+    }
+
+    return result;
 }
             
     </script>
