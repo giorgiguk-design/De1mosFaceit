@@ -29538,8 +29538,8 @@ async function renderModeratorPanel() {
     // ============================================================
     // 1. ЗАГРУЗКА ВСЕХ ДАННЫХ
     // ============================================================
-    const [disputedRes, reportsRes, modsRes, bansRes] = await Promise.all([
-        sb.from('game_matches').select('*').eq('result_status', 'disputed').eq('status', 'result'),
+const [disputedRes, reportsRes, modsRes, bansRes] = await Promise.all([
+    sb.from('game_matches').select('*').eq('result_status', 'disputed'),
         sb.from('match_reports').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(50),
         sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until')
             .eq('is_mod', true).order('display_name'),
@@ -39159,10 +39159,23 @@ async function tryFinishMatch(matchId) {
         // 🚨 Разные победители — реальный спор, уходит модератору
         // ═══════════════════════════════════════════════════════════════
         if (match.result_status !== 'disputed') {
-            await sb.from('game_matches').update({
+            const { error: updErr } = await sb.from('game_matches').update({
                 result_status: 'disputed',
                 disputed_at: new Date().toISOString()
             }).eq('id', matchId);
+
+            if (updErr) {
+                console.error('❌ Не удалось поставить disputed:', updErr);
+                // 🔥 Дублируем попытку через RPC (обход RLS)
+                try {
+                    await sb.rpc('mark_match_disputed', { p_match_id: matchId });
+                    console.log('✅ disputed установлен через RPC');
+                } catch (e) {
+                    console.error('❌ RPC тоже упал:', e);
+                }
+            } else {
+                console.log('✅ disputed установлен');
+            }
         }
     } catch (e) {
         console.warn('tryFinishMatch:', e);
@@ -39316,7 +39329,7 @@ async function renderFinishedScreen() {
     const teamB = currentMatch.team_b_players || [];
 
     const isFinished = currentMatch.status === 'finished';
-    const isDisputed = currentMatch.result_status === 'disputed';
+    const isDisputed = currentMatch.result_status === 'disputed';   // ← ДОБАВИТЬ ЭТУ
     const isConfirmed = currentMatch.result_status === 'confirmed';
     const isCancelled = currentMatch.status === 'cancelled';
 
