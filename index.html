@@ -62179,6 +62179,189 @@ async function previewCaseItem(itemId) {
 }
 
 // ============================================================
+// 🎨 ПРЕПРОЦЕССИНГ СКРИНШОТА Standoff 2 (адаптивный)
+// Нормализует любое разрешение под оптимальное для OCR
+// ============================================================
+async function preprocessStandoffImage(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => { img.src = e.target.result; };
+        reader.onerror = reject;
+
+        img.onerror = reject;
+        img.onload = () => {
+            // ============================================================
+            // 🎯 АДАПТИВНАЯ НОРМАЛИЗАЦИЯ РАЗМЕРА
+            // ============================================================
+            // Оптимальный размер для OCR — чтобы длинная сторона была
+            // около 2000-2500px. Это баланс между точностью и скоростью.
+            //
+            // Логика:
+            //   - маленькие скрины (720p) → апскейлим
+            //   - средние (1080p) → апскейлим чуть-чуть
+            //   - большие (2K+) → уменьшаем или оставляем
+            //   - огромные (4K+) → уменьшаем обязательно
+            // ============================================================
+
+            const TARGET_LONG_SIDE = 2200;   // целевая длина длинной стороны
+            const MIN_LONG_SIDE = 1200;      // ниже — точно апскейлим
+            const MAX_CANVAS_PIXELS = 16_000_000; // 16 МП — лимит браузеров
+
+            const srcW = img.width;
+            const srcH = img.height;
+            const longSide = Math.max(srcW, srcH);
+            const shortSide = Math.min(srcW, srcH);
+
+            let scale = 1;
+
+            if (longSide < MIN_LONG_SIDE) {
+                // Маленький скрин (телефон 720p) — увеличиваем x2
+                scale = 2;
+            } else if (longSide < 1600) {
+                // Средний — увеличиваем до TARGET
+                scale = TARGET_LONG_SIDE / longSide;
+                scale = Math.min(scale, 2);
+            } else if (longSide <= TARGET_LONG_SIDE) {
+                // Уже в оптимуме — не трогаем
+                scale = 1;
+            } else {
+                // Большой (2K, 4K) — уменьшаем до TARGET
+                scale = TARGET_LONG_SIDE / longSide;
+            }
+
+            let newW = Math.round(srcW * scale);
+            let newH = Math.round(srcH * scale);
+
+            // 🔥 Защита от превышения лимита canvas
+            const totalPixels = newW * newH;
+            if (totalPixels > MAX_CANVAS_PIXELS) {
+                const downscale = Math.sqrt(MAX_CANVAS_PIXELS / totalPixels);
+                newW = Math.round(newW * downscale);
+                newH = Math.round(newH * downscale);
+                console.warn('⚠️ Ограничил размер canvas из-за лимита пикселей');
+            }
+
+            console.log(`🎨 Препроцессинг: ${srcW}x${srcH} → ${newW}x${newH} (scale ${scale.toFixed(2)})`);
+
+            // ============================================================
+            // СОЗДАЁМ CANVAS И РИСУЕМ
+            // ============================================================
+            const canvas = document.createElement('canvas');
+            canvas.width = newW;
+            canvas.height = newH;
+
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            // Если уменьшаем — используем 'lanczos-подобное' сглаживание
+            // (многоступенчатое уменьшение даёт чётче результат)
+            if (scale < 0.7) {
+                // Двухступенчатое уменьшение: сначала в 2x больше целевого, потом финал
+                const tmpCanvas = document.createElement('canvas');
+                tmpCanvas.width = Math.round(newW * 1.4);
+                tmpCanvas.height = Math.round(newH * 1.4);
+                const tmpCtx = tmpCanvas.getContext('2d');
+                tmpCtx.imageSmoothingEnabled = true;
+                tmpCtx.imageSmoothingQuality = 'high';
+                tmpCtx.drawImage(img, 0, 0, tmpCanvas.width, tmpCanvas.height);
+
+                ctx.drawImage(tmpCanvas, 0, 0, newW, newH);
+            } else {
+                // Прямая отрисовка (апскейл или small downscale)
+                ctx.drawImage(img, 0, 0, newW, newH);
+            }
+
+            // ============================================================
+            // ГРАДИЕНТ И БИНАРИЗАЦИЯ (без изменений)
+            // ============================================================
+            const imageData = ctx.getImageData(0, 0, newW, newH);
+            const data = imageData.data;
+
+            let min = 255, max = 0;
+            const gray = new Uint8Array(newW * newH);
+
+            // Grayscale
+            for (let i = 0; i < data.length; i += 4) {
+                const g = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+                gray[i / 4] = g;
+                if (g < min) min = g;
+                if (g > max) max = g;
+            }
+
+            // Растягиваем контраст
+            const range = Math.max(1, max - min);
+            const CONTRAST_BOOST = 1.8;
+
+            for (let i = 0; i < gray.length; i++) {
+                let v = ((gray[i] - min) / range) * 255;
+                v = 128 + (v - 128) * CONTRAST_BOOST;
+                v = Math.max(0, Math.min(255, v));
+                gray[i] = v;
+            }
+
+            // Otsu threshold
+            const histogram = new Array(256).fill(0);
+            for (let i = 0; i < gray.length; i++) histogram[gray[i]]++;
+
+            let sum = 0;
+            const total = gray.length;
+            for (let i = 0; i < 256; i++) sum += i * histogram[i];
+
+            let sumB = 0, wB = 0, maxVariance = 0, threshold = 128;
+            for (let t = 0; t < 256; t++) {
+                wB += histogram[t];
+                if (wB === 0) continue;
+                const wF = total - wB;
+                if (wF === 0) break;
+                sumB += t * histogram[t];
+                const mB = sumB / wB;
+                const mF = (sum - sumB) / wF;
+                const variance = wB * wF * (mB - mF) * (mB - mF);
+                if (variance > maxVariance) {
+                    maxVariance = variance;
+                    threshold = t;
+                }
+            }
+
+            // Определяем: фон тёмный или светлый
+            let darkCount = 0;
+            for (let i = 0; i < 128; i++) darkCount += histogram[i];
+            const isDarkBg = darkCount > total / 2;
+
+            // Бинаризация
+            for (let i = 0; i < gray.length; i++) {
+                let v = gray[i];
+                if (isDarkBg) {
+                    v = v > threshold ? 0 : 255;
+                } else {
+                    v = v < threshold ? 0 : 255;
+                }
+                const idx = i * 4;
+                data[idx] = v;
+                data[idx + 1] = v;
+                data[idx + 2] = v;
+                data[idx + 3] = 255;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            console.log(`🎨 Готово: порог ${threshold}, фон ${isDarkBg ? 'тёмный' : 'светлый'}`);
+
+            canvas.toBlob(
+                (blob) => blob ? resolve(blob) : reject(new Error('Blob error')),
+                'image/png',
+                0.92
+            );
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+// ============================================================
 // 📸 OCR ПАРСИНГ СКРИНШОТА Standoff 2
 // ============================================================
 async function parseStandoffScreenshot(file) {
@@ -62186,38 +62369,45 @@ async function parseStandoffScreenshot(file) {
         throw new Error('OCR не загружен');
     }
 
-    showToast('🔍 Распознаю скриншот...');
+    showToast('🔍 Обрабатываю изображение...');
 
-    // Сжимаем картинку до разумных размеров
-    const blob = await compressImage(file, 1400, 0.9);
-    const imageUrl = URL.createObjectURL(blob);
+    // ============================================================
+    // 🎨 ПРЕПРОЦЕССИНГ — улучшаем контраст перед OCR
+    // ============================================================
+    const processedBlob = await preprocessStandoffImage(file);
+
+    // ============================================================
+    // 🤖 ЗАПУСКАЕМ TESSERACT
+    // ============================================================
+    showToast('📖 Распознаю текст (5-15 сек)...');
 
     try {
         const worker = await Tesseract.createWorker('rus+eng', 1, {
             logger: m => {
                 if (m.status === 'recognizing text') {
                     const pct = Math.round(m.progress * 100);
-                    console.log(`OCR: ${pct}%`);
+                    if (pct % 20 === 0) console.log(`OCR: ${pct}%`);
                 }
             }
         });
 
-        // Улучшаем распознавание — цифры и K/D
+        // 🔥 Без whitelist — читаем всё, потом фильтруем сами
+        // Это важно, потому что ники могут содержать любые символы
         await worker.setParameters({
-            tessedit_char_whitelist: '0123456789:/KDAkdaМАТЧЕЙПОБЕДЫ ',
+            tessedit_pageseg_mode: '6',  // Единый блок текста
             preserve_interword_spaces: '1',
         });
 
+        const imageUrl = URL.createObjectURL(processedBlob);
         const { data: { text } } = await worker.recognize(imageUrl);
-        await worker.terminate();
-
         URL.revokeObjectURL(imageUrl);
 
-        console.log('📝 OCR распознал:', text);
+        await worker.terminate();
+
+        console.log('📝 OCR распознал:\n', text);
 
         return parseStandoffText(text);
     } catch (e) {
-        URL.revokeObjectURL(imageUrl);
         throw e;
     }
 }
@@ -62232,43 +62422,160 @@ function parseStandoffText(text) {
         mvps: 0,
         raw: text,
         confidence: 0,
+        // 🔥 Новые поля
+        isWin: false,
+        matchId: null,
+        scoreA: 0,    // счёт спецназа
+        scoreB: 0,    // счёт террористов
     };
 
-    // Ищем паттерн "K/D/A" — например "15/8/3" или "15 / 8 / 3"
-    const kdaMatch = text.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*(?:\/\s*(\d{1,2}))?/);
-    if (kdaMatch) {
-        result.kills = parseInt(kdaMatch[1], 10) || 0;
-        result.deaths = parseInt(kdaMatch[2], 10) || 0;
-        result.assists = parseInt(kdaMatch[3], 10) || 0;
-        result.confidence += 40;
+    // Нормализуем: убираем лишние пробелы, кириллицу можно оставить
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const flat = lines.join(' ');
+
+    // ============================================================
+    // 1️⃣ ID МАТЧА: "МАТЧ №1234567890"
+    // ============================================================
+    const matchIdMatch = flat.match(/МАТЧ\s*[№#]?\s*(\d{7,})/i) 
+                      || flat.match(/MATCH\s*[№#]?\s*(\d{7,})/i);
+    if (matchIdMatch) {
+        result.matchId = matchIdMatch[1];
+        result.confidence += 15;
     }
 
-    // Ищем количество хедшотов (обычно рядом со словом HS или ⚡)
-    const hsMatch = text.match(/HS[\s:]*(\d{1,2})/i) 
-                 || text.match(/(\d{1,2})\s*(?:хедшот|headshot)/i);
-    if (hsMatch) {
-        result.headshots = parseInt(hsMatch[1], 10) || 0;
-        result.confidence += 20;
+    // ============================================================
+    // 2️⃣ ПОБЕДА / ПОРАЖЕНИЕ
+    // ============================================================
+    if (/ПОБЕДА|ПЕРЕМОГА|VICTORY|ПОБЕД/i.test(flat)) {
+        result.isWin = true;
+        result.confidence += 10;
     }
 
-    // MVP — обычно ✩ или 🏆
-    const mvpMatch = text.match(/MVP[\s:]*(\d{1,2})/i) 
-                  || text.match(/★[\s:]*(\d{1,2})/);
-    if (mvpMatch) {
-        result.mvps = parseInt(mvpMatch[1], 10) || 0;
-        result.confidence += 20;
-    }
-
-    // Общий счёт
-    const scoreMatch = text.match(/(\d{1,2})\s*[:]\s*(\d{1,2})/);
+    // ============================================================
+    // 3️⃣ СЧЁТ МАТЧА: "8 ... 6" (СПЕЦНАЗ победил со счётом 8:6)
+    // Ищем паттерн "ПОБЕДА 8 ... 6 ТЕРРОРИСТЫ"
+    // ============================================================
+    const scoreMatch = flat.match(/(?:ПОБЕДА|ПЕРЕМОГА)?\s*(\d{1,2})\s+(\d{1,2})\s+(?:ТЕРРОРИСТ|Terrorist)/i);
     if (scoreMatch) {
-        result.score = parseInt(scoreMatch[1], 10) + parseInt(scoreMatch[2], 10);
+        result.scoreA = parseInt(scoreMatch[1], 10) || 0;
+        result.scoreB = parseInt(scoreMatch[2], 10) || 0;
         result.confidence += 20;
     }
+
+    // ============================================================
+    // 4️⃣ ПОИСК СТРОК ИГРОКОВ
+    // ============================================================
+    // Паттерн строки игрока после OCR:
+    // "1 ник какой-то 16 0 6 38 33" — У П С Счет Пинг
+    // Или "2 FirstFire45 2 0 11 6 42"
+    //
+    // Значит: [цифра номера] [имя] [цифры: У П С Счет Пинг]
+    //
+    // Ищем ВСЕ строки с 4-5 цифрами подряд в конце
+    const playerRows = [];
+
+    lines.forEach((line, idx) => {
+        // Ищем 4+ числа, идущих подряд (разделённые пробелами)
+        // Возможные окончания: 
+        // - "16 0 6 38 33" (kills, assists, deaths, score, ping) — 5 чисел
+        // - "11 0 9 27 48" — 5 чисел
+        const numbersMatch = line.match(/(\d{1,3})(?:\s+(\d{1,3})){3,4}\s*$/);
+        if (!numbersMatch) return;
+
+        // Извлекаем все числа с конца строки
+        const trailingNumbers = line.match(/(\d{1,3})(?:\s+(\d{1,3})){3,4}\s*$/);
+        if (!trailingNumbers) return;
+
+        const numsStr = trailingNumbers[0].trim();
+        const nums = numsStr.split(/\s+/).map(n => parseInt(n, 10));
+
+        if (nums.length < 4) return;
+
+        // Определяем структуру: 
+        // Standoff формат: У(убийства) П(помощи) С(смерти) Счет Пинг
+        // Т.е. последние 5 чисел — это stats. Если 4 числа — без ping.
+        let kills, assists, deaths, score, ping;
+
+        if (nums.length === 5) {
+            [kills, assists, deaths, score, ping] = nums;
+        } else if (nums.length === 4) {
+            [kills, assists, deaths, score] = nums;
+        } else {
+            return;
+        }
+
+        // Имя = текст между номером строки и первым числом stats
+        // Убираем начальные номера (1, 2) и звёзды
+        let nameRaw = line.substring(0, line.indexOf(numsStr));
+        nameRaw = nameRaw.replace(/^\d+\s+/, '').trim(); // убираем "1 "
+        // Убираем звёзды, ромбы, эмодзи
+        nameRaw = nameRaw.replace(/[⭐★✦✧✩✪✫✬✭✮✯◆◇◈]/g, '').trim();
+
+        // Определяем, сколько звёзд (MVP indicator)
+        const starsMatch = line.match(/([⭐★✦✧✩✪✫✬✭✮✯]+)/);
+        const stars = starsMatch ? starsMatch[1].length : 0;
+
+        playerRows.push({
+            lineIdx: idx,
+            name: nameRaw,
+            kills,
+            assists,
+            deaths,
+            score,
+            ping: ping || 0,
+            stars,
+        });
+    });
+
+    console.log('🎯 Найдено строк игроков:', playerRows.length);
+    playerRows.forEach(p => console.log(`  #${p.lineIdx}: ${p.name} — ${p.kills}/${p.deaths}/${p.assists}, score=${p.score}, stars=${p.stars}`));
+
+    // ============================================================
+    // 5️⃣ ОПРЕДЕЛЯЕМ МОЮ СТРОКУ
+    // ============================================================
+    // Ищем моё имя в списке (по нику из currentUser)
+    const myName = (currentUser?.display_name || '').toLowerCase().trim();
+    let myRow = null;
+
+    if (myName) {
+        // Точное совпадение
+        myRow = playerRows.find(p => p.name.toLowerCase().trim() === myName);
+        
+        // Или частичное (имя может обрезаться OCR)
+        if (!myRow && myName.length >= 3) {
+            myRow = playerRows.find(p => {
+                const pName = p.name.toLowerCase().trim();
+                return pName.includes(myName.slice(0, 5)) 
+                    || myName.includes(pName.slice(0, 5));
+            });
+        }
+    }
+
+    // Если не нашли по нику — берём первого с наибольшим K/D (наверное я MVP)
+    if (!myRow && playerRows.length > 0) {
+        console.warn('⚠️ Не нашёл мою строку по нику, беру лучшего');
+        myRow = [...playerRows].sort((a, b) => b.kills - a.kills)[0];
+    }
+
+    // ============================================================
+    // 6️⃣ ЗАПОЛНЯЕМ РЕЗУЛЬТАТ
+    // ============================================================
+    if (myRow) {
+        result.kills = myRow.kills;
+        result.deaths = myRow.deaths;
+        result.assists = myRow.assists;
+        result.score = myRow.score;
+        result.mvps = myRow.stars;
+        result.confidence += 40;
+        console.log('✅ Нашёл мою строку:', myRow);
+    } else {
+        console.warn('❌ Не нашёл мою строку в таблице');
+    }
+
+    result.confidence = Math.min(result.confidence, 100);
 
     return result;
-}
-            
+}            
     </script>
 
 <!-- ============================================================ -->
