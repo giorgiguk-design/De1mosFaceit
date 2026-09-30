@@ -35228,6 +35228,12 @@ async function sendBotMessage() {
         return;
     }
 
+    // 🔥 ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: точно ли мы в чате бота
+    if (!currentChat || currentChat.type !== 'bot') {
+        console.warn('🚫 sendBotMessage вызван не из чата бота');
+        return;
+    }
+
     const input = document.getElementById('chatInput');
     if (!input) return;
 
@@ -35259,8 +35265,7 @@ async function sendBotMessage() {
         if (typeof SFX !== 'undefined') SFX.play('send');
 
         // 🔥 Раскидываем через Telegram-бота (в фоне)
-        broadcastToTelegram(text).catch(e => console.warn('broadcast TG:', e));
-
+	broadcastToTelegram(text, 'bot').catch(e => console.warn('broadcast TG:', e));
     } catch (e) {
         console.error('sendBotMessage:', e);
         showToast('❌ ' + (e.message || 'Ошибка'));
@@ -35271,7 +35276,17 @@ async function sendBotMessage() {
 }
 
 // Раскидываем сообщение всем в Telegram-ботовую ЛС
-async function broadcastToTelegram(text) {
+async function broadcastToTelegram(text, sourceChatType) {
+    // 🔥 ЖЁСТКАЯ ЗАЩИТА: рассылка ТОЛЬКО из чата бота
+    if (sourceChatType !== 'bot') {
+        console.warn('🚫 broadcastToTelegram вызван не из чата бота → игнорирую');
+        return;
+    }
+    if (!isCurrentUserAdmin()) {
+        console.warn('🚫 broadcastToTelegram от не-админа → игнорирую');
+        return;
+    }
+
     try {
         const { data: users } = await sb.from('users')
             .select('telegram_id')
@@ -35305,31 +35320,76 @@ window.sendBotMessage = sendBotMessage;
 
 async function sendMessage() {
     if (!currentChat || !currentUser) return;
+
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
+
+    // 🔥 ЖЁСТКАЯ ПРОВЕРКА ТИПА ЧАТА
+    const chatType = currentChat.type;   // 'bot' | 'dm' | 'club'
+
+    // 🚫 В чате бота — только через sendBotMessage (там своя логика рассылки)
+    if (chatType === 'bot') {
+        console.warn('⚠️ sendMessage: бот-чат должен идти через sendBotMessage');
+        input.value = text; // возвращаем
+        return;
+    }
+
     try {
         const payload = {
             sender_id: currentUser.telegram_id,
             text,
-            club_id: currentChat.type === 'club' ? currentChat.id : null,
-            recipient_id: currentChat.type === 'dm' ? currentChat.id : null,
-            read_at: null
+            club_id: chatType === 'club' ? currentChat.id : null,
+            recipient_id: chatType === 'dm' ? currentChat.id : null,
+            read_at: null,
         };
+
         if (replyTo) {
             payload.reply_to_id = parseInt(replyTo.id);
             payload.reply_to_name = replyTo.sender_name;
             payload.reply_to_text = replyTo.text;
         }
+
         const { error } = await sb.from('messages').insert(payload);
         if (error) throw error;
-        if (currentChat.type === 'dm') {
-            notify(currentChat.id, `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`, 'message');
+
+        // 🔥 УВЕДОМЛЕНИЕ — ТОЛЬКО ПОЛУЧАТЕЛЮ, никому больше
+        if (chatType === 'dm') {
+            await notify(
+                currentChat.id,
+                `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`,
+                'message'
+            );
         }
+
+        // 🔥 Клан-чат — уведомляем ТОЛЬКО членов клана
+        if (chatType === 'club') {
+            try {
+                const { data: members } = await sb.from('club_members')
+                    .select('telegram_id')
+                    .eq('club_id', currentChat.id);
+
+                const ids = (members || [])
+                    .map(m => m.telegram_id)
+                    .filter(id => Number(id) !== Number(currentUser.telegram_id));
+
+                // Ограничим — не более 30 уведомлений за раз
+                const limited = ids.slice(0, 30);
+                for (const id of limited) {
+                    notify(id,
+                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 100))}`,
+                        'message'
+                    ).catch(() => {});
+                }
+            } catch (e) {
+                console.warn('club chat notify:', e);
+            }
+        }
+
         cancelReply();
 
-        // 🔥 После ответа — убираем разделитель «Непрочитанные»
+        // Убираем разделитель «Непрочитанные»
         const divider = document.getElementById('unreadDivider');
         if (divider) {
             divider.style.transition = 'opacity 0.3s ease, height 0.3s ease, margin 0.3s ease';
@@ -35338,9 +35398,11 @@ async function sendMessage() {
             divider.style.margin = '0';
             setTimeout(() => divider.remove(), 300);
         }
-    } catch (e) { console.error(e); showToast('Ошибка отправки'); }
+    } catch (e) {
+        console.error('sendMessage:', e);
+        showToast('Ошибка отправки');
+    }
 }
-
         function openImageView(url) {
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;padding:20px;cursor:pointer;';
