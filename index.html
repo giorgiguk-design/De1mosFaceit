@@ -64989,6 +64989,68 @@ function installAutoHooks() {
         parent.appendChild(span);
     }, true); // capture: true — обязательно, чтобы ловить ошибки картинок
 })();
+
+// ============================================================
+// 📸 OCR ОБРАБОТЧИК ЗАГРУЗКИ
+// ============================================================
+document.addEventListener('change', async (e) => {
+    if (e.target?.id !== 'ocrScreenshotInput') return;
+
+    console.log('🎯 OCR handler: файл выбран');
+
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) {
+        console.warn('🎯 OCR: файл не выбран');
+        return;
+    }
+    if (!currentMatch || !currentUser) {
+        console.warn('🎯 OCR: нет currentMatch или currentUser');
+        showToast('⚠️ Матч не активен');
+        return;
+    }
+
+    console.log('🎯 OCR: старт обработки', file.name, file.size);
+
+    try {
+        // 1. Загружаем скриншот в storage
+        const blob = await compressImage(file, 1400, 0.88);
+        const path = `${currentMatch.id}/${currentUser.telegram_id}_${Date.now()}.jpg`;
+
+        const { error: upErr } = await sb.storage.from(BUCKETS.matches)
+            .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from(BUCKETS.matches).getPublicUrl(path);
+
+        const me = Number(currentUser.telegram_id);
+        const myTeam = (currentMatch.team_a_players || []).some(p => Number(p.telegram_id) === me)
+            ? 'A' : 'B';
+
+        // 2. Сохраняем скриншот
+        await sb.from('match_screenshots').upsert({
+            match_id: currentMatch.id,
+            uploader_id: me,
+            team: myTeam,
+            url: urlData.publicUrl,
+            created_at: new Date().toISOString()
+        }, { onConflict: 'match_id,uploader_id' });
+
+        // 3. OCR
+        console.log('🎯 OCR: запуск парсинга...');
+        const stats = await parseStandoffScreenshot(file);
+        console.log('📊 Распознано:', stats);
+
+        // 4. Модалка
+        showOcrResultModal(stats, currentMatch.id);
+
+    } catch (err) {
+        console.error('❌ OCR upload error:', err);
+        showToast('❌ ' + (err.message || 'Ошибка'));
+    }
+}, true);
+
+console.log('✅ OCR handler зарегистрирован');
 </script>
 
 
