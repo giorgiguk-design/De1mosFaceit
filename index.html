@@ -30678,13 +30678,13 @@ async function makeModerator() {
         const targetId = userData[0].telegram_id;
 
         // 🔥 Используем admin_appoint с p_make_admin = false
-        const { data: result, error: rpcErr } = await sb.rpc('admin_appoint', {
-            p_appointer_id: currentUser.telegram_id,
-            p_target_id: targetId,
-            p_perms: '{}'::jsonb,      // права можно потом выдать через модалку
-            p_notes: 'Назначен из панели',
-            p_make_admin: false
-        });
+const { data: result, error: rpcErr } = await sb.rpc('admin_appoint', {
+    p_appointer_id: currentUser.telegram_id,
+    p_target_id: targetId,
+    p_perms: {},               // ✅ просто пустой объект
+    p_notes: 'Назначен из панели',
+    p_make_admin: false
+});
 
         if (rpcErr) throw rpcErr;
         if (!result?.ok) throw new Error(result?.error || 'Не удалось назначить');
