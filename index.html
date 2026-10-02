@@ -30678,22 +30678,22 @@ async function revokeModerator(userId) {
 }
 
 // ============================================================
-// 👑 СНЯТИЕ АДМИНА (только владелец)
+// 👑 СНЯТИЕ АДМИНА / МОДЕРАТОРА (только владелец)
 // ============================================================
 async function revokeAdmin(userId) {
     if (!currentUser?.is_admin) {
         showToast('❌ Только владелец может снимать админов');
         return;
     }
-    if (!confirm('Снять права АДМИНА? Полный доступ будет удалён.')) return;
+    if (!confirm('Снять ВСЕ права с игрока?')) return;
 
     try {
-        // 1. Убираем флаг is_admin
+        // 1. Убираем флаги
         await sb.from('users')
-            .update({ is_admin: false })
+            .update({ is_admin: false, is_mod: false })
             .eq('telegram_id', userId);
 
-        // 2. Полностью очищаем права в admin_permissions
+        // 2. Полностью очищаем права
         await sb.from('admin_permissions')
             .delete()
             .eq('telegram_id', userId);
@@ -30705,14 +30705,14 @@ async function revokeAdmin(userId) {
             p_target_id: userId
         }).catch(() => {});
 
-        // 4. Уведомляем бывшего админа
+        // 4. Уведомляем
         await notify(userId,
-            `👑 Твои права <b>администратора</b> сняты.`,
+            `👑 Твои права администрации сняты.`,
             null,
             { force: true }
         ).catch(() => {});
 
-        showToast('✅ Права админа сняты');
+        showToast('✅ Права сняты');
         haptic('medium');
         renderModeratorPanel();
     } catch (e) {
@@ -63086,6 +63086,8 @@ function parseStandoffText(text) {
 // ============================================================
 // 👑 МОДАЛКА: НАЗНАЧИТЬ / РЕДАКТИРОВАТЬ АДМИНА
 // ============================================================
+let _admTargetType = 'mod';   // 🔥 глобальное состояние: 'mod' или 'admin'
+
 async function openAdminAppointModal(targetId = null) {
     if (!currentUser?.is_admin && !(await hasPerm('manage_admins'))) {
         showToast('❌ Нет прав');
@@ -63097,17 +63099,22 @@ async function openAdminAppointModal(targetId = null) {
     // Если targetId — загружаем существующие права
     let existing = null;
     let userData = null;
+    let userIsAdmin = false;
 
     if (targetId) {
         const { data: u } = await sb.from('users')
-            .select('telegram_id, display_name, custom_avatar, photo_url')
+            .select('telegram_id, display_name, custom_avatar, photo_url, is_admin, is_mod')
             .eq('telegram_id', targetId).single();
         userData = u;
+        userIsAdmin = u?.is_admin === true;
 
         const { data: perm } = await sb.from('admin_permissions')
             .select('*').eq('telegram_id', targetId).maybeSingle();
         existing = perm;
     }
+
+    // 🔥 Устанавливаем тип по умолчанию
+    _admTargetType = userIsAdmin ? 'admin' : 'mod';
 
     const PERMS = [
         { key: 'ban',               label: '🚫 Банить игроков',        desc: 'Временный бан от матчей' },
@@ -63136,6 +63143,8 @@ async function openAdminAppointModal(targetId = null) {
             : (userData.display_name || 'U')[0].toUpperCase())
         : '➕';
 
+    const isAdminSelected = _admTargetType === 'admin';
+
     overlay.innerHTML = `
         <div class="player-modal-inner" style="max-width: 520px;">
             <button class="player-modal-close" onclick="document.getElementById('adminAppointModal').remove()">✕</button>
@@ -63161,11 +63170,52 @@ async function openAdminAppointModal(targetId = null) {
             `}
 
             <div id="adminPermsForm" style="${targetId ? '' : 'display:none;'}">
-                <div style="font-size:10px;color:var(--hint);font-weight:900;letter-spacing:1.5px;margin-bottom:10px;">
-                    ПРАВА ДОСТУПА
+
+                <!-- 🔥 ВЫБОР ТИПА ДОСТУПА -->
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:10px;color:var(--hint);font-weight:900;letter-spacing:1.5px;margin-bottom:10px;">
+                        ТИП ДОСТУПА
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <button type="button" id="admTypeMod" onclick="selectAdminType('mod')"
+                                style="padding:14px 12px;
+                                       background:${!_admTargetType || _admTargetType === 'mod' ? 'linear-gradient(135deg,rgba(167,139,250,0.20),rgba(167,139,250,0.05))' : 'rgba(255,255,255,0.04)'};
+                                       border:1.5px solid ${_admTargetType === 'mod' ? '#a78bfa' : 'var(--border)'};
+                                       border-radius:12px;
+                                       color:${_admTargetType === 'mod' ? '#a78bfa' : 'var(--hint)'};
+                                       font-family:inherit;font-size:12px;cursor:pointer;text-align:left;
+                                       box-shadow:${_admTargetType === 'mod' ? '0 0 18px rgba(167,139,250,0.35)' : 'none'};
+                                       transition:all 0.2s ease;">
+                            <div style="font-size:18px;margin-bottom:4px;">⭐</div>
+                            <div style="font-weight:900;letter-spacing:0.5px;">МОДЕРАТОР</div>
+                            <div style="font-size:9.5px;opacity:0.75;margin-top:4px;line-height:1.4;">Только отмеченные права</div>
+                        </button>
+                        <button type="button" id="admTypeAdmin" onclick="selectAdminType('admin')"
+                                style="padding:14px 12px;
+                                       background:${_admTargetType === 'admin' ? 'linear-gradient(135deg,rgba(217,171,90,0.25),rgba(217,171,90,0.05))' : 'rgba(255,255,255,0.04)'};
+                                       border:1.5px solid ${_admTargetType === 'admin' ? '#ffd700' : 'var(--border)'};
+                                       border-radius:12px;
+                                       color:${_admTargetType === 'admin' ? '#ffd700' : 'var(--hint)'};
+                                       font-family:inherit;font-size:12px;cursor:pointer;text-align:left;
+                                       box-shadow:${_admTargetType === 'admin' ? '0 0 18px rgba(217,171,90,0.4)' : 'none'};
+                                       transition:all 0.2s ease;">
+                            <div style="font-size:18px;margin-bottom:4px;">👑</div>
+                            <div style="font-weight:900;letter-spacing:0.5px;">АДМИН</div>
+                            <div style="font-size:9.5px;opacity:0.75;margin-top:4px;line-height:1.4;">Полный доступ ко всему</div>
+                        </button>
+                    </div>
+                    <div id="admTypeHint" style="font-size:10.5px;color:var(--hint);margin-top:8px;line-height:1.5;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;">
+                        ${_admTargetType === 'admin'
+                            ? '⚠️ <b style="color:#ffd700;">Админ</b> получает ПОЛНЫЙ доступ ко всем функциям, даже если галочки ниже не отмечены.'
+                            : '⭐ <b style="color:#a78bfa;">Модератор</b> получает только те права, что ты отметишь ниже.'}
+                    </div>
                 </div>
 
-                <div style="display:flex;flex-direction:column;gap:6px;max-height:45vh;overflow-y:auto;margin-bottom:14px;">
+                <div style="font-size:10px;color:var(--hint);font-weight:900;letter-spacing:1.5px;margin-bottom:10px;">
+                    ПРАВА ДОСТУПА ${_admTargetType === 'admin' ? '(игнорируются для админа)' : ''}
+                </div>
+
+                <div id="admPermsList" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;margin-bottom:14px;${_admTargetType === 'admin' ? 'opacity:0.4;pointer-events:none;' : ''}">
                     ${PERMS.map(p => `
                         <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;cursor:pointer;user-select:none;">
                             <input type="checkbox" data-perm="${p.key}"
@@ -63188,7 +63238,7 @@ async function openAdminAppointModal(targetId = null) {
 
                 <button class="profile-action-btn save"
                         onclick="submitAdminAppoint(${targetId || 'null'})">
-                    ✅ СОХРАНИТЬ ПРАВА
+                    ✅ СОХРАНИТЬ
                 </button>
 
                 ${existing && existing.is_active ? `
@@ -63209,6 +63259,50 @@ async function openAdminAppointModal(targetId = null) {
 
     document.body.appendChild(overlay);
 }
+
+// 🔥 Переключение типа модератор / админ
+function selectAdminType(type) {
+    _admTargetType = type;
+
+    const modBtn = document.getElementById('admTypeMod');
+    const admBtn = document.getElementById('admTypeAdmin');
+    const hint = document.getElementById('admTypeHint');
+    const permsList = document.getElementById('admPermsList');
+
+    if (type === 'mod') {
+        modBtn.style.background = 'linear-gradient(135deg,rgba(167,139,250,0.20),rgba(167,139,250,0.05))';
+        modBtn.style.borderColor = '#a78bfa';
+        modBtn.style.color = '#a78bfa';
+        modBtn.style.boxShadow = '0 0 18px rgba(167,139,250,0.35)';
+
+        admBtn.style.background = 'rgba(255,255,255,0.04)';
+        admBtn.style.borderColor = 'var(--border)';
+        admBtn.style.color = 'var(--hint)';
+        admBtn.style.boxShadow = 'none';
+
+        hint.innerHTML = '⭐ <b style="color:#a78bfa;">Модератор</b> получает только те права, что ты отметишь ниже.';
+        permsList.style.opacity = '1';
+        permsList.style.pointerEvents = 'auto';
+    } else {
+        admBtn.style.background = 'linear-gradient(135deg,rgba(217,171,90,0.25),rgba(217,171,90,0.05))';
+        admBtn.style.borderColor = '#ffd700';
+        admBtn.style.color = '#ffd700';
+        admBtn.style.boxShadow = '0 0 18px rgba(217,171,90,0.4)';
+
+        modBtn.style.background = 'rgba(255,255,255,0.04)';
+        modBtn.style.borderColor = 'var(--border)';
+        modBtn.style.color = 'var(--hint)';
+        modBtn.style.boxShadow = 'none';
+
+        hint.innerHTML = '⚠️ <b style="color:#ffd700;">Админ</b> получает ПОЛНЫЙ доступ ко всем функциям, даже если галочки ниже не отмечены.';
+        permsList.style.opacity = '0.4';
+        permsList.style.pointerEvents = 'none';
+    }
+
+    haptic('light');
+}
+
+window.selectAdminType = selectAdminType;
 
 // ---- Проверка прав ----
 async function hasPerm(permName) {
@@ -63290,19 +63384,21 @@ async function submitAdminAppoint(targetId) {
     });
 
     const notes = document.getElementById('adminNotes')?.value.trim() || null;
+    const makeAdmin = _admTargetType === 'admin';
 
     try {
         const { data, error } = await sb.rpc('admin_appoint', {
             p_appointer_id: currentUser.telegram_id,
             p_target_id: targetId,
             p_perms: perms,
-            p_notes: notes
+            p_notes: notes,
+            p_make_admin: makeAdmin
         });
 
         if (error) throw error;
         if (!data?.ok) throw new Error(data?.error || 'Ошибка');
 
-        showToast('✅ Права сохранены');
+        showToast(makeAdmin ? '👑 Назначен админом' : '⭐ Назначен модератором');
         haptic('medium');
         document.getElementById('adminAppointModal')?.remove();
         renderModeratorPanel();
