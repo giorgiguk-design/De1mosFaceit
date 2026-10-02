@@ -28562,9 +28562,6 @@ async function openCaseCategoryAdd(caseId, category) {
         showToast('❌ ' + itemsRes.error.message);
         return;
     }
-    if (inCaseRes.error) {
-        console.warn('openCaseCategoryAdd case_items:', inCaseRes.error);
-    }
 
     const items = itemsRes.data || [];
     const inCase = new Set((inCaseRes.data || []).map(e => e.item_id));
@@ -28600,7 +28597,12 @@ async function openCaseCategoryAdd(caseId, category) {
     sheet.style.maxHeight = '92vh';
     sheet.style.overflowY = 'auto';
 
-    const selected = new Set();
+    // 🔥 Уникальный ключ для хранения выбора этой категории
+    const selKey = `${caseId}:${category}`;
+    window._caseAddSelected = window._caseAddSelected || {};
+    window._caseAddSelected[selKey] = new Set(
+        items.filter(i => inCase.has(i.id)).map(i => i.id)
+    );
 
     sheet.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
@@ -28618,7 +28620,7 @@ async function openCaseCategoryAdd(caseId, category) {
                 </div>
             </div>
             <button class="sheet-cancel"
-                    onclick="toggleAllCaseItems(true)"
+                    onclick="toggleAllCaseItems(true, '${caseId}', '${category}')"
                     style="width: 40px; height: 40px; padding: 0; flex-shrink: 0;">
                 ✓
             </button>
@@ -28626,19 +28628,19 @@ async function openCaseCategoryAdd(caseId, category) {
 
         <div style="max-height: 60vh; overflow-y: auto; padding-right: 4px; margin-bottom: 12px;">
             ${items.map(i => {
-                const isInCase = inCase.has(i.id);
+                const isInCaseItem = inCase.has(i.id);
                 const color = rarityColor[i.rarity] || '#9aa7b5';
                 return `
                     <div class="case-admin-item"
                          data-item-id="${i.id}"
-                         data-in-case="${isInCase ? '1' : '0'}"
-                         onclick="toggleCaseItemSelect('${i.id}', this)"
-                         style="cursor: pointer; user-select: none; -webkit-user-select: none; border-left: 3px solid ${isInCase ? 'var(--emerald)' : color};">
+                         data-in-case="${isInCaseItem ? '1' : '0'}"
+                         onclick="toggleCaseItemSelect('${i.id}', this, '${caseId}', '${category}')"
+                         style="cursor: pointer; user-select: none; -webkit-user-select: none; border-left: 3px solid ${isInCaseItem ? 'var(--emerald)' : color};">
                         <div style="
                             width: 22px; height: 22px;
                             border-radius: 6px;
-                            border: 2px solid ${isInCase ? 'var(--emerald)' : 'var(--border-strong)'};
-                            background: ${isInCase ? 'var(--emerald)' : 'transparent'};
+                            border: 2px solid ${isInCaseItem ? 'var(--emerald)' : 'var(--border-strong)'};
+                            background: ${isInCaseItem ? 'var(--emerald)' : 'transparent'};
                             display: flex;
                             align-items: center;
                             justify-content: center;
@@ -28647,14 +28649,14 @@ async function openCaseCategoryAdd(caseId, category) {
                             font-weight: 900;
                             flex-shrink: 0;
                             transition: all 0.18s ease;
-                        " class="case-check-box">${isInCase ? '✓' : ''}</div>
+                        " class="case-check-box">${isInCaseItem ? '✓' : ''}</div>
 
                         <div class="case-admin-item-info">
                             <div class="case-admin-item-name">${escapeHtml(i.name)}</div>
                             <div class="case-admin-item-meta">
                                 <span style="color: ${color}; font-weight: 800; text-transform: uppercase;">${i.rarity}</span>
                                 · 📦 ${i.price || 0}
-                                ${isInCase ? ' · <span style="color: var(--emerald); font-weight: 800;">УЖЕ В КЕЙСЕ</span>' : ''}
+                                ${isInCaseItem ? ' · <span style="color: var(--emerald); font-weight: 800;">В КЕЙСЕ</span>' : ''}
                             </div>
                         </div>
                     </div>
@@ -28664,43 +28666,41 @@ async function openCaseCategoryAdd(caseId, category) {
 
         <button class="profile-action-btn save"
                 id="addCaseSubmitBtn"
-                onclick="applyCaseItems('${caseId}')">
-            💾 ПРИМЕНИТЬ
+                onclick="applyCaseItems('${caseId}', '${category}')">
+            💾 ПРИМЕНИТЬ К КАТЕГОРИИ
         </button>
-        <button class="sheet-cancel" onclick="openAddCaseItemSheet('${caseId}')">← НАЗАД</button>
+        <button class="sheet-cancel" onclick="openAddCaseItemSheet('${caseId}')">← К КАТЕГОРИЯМ</button>
     `;
 
     document.body.appendChild(overlay);
     document.body.appendChild(sheet);
 
-    // Восстанавливаем состояние выбора
-    window._caseAddSelected = new Set(
-        items.filter(i => inCase.has(i.id)).map(i => i.id)
-    );
-    updateCaseSelCount();
-
+    updateCaseSelCount(caseId, category);
     haptic('medium');
 }
 
 // ────────────────────────────────────────────────────────────
 // ТОГГЛ ВЫБОРА
 // ────────────────────────────────────────────────────────────
-function toggleCaseItemSelect(itemId, el) {
+function toggleCaseItemSelect(itemId, el, caseId, category) {
     const box = el.querySelector('.case-check-box');
     if (!box) return;
 
-    const wasInCase = el.dataset.inCase === '1';
+    const selKey = `${caseId}:${category}`;
+    if (!window._caseAddSelected) window._caseAddSelected = {};
+    if (!window._caseAddSelected[selKey]) window._caseAddSelected[selKey] = new Set();
+
+    const sel = window._caseAddSelected[selKey];
     let isSelected;
 
-    if (window._caseAddSelected?.has(itemId)) {
-        window._caseAddSelected.delete(itemId);
+    if (sel.has(itemId)) {
+        sel.delete(itemId);
         isSelected = false;
     } else {
-        window._caseAddSelected.add(itemId);
+        sel.add(itemId);
         isSelected = true;
     }
 
-    // Визуально
     if (isSelected) {
         box.style.background = 'var(--emerald)';
         box.style.borderColor = 'var(--emerald)';
@@ -28711,13 +28711,16 @@ function toggleCaseItemSelect(itemId, el) {
         box.textContent = '';
     }
 
-    updateCaseSelCount();
+    updateCaseSelCount(caseId, category);
     haptic('light');
 }
 
-function toggleAllCaseItems(selectAll) {
-    const sel = window._caseAddSelected;
-    if (!sel) return;
+function toggleAllCaseItems(selectAll, caseId, category) {
+    const selKey = `${caseId}:${category}`;
+    if (!window._caseAddSelected) window._caseAddSelected = {};
+    if (!window._caseAddSelected[selKey]) window._caseAddSelected[selKey] = new Set();
+
+    const sel = window._caseAddSelected[selKey];
 
     document.querySelectorAll('#addCaseItemSheet [data-item-id]').forEach(el => {
         const id = el.dataset.itemId;
@@ -28734,36 +28737,57 @@ function toggleAllCaseItems(selectAll) {
             box.textContent = '';
         }
     });
-    updateCaseSelCount();
+
+    updateCaseSelCount(caseId, category);
 }
 
-function updateCaseSelCount() {
+function updateCaseSelCount(caseId, category) {
     const el = document.getElementById('addCaseSelCount');
-    if (el) el.textContent = String(window._caseAddSelected?.size || 0);
+    if (!el || !caseId || !category) return;
+    const sel = window._caseAddSelected?.[`${caseId}:${category}`];
+    el.textContent = String(sel ? sel.size : 0);
 }
 
 // ────────────────────────────────────────────────────────────
 // ПРИМЕНИТЬ ИЗМЕНЕНИЯ
 // ────────────────────────────────────────────────────────────
-async function applyCaseItems(caseId) {
-    const selected = window._caseAddSelected;
-    if (!selected) return;
+async function applyCaseItems(caseId, category) {
+    if (!category) {
+        showToast('⚠️ Категория не передана');
+        return;
+    }
+
+    const selKey = `${caseId}:${category}`;
+    const selected = window._caseAddSelected?.[selKey];
+    if (!selected) {
+        showToast('⚠️ Нет выбранных предметов');
+        return;
+    }
 
     const btn = document.getElementById('addCaseSubmitBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ СОХРАНЕНИЕ...'; }
 
     try {
-        // Что уже в кейсе
+        // 1. Все id этой категории
+        const { data: catItems } = await sb.from('shop_items')
+            .select('id').eq('category', category);
+        const catIds = new Set((catItems || []).map(i => i.id));
+
+        // 2. Что сейчас в кейсе
         const { data: currentInCase } = await sb.from('case_items')
             .select('item_id').eq('case_id', caseId);
         const currentIds = new Set((currentInCase || []).map(e => e.item_id));
 
-        // Что нужно добавить
-        const toAdd = [...selected].filter(id => !currentIds.has(id));
-        // Что нужно удалить
-        const toRemove = [...currentIds].filter(id => !selected.has(id));
+        // 3. Предметы этой категории, которые сейчас в кейсе
+        const currentInCat = [...currentIds].filter(id => catIds.has(id));
 
-        // Удаляем
+        // 4. Что нужно добавить (выбрано, но ещё не в кейсе)
+        const toAdd = [...selected].filter(id => !currentIds.has(id));
+
+        // 5. Что нужно удалить (в кейсе, но снята галочка)
+        const toRemove = currentInCat.filter(id => !selected.has(id));
+
+        // 6. Удаляем
         if (toRemove.length) {
             await sb.from('case_items')
                 .delete()
@@ -28771,7 +28795,7 @@ async function applyCaseItems(caseId) {
                 .in('item_id', toRemove);
         }
 
-        // Добавляем
+        // 7. Добавляем
         if (toAdd.length) {
             const rows = toAdd.map(id => ({
                 case_id: caseId,
@@ -28784,15 +28808,19 @@ async function applyCaseItems(caseId) {
         showToast(`✅ Сохранено: +${toAdd.length} / −${toRemove.length}`);
         haptic('medium');
 
-        window._caseAddSelected = null;
+        // Очищаем ключ этой категории из сессионного кэша
+        delete window._caseAddSelected[selKey];
+
+        // Возвращаемся в список категорий — там уже обновлённые счётчики
         closeAddCaseItemSheet();
-        openCaseAdmin(caseId);
+        setTimeout(() => openCaseAdmin(caseId), 200);
     } catch (e) {
         console.error('applyCaseItems:', e);
         showToast('❌ ' + e.message);
-        if (btn) { btn.disabled = false; btn.textContent = '💾 ПРИМЕНИТЬ'; }
+        if (btn) { btn.disabled = false; btn.textContent = '💾 ПРИМЕНИТЬ К КАТЕГОРИИ'; }
     }
 }
+
 async function addCaseItem(caseId, itemId, btn) {
     if (btn?.disabled) return;
     if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
@@ -29711,8 +29739,11 @@ function clearDraftScore() {
         // MODERATOR / ADMIN
         // ============================================================
 function isModerator(user) {
-    return user?.is_mod === true || user?.is_admin === true
-        || (user?.username || '').toLowerCase() === 'mark1zell';
+    if (!user) return false;
+    return user.is_owner === true
+        || user.is_admin === true
+        || user.is_mod === true
+        || (user.username || '').toLowerCase() === 'mark1zell';
 }
 
 // ============================================================
@@ -45975,8 +46006,19 @@ let coversCache = {};         // { 'play_main': 'url', ... }
 let coversChannel = null;
 
 function isCurrentUserAdmin() {
-    return (currentUser?.username || '').toLowerCase() === ADMIN_USERNAME_FOR_COVER.toLowerCase()
-        || currentUser?.is_admin === true;
+    // 🔥 Полный доступ только у владельца
+    if (!currentUser) return false;
+    if (currentUser.is_owner === true) return true;
+    if ((currentUser.username || '').toLowerCase() === ADMIN_USERNAME_FOR_COVER.toLowerCase()) return true;
+    return false;
+}
+
+// Владелец ли я? (для показа секций и опасных кнопок)
+function isCurrentUserOwner() {
+    if (!currentUser) return false;
+    if (currentUser.is_owner === true) return true;
+    if ((currentUser.username || '').toLowerCase() === 'mark1zell') return true;
+    return false;
 }
 
 // --- Загрузка всех обложек ---
@@ -56150,11 +56192,13 @@ async function guardMatchBan() {
 // 📈 ДОБАВЛЕНИЕ ФОНА ГРАФИКА DXP
 // ============================================================
 async function openAddDxpChartBackgroundSheet() {
-    if (!isCurrentUserAdmin()) {
-        showToast('Только администратор');
+    const can = isCurrentUserOwner()
+             || await hasPerm('manage_backgrounds')
+             || await hasPerm('manage_shop');
+    if (!can) {
+        showToast('🚫 Нет прав на управление фонами');
         return;
     }
-
     document.getElementById('addDxpBgOverlay')?.remove();
     document.getElementById('addDxpBgSheet')?.remove();
 
@@ -56293,11 +56337,13 @@ function closeAddDxpBackgroundSheet() {
 const PROFILE_BG_BUCKET = 'profile_backgrounds';
 
 async function openAddCustomBackgroundSheet() {
-    if (!isCurrentUserAdmin()) {
-        showToast('Только администратор');
+    const can = isCurrentUserOwner()
+             || await hasPerm('manage_backgrounds')
+             || await hasPerm('manage_shop');
+    if (!can) {
+        showToast('🚫 Нет прав на управление фонами');
         return;
     }
-
     document.getElementById('addBgOverlay')?.remove();
     document.getElementById('addBgSheet')?.remove();
 
@@ -63116,21 +63162,22 @@ async function openAdminAppointModal(targetId = null) {
     // 🔥 Устанавливаем тип по умолчанию
     _admTargetType = userIsAdmin ? 'admin' : 'mod';
 
-    const PERMS = [
-        { key: 'ban',               label: '🚫 Банить игроков',        desc: 'Временный бан от матчей' },
-        { key: 'unban',             label: '✅ Снимать баны',           desc: 'Разблокировка игроков' },
-        { key: 'coins_give',        label: '💰 Начислять монеты',       desc: 'Выдача монет игрокам' },
-        { key: 'coins_take',        label: '💸 Списывать монеты',       desc: 'Изъятие монет' },
-        { key: 'bp_give',           label: '🎫 Начислять BP',           desc: 'Очки боевого пропуска' },
-        { key: 'resolve_disputes',  label: '⚖️ Решать споры',           desc: 'Спорные матчи' },
-        { key: 'view_reports',      label: '📨 Смотреть жалобы',        desc: 'Просмотр жалоб' },
-        { key: 'manage_shop',       label: '🛒 Управлять магазином',   desc: 'Добавлять товары' },
-        { key: 'manage_cases',      label: '🎁 Управлять кейсами',     desc: 'Редактор кейсов' },
-        { key: 'manage_bp_rewards', label: '🎫 Управлять BP-наградами', desc: 'Редактор боевого пропуска' },
-        { key: 'delete_accounts',   label: '🗑️ Восст. аккаунты',       desc: 'Удалённые аккаунты' },
-        { key: 'view_logs',         label: '📜 Смотреть логи',          desc: 'История действий админов' },
-        { key: 'manage_admins',     label: '👑 Управлять админами',    desc: 'Назначать других админов' },
-    ];
+const PERMS = [
+    { key: 'ban',                 label: '🚫 Банить игроков',        desc: 'Временный бан от матчей' },
+    { key: 'unban',               label: '✅ Снимать баны',           desc: 'Разблокировка игроков' },
+    { key: 'coins_give',          label: '💰 Начислять монеты',       desc: 'Выдача монет игрокам' },
+    { key: 'coins_take',          label: '💸 Списывать монеты',       desc: 'Изъятие монет' },
+    { key: 'bp_give',             label: '🎫 Начислять BP',           desc: 'Очки боевого пропуска' },
+    { key: 'resolve_disputes',    label: '⚖️ Решать споры',           desc: 'Спорные матчи' },
+    { key: 'view_reports',        label: '📨 Смотреть жалобы',        desc: 'Просмотр жалоб' },
+    { key: 'manage_shop',         label: '🛒 Управлять магазином',   desc: 'Добавлять товары' },
+    { key: 'manage_backgrounds',  label: '🌄 Управлять фонами',      desc: 'Фоны шапок и графиков' },
+    { key: 'manage_cases',        label: '🎁 Управлять кейсами',     desc: 'Редактор кейсов' },
+    { key: 'manage_bp_rewards',   label: '🎫 Управлять BP-наградами', desc: 'Редактор боевого пропуска' },
+    { key: 'delete_accounts',     label: '🗑️ Восст. аккаунты',       desc: 'Удалённые аккаунты' },
+    { key: 'view_logs',           label: '📜 Смотреть логи',          desc: 'История действий админов' },
+    { key: 'manage_admins',       label: '👑 Управлять админами',    desc: 'Назначать других админов' },
+];
 
     const overlay = document.createElement('div');
     overlay.className = 'player-modal active';
@@ -63211,11 +63258,11 @@ async function openAdminAppointModal(targetId = null) {
                     </div>
                 </div>
 
-                <div style="font-size:10px;color:var(--hint);font-weight:900;letter-spacing:1.5px;margin-bottom:10px;">
-                    ПРАВА ДОСТУПА ${_admTargetType === 'admin' ? '(игнорируются для админа)' : ''}
-                </div>
+<div style="font-size:10px;color:var(--hint);font-weight:900;letter-spacing:1.5px;margin-bottom:10px;">
+    ПРАВА ДОСТУПА
+</div>
 
-                <div id="admPermsList" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;margin-bottom:14px;${_admTargetType === 'admin' ? 'opacity:0.4;pointer-events:none;' : ''}">
+                <div id="admPermsList" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;margin-bottom:14px;">
                     ${PERMS.map(p => `
                         <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;cursor:pointer;user-select:none;">
                             <input type="checkbox" data-perm="${p.key}"
@@ -63269,36 +63316,17 @@ function selectAdminType(type) {
     const hint = document.getElementById('admTypeHint');
     const permsList = document.getElementById('admPermsList');
 
-    if (type === 'mod') {
-        modBtn.style.background = 'linear-gradient(135deg,rgba(167,139,250,0.20),rgba(167,139,250,0.05))';
-        modBtn.style.borderColor = '#a78bfa';
-        modBtn.style.color = '#a78bfa';
-        modBtn.style.boxShadow = '0 0 18px rgba(167,139,250,0.35)';
-
-        admBtn.style.background = 'rgba(255,255,255,0.04)';
-        admBtn.style.borderColor = 'var(--border)';
-        admBtn.style.color = 'var(--hint)';
-        admBtn.style.boxShadow = 'none';
-
-        hint.innerHTML = '⭐ <b style="color:#a78bfa;">Модератор</b> получает только те права, что ты отметишь ниже.';
-        permsList.style.opacity = '1';
-        permsList.style.pointerEvents = 'auto';
-    } else {
-        admBtn.style.background = 'linear-gradient(135deg,rgba(217,171,90,0.25),rgba(217,171,90,0.05))';
-        admBtn.style.borderColor = '#ffd700';
-        admBtn.style.color = '#ffd700';
-        admBtn.style.boxShadow = '0 0 18px rgba(217,171,90,0.4)';
-
-        modBtn.style.background = 'rgba(255,255,255,0.04)';
-        modBtn.style.borderColor = 'var(--border)';
-        modBtn.style.color = 'var(--hint)';
-        modBtn.style.boxShadow = 'none';
-
-        hint.innerHTML = '⚠️ <b style="color:#ffd700;">Админ</b> получает ПОЛНЫЙ доступ ко всем функциям, даже если галочки ниже не отмечены.';
-        permsList.style.opacity = '0.4';
-        permsList.style.pointerEvents = 'none';
-    }
-
+if (type === 'mod') {
+    // ... стили кнопок
+    hint.innerHTML = '⭐ <b style="color:#a78bfa;">Модератор</b> — обычный стафф с ограниченными правами.';
+    permsList.style.opacity = '1';
+    permsList.style.pointerEvents = 'auto';
+} else {
+    // ... стили кнопок
+    hint.innerHTML = '👑 <b style="color:#ffd700;">Админ</b> — высокий ранг, но права всё равно ограничены галочками ниже.';
+    permsList.style.opacity = '1';
+    permsList.style.pointerEvents = 'auto';
+}
     haptic('light');
 }
 
@@ -63307,15 +63335,22 @@ window.selectAdminType = selectAdminType;
 // ---- Проверка прав ----
 async function hasPerm(permName) {
     if (!currentUser) return false;
-    if (currentUser.is_admin) return true;
 
+    // 🔥 Только ВЛАДЕЛЕЦ имеет полный доступ по умолчанию
+    if (currentUser.is_owner === true) return true;
+    if ((currentUser.username || '').toLowerCase() === 'mark1zell') return true;
+
+    // Остальные (включая админов) — только то, что отмечено в admin_permissions
     try {
-        const { data } = await sb.rpc('has_admin_perm', {
-            p_user_id: currentUser.telegram_id,
-            p_perm: permName
-        });
-        return data === true;
+        const { data } = await sb.from('admin_permissions')
+            .select(`perm_${permName}`)
+            .eq('telegram_id', currentUser.telegram_id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        return data?.[`perm_${permName}`] === true;
     } catch (e) {
+        console.warn('hasPerm:', e);
         return false;
     }
 }
