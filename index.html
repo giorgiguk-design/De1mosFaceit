@@ -29729,112 +29729,11 @@ async function renderModeratorPanel() {
     if (!container) return;
     container.innerHTML = '<div class="empty">Загрузка панели...</div>';
 
-    // 🔥 Проверяем права
-    const isOwner = currentUser?.is_admin === true;
-    const canManageAdmins = isOwner || await hasPerm('manage_admins');
-    const canViewLogs = isOwner || await hasPerm('view_logs');
-    const canResolve = isOwner || await hasPerm('resolve_disputes');
-    const canViewReports = isOwner || await hasPerm('view_reports');
-    const canBan = isOwner || await hasPerm('ban');
-    const canGiveCoins = isOwner || await hasPerm('coins_give');
-    const canTakeCoins = isOwner || await hasPerm('coins_take');
-    const canGiveBp = isOwner || await hasPerm('bp_give');
-    const canManageShop = isOwner || await hasPerm('manage_shop');
-    const canManageCases = isOwner || await hasPerm('manage_cases');
-    const canManageBpRewards = isOwner || await hasPerm('manage_bp_rewards');
-    const canDeleteAccounts = isOwner || await hasPerm('delete_accounts');
-
-    const ALLOW = {
-        isOwner, canManageAdmins, canViewLogs, canResolve, canViewReports,
-        canBan, canGiveCoins, canTakeCoins, canGiveBp,
-        canManageShop, canManageCases, canManageBpRewards, canDeleteAccounts,
-    };
-
-    // 🔥 Верхнее меню — все кнопки
-    let menuHTML = '';
-    if (isOwner || canManageAdmins || canViewLogs || canManageShop || canManageCases || canManageBpRewards || canDeleteAccounts) {
-        menuHTML += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;">`;
-
-        if (canManageAdmins) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;"
-                        onclick="openAdminAppointModal()">
-                    👑 Назначить админа
-                </button>
-            `;
-        }
-        if (canViewLogs) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.05));border-color:rgba(167,139,250,0.4);color:#a78bfa;"
-                        onclick="openAdminLogsModal()">
-                    📜 Логи действий
-                </button>
-            `;
-        }
-        if (canBan) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-danger" style="flex:1;min-width:140px;margin-bottom:0;"
-                        onclick="openModBanPlayerSheet()">
-                    🚫 Забанить игрока
-                </button>
-            `;
-        }
-        if (canGiveCoins || canTakeCoins) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,215,0,0.05));border-color:rgba(255,215,0,0.5);color:#ffd700;"
-                        onclick="openAdminCoinsPanel()">
-                    💰 Управление монетами
-                </button>
-            `;
-        }
-        if (canGiveBp) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(167,139,250,0.05));border-color:rgba(167,139,250,0.5);color:#a78bfa;"
-                        onclick="openAdminBpPanel()">
-                    🎫 Начислить очки BP
-                </button>
-            `;
-        }
-        if (canDeleteAccounts) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;background:linear-gradient(135deg,rgba(255,84,112,0.15),rgba(255,84,112,0.05));border-color:rgba(255,84,112,0.5);color:var(--red);"
-                        onclick="openDeletedAccountsPanel()">
-                    🗑️ Удалённые аккаунты
-                </button>
-            `;
-        }
-        if (canManageShop) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;"
-                        onclick="openCoverPickerSheet()">
-                    🎨 Обложки кнопок
-                </button>
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;"
-                        onclick="openAddCustomBackgroundSheet()">
-                    🌄 Добавить фон шапки
-                </button>
-                <button class="club-full-btn club-btn-edit" style="flex:1;min-width:140px;margin-bottom:0;"
-                        onclick="openAddDxpChartBackgroundSheet()">
-                    📈 Добавить фон DXP
-                </button>
-            `;
-        }
-        menuHTML += `</div>`;
-    }
-
-    // Заголовок панели + кнопки меню
-    let html = `
-        <div class="moderator-panel">
-            <div class="moderator-title">👑 ${isOwner ? 'АДМИН-ПАНЕЛЬ' : 'МОДЕРАТОР-ПАНЕЛЬ'}</div>
-            <div class="moderator-sub">${isOwner ? 'Полный доступ ко всем функциям' : 'Только твои разрешённые действия'}</div>
-            ${menuHTML}
-        </div>
-    `;
     // ============================================================
-    // 1. ЗАГРУЗКА ВСЕХ ДАННЫХ
+    // 1. ЗАГРУЗКА ДАННЫХ
     // ============================================================
-const [disputedRes, reportsRes, modsRes, bansRes] = await Promise.all([
-    sb.from('game_matches').select('*').eq('result_status', 'disputed'),
+    const [disputedRes, reportsRes, modsRes, bansRes] = await Promise.all([
+        sb.from('game_matches').select('*').eq('result_status', 'disputed'),
         sb.from('match_reports').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(50),
         sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until')
             .eq('is_mod', true).order('display_name'),
@@ -29843,70 +29742,27 @@ const [disputedRes, reportsRes, modsRes, bansRes] = await Promise.all([
             .gt('match_ban_until', new Date().toISOString())
     ]);
 
-const disputed = disputedRes.data || [];
-console.log('🎯 Спорных матчей загружено:', disputed.length, disputed);
+    const disputed = disputedRes.data || [];
     const reports = reportsRes.data || [];
     const mods = modsRes.data || [];
     const banned = bansRes.data || [];
 
     // ============================================================
-    // 2. СОБИРАЕМ ВСЕХ ЮЗЕРОВ
-    // ============================================================
-    const allIds = new Set();
-    disputed.forEach(m => {
-        [...(m.team_a_players || []), ...(m.team_b_players || [])]
-            .forEach(p => allIds.add(Number(p.telegram_id)));
-        if (m.captain_a_id) allIds.add(Number(m.captain_a_id));
-        if (m.captain_b_id) allIds.add(Number(m.captain_b_id));
-    });
-    reports.forEach(r => {
-        if (r.reporter_id) allIds.add(Number(r.reporter_id));
-        if (r.target_id) allIds.add(Number(r.target_id));
-    });
-
-    let userMap = {};
-    if (allIds.size) {
-        const { data: users } = await sb.from('users')
-            .select('telegram_id, display_name, custom_avatar, photo_url, standoff_id')
-            .in('telegram_id', [...allIds]);
-        (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
-    }
-
-    // Загружаем голоса капитанов и скрины
-    const disputedIds = disputed.map(m => m.id);
-    let votesMap = {};
-    let shotsMap = {};
-
-    if (disputedIds.length) {
-        const [votesRes, shotsRes] = await Promise.all([
-            sb.from('match_votes').select('*').in('match_id', disputedIds),
-            sb.from('match_screenshots').select('*').in('match_id', disputedIds)
-        ]);
-        (votesRes.data || []).forEach(v => {
-            (votesMap[v.match_id] ||= []).push(v);
-        });
-        (shotsRes.data || []).forEach(s => {
-            (shotsMap[s.match_id] ||= []).push(s);
-        });
-    }
-
-    // ============================================================
-    // 3. HEADER + МЕНЮ ПРАВ
+    // 2. ПРАВА
     // ============================================================
     const isOwner = currentUser?.is_admin === true;
-    const canManageAdmins     = isOwner || await hasPerm('manage_admins');
-    const canViewLogs         = isOwner || await hasPerm('view_logs');
-    const canResolve          = isOwner || await hasPerm('resolve_disputes');
-    const canViewReports      = isOwner || await hasPerm('view_reports');
-    const canBan              = isOwner || await hasPerm('ban');
-    const canGiveCoins        = isOwner || await hasPerm('coins_give');
-    const canTakeCoins        = isOwner || await hasPerm('coins_take');
-    const canGiveBp           = isOwner || await hasPerm('bp_give');
-    const canManageShop       = isOwner || await hasPerm('manage_shop');
-    const canManageCases      = isOwner || await hasPerm('manage_cases');
-    const canManageBpRewards  = isOwner || await hasPerm('manage_bp_rewards');
-    const canDeleteAccounts   = isOwner || await hasPerm('delete_accounts');
+    const canManageAdmins    = isOwner || await hasPerm('manage_admins');
+    const canViewLogs        = isOwner || await hasPerm('view_logs');
+    const canBan             = isOwner || await hasPerm('ban');
+    const canGiveCoins       = isOwner || await hasPerm('coins_give');
+    const canTakeCoins       = isOwner || await hasPerm('coins_take');
+    const canGiveBp          = isOwner || await hasPerm('bp_give');
+    const canManageShop      = isOwner || await hasPerm('manage_shop');
+    const canDeleteAccounts  = isOwner || await hasPerm('delete_accounts');
 
+    // ============================================================
+    // 3. HEADER + МЕНЮ
+    // ============================================================
     let menuHTML = '';
     const anyBtn = canManageAdmins || canViewLogs || canBan || canGiveCoins || canTakeCoins || canGiveBp || canDeleteAccounts || canManageShop;
 
@@ -29914,61 +29770,36 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
         menuHTML += `<div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">`;
 
         if (canManageAdmins) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
-                        onclick="openAdminAppointModal()">
-                    👑 Назначить админа
-                </button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                onclick="openAdminAppointModal()">👑 Назначить админа</button>`;
         }
         if (canViewLogs) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;"
-                        onclick="openAdminLogsModal()">
-                    📜 Логи действий
-                </button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;"
+                onclick="openAdminLogsModal()">📜 Логи действий</button>`;
         }
         if (canBan) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-danger" style="margin-bottom: 0; flex: 1; min-width: 140px;"
-                        onclick="openModBanPlayerSheet()">
-                    🚫 Забанить игрока
-                </button>`;
+            menuHTML += `<button class="club-full-btn club-btn-danger" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                onclick="openModBanPlayerSheet()">🚫 Забанить игрока</button>`;
         }
         if (canGiveCoins || canTakeCoins) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;"
-                        onclick="openAdminCoinsPanel()">
-                    💰 Управление монетами
-                </button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;"
+                onclick="openAdminCoinsPanel()">💰 Управление монетами</button>`;
         }
         if (canGiveBp) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;"
-                        onclick="openAdminBpPanel()">
-                    🎫 Начислить очки BP
-                </button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;"
+                onclick="openAdminBpPanel()">🎫 Начислить очки BP</button>`;
         }
         if (canDeleteAccounts) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,84,112,0.15), rgba(255,84,112,0.05)); border-color: rgba(255,84,112,0.5); color: var(--red);"
-                        onclick="openDeletedAccountsPanel()">
-                    🗑️ Удалённые аккаунты
-                </button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,84,112,0.15), rgba(255,84,112,0.05)); border-color: rgba(255,84,112,0.5); color: var(--red);"
+                onclick="openDeletedAccountsPanel()">🗑️ Удалённые аккаунты</button>`;
         }
         if (canManageShop) {
-            menuHTML += `
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
-                        onclick="openCoverPickerSheet()">
-                    🎨 Обложки кнопок
-                </button>
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
-                        onclick="openAddCustomBackgroundSheet()">
-                    🌄 Добавить фон шапки
-                </button>
-                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
-                        onclick="openAddDxpChartBackgroundSheet()">
-                    📈 Добавить фон графика DXP
-                </button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                onclick="openCoverPickerSheet()">🎨 Обложки кнопок</button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                onclick="openAddCustomBackgroundSheet()">🌄 Добавить фон шапки</button>`;
+            menuHTML += `<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                onclick="openAddDxpChartBackgroundSheet()">📈 Добавить фон графика DXP</button>`;
         }
 
         menuHTML += `</div>`;
@@ -29996,8 +29827,45 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
     `;
 
     // ============================================================
-    // 4. СПОРНЫЕ МАТЧИ — полная инфа
+    // 4. СПОРНЫЕ МАТЧИ
     // ============================================================
+    const allIds = new Set();
+    disputed.forEach(m => {
+        [...(m.team_a_players || []), ...(m.team_b_players || [])]
+            .forEach(p => allIds.add(Number(p.telegram_id)));
+        if (m.captain_a_id) allIds.add(Number(m.captain_a_id));
+        if (m.captain_b_id) allIds.add(Number(m.captain_b_id));
+    });
+    reports.forEach(r => {
+        if (r.reporter_id) allIds.add(Number(r.reporter_id));
+        if (r.target_id) allIds.add(Number(r.target_id));
+    });
+
+    let userMap = {};
+    if (allIds.size) {
+        const { data: users } = await sb.from('users')
+            .select('telegram_id, display_name, custom_avatar, photo_url, standoff_id')
+            .in('telegram_id', [...allIds]);
+        (users || []).forEach(u => userMap[Number(u.telegram_id)] = u);
+    }
+
+    const disputedIds = disputed.map(m => m.id);
+    let votesMap = {};
+    let shotsMap = {};
+
+    if (disputedIds.length) {
+        const [votesRes2, shotsRes] = await Promise.all([
+            sb.from('match_votes').select('*').in('match_id', disputedIds),
+            sb.from('match_screenshots').select('*').in('match_id', disputedIds)
+        ]);
+        (votesRes2.data || []).forEach(v => {
+            (votesMap[v.match_id] ||= []).push(v);
+        });
+        (shotsRes.data || []).forEach(s => {
+            (shotsMap[s.match_id] ||= []).push(s);
+        });
+    }
+
     if (!disputed.length) {
         html += '<div class="empty">Спорных матчей нет</div>';
     } else {
@@ -30006,10 +29874,8 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
             const teamB = m.team_b_players || [];
             const capAId = Number(m.captain_a_id);
             const capBId = Number(m.captain_b_id);
-
             const votes = votesMap[m.id] || [];
             const shots = shotsMap[m.id] || [];
-
             const voteA = votes.find(v => Number(v.telegram_id) === capAId);
             const voteB = votes.find(v => Number(v.telegram_id) === capBId);
             const shotA = shots.find(s => s.team === 'A');
@@ -30025,13 +29891,11 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
                         <div class="dispute-date">${new Date(m.created_at).toLocaleString('ru-RU')}</div>
                     </div>
 
-                    <!-- 2 СТОЛБЦА: Команда A и B -->
                     <div class="dispute-teams-grid">
                         ${renderDisputeTeam('A', teamA, capAId, userMap)}
                         ${renderDisputeTeam('B', teamB, capBId, userMap)}
                     </div>
 
-                    <!-- Счёт от каждого капитана -->
                     <div class="dispute-votes">
                         <div class="dispute-vote-col ${voteA ? '' : 'empty'}">
                             <div class="dispute-vote-label" style="color: var(--emerald);">КАПИТАН A</div>
@@ -30057,28 +29921,22 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
                         </div>
                     </div>
 
-                    <!-- Скриншоты -->
                     ${(shotA || shotB) ? `
                         <div class="dispute-shots">
                             <div class="dispute-shots-title">📸 Скриншоты</div>
                             <div class="dispute-shots-grid">
-                                ${shotA ? `
-                                    <div class="dispute-shot-thumb" onclick="openImageView('${shotA.url}')">
-                                        <img src="${shotA.url}" alt="">
-                                        <div class="dispute-shot-tag" style="background: rgba(var(--emerald-rgb), 0.85); color: #04140e;">A</div>
-                                    </div>
-                                ` : ''}
-                                ${shotB ? `
-                                    <div class="dispute-shot-thumb" onclick="openImageView('${shotB.url}')">
-                                        <img src="${shotB.url}" alt="">
-                                        <div class="dispute-shot-tag" style="background: rgba(255,84,112,0.85); color: #fff;">B</div>
-                                    </div>
-                                ` : ''}
+                                ${shotA ? `<div class="dispute-shot-thumb" onclick="openImageView('${shotA.url}')">
+                                    <img src="${shotA.url}" alt="">
+                                    <div class="dispute-shot-tag" style="background: rgba(var(--emerald-rgb), 0.85); color: #04140e;">A</div>
+                                </div>` : ''}
+                                ${shotB ? `<div class="dispute-shot-thumb" onclick="openImageView('${shotB.url}')">
+                                    <img src="${shotB.url}" alt="">
+                                    <div class="dispute-shot-tag" style="background: rgba(255,84,112,0.85); color: #fff;">B</div>
+                                </div>` : ''}
                             </div>
                         </div>
                     ` : ''}
 
-                    <!-- Кнопка решить -->
                     <button class="dispute-resolve-btn" onclick="openResolveDisputeSheet(${m.id})">
                         ⚖️ РЕШИТЬ СПОР
                     </button>
@@ -30088,7 +29946,7 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
     }
 
     // ============================================================
-    // 5. ЖАЛОБЫ — с полной инфой
+    // 5. ЖАЛОБЫ
     // ============================================================
     html += `
         <div class="section-title" style="margin-top: 20px;">
@@ -30103,7 +29961,6 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
     if (!reports.length) {
         html += '<div class="empty">Жалоб нет</div>';
     } else {
-        // Группируем по матчу
         const byMatch = {};
         reports.forEach(r => {
             (byMatch[r.match_id] ||= []).push(r);
@@ -30120,14 +29977,10 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
     }
 
     // ============================================================
-    // 6. АКТИВНЫЕ БАНЫ
+    // 6. БАНЫ
     // ============================================================
     if (banned.length) {
-        html += `
-            <div class="section-title" style="margin-top: 20px;">
-                🚫 Активные баны (${banned.length})
-            </div>
-        `;
+        html += `<div class="section-title" style="margin-top: 20px;">🚫 Активные баны (${banned.length})</div>`;
         html += banned.map(b => {
             const src = b.custom_avatar || b.photo_url;
             const initial = (b.display_name || 'U')[0].toUpperCase();
@@ -30155,9 +30008,9 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
     }
 
     // ============================================================
-    // 7. УПРАВЛЕНИЕ МОДЕРАТОРАМИ (только для админа)
+    // 7. МОДЕРАТОРЫ
     // ============================================================
-    if (currentUser.is_admin) {
+    if (isOwner) {
         html += `<div class="section-title" style="margin-top: 20px;">👑 Модераторы (${mods.length})</div>`;
         if (!mods.length) {
             html += '<div class="empty">Модераторов пока нет</div>';
