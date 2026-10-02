@@ -329,17 +329,12 @@ body::after {
     position: relative;
 }
 
-/* ============================================================ */
-/* 🏷️ БЕЙДЖ "ТЫ" — ВНУТРИ КАРТОЧКИ, НЕ ОБРЕЗАЕТСЯ                 */
-/* ============================================================ */
-.leaderboard-item.is-me,
-.leaderboard-champion.is-me {
-    position: relative !important;
-    overflow: visible !important;
-}
+/* ══════════════════════════════════════════════════════════════ */
+/* 🏷️ БЕЙДЖ "ТЫ" — только на элементах с data-me-flag="1"       */
+/* ══════════════════════════════════════════════════════════════ */
 
-.leaderboard-item.is-me::before,
-.leaderboard-champion.is-me::before {
+.leaderboard-item.is-me[data-me-flag="1"]::before,
+.leaderboard-champion.is-me[data-me-flag="1"]::before {
     content: 'ТЫ';
     position: absolute;
     top: 8px;
@@ -362,33 +357,22 @@ body::after {
 }
 
 /* У чемпиона — больше места сверху */
-.leaderboard-champion.is-me::before {
+.leaderboard-champion.is-me[data-me-flag="1"]::before {
     top: 10px;
     right: 14px;
     padding: 4px 12px;
     font-size: 11px;
 }
 
-@keyframes тыBadgePulse {
-    0%, 100% {
-        box-shadow: 0 0 14px rgba(var(--emerald-rgb), 0.8),
-                    0 2px 8px rgba(0, 0, 0, 0.5),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-    50% {
-        box-shadow: 0 0 22px rgba(var(--emerald-rgb), 1),
-                    0 2px 10px rgba(0, 0, 0, 0.6),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    }
+/* Скрываем старый бейдж без флага (защита от проскоков) */
+.leaderboard-item.is-me:not([data-me-flag="1"])::before,
+.leaderboard-champion.is-me:not([data-me-flag="1"])::before,
+.club-member-row.is-me:not([data-me-flag="1"])::before {
+    display: none !important;
+    content: none !important;
 }
 
-/* Lite mode — отключаем пульсацию */
-html.lite-mode .leaderboard-item.is-me::before,
-html.lite-mode .leaderboard-champion.is-me::before {
-    animation: none !important;
-}
-
-.club-member-row.is-me::before {
+.club-member-row.is-me[data-me-flag="1"]::before {
     content: 'ТЫ';
     position: absolute;
     top: 6px;
@@ -406,11 +390,6 @@ html.lite-mode .leaderboard-champion.is-me::before {
                 0 2px 6px rgba(0, 0, 0, 0.5);
     z-index: 999;
     pointer-events: none;
-}
-
-.club-member-row {
-    position: relative;
-    overflow: visible;
 }
 
 /* ============================================================
@@ -26294,6 +26273,18 @@ html.lite-mode .pm2-title[data-anim] {
             Музыка и звуки
         </button>
 
+<button class="menu-drawer-btn" onclick="menuDrawerGo('referral')" 
+        style="background: linear-gradient(135deg, rgba(217,171,90,0.15), rgba(167,139,250,0.08)); border-color: rgba(217,171,90,0.4); color: #ffd700;">
+    <span class="menu-drawer-icon">
+        <svg class="cy-icon cy-md" viewBox="0 0 24 24" style="color:#ffd700;">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <path d="M20 8v6M23 11h-6"/>
+        </svg>
+    </span>
+    Реферальная система
+</button>
+
         <button class="menu-drawer-btn" onclick="menuDrawerSupport()">
             <span class="menu-drawer-icon">
                 <svg class="cy-icon cy-md cy-red" viewBox="0 0 24 24">
@@ -33226,46 +33217,48 @@ async function loadLeaderboard() {
 
 const champIsMe = Number(champion.telegram_id) === Number(me);
 html += `
-    <div class="leaderboard-champion ${champIsMe ? 'is-me' : ''}" data-user-id="${champion.telegram_id}"
-         onclick="openPlayerProfile(${champion.telegram_id})">                    <div class="champ-crown">👑</div>
-                    <div class="champ-avatar">${champAv}</div>
-                    <div class="champ-info">
-                        <div class="champ-label">
-                            <span>ЧЕМПИОН</span>
-                            ${champIsMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
-                        </div>
-<div class="champ-name">${escapeHtml(champion.display_name || 'Игрок')}</div>
-<div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
-    <div style="
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 6px 12px;
-        background: rgba(0,0,0,0.5);
-        border: 1px solid ${RANK_CONFIG.LEVELS[champLvl-1].color}66;
-        border-radius: 999px;
-        cursor: pointer;
-    " onclick="event.stopPropagation(); openRankInfoSheet(${champLvl});">
-        <span style="width: 24px; height: 24px; display: inline-flex; flex-shrink: 0;">
-            ${getRankEmblem(champLvl, 24, true)}
-        </span>
-        <span style="
-            font-family: 'Orbitron', sans-serif;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 1.5px;
-            color: ${RANK_CONFIG.LEVELS[champLvl-1].color};
-            text-transform: uppercase;
-            text-shadow: 0 0 8px ${RANK_CONFIG.LEVELS[champLvl-1].color}88;
-        ">${RANK_CONFIG.LEVELS[champLvl-1].name}</span>
-    </div>
-    <div class="champ-stat">
-        <span class="champ-stat-value">${champion.elo ?? 1000}</span>
-        <span class="champ-stat-label">DXP</span>
-    </div>
-</div>
-                    </div>
+    <div class="leaderboard-champion ${champIsMe ? 'is-me' : ''}"
+         ${champIsMe ? 'data-me-flag="1"' : ''}
+         data-user-id="${champion.telegram_id}"
+         onclick="openPlayerProfile(${champion.telegram_id})">
+        <div class="champ-crown">👑</div>
+        <div class="champ-avatar">${champAv}</div>
+        <div class="champ-info">
+            <div class="champ-label">
+                <span>ЧЕМПИОН</span>
+                ${champIsMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
+            </div>
+            <div class="champ-name">${escapeHtml(champion.display_name || 'Игрок')}</div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+                <div style="
+                    display: inline-flex; align-items: center; gap: 8px;
+                    padding: 6px 12px;
+                    background: rgba(0,0,0,0.5);
+                    border: 1px solid ${RANK_CONFIG.LEVELS[champLvl-1].color}66;
+                    border-radius: 999px;
+                    cursor: pointer;
+                " onclick="event.stopPropagation(); openRankInfoSheet(${champLvl});">
+                    <span style="width: 24px; height: 24px; display: inline-flex; flex-shrink: 0;">
+                        ${getRankEmblem(champLvl, 24, true)}
+                    </span>
+                    <span style="
+                        font-family: 'Orbitron', sans-serif;
+                        font-size: 11px;
+                        font-weight: 900;
+                        letter-spacing: 1.5px;
+                        color: ${RANK_CONFIG.LEVELS[champLvl-1].color};
+                        text-transform: uppercase;
+                        text-shadow: 0 0 8px ${RANK_CONFIG.LEVELS[champLvl-1].color}88;
+                    ">${RANK_CONFIG.LEVELS[champLvl-1].name}</span>
                 </div>
-            `;
-        }
+                <div class="champ-stat">
+                    <span class="champ-stat-value">${champion.elo ?? 1000}</span>
+                    <span class="champ-stat-label">DXP</span>
+                </div>
+            </div>
+        </div>
+    </div>
+`;        }
 
         // Топ-9
         if (top9.length) {
@@ -33320,7 +33313,7 @@ function renderLbItem(user, rank, isMe = false) {
     const isOnline = Date.now() - lastSeen < 2 * 60 * 1000;
     const onlineDot = isOnline ? '<div class="online-dot online-dot-sm"></div>' : '';
 
-    // 🔥 Спец-рамка — если надета, показываем её полностью
+    // 🔥 Спец-рамка
     const eq = user.equipped_items || {};
     const frameId = eq.avatar_frame;
     let frameHTML = '';
@@ -33338,7 +33331,9 @@ function renderLbItem(user, rank, isMe = false) {
     }
 
     return `
-    <div class="leaderboard-item ${isMe ? 'is-me' : ''}" onclick="openPlayerProfile(${user.telegram_id})"
+    <div class="leaderboard-item ${isMe ? 'is-me' : ''}"
+         ${isMe ? 'data-me-flag="1"' : ''}
+         onclick="openPlayerProfile(${user.telegram_id})"
          data-user-id="${user.telegram_id}">
         <span class="leaderboard-rank">#${rank}</span>
 
@@ -33370,6 +33365,7 @@ function renderLbItem(user, rank, isMe = false) {
         <span class="leaderboard-DXP-value">${user.elo}</span>
     </div>`;
 }
+
 async function openFullLeaderboard() {
     switchPage('leaderboard');
     const c = document.getElementById('leaderboardFull');
@@ -33792,9 +33788,10 @@ const membersHTML = sorted.map(m => {
 
     return `
 const isMeMember = Number(m.telegram_id) === Number(currentUser.telegram_id);
-<div class="club-member-row ${isMeMember ? 'is-me' : ''}" onclick="openPlayerProfile(${m.telegram_id})"
-     data-user-id="${m.telegram_id}">
-            <div class="club-member-avatar" data-list-avatar>${av}${onlineDot}</div>
+<div class="club-member-row ${isMeMember ? 'is-me' : ''}"
+     ${isMeMember ? 'data-me-flag="1"' : ''}
+     onclick="openPlayerProfile(${m.telegram_id})"
+     data-user-id="${m.telegram_id}">            <div class="club-member-avatar" data-list-avatar>${av}${onlineDot}</div>
             <div class="club-member-info">
                 <div class="club-member-name">
                     <span data-list-nick>${escapeHtml(u.display_name || 'Игрок')}</span>
@@ -45949,16 +45946,16 @@ function menuDrawerGo(dest) {
             case 'matches':
                 openMatchesHistory();
                 break;
-                case 'cases':
+            case 'cases':
                 openCasesScreen();
                 break;
-            case 'chat':                    
-                openChatPage();             
-                break;                      
+            case 'chat':
+                openChatPage();
+                break;
             case 'settings':
                 openSettingsSheet();
                 break;
-                case 'quests':
+            case 'quests':
                 openQuestsScreen();
                 break;
             case 'theme':
@@ -45967,7 +45964,6 @@ function menuDrawerGo(dest) {
             case 'privacy':
                 openPrivacySheet();
                 break;
-            // 🔥 НОВОЕ:
             case 'shop':
                 openShop();
                 break;
@@ -45976,6 +45972,9 @@ function menuDrawerGo(dest) {
                 break;
             case 'coins':
                 openCoinsHistory();
+                break;
+            case 'referral':
+                openReferralScreen();
                 break;
             default:
                 showToast('Раздел в разработке');
@@ -63690,6 +63689,303 @@ async function loadAdminLogs() {
         `;
     }).join('');
 }
+
+// ============================================================
+// 🎁 РЕФЕРАЛЬНАЯ СИСТЕМА
+// ============================================================
+async function openReferralScreen() {
+    if (!currentUser) {
+        showToast('⚠️ Профиль ещё не загружен');
+        return;
+    }
+
+    // Создаём страницу при первом открытии
+    let page = document.getElementById('page-referral');
+    if (!page) {
+        page = document.createElement('div');
+        page.className = 'container page';
+        page.id = 'page-referral';
+        const dash = document.getElementById('page-dashboard');
+        dash?.parentNode?.insertBefore(page, dash.nextSibling);
+    }
+
+    page.innerHTML = '<div class="empty">Загрузка...</div>';
+    switchPage('referral');
+
+    try {
+        const { data: freshUser } = await sb.from('users')
+            .select('referral_code, referral_count, referral_earnings, referred_by')
+            .eq('telegram_id', currentUser.telegram_id)
+            .single();
+
+        const code = freshUser?.referral_code || '—';
+        const count = freshUser?.referral_count || 0;
+        const earnings = freshUser?.referral_earnings || 0;
+        const wasReferred = !!freshUser?.referred_by;
+
+        const { data: refs } = await sb.from('referrals')
+            .select('referred_id, created_at')
+            .eq('referrer_id', currentUser.telegram_id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        const refIds = (refs || []).map(r => r.referred_id);
+        let userMap = {};
+        if (refIds.length) {
+            const { data: users } = await sb.from('users')
+                .select('telegram_id, display_name, custom_avatar, photo_url')
+                .in('telegram_id', refIds);
+            (users || []).forEach(u => userMap[u.telegram_id] = u);
+        }
+
+        const botLink = 'https://t.me/De1mosFaceit_bot/De1mosFaceit';
+        const shareLink = `${botLink}?start=ref_${code}`;
+
+        page.innerHTML = `
+            <div style="
+                position: relative;
+                padding: 20px;
+                margin-bottom: 14px;
+                background: linear-gradient(160deg, rgba(217,171,90,0.15), rgba(0,0,0,0.6));
+                border: 1px solid rgba(217,171,90,0.5);
+                border-radius: 20px;
+                text-align: center;
+                overflow: hidden;
+            ">
+                <div style="font-size: 56px; margin-bottom: 8px;">🎁</div>
+                <div style="
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 22px;
+                    font-weight: 900;
+                    letter-spacing: 3px;
+                    color: #ffd700;
+                    text-shadow: 0 0 20px rgba(255,215,0,0.5);
+                    margin-bottom: 6px;
+                ">РЕФЕРАЛЬНАЯ СИСТЕМА</div>
+                <div style="font-size: 12px; color: var(--hint); margin-bottom: 16px;">
+                    Приглашай друзей — получай <b style="color: var(--gold);">+300 💰</b><br>
+                    а друг — <b style="color: var(--emerald);">+150 💰</b> на старт
+                </div>
+
+                <div style="
+                    display: inline-block;
+                    padding: 14px 26px;
+                    background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,215,0,0.06));
+                    border: 1.5px solid rgba(255,215,0,0.55);
+                    border-radius: 14px;
+                    margin-bottom: 14px;
+                ">
+                    <div style="font-size: 10px; color: var(--hint); letter-spacing: 2px; font-weight: 800; margin-bottom: 4px;">
+                        ТВОЙ КОД
+                    </div>
+                    <div style="
+                        font-family: 'Orbitron', sans-serif;
+                        font-size: 26px;
+                        font-weight: 900;
+                        color: #ffd700;
+                        letter-spacing: 4px;
+                        text-shadow: 0 0 16px rgba(255,215,0,0.6);
+                    ">${escapeHtml(code)}</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
+                    <div style="
+                        padding: 12px;
+                        background: rgba(0,0,0,0.4);
+                        border: 1px solid var(--border);
+                        border-radius: 12px;
+                    ">
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: var(--emerald);">
+                            ${count}
+                        </div>
+                        <div style="font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-top: 2px;">
+                            ПРИГЛАШЕНО
+                        </div>
+                    </div>
+                    <div style="
+                        padding: 12px;
+                        background: rgba(0,0,0,0.4);
+                        border: 1px solid var(--border);
+                        border-radius: 12px;
+                    ">
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: #ffd700;">
+                            ${earnings}
+                        </div>
+                        <div style="font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-top: 2px;">
+                            ЗАРАБОТАНО
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+                <button onclick="copyReferralLink('${shareLink}')" style="
+                    padding: 14px;
+                    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                    border: none;
+                    border-radius: 12px;
+                    color: #04140e;
+                    font-family: inherit;
+                    font-size: 13px;
+                    font-weight: 900;
+                    letter-spacing: 0.5px;
+                    cursor: pointer;
+                ">📋 СКОПИРОВАТЬ</button>
+                <button onclick="shareReferralLink('${shareLink}')" style="
+                    padding: 14px;
+                    background: rgba(var(--emerald-rgb), 0.10);
+                    border: 1px solid var(--border-strong);
+                    border-radius: 12px;
+                    color: var(--emerald);
+                    font-family: inherit;
+                    font-size: 13px;
+                    font-weight: 900;
+                    letter-spacing: 0.5px;
+                    cursor: pointer;
+                ">📤 ПОДЕЛИТЬСЯ</button>
+            </div>
+
+            ${!wasReferred ? `
+                <div style="
+                    padding: 14px;
+                    background: rgba(var(--emerald-rgb), 0.06);
+                    border: 1px solid var(--border-strong);
+                    border-radius: 14px;
+                    margin-bottom: 14px;
+                ">
+                    <div style="font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 8px;">
+                        🔑 Есть код друга?
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" class="field-input" id="refCodeInput"
+                               placeholder="Введи код" maxlength="12"
+                               style="flex: 1; text-transform: uppercase; text-align: center; letter-spacing: 2px; font-family: var(--font-mono); font-weight: 800;">
+                        <button onclick="useReferralCode()" style="
+                            padding: 0 18px;
+                            background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                            border: none;
+                            border-radius: 10px;
+                            color: #04140e;
+                            font-family: inherit;
+                            font-size: 12px;
+                            font-weight: 900;
+                            cursor: pointer;
+                        ">АКТИВИРОВАТЬ</button>
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="section-title">Твои рефералы (${(refs || []).length})</div>
+
+            ${(refs || []).length === 0 ? `
+                <div style="
+                    text-align: center;
+                    padding: 30px 20px;
+                    background: rgba(0,0,0,0.3);
+                    border: 1px dashed var(--border-strong);
+                    border-radius: 14px;
+                    color: var(--hint);
+                    font-size: 12px;
+                ">
+                    <div style="font-size: 40px; opacity: 0.5; margin-bottom: 8px;">👥</div>
+                    Пока никого нет<br>
+                    <span style="font-size: 11px;">Поделись ссылкой — начни зарабатывать</span>
+                </div>
+            ` : `
+                ${(refs || []).map(r => {
+                    const u = userMap[r.referred_id] || {};
+                    const av = renderAvatar(u);
+                    return `
+                        <div class="leaderboard-item" onclick="openPlayerProfile(${r.referred_id})">
+                            <div class="lb-avatar">${av}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="leaderboard-name">${escapeHtml(u.display_name || 'Игрок')}</div>
+                                <div style="font-size:11px;color:var(--hint);">
+                                    ${formatTimeAgo(r.created_at)}
+                                </div>
+                            </div>
+                            <span style="font-size: 11px; font-weight: 900; color: var(--gold);">+300 💰</span>
+                        </div>
+                    `;
+                }).join('')}
+            `}
+
+            <button class="profile-action-btn cancel" style="margin-top: 14px;" onclick="switchPage('dashboard')">
+                ◀ НАЗАД
+            </button>
+        `;
+
+    } catch (e) {
+        console.error('openReferralScreen:', e);
+        page.innerHTML = `<div class="empty" style="color:var(--red);">Ошибка: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function copyReferralLink(link) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(link).then(() => {
+            showToast('📋 Ссылка скопирована');
+            haptic('medium');
+        }).catch(() => fallbackCopy(link));
+    } else {
+        fallbackCopy(link);
+    }
+}
+
+function shareReferralLink(link) {
+    const text = `🎮 Заходи в De1mos Faceit по моей ссылке — получишь бонус на старт!`;
+    if (navigator.share && !window.Telegram?.WebApp?.initData) {
+        navigator.share({ title: 'De1mos Faceit', text, url: link }).catch(() => {});
+        return;
+    }
+    const url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+    try {
+        if (tg?.openTelegramLink) tg.openTelegramLink(url);
+        else if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank');
+    } catch (e) {
+        window.open(url, '_blank');
+    }
+}
+
+async function useReferralCode() {
+    const input = document.getElementById('refCodeInput');
+    const code = input?.value.trim();
+    if (!code) { showToast('⚠️ Введи код'); return; }
+
+    try {
+        showToast('⏳ Проверяю...');
+        const { data, error } = await sb.rpc('apply_referral', {
+            p_user_id: currentUser.telegram_id,
+            p_referral_code: code.toUpperCase()
+        });
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'already_used') showToast('⚠️ Ты уже использовал реферальный код');
+            else if (err === 'invalid_code') showToast('❌ Неверный код');
+            else if (err === 'self_referral') showToast('🚫 Нельзя использовать свой код');
+            else showToast('❌ ' + err);
+            return;
+        }
+
+        currentUser.coins = (currentUser.coins || 0) + 150;
+        updateCoinsBadge();
+        haptic('heavy');
+        showToast('🎉 Ты получил +150 монет!');
+
+        setTimeout(() => openReferralScreen(), 800);
+    } catch (e) {
+        console.error('useReferralCode:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+window.openReferralScreen = openReferralScreen;
+window.copyReferralLink = copyReferralLink;
+window.shareReferralLink = shareReferralLink;
+window.useReferralCode = useReferralCode;
 
     </script>
 
