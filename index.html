@@ -29365,6 +29365,12 @@ function initSupabaseClient() {
     if (!window.supabase?.createClient) return false;
     try {
         sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // 🔥 ФИКС: sb.rpc() возвращает PostgrestBuilder без .catch()
+        // Оборачиваем в настоящий Promise — теперь .catch() работает везде
+        const _origRpc = sb.rpc.bind(sb);
+        sb.rpc = (name, params) => Promise.resolve(_origRpc(name, params));
+
         console.log('✅ Supabase client создан');
         return true;
     } catch (e) {
@@ -30654,7 +30660,7 @@ async function closeReport(reportId) {
 }
 
 async function makeModerator() {
-    const val = document.getElementById('modInput').value.trim();
+    const val = document.getElementById('modInput')?.value.trim();
     if (!val) { showToast('Введи @username или ID'); return; }
 
     const field = val.startsWith('@') ? 'username' : (isNaN(Number(val)) ? 'username' : 'telegram_id');
@@ -30671,20 +30677,26 @@ async function makeModerator() {
 
         const targetId = userData[0].telegram_id;
 
-        const { data: roleResult, error: roleErr } = await sb.rpc('mod_set_role', {
-            p_user_id: targetId,
-            p_is_mod: true
+        // 🔥 Используем admin_appoint с p_make_admin = false
+        const { data: result, error: rpcErr } = await sb.rpc('admin_appoint', {
+            p_appointer_id: currentUser.telegram_id,
+            p_target_id: targetId,
+            p_perms: '{}'::jsonb,      // права можно потом выдать через модалку
+            p_notes: 'Назначен из панели',
+            p_make_admin: false
         });
 
-        if (roleErr) throw roleErr;
-        if (!roleResult?.ok) throw new Error('Не удалось назначить');
+        if (rpcErr) throw rpcErr;
+        if (!result?.ok) throw new Error(result?.error || 'Не удалось назначить');
 
-        showToast('✅ Модератор назначен');
-        await notify(targetId, `👑 Тебя назначили <b>модератором</b> De1mos Faceit.`);
+        showToast('⭐ Модератор назначен');
+        try {
+            await notify(targetId, `⭐ Тебя назначили <b>модератором</b> De1mos Faceit.`);
+        } catch (e) {}
 
         const input = document.getElementById('modInput');
         if (input) input.value = '';
-        await renderAdminPanel();
+        await renderModeratorPanel();
     } catch (e) {
         console.error('makeModerator:', e);
         showToast('Ошибка: ' + e.message);
@@ -30712,36 +30724,45 @@ async function revokeModerator(userId) {
 // 👑 СНЯТИЕ АДМИНА / МОДЕРАТОРА (только владелец)
 // ============================================================
 async function revokeAdmin(userId) {
-    if (!currentUser?.is_admin) {
+    if (!isCurrentUserOwner() && !currentUser?.is_admin) {
         showToast('❌ Только владелец может снимать админов');
         return;
     }
     if (!confirm('Снять ВСЕ права с игрока?')) return;
 
     try {
-        // 1. Убираем флаги
-        await sb.from('users')
-            .update({ is_admin: false, is_mod: false })
-            .eq('telegram_id', userId);
-
-        // 2. Полностью очищаем права
-        await sb.from('admin_permissions')
-            .delete()
-            .eq('telegram_id', userId);
-
-        // 3. Лог
-        await sb.rpc('admin_log_action', {
-            p_admin_id: currentUser.telegram_id,
-            p_action: 'revoke_admin',
+        // 🔥 Делаем через RPC (SECURITY DEFINER обходит RLS)
+        const { data, error } = await sb.rpc('admin_revoke', {
+            p_appointer_id: currentUser.telegram_id,
             p_target_id: userId
-        }).catch(() => {});
+        });
 
-        // 4. Уведомляем
-        await notify(userId,
-            `👑 Твои права администрации сняты.`,
-            null,
-            { force: true }
-        ).catch(() => {});
+        if (error) throw error;
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'no_permission') showToast('❌ Нет прав');
+            else if (err === 'cannot_revoke_owner') showToast('🚫 Нельзя снять владельца');
+            else showToast('❌ ' + err);
+            return;
+        }
+
+        // Лог (не критично — обёрнут в try)
+        try {
+            await sb.rpc('admin_log_action', {
+                p_admin_id: currentUser.telegram_id,
+                p_action: 'revoke_admin',
+                p_target_id: userId
+            });
+        } catch (e) { console.warn('log fail:', e); }
+
+        // Уведомление
+        try {
+            await notify(userId,
+                `👑 Твои права администрации сняты.`,
+                null,
+                { force: true }
+            );
+        } catch (e) { console.warn('notify fail:', e); }
 
         showToast('✅ Права сняты');
         haptic('medium');
@@ -41635,14 +41656,17 @@ window.submitCoinsAction = submitCoinsAction;
 async function revokeModerator(userId) {
     if (!confirm('Снять модератора?')) return;
     try {
-        const { data, error } = await sb.rpc('mod_set_role', {
-            p_user_id: userId,
-            p_is_mod: false
+        // 🔥 Используем admin_revoke — он снимает и is_mod, и is_admin, и права
+        const { data, error } = await sb.rpc('admin_revoke', {
+            p_appointer_id: currentUser.telegram_id,
+            p_target_id: userId
         });
+
         if (error) throw error;
-        if (!data?.ok) throw new Error('Не удалось снять');
+        if (!data?.ok) throw new Error(data?.error || 'Не удалось снять');
+
         showToast('✅ Модератор снят');
-        await renderAdminPanel();
+        await renderModeratorPanel();
     } catch (e) {
         console.error('revokeModerator:', e);
         showToast('Ошибка: ' + e.message);
@@ -63444,7 +63468,7 @@ async function submitAdminAppoint(targetId) {
 }
 
 async function submitAdminRevoke(targetId) {
-    if (!confirm('Снять права администратора?')) return;
+    if (!confirm('Снять права с игрока?')) return;
 
     try {
         const { data, error } = await sb.rpc('admin_revoke', {
@@ -63453,12 +63477,19 @@ async function submitAdminRevoke(targetId) {
         });
 
         if (error) throw error;
-        if (!data?.ok) throw new Error(data?.error || 'Ошибка');
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'cannot_revoke_owner') showToast('🚫 Нельзя снять владельца');
+            else if (err === 'no_permission') showToast('❌ Нет прав');
+            else showToast('❌ ' + err);
+            return;
+        }
 
         showToast('✅ Права сняты');
         document.getElementById('adminAppointModal')?.remove();
         renderModeratorPanel();
     } catch (e) {
+        console.error('submitAdminRevoke:', e);
         showToast('❌ ' + e.message);
     }
 }
