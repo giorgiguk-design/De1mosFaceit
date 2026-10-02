@@ -29710,19 +29710,65 @@ function clearDraftScore() {
         // ============================================================
         // MODERATOR / ADMIN
         // ============================================================
-        function isModerator(user) {
-            return user?.is_mod === true || user?.is_admin === true
-                || (user?.username || '').toLowerCase() === 'mark1zell';
+function isModerator(user) {
+    return user?.is_mod === true || user?.is_admin === true
+        || (user?.username || '').toLowerCase() === 'mark1zell';
+}
+
+// ============================================================
+// 🛡️ Проверка: есть ли у игрока ХОТЬ ОДНО право из admin_permissions
+// Нужно потому, что при назначении через admin_appoint
+// юзер может не получить флаг is_mod в users
+// ============================================================
+let _userPermsCache = null;
+let _userPermsCacheTime = 0;
+const _PERMS_CACHE_TTL = 60000; // 1 минута
+
+async function hasAnyAdminPerm() {
+    if (!currentUser) return false;
+    if (currentUser.is_admin) return true;
+    if (currentUser.is_mod === true) return true;
+
+    const now = Date.now();
+    if (_userPermsCache !== null && now - _userPermsCacheTime < _PERMS_CACHE_TTL) {
+        return _userPermsCache;
+    }
+
+    try {
+        const { data } = await sb.from('admin_permissions')
+            .select('*')
+            .eq('telegram_id', currentUser.telegram_id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        if (!data) {
+            _userPermsCache = false;
+            _userPermsCacheTime = now;
+            return false;
         }
 
-        function openModeratorPanel() {
-            if (!isModerator(currentUser)) {
-                showToast('Только для модераторов');
-                return;
-            }
-            switchPage('admin');
-            renderModeratorPanel();
-        }
+        const hasAny = Object.keys(data)
+            .filter(k => k.startsWith('perm_'))
+            .some(k => data[k] === true);
+
+        _userPermsCache = hasAny;
+        _userPermsCacheTime = now;
+        return hasAny;
+    } catch (e) {
+        console.warn('hasAnyAdminPerm:', e);
+        return false;
+    }
+}
+
+async function openModeratorPanel() {
+    const can = isModerator(currentUser) || await hasAnyAdminPerm();
+    if (!can) {
+        showToast('🚫 Только для администрации');
+        return;
+    }
+    switchPage('admin');
+    renderModeratorPanel();
+}
 
 async function renderModeratorPanel() {
     const container = document.getElementById('adminContent');
@@ -29730,13 +29776,17 @@ async function renderModeratorPanel() {
     container.innerHTML = '<div class="empty">Загрузка панели...</div>';
 
     // ============================================================
-    // 1. ЗАГРУЗКА ДАННЫХ
+    // 1. ЗАГРУЗКА ДАННЫХ (добавлен запрос adminsRes)
     // ============================================================
-    const [disputedRes, reportsRes, modsRes, bansRes] = await Promise.all([
+    const [disputedRes, reportsRes, modsRes, adminsRes, bansRes] = await Promise.all([
         sb.from('game_matches').select('*').eq('result_status', 'disputed'),
         sb.from('match_reports').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(50),
+        // 🔥 Только модеры (НЕ админы, чтобы не дублировались в двух списках)
         sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until')
-            .eq('is_mod', true).order('display_name'),
+            .eq('is_mod', true).eq('is_admin', false).order('display_name'),
+        // 🔥 Админы (is_admin = true)
+        sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until')
+            .eq('is_admin', true).order('display_name'),
         sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url, match_ban_until, match_ban_reason')
             .not('match_ban_until', 'is', null)
             .gt('match_ban_until', new Date().toISOString())
@@ -29745,6 +29795,7 @@ async function renderModeratorPanel() {
     const disputed = disputedRes.data || [];
     const reports = reportsRes.data || [];
     const mods = modsRes.data || [];
+    const admins = adminsRes.data || [];
     const banned = bansRes.data || [];
 
     // ============================================================
@@ -29813,6 +29864,7 @@ async function renderModeratorPanel() {
                 <span class="moderator-stat">🎯 Спорных: ${disputed.length}</span>
                 <span class="moderator-stat">📨 Активных жалоб: ${reports.length}</span>
                 <span class="moderator-stat">⭐ Модеров: ${mods.length}</span>
+                <span class="moderator-stat">👑 Админов: ${admins.length}</span>
                 <span class="moderator-stat">🚫 В бане: ${banned.length}</span>
             </div>
             ${menuHTML}
@@ -30008,10 +30060,49 @@ async function renderModeratorPanel() {
     }
 
     // ============================================================
-    // 7. МОДЕРАТОРЫ
+    // 7. АДМИНЫ (только для владельца)
     // ============================================================
     if (isOwner) {
-        html += `<div class="section-title" style="margin-top: 20px;">👑 Модераторы (${mods.length})</div>`;
+        html += `<div class="section-title" style="margin-top: 20px;">👑 Админы (${admins.length})</div>`;
+        if (!admins.length) {
+            html += '<div class="empty">Кроме тебя админов нет</div>';
+        } else {
+            html += admins.map(m => {
+                const src = m.custom_avatar || m.photo_url;
+                const initial = (m.display_name || 'U')[0].toUpperCase();
+                const av = src ? `<img src="${src}" alt="">` : initial;
+                const isMe = Number(m.telegram_id) === Number(currentUser.telegram_id);
+
+                return `
+                    <div class="leaderboard-item" style="border-color: rgba(217,171,90,0.4);">
+                        <div class="lb-avatar" onclick="openPlayerProfile(${m.telegram_id})">${av}</div>
+                        <div style="flex:1;min-width:0;" onclick="openPlayerProfile(${m.telegram_id})">
+                            <div class="leaderboard-name">
+                                ${escapeHtml(m.display_name || 'Игрок')}
+                                <span class="role-tag owner" style="background: rgba(217,171,90,0.25); color: var(--gold); border-color: rgba(217,171,90,0.5);">👑 ADMIN</span>
+                                ${isMe ? '<span style="color:var(--emerald);font-size:10px;font-weight:900;margin-left:4px;">· ТЫ</span>' : ''}
+                            </div>
+                            <div style="font-size:11px;color:var(--hint);">
+                                ${m.username ? '@' + escapeHtml(m.username) + ' · ' : ''}DXP ${m.elo ?? 1000}
+                            </div>
+                        </div>
+                        ${!isMe ? `
+                            <button class="friend-action decline"
+                                    onclick="event.stopPropagation();revokeAdmin(${m.telegram_id})">
+                                Снять
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    // ============================================================
+    // 8. МОДЕРАТОРЫ (только для владельца)
+    // ============================================================
+    if (isOwner) {
+        html += `<div class="section-title" style="margin-top: 20px;">⭐ Модераторы (${mods.length})</div>`;
         if (!mods.length) {
             html += '<div class="empty">Модераторов пока нет</div>';
         } else {
@@ -30020,7 +30111,7 @@ async function renderModeratorPanel() {
                 const initial = (m.display_name || 'U')[0].toUpperCase();
                 const av = src ? `<img src="${src}" alt="">` : initial;
                 return `
-                    <div class="leaderboard-item" style="border-color: rgba(217,171,90,0.3);">
+                    <div class="leaderboard-item" style="border-color: rgba(167,139,250,0.3);">
                         <div class="lb-avatar" onclick="openPlayerProfile(${m.telegram_id})">${av}</div>
                         <div style="flex:1;min-width:0;" onclick="openPlayerProfile(${m.telegram_id})">
                             <div class="leaderboard-name">
@@ -30585,6 +30676,51 @@ async function revokeModerator(userId) {
         showToast('Ошибка: ' + e.message);
     }
 }
+
+// ============================================================
+// 👑 СНЯТИЕ АДМИНА (только владелец)
+// ============================================================
+async function revokeAdmin(userId) {
+    if (!currentUser?.is_admin) {
+        showToast('❌ Только владелец может снимать админов');
+        return;
+    }
+    if (!confirm('Снять права АДМИНА? Полный доступ будет удалён.')) return;
+
+    try {
+        // 1. Убираем флаг is_admin
+        await sb.from('users')
+            .update({ is_admin: false })
+            .eq('telegram_id', userId);
+
+        // 2. Полностью очищаем права в admin_permissions
+        await sb.from('admin_permissions')
+            .delete()
+            .eq('telegram_id', userId);
+
+        // 3. Лог
+        await sb.rpc('admin_log_action', {
+            p_admin_id: currentUser.telegram_id,
+            p_action: 'revoke_admin',
+            p_target_id: userId
+        }).catch(() => {});
+
+        // 4. Уведомляем бывшего админа
+        await notify(userId,
+            `👑 Твои права <b>администратора</b> сняты.`,
+            null,
+            { force: true }
+        ).catch(() => {});
+
+        showToast('✅ Права админа сняты');
+        haptic('medium');
+        renderModeratorPanel();
+    } catch (e) {
+        console.error('revokeAdmin:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+window.revokeAdmin = revokeAdmin;
 
         // ============================================================
         // HELPERS
@@ -45644,17 +45780,20 @@ function toggleMenuDrawer() {
         closeMenuDrawer();
     } else {
         fillMenuDrawerUser();
-        // Показ админки — только для владельца
-        const isAdmin = (currentUser?.username || '').toLowerCase() === ADMIN_USERNAME.toLowerCase()
-                     || currentUser?.is_admin === true;
-        const footer = document.getElementById('menuDrawerFooter');
-        if (footer) footer.style.display = isAdmin ? 'block' : 'none';
 
-        // Скрываем кнопку модератора, если ты админ
-        const modBtn = document.getElementById('moderatorMenuBtn');
-        if (modBtn) {
-            modBtn.style.display = (isModerator(currentUser) && !currentUser.is_admin) ? 'flex' : 'none';
-        }
+        // 🔥 Асинхронная проверка прав — чтобы админ по правам тоже видел панель
+        (async () => {
+            const isOwner = currentUser?.is_admin === true;
+            const canMod = isModerator(currentUser) || await hasAnyAdminPerm();
+
+            const footer = document.getElementById('menuDrawerFooter');
+            if (footer) footer.style.display = isOwner ? 'block' : 'none';
+
+            const modBtn = document.getElementById('moderatorMenuBtn');
+            if (modBtn) {
+                modBtn.style.display = (canMod && !isOwner) ? 'flex' : 'none';
+            }
+        })();
 
         drawer.classList.add('active');
         overlay.classList.add('active');
