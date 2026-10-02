@@ -29891,53 +29891,100 @@ console.log('🎯 Спорных матчей загружено:', disputed.len
     }
 
     // ============================================================
-    // 3. HEADER
+    // 3. HEADER + МЕНЮ ПРАВ
     // ============================================================
+    const isOwner = currentUser?.is_admin === true;
+    const canManageAdmins     = isOwner || await hasPerm('manage_admins');
+    const canViewLogs         = isOwner || await hasPerm('view_logs');
+    const canResolve          = isOwner || await hasPerm('resolve_disputes');
+    const canViewReports      = isOwner || await hasPerm('view_reports');
+    const canBan              = isOwner || await hasPerm('ban');
+    const canGiveCoins        = isOwner || await hasPerm('coins_give');
+    const canTakeCoins        = isOwner || await hasPerm('coins_take');
+    const canGiveBp           = isOwner || await hasPerm('bp_give');
+    const canManageShop       = isOwner || await hasPerm('manage_shop');
+    const canManageCases      = isOwner || await hasPerm('manage_cases');
+    const canManageBpRewards  = isOwner || await hasPerm('manage_bp_rewards');
+    const canDeleteAccounts   = isOwner || await hasPerm('delete_accounts');
+
+    let menuHTML = '';
+    const anyBtn = canManageAdmins || canViewLogs || canBan || canGiveCoins || canTakeCoins || canGiveBp || canDeleteAccounts || canManageShop;
+
+    if (anyBtn) {
+        menuHTML += `<div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">`;
+
+        if (canManageAdmins) {
+            menuHTML += `
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                        onclick="openAdminAppointModal()">
+                    👑 Назначить админа
+                </button>`;
+        }
+        if (canViewLogs) {
+            menuHTML += `
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;"
+                        onclick="openAdminLogsModal()">
+                    📜 Логи действий
+                </button>`;
+        }
+        if (canBan) {
+            menuHTML += `
+                <button class="club-full-btn club-btn-danger" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                        onclick="openModBanPlayerSheet()">
+                    🚫 Забанить игрока
+                </button>`;
+        }
+        if (canGiveCoins || canTakeCoins) {
+            menuHTML += `
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;"
+                        onclick="openAdminCoinsPanel()">
+                    💰 Управление монетами
+                </button>`;
+        }
+        if (canGiveBp) {
+            menuHTML += `
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;"
+                        onclick="openAdminBpPanel()">
+                    🎫 Начислить очки BP
+                </button>`;
+        }
+        if (canDeleteAccounts) {
+            menuHTML += `
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,84,112,0.15), rgba(255,84,112,0.05)); border-color: rgba(255,84,112,0.5); color: var(--red);"
+                        onclick="openDeletedAccountsPanel()">
+                    🗑️ Удалённые аккаунты
+                </button>`;
+        }
+        if (canManageShop) {
+            menuHTML += `
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                        onclick="openCoverPickerSheet()">
+                    🎨 Обложки кнопок
+                </button>
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                        onclick="openAddCustomBackgroundSheet()">
+                    🌄 Добавить фон шапки
+                </button>
+                <button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
+                        onclick="openAddDxpChartBackgroundSheet()">
+                    📈 Добавить фон графика DXP
+                </button>`;
+        }
+
+        menuHTML += `</div>`;
+    }
+
     let html = `
         <div class="moderator-panel">
-            <div class="moderator-title">👑 АДМИН-ПАНЕЛЬ</div>
-            <div class="moderator-sub">Спорные матчи, апелляции, жалобы, баны</div>
+            <div class="moderator-title">👑 ${isOwner ? 'АДМИН-ПАНЕЛЬ' : 'МОДЕРАТОР-ПАНЕЛЬ'}</div>
+            <div class="moderator-sub">${isOwner ? 'Полный доступ ко всем функциям' : 'Только твои разрешённые действия'}</div>
             <div>
                 <span class="moderator-stat">🎯 Спорных: ${disputed.length}</span>
                 <span class="moderator-stat">📨 Активных жалоб: ${reports.length}</span>
                 <span class="moderator-stat">⭐ Модеров: ${mods.length}</span>
                 <span class="moderator-stat">🚫 В бане: ${banned.length}</span>
             </div>
-            ${isModerator(currentUser) ? `
-                <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
-                    ${currentUser.is_admin ? `
-                        <button class="club-full-btn club-btn-edit" onclick="openCoverPickerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                            🎨 Обложки кнопок
-                        </button>
-                        <button class="club-full-btn club-btn-edit" onclick="openAddCustomBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                            🌄 Добавить фон шапки
-                        </button>
-                        <button class="club-full-btn club-btn-edit" onclick="openAddDxpChartBackgroundSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                            📈 Добавить фон графика DXP
-                        </button>
-                    ` : ''}
-                    <button class="club-full-btn club-btn-danger" onclick="openModBanPlayerSheet()" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                        🚫 Забанить игрока
-                    </button>
-                    ${currentUser.is_admin ? `
-                        <button class="club-full-btn club-btn-edit"
-                                onclick="openAdminCoinsPanel()"
-                                style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;">
-                            💰 Управление монетами
-                        </button>
-                        <button class="club-full-btn club-btn-edit"
-                                onclick="openAdminBpPanel()"
-                                style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05)); border-color: rgba(167,139,250,0.5); color: #a78bfa;">
-                            🎫 Начислить очки BP
-                        </button>
-                        <button class="club-full-btn club-btn-edit"
-                                onclick="openDeletedAccountsPanel()"
-                                style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,84,112,0.15), rgba(255,84,112,0.05)); border-color: rgba(255,84,112,0.5); color: var(--red);">
-                            🗑️ Удалённые аккаунты
-                        </button>
-                    ` : ''}
-                </div>
-            ` : ''}
+            ${menuHTML}
         </div>
         <div class="section-title">
             <svg class="cy-icon cy-xs cy-red" viewBox="0 0 24 24" style="margin-right: 6px;">
