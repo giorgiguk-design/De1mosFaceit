@@ -64051,26 +64051,39 @@ async function openReferralScreen() {
                     : `💰 ВЫВЕСТИ ${goldBalance} GOLD`}
             </button>
 
-            <!-- Кнопки -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
-                <button onclick="copyReferralLink('${shareLink}')" style="
-                    padding: 14px;
-                    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-                    border: none; border-radius: 12px;
-                    color: #04140e; font-family: inherit;
-                    font-size: 13px; font-weight: 900;
-                    letter-spacing: 0.5px; cursor: pointer;
-                ">📋 СКОПИРОВАТЬ</button>
-                <button onclick="shareReferralLink('${shareLink}')" style="
-                    padding: 14px;
-                    background: rgba(var(--emerald-rgb), 0.10);
-                    border: 1px solid var(--border-strong);
-                    border-radius: 12px;
-                    color: var(--emerald); font-family: inherit;
-                    font-size: 13px; font-weight: 900;
-                    letter-spacing: 0.5px; cursor: pointer;
-                ">📤 ПОДЕЛИТЬСЯ</button>
-            </div>
+<!-- Кнопки -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+    <button onclick="copyReferralLink('${shareLink}')" style="
+        padding: 14px;
+        background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+        border: none; border-radius: 12px;
+        color: #04140e; font-family: inherit;
+        font-size: 13px; font-weight: 900;
+        letter-spacing: 0.5px; cursor: pointer;
+    ">📋 СКОПИРОВАТЬ</button>
+    <button onclick="shareReferralLink('${shareLink}')" style="
+        padding: 14px;
+        background: rgba(var(--emerald-rgb), 0.10);
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        color: var(--emerald); font-family: inherit;
+        font-size: 13px; font-weight: 900;
+        letter-spacing: 0.5px; cursor: pointer;
+    ">📤 ПОДЕЛИТЬСЯ</button>
+</div>
+
+<!-- 🔥 Новая кнопка — копировать красивый текст -->
+<button onclick="copyReferralShareText('${shareLink}')" style="
+    width: 100%; padding: 14px;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, rgba(217,171,90,0.18), rgba(217,171,90,0.06));
+    border: 1.5px solid rgba(217,171,90,0.55);
+    border-radius: 12px;
+    color: #ffd700; font-family: inherit;
+    font-size: 12px; font-weight: 900;
+    letter-spacing: 1px; cursor: pointer;
+    box-shadow: 0 0 16px rgba(217,171,90,0.2);
+">✨ СКОПИРОВАТЬ КРАСИВОЕ ПРИГЛАШЕНИЕ</button>
 
             ${!wasReferred ? `
                 <div style="
@@ -64239,12 +64252,20 @@ function copyReferralLink(link) {
     }
 }
 
+// ============================================================
+// 📤 ШЕРИНГ РЕФЕРАЛЬНОЙ ССЫЛКИ (красивый текст)
+// ============================================================
 function shareReferralLink(link) {
-    const text = `🎮 Заходи в De1mos Faceit по моей ссылке — получишь бонус на старт!`;
+    const text = buildReferralShareText(link);
+
     if (navigator.share && !window.Telegram?.WebApp?.initData) {
-        navigator.share({ title: 'De1mos Faceit', text, url: link }).catch(() => {});
+        navigator.share({
+            title: 'De1mos Faceit',
+            text: text,
+        }).catch(() => {});
         return;
     }
+
     const url = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
     try {
         if (tg?.openTelegramLink) tg.openTelegramLink(url);
@@ -64254,6 +64275,71 @@ function shareReferralLink(link) {
         window.open(url, '_blank');
     }
 }
+
+// ============================================================
+// ✨ Красивый текст приглашения
+// ============================================================
+function buildReferralShareText(link) {
+    return (
+        `⚔️ ТЫ ГОТОВ СТАТЬ ЛЕГЕНДОЙ STANDOFF 2? ⚔️\n` +
+        `\n` +
+        `🎮 De1mos Faceit — киберспортивная платформа\n` +
+        `для настоящих бойцов Standoff 2!\n` +
+        `\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🎁 ТЕБЯ ЖДЁТ БОНУС: +3000 МОНЕТ!\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `\n` +
+        `Что внутри приложения:\n` +
+        `\n` +
+        `🏆 Матчи 1×1, 2×2, 5×5\n` +
+        `   Находи противников по своему уровню\n` +
+        `\n` +
+        `⚡ Рейтинговая система DXP\n` +
+        `   Прокачивайся от Новичка до БОГА\n` +
+        `\n` +
+        `🎁 Ежедневные кейсы и награды\n` +
+        `   Открывай скины, рамки, титулы\n` +
+        `\n` +
+        `🛡️ Кланы и командные битвы\n` +
+        `   Собирай команду, доминируй\n` +
+        `\n` +
+        `🎯 Внутренняя экономика\n` +
+        `   Монеты, Gold, кейсы, магазин\n` +
+        `\n` +
+        `📊 Детальная статистика\n` +
+        `   Графики, winrate, история матчей\n` +
+        `\n` +
+        `👥 Соцсеть игроков\n` +
+        `   Друзья, чаты, приглашения\n` +
+        `\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `🔥 Твой стартовый бонус: 3000 монет 💰\n` +
+        `━━━━━━━━━━━━━━━━━━━━━\n` +
+        `\n` +
+        `👉 Переходи по ссылке и забирай:\n` +
+        `${link}\n` +
+        `\n` +
+        `🎮 Стань топом. Уже сегодня. 🏆`
+    );
+}
+window.buildReferralShareText = buildReferralShareText;
+
+// ============================================================
+// 📋 Копировать красивый текст
+// ============================================================
+function copyReferralShareText(link) {
+    const text = buildReferralShareText(link);
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('📋 Текст приглашения скопирован');
+            haptic('medium');
+        }).catch(() => fallbackCopy(text));
+    } else {
+        fallbackCopy(text);
+    }
+}
+window.copyReferralShareText = copyReferralShareText;
 
 async function useReferralCode() {
     const input = document.getElementById('refCodeInput');
