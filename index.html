@@ -29457,6 +29457,15 @@ let currentProfileUserId = null; // чей профиль сейчас откр�
 // Глобальный флаг: SDK загружен?
 const hasTelegramSDK = !!tg;
 
+// ============================================================
+// 🔒 Утилита: проверить, я ли этот игрок
+// ============================================================
+function checkIsMe(telegramId) {
+    if (!currentUser) return false;
+    return Number(telegramId) === Number(currentUser.telegram_id);
+}
+window.checkIsMe = checkIsMe;
+
         // ============================================================
         // STATE
         // ============================================================
@@ -31200,6 +31209,11 @@ function showToast(msg, type = 'info') {
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
+// ============================================================
+// 🖼️ Рендер аватара с fallback на букву
+// Работает с таймаутом — если Telegram-картинка не грузится за 3 сек,
+// показывается буква ника
+// ============================================================
 function renderAvatar(user) {
     const custom = user?.custom_avatar;
     const telegram = user?.photo_url;
@@ -31207,12 +31221,56 @@ function renderAvatar(user) {
     const initial = (user?.display_name || user?.username || 'U')[0].toUpperCase();
 
     if (src) {
-        return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" 
-                    onerror="this.style.display='none'; this.parentElement.classList.add('av-fallback'); this.parentElement.textContent='${initial}';">`;
+        // 🔥 Уникальный ID для отслеживания этого конкретного <img>
+        const uid = '_av_' + Math.random().toString(36).slice(2, 8);
+
+        return `
+            <img src="${escapeHtml(src)}" alt=""
+                 data-av-uid="${uid}"
+                 style="width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0;transition:opacity 0.25s ease;"
+                 onload="
+                     this.style.opacity='1';
+                     if (window['_avt_${uid}']) { clearTimeout(window['_avt_${uid}']); delete window['_avt_${uid}']; }
+                 "
+                 onerror="
+                     this.style.display='none';
+                     if (this.parentElement) {
+                         this.parentElement.classList.add('av-fallback');
+                         this.parentElement.innerHTML='<span class=&quot;av-fallback-letter&quot;>${initial}</span>';
+                     }
+                     if (window['_avt_${uid}']) { clearTimeout(window['_avt_${uid}']); delete window['_avt_${uid}']; }
+                 ">
+            <span id="av-fb-${uid}" style="display:none;">
+                <span class="av-fallback-letter">${initial}</span>
+            </span>
+            <script>
+                (function() {
+                    var uid = "${uid}";
+                    window['_avt_' + uid] = setTimeout(function() {
+                        var img = document.querySelector('[data-av-uid="' + uid + '"]');
+                        if (img && !img.complete) {
+                            img.style.display = 'none';
+                            if (img.parentElement) {
+                                img.parentElement.classList.add('av-fallback');
+                                var fb = img.parentElement.querySelector('.av-fallback-letter');
+                                if (!fb) {
+                                    var span = document.createElement('span');
+                                    span.className = 'av-fallback-letter';
+                                    span.textContent = '${initial}';
+                                    img.parentElement.appendChild(span);
+                                }
+                            }
+                        }
+                        delete window['_avt_' + uid];
+                    }, 3000);
+                })();
+            <\/script>
+        `;
     }
 
     return `<span class="av-fallback-letter">${initial}</span>`;
 }
+window.renderAvatar = renderAvatar;
 
 // ============================================================
 // 📬 NOTIFY — с кэшем настроек уведомлений
@@ -33834,57 +33892,65 @@ function renderMyClub(container) {
         return (rank[a.role] ?? 3) - (rank[b.role] ?? 3);
     });
 
-const membersHTML = sorted.map(m => {
-    const u = m.user || {};
-    const av = renderAvatar(u);
-    let roleTag = '';
-    if (m.role === 'owner') roleTag = '<span class="role-tag owner">👑</span>';
-    else if (m.role === 'elder') roleTag = '<span class="role-tag elder">⭐</span>';
+    // ============================================================
+    // 🎯 КАЖДЫЙ ЧЛЕН КЛАНА
+    // ============================================================
+    const membersHTML = sorted.map(m => {
+        const u = m.user || {};
+        const av = renderAvatar(u);
 
-    // 🟢 Онлайн-индикатор
-    const lastSeen = u.last_seen ? new Date(u.last_seen).getTime() : 0;
-    const isOnline = Date.now() - lastSeen < 2 * 60 * 1000;
-    const onlineDot = isOnline ? '<div class="online-dot online-dot-sm"></div>' : '';
+        let roleTag = '';
+        if (m.role === 'owner') roleTag = '<span class="role-tag owner">👑</span>';
+        else if (m.role === 'elder') roleTag = '<span class="role-tag elder">⭐</span>';
 
-    const dotsBtn = (isOwner && m.telegram_id !== currentUser.telegram_id)
-        ? `<button class="club-mini-dots" onclick="event.stopPropagation();openOwnerMenu(${m.telegram_id})">···</button>` : '';
+        // 🟢 Онлайн-индикатор
+        const lastSeen = u.last_seen ? new Date(u.last_seen).getTime() : 0;
+        const isOnline = Date.now() - lastSeen < 2 * 60 * 1000;
+        const onlineDot = isOnline ? '<div class="online-dot online-dot-sm"></div>' : '';
 
-    return `
-const isMeMember = Number(m.telegram_id) === Number(currentUser.telegram_id);
-<div class="club-member-row ${isMeMember ? 'is-me' : ''}"
-     ${isMeMember ? 'data-me-flag="1"' : ''}
-     onclick="openPlayerProfile(${m.telegram_id})"
-     data-user-id="${m.telegram_id}">            <div class="club-member-avatar" data-list-avatar>${av}${onlineDot}</div>
-            <div class="club-member-info">
-                <div class="club-member-name">
-                    <span data-list-nick>${escapeHtml(u.display_name || 'Игрок')}</span>
-                    <span data-list-badge></span>
-                    ${roleTag}
+        // 🔥 Вычисляем — я ли это. ТОЛЬКО ЗДЕСЬ, В JS, А НЕ В ШАБЛОНЕ!
+        const isMeMember = Number(m.telegram_id) === Number(currentUser.telegram_id);
+
+        const dotsBtn = (isOwner && !isMeMember)
+            ? `<button class="club-mini-dots" onclick="event.stopPropagation();openOwnerMenu(${m.telegram_id})">···</button>`
+            : '';
+
+        return `
+            <div class="club-member-row ${isMeMember ? 'is-me' : ''}"
+                 ${isMeMember ? 'data-me-flag="1"' : ''}
+                 onclick="openPlayerProfile(${m.telegram_id})"
+                 data-user-id="${m.telegram_id}">
+                <div class="club-member-avatar" data-list-avatar>${av}${onlineDot}</div>
+                <div class="club-member-info">
+                    <div class="club-member-name">
+                        <span data-list-nick>${escapeHtml(u.display_name || 'Игрок')}</span>
+                        <span data-list-badge></span>
+                        ${roleTag}
+                    </div>
+                    <div class="club-member-sub">
+                        ⚡ ${eloToLevel(u.elo)} ур. · ${u.elo || 1000} DXP
+                        ${u.last_seen ? ` · ${formatTimeAgo(u.last_seen)}` : ''}
+                    </div>
                 </div>
-                <div class="club-member-sub">
-                    ⚡ ${eloToLevel(u.elo)} ур. · ${u.elo || 1000} DXP
-                    ${u.last_seen ? ` · ${formatTimeAgo(u.last_seen)}` : ''}
-                </div>
+                ${dotsBtn}
             </div>
-            ${dotsBtn}
-        </div>
-    `;
-}).join('');
+        `;
+    }).join('');
 
     let actionBtns = '';
-if (canEdit) {
-    actionBtns = `
-        <div class="club-actions-row-new">
-            ${isOwner ? `<button class="club-mini-btn" id="requestsBtn" onclick="openRequestsSheet()">📥<span>Заявки</span></button>` : ''}
-            ${(isOwner || isElder) ? `<button class="club-mini-btn" onclick="openClubInviteSheet()">➕<span>Пригласить</span></button>` : ''}
-            ${(isOwner || isElder) ? `<button class="club-mini-btn" onclick="openClanInventory()">🎒<span>Инвентарь</span></button>` : ''}
-            ${isOwner ? `<button class="club-mini-btn danger" onclick="openBansSheet()">🚫<span>Баны</span></button>` : ''}
-            <button class="club-mini-btn" onclick="openClanShop()">🏪<span>Магазин</span></button>
-            <button class="club-mini-btn" onclick="openClubEventsSheet()">📜<span>События</span></button>
-            ${isOwner ? `<button class="club-mini-btn danger" onclick="deleteClubConfirm()">🗑<span>Удалить</span></button>` : ''}
-        </div>
-    `;
-}
+    if (canEdit) {
+        actionBtns = `
+            <div class="club-actions-row-new">
+                ${isOwner ? `<button class="club-mini-btn" id="requestsBtn" onclick="openRequestsSheet()">📥<span>Заявки</span></button>` : ''}
+                ${(isOwner || isElder) ? `<button class="club-mini-btn" onclick="openClubInviteSheet()">➕<span>Пригласить</span></button>` : ''}
+                ${(isOwner || isElder) ? `<button class="club-mini-btn" onclick="openClanInventory()">🎒<span>Инвентарь</span></button>` : ''}
+                ${isOwner ? `<button class="club-mini-btn danger" onclick="openBansSheet()">🚫<span>Баны</span></button>` : ''}
+                <button class="club-mini-btn" onclick="openClanShop()">🏪<span>Магазин</span></button>
+                <button class="club-mini-btn" onclick="openClubEventsSheet()">📜<span>События</span></button>
+                ${isOwner ? `<button class="club-mini-btn danger" onclick="deleteClubConfirm()">🗑<span>Удалить</span></button>` : ''}
+            </div>
+        `;
+    }
 
     const playBtn = (isOwner || isElder) ? `
         <button class="club-play-main" onclick="startClubParty()">
