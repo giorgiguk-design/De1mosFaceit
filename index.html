@@ -12432,6 +12432,35 @@ html.lite-mode .header-coins::before {
         height: 20px !important;
     }
 
+/* Кнопки в чужом профиле — растягиваются на всю ширину сетки */
+.phc-actions {
+    display: contents;
+}
+.phc-actions .phc-icon-btn {
+    flex: 1;
+    height: auto;
+    aspect-ratio: auto;
+    padding: 14px 8px;
+    border-radius: 14px;
+    flex-direction: column;
+    gap: 6px;
+}
+.phc-actions .phc-icon-btn::after {
+    display: none;
+}
+.phc-actions .phc-icon-btn svg {
+    width: 22px;
+    height: 22px;
+}
+.phc-actions .phc-icon-btn::before {
+    content: attr(data-tip);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: currentColor;
+}
+
     /* Достижения — компактные плитки */
     .achv-strip {
         gap: 8px !important;
@@ -27456,7 +27485,8 @@ async function openCaseById(caseId) {
         const itemPrice = SHOP_ITEMS_CACHE[item.id]?.price
             || (await sb.from('shop_items').select('price').eq('id', item.id).single()).data?.price
             || 100;
-        refund = Math.round(itemPrice * 0.5);
+        // 🔥 Было 0.5 — стало 0.1 (10% от цены)
+        refund = Math.max(5, Math.round(itemPrice * 0.1));
         try {
             await sb.rpc('add_coins', {
                 p_user_id: currentUser.telegram_id,
@@ -27737,7 +27767,7 @@ async function openMultipleCases(caseId, count) {
                 const itemPrice = SHOP_ITEMS_CACHE[item.id]?.price
                     || (await sb.from('shop_items').select('price').eq('id', item.id).single()).data?.price
                     || 100;
-                refund = Math.round(itemPrice * 0.5);
+                refund = Math.max(5, Math.round(itemPrice * 0.1));
 
                 try {
                     await sb.rpc('add_coins', {
@@ -31793,18 +31823,25 @@ if (tg?.BackButton) {
         setTimeout(checkDailyStreak, 2000);
 
         // ============================================================
-        // 📸 Триггер из бота: ?action=share-profile — авто-генерация карточки
+        // 📸 Триггер из бота: ?action=share-profile
+        //   auto=1 → автоматически генерируем и отправляем в ЛС
+        //   без auto → открываем превью
         // ============================================================
         try {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('action') === 'share-profile') {
-                // Чистим URL, чтобы при F5 не открывалось заново
+            const isShare = urlParams.get('action') === 'share-profile';
+            const isAuto = urlParams.get('auto') === '1';
+
+            if (isShare) {
                 try {
                     history.replaceState({}, '', window.location.pathname);
                 } catch (e) {}
 
-                setTimeout(() => {
-                    if (currentUser) {
+                setTimeout(async () => {
+                    if (!currentUser) return;
+                    if (isAuto) {
+                        await autoShareProfile(currentUser.telegram_id);
+                    } else {
                         openSharePreview(currentUser.telegram_id);
                     }
                 }, 1800);
@@ -31812,13 +31849,6 @@ if (tg?.BackButton) {
         } catch (e) {
             console.warn('share-profile trigger:', e);
         }
-
-
-    } catch (e) {
-        console.error('Init error:', e);
-        showToast('Ошибка: ' + (e?.message || e));
-    }
-}
 
 function applyHeaderAvatar(user) {
     const src = user.custom_avatar || user.photo_url;
@@ -32651,38 +32681,12 @@ async function renderProfileView(user, options = {}) {
         <!-- HERO -->
         <div class="profile-hero-compact" data-profile-bg>
 
-            <!-- 🆕 Верхняя строка: бейдж + кнопки -->
-            <div class="phc-top-bar">
-                ${user.is_admin ? `<div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>` : '<div></div>'}
-                <div class="phc-actions">
-                    <button type="button" class="phc-icon-btn share-btn"
-                            data-tip="Поделиться"
-                            onclick="openSharePreview(${user.telegram_id}); return false;">
-                        <svg viewBox="0 0 24 24">
-                            <circle cx="18" cy="5" r="3"/>
-                            <circle cx="6" cy="12" r="3"/>
-                            <circle cx="18" cy="19" r="3"/>
-                            <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>
-                        </svg>
-                    </button>
-                    ${isMe ? `
-                        <button class="phc-icon-btn" data-tip="Редактировать" onclick="enterProfileEditMode()">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"/>
-                            </svg>
-                        </button>
-                        <button class="phc-icon-btn phc-settings-customize" data-tip="Кастомизация" onclick="openCustomizationSheet()">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M12 2v6l3-2M12 2v6l-3-2M12 22v-6l3 2M12 22v-6l-3 2M2 12h6l-2-3M2 12h6l-2 3M22 12h-6l2-3M22 12h-6l2 3"/>
-                                <circle cx="12" cy="12" r="4" fill="none"/>
-                            </svg>
-                        </button>
-                    ` : `
-                        ${renderFriendActionButton(user, options)}
-                    `}
+            <!-- 🆕 Верхняя строка: только бейдж -->
+            ${user.is_admin ? `
+                <div class="phc-top-bar" style="justify-content: center;">
+                    <div class="profile-admin-tag">👑 ГЛАВА ФЕЙСИТА</div>
                 </div>
-            </div>
-
+            ` : ''}
             <!-- 🆕 Основной блок: аватар слева, инфо справа -->
             <div class="phc-main">
                 <!-- Аватар + рамка -->
@@ -32758,6 +32762,116 @@ async function renderProfileView(user, options = {}) {
                     </div>
                 `;
             })() : ''}
+        </div>
+
+        <!-- 🎯 Кнопки действий -->
+        <div style="
+            display: grid;
+            grid-template-columns: ${isMe ? '1fr 1fr 1fr' : '1fr 1fr'};
+            gap: 8px;
+            margin: 12px 0;
+            animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        ">
+            <!-- Поделиться — всегда -->
+            <button onclick="openSharePreview(${user.telegram_id}); return false;"
+                    style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        padding: 14px 8px;
+                        background: linear-gradient(160deg,
+                            rgba(var(--emerald-rgb), 0.10) 0%,
+                            rgba(0, 0, 0, 0.4) 100%);
+                        border: 1.5px solid var(--border-strong);
+                        border-radius: 14px;
+                        color: var(--text);
+                        font-family: inherit;
+                        cursor: pointer;
+                        transition: transform 0.18s, border-color 0.22s, background 0.22s;
+                        position: relative;
+                        overflow: hidden;
+                    "
+                    onmouseover="this.style.borderColor='var(--emerald)'; this.style.transform='translateY(-2px)';"
+                    onmouseout="this.style.borderColor='var(--border-strong)'; this.style.transform='translateY(0)';">
+                <span style="font-size: 22px; line-height: 1;">📤</span>
+                <span style="
+                    font-size: 11px;
+                    font-weight: 900;
+                    letter-spacing: 0.8px;
+                    color: var(--emerald);
+                    text-transform: uppercase;
+                ">Поделиться</span>
+            </button>
+
+            ${isMe ? `
+                <!-- Редактировать — только свой -->
+                <button onclick="enterProfileEditMode()"
+                        style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                            padding: 14px 8px;
+                            background: linear-gradient(160deg,
+                                rgba(79, 195, 247, 0.10) 0%,
+                                rgba(0, 0, 0, 0.4) 100%);
+                            border: 1.5px solid var(--border-strong);
+                            border-radius: 14px;
+                            color: var(--text);
+                            font-family: inherit;
+                            cursor: pointer;
+                            transition: transform 0.18s, border-color 0.22s, background 0.22s;
+                        "
+                        onmouseover="this.style.borderColor='#4fc3f7'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.borderColor='var(--border-strong)'; this.style.transform='translateY(0)';">
+                    <span style="font-size: 22px; line-height: 1;">✏️</span>
+                    <span style="
+                        font-size: 11px;
+                        font-weight: 900;
+                        letter-spacing: 0.8px;
+                        color: #4fc3f7;
+                        text-transform: uppercase;
+                    ">Профиль</span>
+                </button>
+
+                <!-- Кастомизация — только свой -->
+                <button onclick="openCustomizationSheet()"
+                        style="
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                            padding: 14px 8px;
+                            background: linear-gradient(160deg,
+                                rgba(167, 139, 250, 0.12) 0%,
+                                rgba(217, 171, 90, 0.05) 50%,
+                                rgba(0, 0, 0, 0.4) 100%);
+                            border: 1.5px solid rgba(167, 139, 250, 0.45);
+                            border-radius: 14px;
+                            color: var(--text);
+                            font-family: inherit;
+                            cursor: pointer;
+                            transition: transform 0.18s, border-color 0.22s, background 0.22s;
+                        "
+                        onmouseover="this.style.borderColor='var(--purple)'; this.style.transform='translateY(-2px)';"
+                        onmouseout="this.style.borderColor='rgba(167, 139, 250, 0.45)'; this.style.transform='translateY(0)';">
+                    <span style="font-size: 22px; line-height: 1;">🎨</span>
+                    <span style="
+                        font-size: 11px;
+                        font-weight: 900;
+                        letter-spacing: 0.8px;
+                        color: var(--purple);
+                        text-transform: uppercase;
+                    ">Стиль</span>
+                </button>
+            ` : `
+                <!-- Чужой профиль — кнопки друга + сообщение -->
+                ${renderFriendActionButton(user, options)}
+            `}
         </div>
 
         <!-- 🏅 ДОСТИЖЕНИЯ -->
@@ -59410,6 +59524,180 @@ function drawCTA(ctx, W, H, colors) {
 
     ctx.textBaseline = 'alphabetic';
 }
+
+// ============================================================
+// 📸 Авто-шаринг профиля (без превью, сразу в ЛС)
+// Используется при переходе из бота с ?auto=1
+// ============================================================
+async function autoShareProfile(userId) {
+    // Открываем "ширму" — показываем прогресс
+    const screen = document.createElement('div');
+    screen.id = 'autoShareScreen';
+    screen.style.cssText = `
+        position: fixed; inset: 0; z-index: 99999;
+        background: radial-gradient(circle at center,
+            rgba(var(--emerald-rgb), 0.10) 0%,
+            rgba(0, 0, 0, 0.98) 70%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 24px; text-align: center;
+        font-family: inherit;
+    `;
+    screen.innerHTML = `
+        <div style="font-size: 72px; margin-bottom: 16px; animation: pulseText 1.6s ease-in-out infinite;">
+            📸
+        </div>
+        <div style="
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px; font-weight: 900;
+            color: var(--emerald); letter-spacing: 3px;
+            margin-bottom: 10px;
+        ">ГЕНЕРИРУЮ КАРТОЧКУ</div>
+        <div id="autoShareStatus" style="
+            font-size: 13px; color: var(--hint);
+            line-height: 1.6; max-width: 280px;
+        ">Загружаю данные профиля...</div>
+        <div style="
+            margin-top: 24px;
+            width: 36px; height: 36px;
+            border: 3px solid rgba(var(--emerald-rgb), 0.15);
+            border-top-color: var(--emerald);
+            border-right-color: var(--emerald-3);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        "></div>
+    `;
+    document.body.appendChild(screen);
+
+    const setStatus = (t) => {
+        const el = document.getElementById('autoShareStatus');
+        if (el) el.textContent = t;
+    };
+
+    try {
+        setStatus('Загружаю профиль...');
+        const { data: user } = await sb.from('users')
+            .select('*').eq('telegram_id', userId).single();
+        if (!user) throw new Error('Профиль не найден');
+
+        // Догружаем shop_items
+        if (user.equipped_items && Object.keys(user.equipped_items).length) {
+            const ids = Object.values(user.equipped_items);
+            const missing = ids.filter(id => !SHOP_ITEMS_CACHE[id]);
+            if (missing.length) {
+                const { data: items } = await sb.from('shop_items')
+                    .select('id, category, value').in('id', missing);
+                (items || []).forEach(i => SHOP_ITEMS_CACHE[i.id] = i);
+            }
+        }
+
+        // Догружаем тег Клана
+        if (typeof clubTagCache !== 'undefined' && !clubTagCache[user.telegram_id]) {
+            if (typeof loadClubTagsForUsers === 'function') {
+                try { await loadClubTagsForUsers([user.telegram_id]); } catch (e) {}
+            }
+        }
+
+        setStatus('Рисую карточку...');
+        const canvas = await generateProfileShareImage(user);
+
+        setStatus('Готовлю картинку...');
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
+        if (!blob) throw new Error('Не удалось создать PNG');
+
+        setStatus('Отправляю в Telegram...');
+
+        const caption = (typeof buildProfileCardCaption === 'function')
+            ? buildProfileCardCaption(user)
+            : `🎮 <b>Профиль ${escapeHtml(user.display_name || '')}</b>`;
+
+        const formData = new FormData();
+        formData.append('userId', String(currentUser.telegram_id));
+        formData.append('profileOwnerId', String(user.telegram_id));
+        formData.append('text', caption);
+        formData.append('url', 'https://t.me/De1mosFaceit_bot/De1mosFaceit');
+        formData.append('photo', blob, `profile_${user.telegram_id}.png`);
+
+        if (Number(currentUser.telegram_id) === Number(user.telegram_id) && currentUser.referral_code) {
+            formData.append('referralUrl',
+                `https://t.me/De1mosFaceit_bot/De1mosFaceit?start=ref_${currentUser.referral_code}`
+            );
+        }
+
+        const res = await fetch(SAVE_PREPARED_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'apikey': SUPABASE_ANON_KEY,
+            },
+            body: formData,
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Ошибка сервера');
+        if (!data.sent_to_chat) throw new Error('Бот не смог написать в ЛС');
+
+        // ✅ Успех
+        screen.innerHTML = `
+            <div style="font-size: 72px; margin-bottom: 16px;">✅</div>
+            <div style="
+                font-family: 'Orbitron', sans-serif;
+                font-size: 20px; font-weight: 900;
+                color: var(--emerald); letter-spacing: 2px;
+                margin-bottom: 12px;
+            ">ГОТОВО!</div>
+            <div style="
+                font-size: 14px; color: var(--text);
+                line-height: 1.6; max-width: 300px;
+                margin-bottom: 24px;
+            ">
+                Карточка отправлена в чат с ботом 👇<br>
+                <b>@${(tg?.initDataUnsafe?.user?.username) ? tg.initDataUnsafe.user.username : 'De1mosFaceit_bot'}</b>
+            </div>
+            <button onclick="document.getElementById('autoShareScreen')?.remove()" style="
+                padding: 14px 32px;
+                background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                color: #04140e;
+                border: none; border-radius: 14px;
+                font-family: 'Orbitron', sans-serif;
+                font-size: 13px; font-weight: 900;
+                letter-spacing: 1.5px; cursor: pointer;
+                box-shadow: 0 8px 24px rgba(var(--emerald-rgb), 0.4);
+            ">ЗАКРЫТЬ</button>
+        `;
+
+        haptic('heavy');
+        if (typeof SFX !== 'undefined') SFX.play('success');
+
+    } catch (e) {
+        console.error('autoShareProfile:', e);
+        screen.innerHTML = `
+            <div style="font-size: 72px; margin-bottom: 16px;">❌</div>
+            <div style="
+                font-family: 'Orbitron', sans-serif;
+                font-size: 18px; font-weight: 900;
+                color: var(--red); letter-spacing: 2px;
+                margin-bottom: 12px;
+            ">ОШИБКА</div>
+            <div style="
+                font-size: 13px; color: var(--hint);
+                line-height: 1.6; max-width: 300px;
+                margin-bottom: 24px;
+            ">${escapeHtml(e.message || 'Что-то пошло не так')}</div>
+            <button onclick="document.getElementById('autoShareScreen')?.remove()" style="
+                padding: 14px 32px;
+                background: rgba(255,255,255,0.06);
+                color: var(--text);
+                border: 1px solid var(--border-strong);
+                border-radius: 14px;
+                font-family: inherit;
+                font-size: 13px; font-weight: 800;
+                cursor: pointer;
+            ">ЗАКРЫТЬ</button>
+        `;
+    }
+}
+window.autoShareProfile = autoShareProfile;
 
 // ============================================================
 // ОТКРЫТИЕ МОДАЛКИ ПРЕВЬЮ
