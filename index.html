@@ -31814,6 +31814,28 @@ if (tg?.BackButton) {
         // 🎁 Проверяем ежедневную награду (через 2 секунды)
         setTimeout(checkDailyStreak, 2000);
 
+        // ============================================================
+        // 📸 Триггер из бота: ?action=share-profile — авто-генерация карточки
+        // ============================================================
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'share-profile') {
+                // Чистим URL, чтобы при F5 не открывалось заново
+                try {
+                    history.replaceState({}, '', window.location.pathname);
+                } catch (e) {}
+
+                setTimeout(() => {
+                    if (currentUser) {
+                        openSharePreview(currentUser.telegram_id);
+                    }
+                }, 1800);
+            }
+        } catch (e) {
+            console.warn('share-profile trigger:', e);
+        }
+
+
     } catch (e) {
         console.error('Init error:', e);
         showToast('Ошибка: ' + (e?.message || e));
@@ -54270,6 +54292,25 @@ function uniquifySvgIds(svgString) {
         .replace(/xlink:href="#([^"]+)"/g, `xlink:href="#$1${uid}"`);
 }
 
+// ============================================================
+// 🔧 Расширяем viewBox SVG, чтобы рамка не обрезалась при рендере в canvas
+// ============================================================
+function padSvgViewBox(svgString, extraPercent) {
+    if (!svgString) return svgString;
+    const pct = (typeof extraPercent === 'number') ? extraPercent : 0.30;
+    const m = svgString.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/);
+    if (!m) return svgString;
+    const w = parseFloat(m[1]);
+    const h = parseFloat(m[2]);
+    const padX = w * pct;
+    const padY = h * pct;
+    return svgString.replace(
+        /viewBox="0 0 \d+(?:\.\d+)? \d+(?:\.\d+)?"/,
+        `viewBox="${-padX} ${-padY} ${w + padX * 2} ${h + padY * 2}"`
+    );
+}
+window.padSvgViewBox = padSvgViewBox;
+
 // Хелпер
 function shadeColor(hex, percent) {
     if (!hex || typeof hex !== 'string') return '#888';
@@ -58705,15 +58746,19 @@ async function loadShareData(user) {
         }
     }
 
-    // ---- SVG-рамка ----
+    // ---- SVG-рамка (с расширенным viewBox, чтобы не обрезалась) ----
     const frameId = eq.avatar_frame;
     if (frameId && SHOP_ITEMS_CACHE[frameId]) {
         const item = SHOP_ITEMS_CACHE[frameId];
         const val = item.value || {};
         if (val.special === true && typeof getSpecialFrameHTML === 'function') {
             const rawSvg = getSpecialFrameHTML(val.special_type || 'default', val.color || '#fff');
-            // Преобразуем SVG-строку в data URI
-            data.frameSvg = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rawSvg);
+
+            // 🔥 Расширяем viewBox на 35% — рамка не обрежется
+            const PAD = 0.35;
+            const paddedSvg = padSvgViewBox(rawSvg, PAD);
+            data.frameSvg = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(paddedSvg);
+            data.framePadMultiplier = 1 + PAD * 2;   // = 1.7
         }
     }
 
@@ -58894,13 +58939,13 @@ async function drawProfileCard(ctx, W, data, colors) {
     }
 
     // ============================================================
-    // SVG-рамка — пропорционально больше аватара
+    // SVG-рамка — с компенсацией расширенного viewBox
     // ============================================================
     if (data.frameSvg) {
         try {
             const frameImg = await loadImageAsPromise(data.frameSvg);
-            // 🔥 2.5× от радиуса — рамка видна полностью, не лезет в текст
-            const frameSize = avR * 2.5;
+            const padMul = data.framePadMultiplier || 1;   // 1.7
+            const frameSize = avR * 2.5 * padMul;
             ctx.drawImage(
                 frameImg,
                 avCx - frameSize / 2,
@@ -59509,6 +59554,9 @@ function openBotChat() {
     document.getElementById('msgSentHint')?.remove();
 }
             
+// ============================================================
+// 📸 Отправка карточки профиля через бота (в ЛС)
+// ============================================================
 async function doShareToTelegram() {
     const blob = AppState.share.blob;
     const user = AppState.share.userData;
@@ -59519,37 +59567,44 @@ async function doShareToTelegram() {
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ОТПРАВКА...'; }
 
     try {
-        const formData = new FormData();
-        formData.append('userId', String(user.telegram_id));
-        formData.append('text', `🎮 Мой профиль на De1mos Faceit`);
-        formData.append('url', 'https://t.me/De1mosFaceit_bot/De1mosFaceit');
-        formData.append('photo', blob, `de1mos_${user.telegram_id}.png`);
+        // 1. Загружаем картинку в Storage
+        const path = `profile_cards/${user.telegram_id}_${Date.now()}.png`;
+        const { error: upErr } = await sb.storage.from('matches')
+            .upload(path, blob, { contentType: 'image/png', upsert: false });
+        if (upErr) throw upErr;
 
-        const res = await fetch(SAVE_PREPARED_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                'apikey': SUPABASE_ANON_KEY,
-            },
-            body: formData,
-        });
+        const { data: urlData } = sb.storage.from('matches').getPublicUrl(path);
+
+        // 2. Красивая подпись
+        const caption = (typeof buildProfileCardCaption === 'function')
+            ? buildProfileCardCaption(user)
+            : `🎮 <b>Профиль ${escapeHtml(user.display_name || '')}</b>\n\nDXP: <b>${user.elo || 1000}</b>`;
+
+        // 3. Отправляем боту
+        const res = await fetch(
+            `${SUPABASE_URL}/functions/v1/telegram-bot?action=send-profile-card-share`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'apikey': SUPABASE_ANON_KEY,
+                },
+                body: JSON.stringify({
+                    userId: user.telegram_id,
+                    imageUrl: urlData.publicUrl,
+                    caption,
+                    username: user.username || '',
+                }),
+            }
+        );
 
         const data = await res.json();
-
-        if (!res.ok) throw new Error(data?.error || 'Ошибка сервера');
-
-        // ============================================================
-        // Проверяем — отправилось ли в ЛС
-        // ============================================================
-        if (!data.sent_to_chat) {
-            // sendPhoto не сработал — возможно, пользователь не нажал /start
-            throw new Error('Бот не смог написать тебе в ЛС. Открой @De1mosFaceit_bot и нажми /start');
-        }
+        if (!res.ok || !data.ok) throw new Error(data.error || 'Ошибка сервера');
 
         haptic('medium');
         closeSharePreview();
         showMessageSentHint();
-
     } catch (e) {
         console.error('doShareToTelegram:', e);
         showToast('❌ ' + e.message);
@@ -64324,6 +64379,51 @@ function buildReferralShareText(link) {
     );
 }
 window.buildReferralShareText = buildReferralShareText;
+
+// ============================================================
+// 📝 Красивая подпись под карточкой профиля (для отправки ботом)
+// ============================================================
+function buildProfileCardCaption(user) {
+    const lvl = eloToLevel(user.elo || 1000);
+    const info = RANK_CONFIG.LEVELS[Math.min(lvl - 1, 9)];
+    const winrate = (user.matches_played || 0) > 0
+        ? Math.round((user.wins / user.matches_played) * 100)
+        : 0;
+
+    const club = (typeof clubTagCache !== 'undefined') ? clubTagCache[user.telegram_id] : null;
+    const clubTag = club ? `[${club.tag}] ` : '';
+
+    let t = '';
+
+    if (user.is_admin) t += `👑 <b>ГЛАВА ФЕЙСИТА</b>\n`;
+
+    t += `<b>${escapeHtml(clubTag + (user.display_name || 'Игрок'))}</b>`;
+    if (user.username && !user.hide_telegram_tag) {
+        t += `\n📱 @${escapeHtml(user.username)}`;
+    }
+
+    t += `\n\n`;
+    t += `🏅 <b>Ранг:</b> <i>${info.name}</i>\n`;
+    t += `⚡ <b>Уровень:</b> ${lvl} / 10\n`;
+    t += `🎯 <b>DXP:</b> <code>${user.elo ?? 1000}</code>\n\n`;
+
+    t += `📊 <b>Статистика</b>\n`;
+    t += `├ 🎮 Матчей: <b>${user.matches_played ?? 0}</b>\n`;
+    t += `├ 🏆 Побед: <b>${user.wins ?? 0}</b>\n`;
+    t += `└ 📈 Winrate: <b>${winrate}%</b>\n`;
+
+    if (user.standoff_id) {
+        t += `\n🆔 <b>Standoff ID:</b> <code>${escapeHtml(user.standoff_id)}</code>`;
+    }
+
+    t += `\n\n━━━━━━━━━━━━━━━━━━━━━\n`;
+    t += `🎮 <b>De1mos Faceit</b> — киберспортивная платформа\n`;
+    t += `👉 t.me/De1mosFaceit_bot/De1mosFaceit`;
+
+    return t;
+}
+
+window.buildProfileCardCaption = buildProfileCardCaption;
 
 // ============================================================
 // 📋 Копировать красивый текст
