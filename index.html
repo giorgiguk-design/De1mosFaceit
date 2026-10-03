@@ -28401,10 +28401,34 @@ function updateChanceTotal() {
     const e = parseInt(document.getElementById('admCaseChanceEpic')?.value, 10) || 0;
     const l = parseInt(document.getElementById('admCaseChanceLegendary')?.value, 10) || 0;
     const total = c + r + e + l;
+
     const el = document.getElementById('admCaseChanceTotal');
     if (!el) return;
-    el.textContent = 'Сумма: ' + total + '%';
-    el.style.color = Math.abs(total - 100) < 1 ? 'var(--emerald)' : 'var(--gold)';
+
+    // Показываем абсолютную и относительную (нормализованную) вероятность
+    if (total > 0) {
+        const pC = ((c / total) * 100).toFixed(1);
+        const pR = ((r / total) * 100).toFixed(1);
+        const pE = ((e / total) * 100).toFixed(1);
+        const pL = ((l / total) * 100).toFixed(1);
+
+        el.innerHTML = `
+            <div style="margin-bottom:6px;">
+                Сумма: <b style="color:${Math.abs(total - 100) < 1 ? 'var(--emerald)' : 'var(--gold)'};">${total}%</b>
+                ${Math.abs(total - 100) < 1 ? '' : ' <span style="font-size:10px;opacity:0.7;">(будет нормализовано до 100%)</span>'}
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px;font-size:10px;">
+                <div>⚪ ${pC}%</div>
+                <div>🔵 ${pR}%</div>
+                <div>🟣 ${pE}%</div>
+                <div>🟡 ${pL}%</div>
+            </div>
+        `;
+        el.style.color = '';
+    } else {
+        el.textContent = 'Сумма: 0%';
+        el.style.color = 'var(--red)';
+    }
 }
 window.updateChanceTotal = updateChanceTotal;
 
@@ -29551,63 +29575,96 @@ function clearDraftScore() {
 
             
 
-        async function saveOnboarding() {
-            const nickname = document.getElementById('onboardNickname').value.trim();
-            const standoffId = document.getElementById('onboardStandoff').value.trim();
-            const btn = document.getElementById('onboardSaveBtn');
+async function saveOnboarding() {
+    const nickname = document.getElementById('onboardNickname').value.trim();
+    const standoffId = document.getElementById('onboardStandoff').value.trim();
+    const btn = document.getElementById('onboardSaveBtn');
 
-            if (!nickname || nickname.length < 2) {
-                showToast('Введите ник (мин. 2 символа)');
-                return;
-            }
-            if (!standoffId || standoffId.length < 7 || standoffId.length > 9) {
-                showToast('ID должен быть 7-9 символов');
-                return;
-            }
-            if (!/^\d+$/.test(standoffId)) {
-                showToast('ID должен содержать только цифры');
-                return;
-            }
+    if (!nickname || nickname.length < 2) {
+        showToast('Введите ник (мин. 2 символа)');
+        return;
+    }
+    if (!standoffId || standoffId.length < 7 || standoffId.length > 9) {
+        showToast('ID должен быть 7-9 символов');
+        return;
+    }
+    if (!/^\d+$/.test(standoffId)) {
+        showToast('ID должен содержать только цифры');
+        return;
+    }
 
-            btn.disabled = true;
-            btn.textContent = 'СОХРАНЕНИЕ...';
+    btn.disabled = true;
+    btn.textContent = 'СОХРАНЕНИЕ...';
 
-            try {
-                let avatarUrl = currentUser.custom_avatar;
+    try {
+        let avatarUrl = currentUser.custom_avatar;
 
-                if (onboardAvatarBlob) {
-                    const path = `${currentUser.telegram_id}/${Date.now()}.jpg`;
-                    const { error: upErr } = await sb.storage.from(BUCKETS.avatars)
-                        .upload(path, onboardAvatarBlob, { contentType: 'image/jpeg', upsert: true });
-                    if (upErr) throw upErr;
-                    const { data: urlData } = sb.storage.from(BUCKETS.avatars).getPublicUrl(path);
-                    avatarUrl = urlData.publicUrl;
-                }
-
-                const { data, error } = await sb.from('users')
-                    .update({
-                        display_name: nickname,
-                        standoff_id: standoffId,
-                        custom_avatar: avatarUrl
-                    })
-                    .eq('telegram_id', currentUser.telegram_id)
-                    .select().single();
-                if (error) throw error;
-
-                currentUser = data;
-                applyHeaderAvatar(currentUser);
-                renderDashboard(currentUser);
-                renderProfileView(currentUser);
-                document.getElementById('onboardingModal').classList.remove('active');
-                onboardAvatarBlob = null;
-                showToast('✅ Профиль готов!');
-                haptic('medium');
-            } catch (e) {
-                showToast('Ошибка: ' + e.message);
-                btn.disabled = false;
-                btn.textContent = '✅ НАЧАТЬ ИГРАТЬ';
-            }
+        if (onboardAvatarBlob) {
+            const path = `${currentUser.telegram_id}/${Date.now()}.jpg`;
+            const { error: upErr } = await sb.storage.from(BUCKETS.avatars)
+                .upload(path, onboardAvatarBlob, { contentType: 'image/jpeg', upsert: true });
+            if (upErr) throw upErr;
+            const { data: urlData } = sb.storage.from(BUCKETS.avatars).getPublicUrl(path);
+            avatarUrl = urlData.publicUrl;
         }
+
+        const { data, error } = await sb.from('users')
+            .update({
+                display_name: nickname,
+                standoff_id: standoffId,
+                custom_avatar: avatarUrl
+            })
+            .eq('telegram_id', currentUser.telegram_id)
+            .select().single();
+        if (error) throw error;
+
+        currentUser = data;
+
+        // 🎁 ПРИМЕНЯЕМ РЕФЕРАЛЬНЫЙ КОД
+        try {
+            const { data: refResult, error: refErr } = await sb.rpc('apply_referral_on_register', {
+                p_user_id: currentUser.telegram_id
+            });
+
+            if (!refErr && refResult?.ok) {
+                console.log('✅ Реферал применён:', refResult);
+
+                // Уведомляем реферера
+                await sb.from('user_notifications').insert({
+                    telegram_id: refResult.referrer_id,
+                    title: '🎁 Новый реферал!',
+                    text: `<b>${escapeHtml(nickname)}</b> зарегистрировался по твоей ссылке. Начислено <b>+30 Gold</b>`,
+                    amount: 30,
+                    type: 'referral',
+                    is_read: false,
+                }).catch(() => {});
+
+                // Пробуем уведомить через бота
+                if (typeof notify === 'function') {
+                    notify(refResult.referrer_id,
+                        `🎁 <b>Новый реферал!</b>\n\n<b>${escapeHtml(nickname)}</b> зарегистрировался по твоей ссылке.\nНачислено <b>+30 Gold</b> 💰`,
+                        'party',
+                        { force: true }
+                    ).catch(() => {});
+                }
+            }
+        } catch (e) {
+            console.warn('apply_referral_on_register:', e);
+        }
+
+        applyHeaderAvatar(currentUser);
+        renderDashboard(currentUser);
+        renderProfileView(currentUser);
+        document.getElementById('onboardingModal').classList.remove('active');
+        onboardAvatarBlob = null;
+        showToast('✅ Профиль готов!');
+        haptic('medium');
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '✅ НАЧАТЬ ИГРАТЬ';
+    }
+}
 
             function pickOnboardTheme(theme, btn) {
             applyTheme(theme);
@@ -29911,6 +29968,12 @@ async function renderModeratorPanel() {
         menuBtns.push(`<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px;"
             onclick="openSeason()">🎫 Редактор BP</button>`);
     }
+
+// 💰 Заявки на вывод — только владелец
+if (isCurrentUserOwner()) {
+    menuBtns.push(`<button class="club-full-btn club-btn-edit" style="margin-bottom: 0; flex: 1; min-width: 140px; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border-color: rgba(255,215,0,0.5); color: #ffd700;"
+        onclick="openWithdrawalsAdmin()">💰 Заявки на вывод</button>`);
+}
 
     if (menuBtns.length) {
         menuHTML = `<div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">${menuBtns.join('')}</div>`;
@@ -35214,6 +35277,70 @@ async function loadChatList() {
         container.innerHTML = '<div class="empty" style="color:var(--red);">Ошибка</div>';
     }
 }
+
+// ============================================================
+// 📷 Загрузка картинки в чат
+// ============================================================
+async function handleChatImageUpload(e) {
+    const file = e.target?.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!currentChat || !currentUser) return;
+
+    if (file.size > 5_000_000) {
+        showToast('⚠️ Максимум 5 МБ');
+        return;
+    }
+
+    showToast('📤 Загрузка фото...');
+
+    try {
+        // Сжимаем
+        const blob = await compressImage(file, 1200, 0.85);
+
+        // Загружаем в storage
+        const path = `${currentUser.telegram_id}/${Date.now()}.jpg`;
+        const { error: upErr } = await sb.storage.from(BUCKETS.chat)
+            .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from(BUCKETS.chat).getPublicUrl(path);
+
+        // Отправляем сообщение с картинкой
+        const payload = {
+            sender_id: currentUser.telegram_id,
+            text: '',
+            image_url: urlData.publicUrl,
+            club_id: currentChat.type === 'club' ? currentChat.id : null,
+            recipient_id: currentChat.type === 'dm' ? currentChat.id : null,
+        };
+
+        if (replyTo) {
+            payload.reply_to_id = parseInt(replyTo.id);
+            payload.reply_to_name = replyTo.sender_name;
+            payload.reply_to_text = replyTo.text;
+        }
+
+        const { error } = await sb.from('messages').insert(payload);
+        if (error) throw error;
+
+        if (typeof cancelReply === 'function') cancelReply();
+
+        // Уведомляем получателя (для ЛС)
+        if (currentChat.type === 'dm') {
+            await notify(currentChat.id,
+                `📷 <b>${escapeHtml(currentUser.display_name)}</b> отправил тебе фото`,
+                'message'
+            ).catch(() => {});
+        }
+
+        haptic('medium');
+    } catch (err) {
+        console.error('handleChatImageUpload:', err);
+        showToast('❌ Ошибка: ' + (err.message || err));
+    }
+}
+window.handleChatImageUpload = handleChatImageUpload;
 
 // ============================================================
 // 🔄 СБРОС INPUT BAR ПОД ТЕКУЩИЙ ЧАТ
@@ -63699,7 +63826,6 @@ async function openReferralScreen() {
         return;
     }
 
-    // Создаём страницу при первом открытии
     let page = document.getElementById('page-referral');
     if (!page) {
         page = document.createElement('div');
@@ -63714,134 +63840,202 @@ async function openReferralScreen() {
 
     try {
         const { data: freshUser } = await sb.from('users')
-            .select('referral_code, referral_count, referral_earnings, referred_by')
+            .select('referral_code, referral_count, gold_balance, gold_earned, gold_withdrawn, referred_by')
             .eq('telegram_id', currentUser.telegram_id)
             .single();
 
         const code = freshUser?.referral_code || '—';
-        const count = freshUser?.referral_count || 0;
-        const earnings = freshUser?.referral_earnings || 0;
+        const refCount = freshUser?.referral_count || 0;
+        const goldBalance = freshUser?.gold_balance || 0;
+        const goldEarned = freshUser?.gold_earned || 0;
+        const goldWithdrawn = freshUser?.gold_withdrawn || 0;
         const wasReferred = !!freshUser?.referred_by;
 
+        // Список приглашённых
         const { data: refs } = await sb.from('referrals')
             .select('referred_id, created_at')
             .eq('referrer_id', currentUser.telegram_id)
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(100);
 
         const refIds = (refs || []).map(r => r.referred_id);
         let userMap = {};
         if (refIds.length) {
             const { data: users } = await sb.from('users')
-                .select('telegram_id, display_name, custom_avatar, photo_url')
+                .select('telegram_id, display_name, custom_avatar, photo_url, standoff_id')
                 .in('telegram_id', refIds);
             (users || []).forEach(u => userMap[u.telegram_id] = u);
         }
 
+        // История выводов
+        const { data: withdrawals } = await sb.from('withdrawals')
+            .select('*')
+            .eq('user_id', currentUser.telegram_id)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
         const botLink = 'https://t.me/De1mosFaceit_bot/De1mosFaceit';
         const shareLink = `${botLink}?start=ref_${code}`;
 
+        const canWithdraw = refCount >= 5 && goldBalance >= 30;
+        const hasPending = (withdrawals || []).some(w => w.status === 'pending');
+
         page.innerHTML = `
+            <!-- HERO -->
             <div style="
-                position: relative;
-                padding: 20px;
+                position: relative; padding: 22px 20px;
                 margin-bottom: 14px;
-                background: linear-gradient(160deg, rgba(217,171,90,0.15), rgba(0,0,0,0.6));
+                background: linear-gradient(160deg, rgba(217,171,90,0.18), rgba(0,0,0,0.6));
                 border: 1px solid rgba(217,171,90,0.5);
-                border-radius: 20px;
-                text-align: center;
-                overflow: hidden;
+                border-radius: 20px; text-align: center; overflow: hidden;
             ">
                 <div style="font-size: 56px; margin-bottom: 8px;">🎁</div>
                 <div style="
                     font-family: 'Orbitron', sans-serif;
-                    font-size: 22px;
-                    font-weight: 900;
-                    letter-spacing: 3px;
-                    color: #ffd700;
+                    font-size: 22px; font-weight: 900;
+                    letter-spacing: 3px; color: #ffd700;
                     text-shadow: 0 0 20px rgba(255,215,0,0.5);
                     margin-bottom: 6px;
                 ">РЕФЕРАЛЬНАЯ СИСТЕМА</div>
-                <div style="font-size: 12px; color: var(--hint); margin-bottom: 16px;">
-                    Приглашай друзей — получай <b style="color: var(--gold);">+300 💰</b><br>
-                    а друг — <b style="color: var(--emerald);">+150 💰</b> на старт
+                <div style="font-size: 12px; color: var(--hint); margin-bottom: 18px;">
+                    Приглашай друзей — получай <b style="color: var(--gold);">+30 Gold</b> за каждого
                 </div>
 
+                <!-- Код -->
                 <div style="
                     display: inline-block;
                     padding: 14px 26px;
                     background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,215,0,0.06));
                     border: 1.5px solid rgba(255,215,0,0.55);
-                    border-radius: 14px;
-                    margin-bottom: 14px;
+                    border-radius: 14px; margin-bottom: 16px;
                 ">
                     <div style="font-size: 10px; color: var(--hint); letter-spacing: 2px; font-weight: 800; margin-bottom: 4px;">
                         ТВОЙ КОД
                     </div>
                     <div style="
                         font-family: 'Orbitron', sans-serif;
-                        font-size: 26px;
-                        font-weight: 900;
-                        color: #ffd700;
-                        letter-spacing: 4px;
+                        font-size: 26px; font-weight: 900;
+                        color: #ffd700; letter-spacing: 4px;
                         text-shadow: 0 0 16px rgba(255,215,0,0.6);
                     ">${escapeHtml(code)}</div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
+                <!-- Стата в 3 колонки -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     <div style="
-                        padding: 12px;
-                        background: rgba(0,0,0,0.4);
-                        border: 1px solid var(--border);
-                        border-radius: 12px;
+                        padding: 12px 6px; background: rgba(0,0,0,0.4);
+                        border: 1px solid var(--border); border-radius: 12px;
                     ">
-                        <div style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: var(--emerald);">
-                            ${count}
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900; color: var(--emerald);">
+                            ${refCount}
                         </div>
-                        <div style="font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-top: 2px;">
-                            ПРИГЛАШЕНО
+                        <div style="font-size: 9px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-top: 3px;">
+                            РЕФЕРАЛОВ
                         </div>
                     </div>
                     <div style="
-                        padding: 12px;
-                        background: rgba(0,0,0,0.4);
-                        border: 1px solid var(--border);
-                        border-radius: 12px;
+                        padding: 12px 6px; background: rgba(0,0,0,0.4);
+                        border: 1px solid var(--border); border-radius: 12px;
                     ">
-                        <div style="font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: #ffd700;">
-                            ${earnings}
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900; color: #ffd700;">
+                            ${goldBalance}
                         </div>
-                        <div style="font-size: 10px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-top: 2px;">
-                            ЗАРАБОТАНО
+                        <div style="font-size: 9px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-top: 3px;">
+                            GOLD
+                        </div>
+                    </div>
+                    <div style="
+                        padding: 12px 6px; background: rgba(0,0,0,0.4);
+                        border: 1px solid var(--border); border-radius: 12px;
+                    ">
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900; color: var(--purple);">
+                            ${goldWithdrawn}
+                        </div>
+                        <div style="font-size: 9px; color: var(--hint); font-weight: 800; letter-spacing: 1px; margin-top: 3px;">
+                            ВЫВЕДЕНО
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Прогресс до вывода -->
+            <div style="
+                padding: 14px;
+                background: linear-gradient(180deg, rgba(var(--emerald-rgb),0.06), rgba(0,0,0,0.4));
+                border: 1px solid ${canWithdraw ? 'rgba(var(--emerald-rgb),0.6)' : 'var(--border)'};
+                border-radius: 14px;
+                margin-bottom: 14px;
+            ">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 11px; font-weight: 800; color: var(--hint); letter-spacing: 1.5px;">
+                        ПРОГРЕСС ДО ВЫВОДА
+                    </span>
+                    <span style="font-size: 11px; font-weight: 900; color: ${canWithdraw ? 'var(--emerald)' : 'var(--hint)'}; font-family: var(--font-mono);">
+                        ${Math.min(refCount, 5)}/5
+                    </span>
+                </div>
+                <div style="height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                    <div style="
+                        height: 100%;
+                        width: ${Math.min(100, (refCount / 5) * 100)}%;
+                        background: ${canWithdraw
+                            ? 'linear-gradient(90deg, var(--emerald-2), var(--emerald), var(--emerald-3))'
+                            : 'linear-gradient(90deg, #6d8a80, #a0b8ae)'};
+                        transition: width 0.8s ease;
+                        box-shadow: ${canWithdraw ? '0 0 12px rgba(var(--emerald-rgb),0.7)' : 'none'};
+                    "></div>
+                </div>
+
+                ${canWithdraw ? `
+                    ${hasPending ? `
+                        <button disabled style="
+                            width: 100%; padding: 14px;
+                            background: rgba(217,171,90,0.15);
+                            border: 1px solid rgba(217,171,90,0.5);
+                            border-radius: 12px;
+                            color: #ffd700;
+                            font-family: inherit; font-size: 13px; font-weight: 900;
+                            letter-spacing: 1px; cursor: not-allowed;
+                        ">⏳ ЗАЯВКА УЖЕ НА РАССМОТРЕНИИ</button>
+                    ` : `
+                        <button onclick="openWithdrawModal()" style="
+                            width: 100%; padding: 16px;
+                            background: linear-gradient(135deg, #ffd700, #b8860b);
+                            border: none; border-radius: 12px;
+                            color: #000; font-family: 'Orbitron', sans-serif;
+                            font-size: 13px; font-weight: 900;
+                            letter-spacing: 1.5px; cursor: pointer;
+                            box-shadow: 0 6px 22px rgba(255,215,0,0.4);
+                        ">💰 ВЫВЕСТИ ${goldBalance} GOLD</button>
+                    `}
+                ` : `
+                    <div style="
+                        font-size: 12px; color: var(--hint); line-height: 1.5;
+                        text-align: center; padding: 4px 0;
+                    ">
+                        Ещё <b style="color: #ffd700;">${5 - refCount}</b> рефералов до вывода
+                    </div>
+                `}
+            </div>
+
+            <!-- Кнопки -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
                 <button onclick="copyReferralLink('${shareLink}')" style="
                     padding: 14px;
                     background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-                    border: none;
-                    border-radius: 12px;
-                    color: #04140e;
-                    font-family: inherit;
-                    font-size: 13px;
-                    font-weight: 900;
-                    letter-spacing: 0.5px;
-                    cursor: pointer;
+                    border: none; border-radius: 12px;
+                    color: #04140e; font-family: inherit;
+                    font-size: 13px; font-weight: 900;
+                    letter-spacing: 0.5px; cursor: pointer;
                 ">📋 СКОПИРОВАТЬ</button>
                 <button onclick="shareReferralLink('${shareLink}')" style="
                     padding: 14px;
                     background: rgba(var(--emerald-rgb), 0.10);
                     border: 1px solid var(--border-strong);
                     border-radius: 12px;
-                    color: var(--emerald);
-                    font-family: inherit;
-                    font-size: 13px;
-                    font-weight: 900;
-                    letter-spacing: 0.5px;
-                    cursor: pointer;
+                    color: var(--emerald); font-family: inherit;
+                    font-size: 13px; font-weight: 900;
+                    letter-spacing: 0.5px; cursor: pointer;
                 ">📤 ПОДЕЛИТЬСЯ</button>
             </div>
 
@@ -63850,8 +64044,7 @@ async function openReferralScreen() {
                     padding: 14px;
                     background: rgba(var(--emerald-rgb), 0.06);
                     border: 1px solid var(--border-strong);
-                    border-radius: 14px;
-                    margin-bottom: 14px;
+                    border-radius: 14px; margin-bottom: 14px;
                 ">
                     <div style="font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 8px;">
                         🔑 Есть код друга?
@@ -63863,29 +64056,23 @@ async function openReferralScreen() {
                         <button onclick="useReferralCode()" style="
                             padding: 0 18px;
                             background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
-                            border: none;
-                            border-radius: 10px;
-                            color: #04140e;
-                            font-family: inherit;
-                            font-size: 12px;
-                            font-weight: 900;
-                            cursor: pointer;
+                            border: none; border-radius: 10px;
+                            color: #04140e; font-family: inherit;
+                            font-size: 12px; font-weight: 900; cursor: pointer;
                         ">АКТИВИРОВАТЬ</button>
                     </div>
                 </div>
             ` : ''}
 
-            <div class="section-title">Твои рефералы (${(refs || []).length})</div>
+            <!-- Мои рефералы -->
+            <div class="section-title">Мои рефералы (${(refs || []).length})</div>
 
             ${(refs || []).length === 0 ? `
                 <div style="
-                    text-align: center;
-                    padding: 30px 20px;
+                    text-align: center; padding: 30px 20px;
                     background: rgba(0,0,0,0.3);
                     border: 1px dashed var(--border-strong);
-                    border-radius: 14px;
-                    color: var(--hint);
-                    font-size: 12px;
+                    border-radius: 14px; color: var(--hint); font-size: 12px;
                 ">
                     <div style="font-size: 40px; opacity: 0.5; margin-bottom: 8px;">👥</div>
                     Пока никого нет<br>
@@ -63904,17 +64091,60 @@ async function openReferralScreen() {
                                     ${formatTimeAgo(r.created_at)}
                                 </div>
                             </div>
-                            <span style="font-size: 11px; font-weight: 900; color: var(--gold);">+300 💰</span>
+                            <span style="font-size: 11px; font-weight: 900; color: #ffd700;">+30 💰</span>
                         </div>
                     `;
                 }).join('')}
             `}
 
+            <!-- История выводов -->
+            ${(withdrawals || []).length > 0 ? `
+                <div class="section-title" style="margin-top: 18px;">История выводов</div>
+                ${(withdrawals || []).map(w => {
+                    const statusMap = {
+                        pending:   { text: '⏳ На рассмотрении', color: 'var(--gold)' },
+                        approved:  { text: '✅ Одобрено',        color: 'var(--emerald)' },
+                        rejected:  { text: '❌ Отклонено',       color: 'var(--red)' },
+                        completed: { text: '🎉 Выполнено',       color: 'var(--emerald)' },
+                    };
+                    const st = statusMap[w.status] || { text: w.status, color: 'var(--hint)' };
+                    return `
+                        <div style="
+                            padding: 12px 14px; margin-bottom: 8px;
+                            background: rgba(0,0,0,0.35);
+                            border: 1px solid var(--border);
+                            border-radius: 12px;
+                        ">
+                            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:13px;font-weight:900;color:#ffd700;font-family:var(--font-mono);">
+                                        ${w.amount} GOLD
+                                    </div>
+                                    <div style="font-size:11px;color:var(--hint);margin-top:2px;">
+                                        🎨 ${escapeHtml(w.skin_name)} · 🎯 ${escapeHtml(w.pattern)}
+                                    </div>
+                                    <div style="font-size:10px;color:var(--hint);margin-top:2px;">
+                                        ${formatTimeAgo(w.created_at)}
+                                    </div>
+                                </div>
+                                <div style="font-size:11px;font-weight:800;color:${st.color};text-align:right;">
+                                    ${st.text}
+                                </div>
+                            </div>
+                            ${w.admin_comment ? `
+                                <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;color:var(--hint);">
+                                    💬 ${escapeHtml(w.admin_comment)}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            ` : ''}
+
             <button class="profile-action-btn cancel" style="margin-top: 14px;" onclick="switchPage('dashboard')">
                 ◀ НАЗАД
             </button>
         `;
-
     } catch (e) {
         console.error('openReferralScreen:', e);
         page.innerHTML = `<div class="empty" style="color:var(--red);">Ошибка: ${escapeHtml(e.message)}</div>`;
@@ -63950,30 +64180,65 @@ function shareReferralLink(link) {
 
 async function useReferralCode() {
     const input = document.getElementById('refCodeInput');
-    const code = input?.value.trim();
+    const code = input?.value.trim().toUpperCase();
     if (!code) { showToast('⚠️ Введи код'); return; }
 
+    // Проверка что код существует
+    const { data: referrer } = await sb.from('users')
+        .select('telegram_id, display_name')
+        .eq('referral_code', code)
+        .maybeSingle();
+
+    if (!referrer) { showToast('❌ Неверный код'); return; }
+    if (referrer.telegram_id === currentUser.telegram_id) {
+        showToast('🚫 Нельзя использовать свой код');
+        return;
+    }
+
+    // Проверяем что у него уже нет реферера
+    const { data: me } = await sb.from('users')
+        .select('referred_by')
+        .eq('telegram_id', currentUser.telegram_id)
+        .single();
+
+    if (me?.referred_by) {
+        showToast('⚠️ Ты уже использовал реферальный код');
+        return;
+    }
+
     try {
-        showToast('⏳ Проверяю...');
-        const { data, error } = await sb.rpc('apply_referral', {
-            p_user_id: currentUser.telegram_id,
-            p_referral_code: code.toUpperCase()
+        showToast('⏳ Активирую...');
+
+        // Сохраняем pending — применится в apply_referral_on_register
+        await sb.from('users')
+            .update({ pending_referral_code: code })
+            .eq('telegram_id', currentUser.telegram_id);
+
+        const { data, error } = await sb.rpc('apply_referral_on_register', {
+            p_user_id: currentUser.telegram_id
         });
         if (error) throw error;
 
         if (!data?.ok) {
             const err = data?.error || 'unknown';
-            if (err === 'already_used') showToast('⚠️ Ты уже использовал реферальный код');
+            if (err === 'already_used') showToast('⚠️ Уже использован');
             else if (err === 'invalid_code') showToast('❌ Неверный код');
-            else if (err === 'self_referral') showToast('🚫 Нельзя использовать свой код');
+            else if (err === 'self_referral') showToast('🚫 Нельзя свой код');
             else showToast('❌ ' + err);
             return;
         }
 
-        currentUser.coins = (currentUser.coins || 0) + 150;
-        updateCoinsBadge();
         haptic('heavy');
-        showToast('🎉 Ты получил +150 монет!');
+        showToast(`🎉 Код активирован! ${data.referrer_name} получил +30 Gold`);
+
+        // Уведомляем реферера
+        if (typeof notify === 'function') {
+            notify(data.referrer_id,
+                `🎁 <b>Новый реферал!</b>\n\n<b>${escapeHtml(currentUser.display_name || 'Игрок')}</b> активировал твой код.\nНачислено <b>+30 Gold</b> 💰`,
+                'party',
+                { force: true }
+            ).catch(() => {});
+        }
 
         setTimeout(() => openReferralScreen(), 800);
     } catch (e) {
@@ -63986,6 +64251,408 @@ window.openReferralScreen = openReferralScreen;
 window.copyReferralLink = copyReferralLink;
 window.shareReferralLink = shareReferralLink;
 window.useReferralCode = useReferralCode;
+
+// ============================================================
+// 💰 МОДАЛКА ВЫВОДА GOLD
+// ============================================================
+async function openWithdrawModal() {
+    if (!currentUser) return;
+
+    // Загружаем баланс
+    const { data: u } = await sb.from('users')
+        .select('gold_balance, referral_count')
+        .eq('telegram_id', currentUser.telegram_id)
+        .single();
+
+    if (!u) return;
+
+    if (u.referral_count < 5) {
+        showToast(`⚠️ Нужно минимум 5 рефералов (у тебя ${u.referral_count})`);
+        return;
+    }
+    if (u.gold_balance < 30) {
+        showToast(`⚠️ Недостаточно Gold (у тебя ${u.gold_balance})`);
+        return;
+    }
+
+    document.getElementById('withdrawModal')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'player-modal active';
+    overlay.id = 'withdrawModal';
+    overlay.style.zIndex = '9999';
+    overlay.onclick = (e) => { if (e.target === overlay) closeWithdrawModal(); };
+
+    overlay.innerHTML = `
+        <div class="player-modal-inner" style="max-width: 520px;">
+            <button class="player-modal-close" onclick="closeWithdrawModal()">✕</button>
+
+            <div style="text-align: center; margin-bottom: 18px;">
+                <div style="font-size: 48px; margin-bottom: 6px;">💰</div>
+                <div style="
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 20px; font-weight: 900;
+                    color: #ffd700; letter-spacing: 2px;
+                    text-shadow: 0 0 20px rgba(255,215,0,0.5);
+                ">ВЫВОД GOLD</div>
+                <div style="font-size: 12px; color: var(--hint); margin-top: 6px;">
+                    Заявка на сумму <b style="color: #ffd700;">${u.gold_balance} Gold</b>
+                </div>
+            </div>
+
+            <div style="
+                padding: 12px; margin-bottom: 14px;
+                background: rgba(217,171,90,0.08);
+                border: 1px solid rgba(217,171,90,0.35);
+                border-radius: 12px;
+                font-size: 12px; color: var(--text); line-height: 1.6;
+            ">
+                <b style="color: #ffd700;">📋 Что нужно:</b><br>
+                1. Открой Standoff 2 → Магазин<br>
+                2. Выбери скин <b>ровно за ${u.gold_balance} Gold</b><br>
+                3. Настрой нужный паттерн<br>
+                4. Сделай скриншот с видимой ценой и паттерном<br>
+                5. Заполни форму ниже
+            </div>
+
+            <div style="margin-bottom: 12px;">
+                <label class="field-label">НАЗВАНИЕ СКИНА</label>
+                <input type="text" class="field-input" id="wdSkinName"
+                       placeholder="Например: AK-47 | Redline"
+                       maxlength="100" autocomplete="off">
+            </div>
+
+            <div style="margin-bottom: 12px;">
+                <label class="field-label">ПАТТЕРН</label>
+                <input type="text" class="field-input" id="wdPattern"
+                       placeholder="Например: 387 или 0.15"
+                       maxlength="50" autocomplete="off">
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label class="field-label">СКРИНШОТ</label>
+                <button onclick="document.getElementById('wdScreenshotInput').click()" style="
+                    width: 100%; padding: 14px;
+                    background: rgba(var(--emerald-rgb), 0.08);
+                    border: 1px dashed var(--border-strong);
+                    border-radius: 12px;
+                    color: var(--emerald);
+                    font-family: inherit; font-size: 13px; font-weight: 800;
+                    cursor: pointer;
+                " id="wdScreenshotBtn">📤 ВЫБРАТЬ ФАЙЛ</button>
+                <input type="file" id="wdScreenshotInput" accept="image/*" style="display: none;">
+
+                <div id="wdScreenshotPreview" style="
+                    margin-top: 10px; width: 100%; height: 120px;
+                    border-radius: 12px;
+                    background: rgba(0,0,0,0.3);
+                    border: 1px solid var(--border);
+                    display: none;
+                    background-size: cover;
+                    background-position: center;
+                "></div>
+            </div>
+
+            <button class="profile-action-btn save" id="wdSubmitBtn"
+                    onclick="submitWithdrawal()">
+                📤 ОТПРАВИТЬ ЗАЯВКУ
+            </button>
+            <button class="profile-action-btn cancel" onclick="closeWithdrawModal()">
+                ОТМЕНА
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Обработчик скриншота
+    let wdScreenshotBlob = null;
+    window._wdScreenshotBlob = null;
+
+    document.getElementById('wdScreenshotInput').onchange = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (file.size > 8_000_000) { showToast('⚠️ Максимум 8 МБ'); return; }
+
+        try {
+            const blob = await compressImage(file, 1400, 0.85);
+            window._wdScreenshotBlob = blob;
+            const url = URL.createObjectURL(blob);
+            const prev = document.getElementById('wdScreenshotPreview');
+            prev.style.display = 'block';
+            prev.style.backgroundImage = `url('${url}')`;
+            document.getElementById('wdScreenshotBtn').textContent = '✅ СКРИНШОТ ЗАГРУЖЕН';
+        } catch (err) {
+            showToast('Ошибка загрузки');
+        }
+    };
+}
+
+function closeWithdrawModal() {
+    document.getElementById('withdrawModal')?.remove();
+    window._wdScreenshotBlob = null;
+}
+
+async function submitWithdrawal() {
+    const skinName = document.getElementById('wdSkinName')?.value.trim();
+    const pattern = document.getElementById('wdPattern')?.value.trim();
+    const blob = window._wdScreenshotBlob;
+    const btn = document.getElementById('wdSubmitBtn');
+
+    if (!skinName) { showToast('⚠️ Введи название скина'); return; }
+    if (!pattern) { showToast('⚠️ Введи паттерн'); return; }
+    if (!blob) { showToast('⚠️ Загрузи скриншот'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ ОТПРАВКА...';
+
+    try {
+        // Загружаем скриншот
+        const path = `withdrawals/${currentUser.telegram_id}_${Date.now()}.jpg`;
+        const { error: upErr } = await sb.storage.from('matches')
+            .upload(path, blob, { contentType: 'image/jpeg' });
+        if (upErr) throw upErr;
+
+        const { data: urlData } = sb.storage.from('matches').getPublicUrl(path);
+
+        // Создаём заявку через RPC
+        const { data, error } = await sb.rpc('create_withdrawal', {
+            p_user_id: currentUser.telegram_id,
+            p_skin_name: skinName,
+            p_pattern: pattern,
+            p_screenshot_url: urlData.publicUrl,
+        });
+        if (error) throw error;
+
+        if (!data?.ok) {
+            const err = data?.error || 'unknown';
+            if (err === 'not_enough_referrals') showToast(`⚠️ Нужно 5 рефералов (у тебя ${data.have})`);
+            else if (err === 'not_enough_gold') showToast(`⚠️ Недостаточно Gold (у тебя ${data.have})`);
+            else if (err === 'already_pending') showToast('⚠️ У тебя уже есть активная заявка');
+            else showToast('❌ ' + err);
+            btn.disabled = false;
+            btn.textContent = '📤 ОТПРАВИТЬ ЗАЯВКУ';
+            return;
+        }
+
+        // Уведомляем админа
+        try {
+            const { data: admins } = await sb.from('users')
+                .select('telegram_id')
+                .or('is_admin.eq.true,username.eq.mark1zell');
+
+            for (const admin of admins || []) {
+                if (typeof notify === 'function') {
+                    await notify(admin.telegram_id,
+                        `💰 <b>Новая заявка на вывод!</b>\n\n` +
+                        `<b>${escapeHtml(currentUser.display_name || 'Игрок')}</b>\n` +
+                        `Сумма: <b>${data.amount} Gold</b>\n` +
+                        `Скин: <b>${escapeHtml(skinName)}</b>\n` +
+                        `Паттерн: <code>${escapeHtml(pattern)}</b></code>`,
+                        'party',
+                        { force: true }
+                    ).catch(() => {});
+                }
+            }
+        } catch (e) {}
+
+        haptic('heavy');
+        showToast('✅ Заявка отправлена на рассмотрение');
+        closeWithdrawModal();
+        setTimeout(() => openReferralScreen(), 500);
+    } catch (e) {
+        console.error('submitWithdrawal:', e);
+        showToast('❌ ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '📤 ОТПРАВИТЬ ЗАЯВКУ';
+    }
+}
+
+window.openWithdrawModal = openWithdrawModal;
+window.closeWithdrawModal = closeWithdrawModal;
+window.submitWithdrawal = submitWithdrawal;
+
+// ============================================================
+// 💰 АДМИН-ПАНЕЛЬ: ЗАЯВКИ НА ВЫВОД
+// ============================================================
+async function openWithdrawalsAdmin() {
+    if (!isCurrentUserOwner()) { 
+        showToast('🚫 Только владелец'); 
+        return; 
+    }
+
+    document.getElementById('wdAdminModal')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'player-modal active';
+    overlay.id = 'wdAdminModal';
+    overlay.style.zIndex = '9999';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="player-modal-inner" style="max-width: 640px;">
+            <button class="player-modal-close" onclick="document.getElementById('wdAdminModal').remove()">✕</button>
+            <h3 style="margin: 0 0 14px; font-size: 16px;">💰 Заявки на вывод</h3>
+            <div id="wdAdminContent">
+                <div class="empty">Загрузка...</div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    await renderWithdrawalsAdmin();
+}
+
+async function renderWithdrawalsAdmin() {
+    const el = document.getElementById('wdAdminContent');
+    if (!el) return;
+
+    const { data: wds, error } = await sb.from('withdrawals')
+        .select('*')
+        .in('status', ['pending', 'approved', 'rejected', 'completed'])
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+    if (error) {
+        el.innerHTML = `<div class="empty" style="color:var(--red);">Ошибка: ${escapeHtml(error.message)}</div>`;
+        return;
+    }
+
+    if (!wds?.length) {
+        el.innerHTML = '<div class="empty">Заявок нет</div>';
+        return;
+    }
+
+    const userIds = [...new Set(wds.map(w => w.user_id))];
+    const { data: users } = await sb.from('users')
+        .select('telegram_id, display_name, custom_avatar, photo_url')
+        .in('telegram_id', userIds);
+    const userMap = {};
+    (users || []).forEach(u => userMap[u.telegram_id] = u);
+
+    const statusMap = {
+        pending:   { text: '⏳ Ожидает',    color: 'var(--gold)' },
+        approved:  { text: '✅ Одобрено',    color: 'var(--emerald)' },
+        rejected:  { text: '❌ Отклонено',   color: 'var(--red)' },
+        completed: { text: '🎉 Выполнено',   color: 'var(--emerald)' },
+    };
+
+    el.innerHTML = wds.map(w => {
+        const u = userMap[w.user_id] || {};
+        const av = renderAvatar(u);
+        const st = statusMap[w.status] || { text: w.status, color: 'var(--hint)' };
+
+        return `
+            <div style="
+                padding: 14px; margin-bottom: 10px;
+                background: linear-gradient(180deg, rgba(217,171,90,0.06), rgba(0,0,0,0.4));
+                border: 1px solid var(--border);
+                border-radius: 14px;
+            ">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <div class="lb-avatar" onclick="openPlayerProfile(${w.user_id})">${av}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:800;color:var(--text);">
+                            ${escapeHtml(u.display_name || 'Игрок')}
+                        </div>
+                        <div style="font-size:11px;color:var(--hint);">
+                            Рефералов: ${w.referrals_count} · ${formatTimeAgo(w.created_at)}
+                        </div>
+                    </div>
+                    <div style="font-size:15px;font-weight:900;color:#ffd700;font-family:var(--font-mono);">
+                        ${w.amount} G
+                    </div>
+                </div>
+
+                <div style="
+                    padding:10px; margin-bottom:10px;
+                    background:rgba(0,0,0,0.3);
+                    border-radius:10px; font-size:12px;
+                ">
+                    <div>🎨 <b>${escapeHtml(w.skin_name)}</b></div>
+                    <div>🎯 Паттерн: <code>${escapeHtml(w.pattern)}</code></div>
+                </div>
+
+                ${w.screenshot_url ? `
+                    <img src="${w.screenshot_url}"
+                         style="width:100%; border-radius:10px; margin-bottom:10px; cursor:pointer;"
+                         onclick="openImageView('${w.screenshot_url}')">
+                ` : ''}
+
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <span style="font-size:12px;font-weight:900;color:${st.color};">${st.text}</span>
+                    ${w.status === 'pending' ? `
+                        <div style="display:flex;gap:6px;">
+                            <button onclick="processWd(${w.id}, 'approve')" style="
+                                padding:8px 14px; background:rgba(34,197,94,0.15);
+                                border:1px solid rgba(34,197,94,0.5); border-radius:8px;
+                                color:#22c55e; font-family:inherit; font-size:11px;
+                                font-weight:900; cursor:pointer;
+                            ">✅ ОДОБРИТЬ</button>
+                            <button onclick="processWd(${w.id}, 'reject')" style="
+                                padding:8px 14px; background:rgba(255,84,112,0.15);
+                                border:1px solid rgba(255,84,112,0.5); border-radius:8px;
+                                color:var(--red); font-family:inherit; font-size:11px;
+                                font-weight:900; cursor:pointer;
+                            ">❌ ОТКЛОНИТЬ</button>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${w.admin_comment ? `
+                    <div style="margin-top:8px;font-size:11px;color:var(--hint);">
+                        💬 ${escapeHtml(w.admin_comment)}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+async function processWd(id, action) {
+    const comment = prompt(
+        action === 'approve'
+            ? 'Комментарий (необязательно):'
+            : 'Причина отклонения (обязательно):'
+    );
+    if (action === 'reject' && !comment) { showToast('⚠️ Укажи причину'); return; }
+
+    try {
+        const { data, error } = await sb.rpc('process_withdrawal', {
+            p_withdrawal_id: id,
+            p_admin_id: currentUser.telegram_id,
+            p_action: action,
+            p_comment: comment || null,
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Ошибка');
+
+        haptic('medium');
+        showToast(action === 'approve' ? '✅ Одобрено' : '❌ Отклонено');
+
+        // Уведомляем игрока
+        const { data: wd } = await sb.from('withdrawals')
+            .select('user_id, amount').eq('id', id).single();
+        if (wd && typeof notify === 'function') {
+            notify(wd.user_id,
+                action === 'approve'
+                    ? `🎉 <b>Твоя заявка на вывод одобрена!</b>\n\n${wd.amount} Gold · ${comment || 'скин отправлен'}`
+                    : `❌ <b>Заявка на вывод отклонена</b>\n\n${comment || ''}`,
+                'party',
+                { force: true }
+            ).catch(() => {});
+        }
+
+        await renderWithdrawalsAdmin();
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+window.openWithdrawalsAdmin = openWithdrawalsAdmin;
+window.renderWithdrawalsAdmin = renderWithdrawalsAdmin;
+window.processWd = processWd;
 
     </script>
 
