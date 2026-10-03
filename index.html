@@ -25246,6 +25246,478 @@ html.lite-mode .pm2-title[data-anim] {
         /* Ничего не обрезаем — просто уменьшили контейнер */
     }
 }
+
+/* ============================================================ */
+/* 🎬 SCROLL REVEAL — появление при скролле                     */
+/* ============================================================ */
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: opacity, transform;
+}
+.scroll-reveal.in-view {
+    opacity: 1;
+    transform: translateY(0);
+}
+.scroll-reveal.delay-1 { transition-delay: 0.06s; }
+.scroll-reveal.delay-2 { transition-delay: 0.12s; }
+.scroll-reveal.delay-3 { transition-delay: 0.18s; }
+.scroll-reveal.delay-4 { transition-delay: 0.24s; }
+.scroll-reveal.delay-5 { transition-delay: 0.30s; }
+
+html.lite-mode .scroll-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+/* ============================================================ */
+/* 🍞 TOAST v2 — улучшенные уведомления с типами                */
+/* ============================================================ */
+.toast {
+    /* Оставляем базу, но добавляем переменные цвета */
+    --toast-color: var(--emerald);
+    --toast-rgb: var(--emerald-rgb);
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(24px);
+    background: linear-gradient(180deg,
+        rgba(var(--toast-rgb), 0.10) 0%,
+        rgba(10, 20, 16, 0.98) 100%);
+    color: var(--text);
+    padding: 14px 20px 16px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+    border: 1px solid rgba(var(--toast-rgb), 0.5);
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(var(--toast-rgb), 0.15);
+    z-index: 9999;
+    max-width: 85vw;
+    min-width: 240px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+}
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.toast-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    line-height: 1;
+    filter: drop-shadow(0 0 6px currentColor);
+}
+.toast > span:not(.toast-icon):not(.toast-progress) {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.35;
+}
+.toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, var(--toast-color), transparent);
+    border-radius: 0 0 14px 14px;
+    transform-origin: left center;
+    animation: toastProgress 2.5s linear forwards;
+}
+@keyframes toastProgress {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+}
+
+/* Типы toast */
+.toast.toast-success {
+    --toast-color: var(--emerald);
+    --toast-rgb: var(--emerald-rgb);
+}
+.toast.toast-error {
+    --toast-color: var(--red);
+    --toast-rgb: 255, 84, 112;
+}
+.toast.toast-warning {
+    --toast-color: var(--gold);
+    --toast-rgb: 217, 171, 90;
+}
+.toast.toast-info {
+    --toast-color: #4fc3f7;
+    --toast-rgb: 79, 195, 247;
+}
+
+/* ============================================================ */
+/* 📭 EMPTY STATE v2 — красивые пустые состояния                 */
+/* ============================================================ */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.04) 0%,
+        rgba(0, 0, 0, 0.4) 100%);
+    border: 1px dashed var(--border-strong);
+    border-radius: 18px;
+    margin: 8px 0;
+    animation: emptyStateIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes emptyStateIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.empty-state-icon {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    margin-bottom: 14px;
+    opacity: 0.55;
+    animation: emptyFloat 3.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(var(--emerald-rgb), 0.4));
+}
+@keyframes emptyFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-6px) scale(1.04); }
+}
+.empty-state-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 6px;
+    text-shadow: 0 0 10px rgba(var(--emerald-rgb), 0.3);
+}
+.empty-state-desc {
+    font-size: 12px;
+    color: var(--hint);
+    line-height: 1.5;
+    margin-bottom: 16px;
+    max-width: 280px;
+}
+.empty-state-btn {
+    padding: 10px 22px;
+    border-radius: 12px;
+    border: 1.5px solid var(--emerald);
+    background: rgba(var(--emerald-rgb), 0.10);
+    color: var(--emerald);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.22s ease, box-shadow 0.22s ease;
+}
+.empty-state-btn:hover {
+    background: rgba(var(--emerald-rgb), 0.20);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(var(--emerald-rgb), 0.3);
+}
+.empty-state-btn:active { transform: scale(0.96); }
+
+/* ============================================================ */
+/* 🌊 RIPPLE — эффект волны при клике                           */
+/* ============================================================ */
+.ripple-host {
+    position: relative;
+    overflow: hidden;
+}
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+        rgba(var(--emerald-rgb), 0.55) 0%,
+        rgba(var(--emerald-rgb), 0.15) 40%,
+        transparent 70%);
+    transform: scale(0);
+    animation: rippleAnim 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
+    z-index: 5;
+}
+@keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+}
+
+/* ============================================================ */
+/* 🎴 CARD TILT — 3D-наклон карточек (ПК)                       */
+/* ============================================================ */
+@media (hover: hover) and (pointer: fine) {
+    .tilt-card {
+        transition: transform 0.15s ease;
+        transform-style: preserve-3d;
+        will-change: transform;
+    }
+}
+
+/* ============================================================ */
+/* 📊 DXP TOOLTIP — всплывашка на графике                       */
+/* ============================================================ */
+.dxp-point {
+    cursor: pointer;
+    transition: r 0.2s ease, filter 0.2s ease;
+    pointer-events: all;
+}
+.dxp-point:hover,
+.dxp-point.active {
+    filter: drop-shadow(0 0 12px var(--purple));
+    r: 5;
+}
+.dxp-tooltip {
+    position: fixed;
+    z-index: 99999;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(10, 20, 16, 0.98), rgba(5, 10, 8, 0.98));
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    white-space: nowrap;
+    max-width: 220px;
+}
+.dxp-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+.dxp-tooltip-title {
+    font-weight: 900;
+    color: var(--emerald);
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+}
+.dxp-tooltip-delta {
+    font-family: var(--font-mono);
+    font-weight: 900;
+}
+.dxp-tooltip-delta.win { color: #8ce65a; }
+.dxp-tooltip-delta.loss { color: var(--red); }
+
+/* ============================================================ */
+/* ⚡ FLASH / SCREEN SHAKE — кинематографичные эффекты           */
+/* ============================================================ */
+body.screen-flash::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: white;
+    z-index: 99998;
+    pointer-events: none;
+    animation: flashAnim 0.35s ease-out;
+}
+@keyframes flashAnim {
+    0%   { opacity: 0.85; }
+    100% { opacity: 0; }
+}
+
+body.screen-shake {
+    animation: shakeAnim 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes shakeAnim {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(3px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* ============================================================ */
+/* 💀 SKELETON v2 — улучшенные шиммеры                           */
+/* ============================================================ */
+.skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: linear-gradient(180deg,
+        rgba(var(--emerald-rgb), 0.03) 0%,
+        rgba(0, 0, 0, 0.35) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+}
+.skeleton-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.04) 0%,
+        rgba(var(--emerald-rgb), 0.14) 50%,
+        rgba(var(--emerald-rgb), 0.04) 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s linear infinite;
+}
+.skeleton-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.skeleton-bar {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg,
+        rgba(var(--emerald-rgb), 0.04) 0%,
+        rgba(var(--emerald-rgb), 0.14) 50%,
+        rgba(var(--emerald-rgb), 0.04) 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s linear infinite;
+}
+
+/* ============================================================ */
+/* 🚫 LITE MODE — отключаем всё лишнее                          */
+/* ============================================================ */
+html.lite-mode .empty-state-icon {
+    animation: none !important;
+}
+html.lite-mode .ripple { display: none !important; }
+html.lite-mode body.screen-flash::before { display: none !important; }
+html.lite-mode body.screen-shake { animation: none !important; }
+html.lite-mode .toast-progress { animation: none !important; }
+
+/* ============================================================ */
+/* 🎬 SCREEN FLASH — белая/цветная вспышка                       */
+/* ============================================================ */
+.screen-flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999999;
+    opacity: 1;
+    animation: screenFlashAnim 0.5s ease-out forwards;
+}
+@keyframes screenFlashAnim {
+    0%   { opacity: 0.85; }
+    40%  { opacity: 0.4; }
+    100% { opacity: 0; }
+}
+
+/* ============================================================ */
+/* 🎬 SCREEN SHAKE — тряска экрана                                */
+/* ============================================================ */
+/* Применяется через inline style к html — там ничего не нужно    */
+/* ============================================================ */
+
+/* ============================================================ */
+/* 📊 ZONES — цветные полосы рангов на графике DXP               */
+/* ============================================================ */
+.elo-chart-card {
+    position: relative; /* нужно для tooltip */
+}
+.ech-point-tooltip {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 12px));
+    background: linear-gradient(180deg, rgba(10,20,16,0.98), rgba(5,10,8,0.98));
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-width: 175px;
+    pointer-events: none;
+    z-index: 100;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.75);
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ech-point-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 10px;
+    height: 10px;
+    background: rgba(5,10,8,0.98);
+    border-right: 1px solid var(--border-strong);
+    border-bottom: 1px solid var(--border-strong);
+}
+.ech-point-tooltip.show {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 16px));
+}
+.ech-point-tooltip.hiding { opacity: 0; }
+
+.ept-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    padding: 2px 0;
+}
+.ept-label {
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.ept-value {
+    color: var(--text);
+    font-weight: 900;
+    font-family: var(--font-mono);
+}
+.ept-date {
+    font-size: 9px;
+    color: var(--hint);
+    text-align: center;
+    padding-top: 6px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    letter-spacing: 0.5px;
+}
+
+/* Точки на графике */
+.js-elo-point-group {
+    cursor: pointer;
+}
+.js-elo-point-group circle:first-child {
+    transition: r 0.2s ease, filter 0.2s ease;
+}
+.js-elo-point-group:hover circle:first-child {
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* ============================================================ */
+/* 📈 TREND GLOW — свечение графика при серии побед/поражений    */
+/* ============================================================ */
+.elo-chart-card.js-trend-up .js-elo-line {
+    animation: trendGlowUp 2.4s ease-in-out infinite;
+}
+@keyframes trendGlowUp {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(0,224,138,0.5)); }
+    50%      { filter: drop-shadow(0 0 12px rgba(0,224,138,0.95)); }
+}
+
+.elo-chart-card.js-trend-down .js-elo-line {
+    animation: trendGlowDown 2.4s ease-in-out infinite;
+}
+@keyframes trendGlowDown {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(255,84,112,0.5)); }
+    50%      { filter: drop-shadow(0 0 12px rgba(255,84,112,0.95)); }
+}
     
 </style>
 </head>
@@ -31597,32 +32069,44 @@ function closeAllBpSheets() {
 }
             
 let toastTimer;
-function showToast(msg, type = 'info') {
+function showToast(msg, type = null) {
     const toast = document.getElementById('toast');
     if (!toast) return;
-
+    
+    // Автоопределение типа по эмодзи
+    if (!type) {
+        if (msg.startsWith('✅') || /готово|сохранено|успешно|куплено|принято|добавлено|надето|забрано/i.test(msg)) type = 'success';
+        else if (msg.startsWith('❌') || msg.startsWith('🚫') || /ошибка|не удалось|запрещено|нельзя/i.test(msg)) type = 'error';
+        else if (msg.startsWith('⚠️') || msg.startsWith('⏰') || /внимание|подожди|ещё рано|уже/i.test(msg)) type = 'warning';
+        else type = 'info';
+    }
+    
     const icons = { info: '💬', success: '✅', error: '❌', warning: '⚠️' };
-
-    if (msg.startsWith('✅')) type = 'success';
-    else if (msg.startsWith('❌') || msg.startsWith('🚫')) type = 'error';
-    else if (msg.startsWith('⚠️') || msg.startsWith('⏰')) type = 'warning';
-
-    const cleanMsg = msg.replace(/^[✅❌🚫⚠️⏰💬🏆🗑️📋🔔🔒💰🎁🎮📤🎯⚡🛡️👑🚀📊⏳]\s*/u, '');
-
+    
+    // Очищаем текст от эмодзи в начале
+    const cleanMsg = String(msg).replace(/^[✅❌🚫⚠️⏰💬🏆🗑️📋🔔🔒💰🎁🎮📤🎯⚡🛡️👑🚀📊⏳]\s*/u, '');
+    
     toast.innerHTML = '';
-
+    toast.className = `toast toast-${type}`;
+    
     const iconSpan = document.createElement('span');
     iconSpan.className = 'toast-icon';
     iconSpan.textContent = icons[type] || '💬';
-
+    
     const textSpan = document.createElement('span');
     textSpan.textContent = cleanMsg;
-
+    
+    const progress = document.createElement('span');
+    progress.className = 'toast-progress';
+    
     toast.appendChild(iconSpan);
     toast.appendChild(textSpan);
-
-    toast.className = `toast toast-${type} show`;
-
+    toast.appendChild(progress);
+    
+    // Форсируем перезапуск анимации
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
 }
@@ -33795,7 +34279,13 @@ async function loadLeaderboard() {
 
         const others = data || [];
         if (!others.length) {
-            container.innerHTML = '<div class="empty">Пока никого нет</div>';
+            container.innerHTML = renderEmptyState({
+                icon: '🏆',
+                title: 'Лидерборд пуст',
+                desc: 'Сыграй первый матч, чтобы попасть в топ',
+                btnText: 'Играть',
+                btnAction: 'openPlayScreen()'
+            });
             return;
         }
 
@@ -34170,7 +34660,16 @@ async function loadFriends() {
             .select('id, requester_id, addressee_id, status, created_at')
             .or(`requester_id.eq.${me},addressee_id.eq.${me}`);
         if (error) throw error;
-        if (!rels?.length) { container.innerHTML = '<div class="empty">Пока нет друзей</div>'; return; }
+                if (!rels?.length) {
+            container.innerHTML = renderEmptyState({
+                icon: '👥',
+                title: 'Нет друзей',
+                desc: 'Найди игроков и добавь их в друзья',
+                btnText: 'Найти игроков',
+                btnAction: 'openFriendSearchSheet()'
+            });
+            return;
+        }
 
         const otherIds = rels.map(r => r.requester_id === me ? r.addressee_id : r.requester_id);
 const { data: users } = await sb.from('users')
@@ -35792,7 +36291,13 @@ async function loadChatList() {
 
         // Если чатов нет — показываем только бота
         if (!items.length) {
-            container.innerHTML = renderBotChatItem(botItem);
+            container.innerHTML = renderBotChatItem(botItem) + renderEmptyState({
+                icon: '💬',
+                title: 'Нет сообщений',
+                desc: 'Напиши другу или найди нового собеседника',
+                btnText: 'Найти друзей',
+                btnAction: 'openFriendsPage()'
+            });
             return;
         }
 
@@ -40648,6 +41153,10 @@ async function finishMatch(matchId, result) {
         // FINISHED
         // ============================================================
 function showFinishedScreen() {
+    if (window._matchJustFinished) {
+        window._matchJustFinished = false;
+        // ripple у нас и так при клике
+    }
     unlockNav();
     if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
 
@@ -47817,7 +48326,13 @@ async function loadMatchesHistory() {
         });
 
         if (!myMatches.length) {
-            container.innerHTML = '<div class="empty">Матчей пока нет</div>';
+            container.innerHTML = renderEmptyState({
+                icon: '🎮',
+                title: 'Матчей пока нет',
+                desc: 'Сыграй первую игру, чтобы увидеть свою историю',
+                btnText: 'Играть',
+                btnAction: 'openPlayScreen()'
+            });
             return;
         }
 
@@ -49222,14 +49737,80 @@ function throttle(fn, delay = 300) {
     };
 }  
 
-         // ============================================================
-// DXPCHART — рисует график DXPпо последним матчам
 // ============================================================
-async function renderEloChart(userId, cardEl = null) {
-    const card = cardEl || document.getElementById('eloChartCardMe');
+// 💬 ТУЛТИП ТОЧКИ НА ГРАФИКЕ
+// ============================================================
+function showEloPointTooltip(card, point, index, total) {
+    card.querySelector('.ech-point-tooltip')?.remove();
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'ech-point-tooltip';
+
+    const date = point.date ? new Date(point.date).toLocaleString('ru-RU', {
+        day: '2-digit', month: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+    }) : '—';
+
+    const winLabel = point.win
+        ? '<span style="color:#00e08a;font-weight:900;">🏆 ПОБЕДА</span>'
+        : '<span style="color:#ff5470;font-weight:900;">💀 ПОРАЖЕНИЕ</span>';
+
+    const deltaStr   = (point.delta >= 0 ? '+' : '') + point.delta;
+    const deltaColor = point.delta >= 0 ? '#00e08a' : '#ff5470';
+
+    tooltip.innerHTML = `
+        <div class="ept-row">
+            <span class="ept-label">Матч</span>
+            <span class="ept-value">#${index + 1}/${total}</span>
+        </div>
+        <div class="ept-row">
+            <span class="ept-label">Результат</span>
+            ${winLabel}
+        </div>
+        <div class="ept-row">
+            <span class="ept-label">DXP</span>
+            <span class="ept-value">${point.elo}</span>
+        </div>
+        <div class="ept-row">
+            <span class="ept-label">Δ</span>
+            <span class="ept-value" style="color:${deltaColor};">${deltaStr}</span>
+        </div>
+        <div class="ept-date">${date}</div>
+    `;
+
+    card.appendChild(tooltip);
+
+    // Позиция
+    const cardRect = card.getBoundingClientRect();
+    const svgEl    = card.querySelector('.ech-svg');
+    const svgRect  = svgEl.getBoundingClientRect();
+
+    const relX = point.x / 320;
+    const relY = point.y / 140;
+
+    const screenX = svgRect.left - cardRect.left + relX * svgRect.width;
+    const screenY = svgRect.top  - cardRect.top  + relY * svgRect.height;
+
+    tooltip.style.left = `${screenX}px`;
+    tooltip.style.top  = `${screenY}px`;
+
+    clearTimeout(card._tooltipTimer);
+    card._tooltipTimer = setTimeout(() => {
+        tooltip.classList.add('hiding');
+        setTimeout(() => tooltip.remove(), 220);
+    }, 3000);
+
+    requestAnimationFrame(() => tooltip.classList.add('show'));
+}
+
+// ============================================================
+// 📈 ГРАФИК DXP — интерактивный с зонами рангов и тултипами
+// ============================================================
+async function (userId, cardEl = null) {
+    const card = cardEl || document.getElementById('eloChartCardMe')
+              || document.getElementById(`eloChartCard_${userId}`);
     if (!card) return;
 
-    // 🔥 Ищем элементы ВНУТРИ конкретной карточки, а не по всему документу
     const areaEl    = card.querySelector('.js-elo-area');
     const lineEl    = card.querySelector('.js-elo-line');
     const dotEl     = card.querySelector('.js-elo-dot');
@@ -49238,6 +49819,22 @@ async function renderEloChart(userId, cardEl = null) {
     const streakEl  = card.querySelector('.js-elo-streak');
     const winsEl    = card.querySelector('.js-elo-wins');
     const lossesEl  = card.querySelector('.js-elo-losses');
+    const svgEl     = card.querySelector('.ech-svg');
+    if (!svgEl) return;
+
+    // Создаём группы один раз
+    let zonesGroup = svgEl.querySelector('.js-elo-zones');
+    if (!zonesGroup) {
+        zonesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        zonesGroup.setAttribute('class', 'js-elo-zones');
+        svgEl.insertBefore(zonesGroup, svgEl.firstChild);
+    }
+    let pointsGroup = svgEl.querySelector('.js-elo-points');
+    if (!pointsGroup) {
+        pointsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        pointsGroup.setAttribute('class', 'js-elo-points');
+        svgEl.appendChild(pointsGroup);
+    }
 
     try {
         const { data: history, error } = await sb
@@ -49250,82 +49847,129 @@ async function renderEloChart(userId, cardEl = null) {
         if (error) throw error;
 
         const ordered = (history || []).slice().reverse();
-        const recent = ordered.slice(-15);
+        const recent  = ordered.slice(-15);
 
-if (recent.length < 2) {
-    card.classList.add('empty');
-    areaEl?.setAttribute('d', '');
-    lineEl?.setAttribute('d', '');
-    dotEl?.setAttribute('cx', '-10');
-    dotEl?.setAttribute('cy', '-10');
-    if (yAxisEl) yAxisEl.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
-    if (deltaEl) { deltaEl.textContent = '—'; deltaEl.classList.remove('negative'); }
-    if (streakEl) streakEl.innerHTML = '';
-    if (winsEl) winsEl.textContent = '0';
-    if (lossesEl) lossesEl.textContent = '0';
+        // ═══════════ ПУСТОЕ СОСТОЯНИЕ ═══════════
+        if (recent.length < 2) {
+            card.classList.add('empty');
+            areaEl?.setAttribute('d', '');
+            lineEl?.setAttribute('d', '');
+            dotEl?.setAttribute('cx', '-10');
+            dotEl?.setAttribute('cy', '-10');
+            zonesGroup.innerHTML = '';
+            pointsGroup.innerHTML = '';
+            if (yAxisEl) yAxisEl.innerHTML = '<span>—</span><span>—</span><span>—</span><span>—</span>';
+            if (deltaEl) { deltaEl.textContent = '—'; deltaEl.classList.remove('negative'); }
+            if (streakEl) streakEl.innerHTML = '';
+            if (winsEl) winsEl.textContent = '0';
+            if (lossesEl) lossesEl.textContent = '0';
 
-    if (!card.querySelector('.ech-empty-msg')) {
-        const msg = document.createElement('div');
-        msg.className = 'ech-empty-msg';
-        msg.innerHTML = `
-            <div style="text-align: center; padding: 20px 12px;">
-                <div style="font-size: 40px; margin-bottom: 10px; opacity: 0.4;">📈</div>
-                <div style="font-size: 13px; font-weight: 800; color: var(--hint); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">
-                    Пока нет данных
-                </div>
-                <div style="font-size: 11px; color: var(--hint); opacity: 0.7; line-height: 1.5;">
-                    Сыграй первые матчи —<br>
-                    график появится автоматически
-                </div>
-            </div>
-        `;
-        msg.style.cssText = `
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
-            z-index: 2;
-        `;
-        card.appendChild(msg);
-    }
-    return;
-}
+            if (!card.querySelector('.ech-empty-msg')) {
+                const msg = document.createElement('div');
+                msg.className = 'ech-empty-msg';
+                msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.3) 100%);z-index:2;';
+                msg.innerHTML = `
+                    <div style="text-align:center;padding:20px 12px;">
+                        <div style="font-size:40px;margin-bottom:10px;opacity:0.4;">📈</div>
+                        <div style="font-size:13px;font-weight:800;color:var(--hint);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Пока нет данных</div>
+                        <div style="font-size:11px;color:var(--hint);opacity:0.7;line-height:1.5;">Сыграй первые матчи —<br>график появится автоматически</div>
+                    </div>`;
+                card.appendChild(msg);
+            }
+            return;
+        }
 
         card.classList.remove('empty');
         card.querySelector('.ech-empty-msg')?.remove();
 
         const points = recent.map(h => ({
-            elo: h.elo_after ?? h.elo_before ?? 1000,
-            win: h.won === true,
-            delta: h.delta ?? 0
+            elo:   h.elo_after ?? h.elo_before ?? 1000,
+            win:   h.won === true,
+            delta: h.delta ?? 0,
+            date:  h.created_at,
         }));
 
-        const elos = points.map(p => p.elo);
-        const min = Math.min(...elos);
-        const max = Math.max(...elos);
+        const elos  = points.map(p => p.elo);
+        const min   = Math.min(...elos);
+        const max   = Math.max(...elos);
         const range = Math.max(50, max - min);
-        const pad = Math.round(range * 0.15);
-        const yMin = min - pad;
-        const yMax = max + pad;
+        const pad   = Math.round(range * 0.15);
+        const yMin  = min - pad;
+        const yMax  = max + pad;
 
         const W = 320, H = 140;
         const padL = 6, padR = 6, padT = 10, padB = 12;
         const innerW = W - padL - padR;
         const innerH = H - padT - padB;
-        const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
+        const stepX  = points.length > 1 ? innerW / (points.length - 1) : 0;
 
-        const xy = points.map((p, i) => {
-            const x = padL + i * stepX;
-            const y = padT + innerH - ((p.elo - yMin) / (yMax - yMin)) * innerH;
-            return { ...p, x, y };
+        const yFor = (elo) =>
+            padT + innerH - ((elo - yMin) / (yMax - yMin)) * innerH;
+
+        const xy = points.map((p, i) => ({
+            ...p,
+            x: padL + i * stepX,
+            y: yFor(p.elo),
+        }));
+
+        // ═══════════ ZONES (полосы рангов) ═══════════
+        zonesGroup.innerHTML = '';
+        RANK_CONFIG.LEVELS.forEach(level => {
+            const top    = level.max === Infinity ? yMax : Math.min(level.max, yMax);
+            const bottom = Math.max(level.min, yMin);
+            if (top <= bottom) return;
+
+            const y1 = yFor(top);
+            const y2 = yFor(bottom);
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', padL);
+            rect.setAttribute('y', y1.toFixed(1));
+            rect.setAttribute('width', innerW);
+            rect.setAttribute('height', (y2 - y1).toFixed(1));
+            rect.setAttribute('fill', level.color);
+            rect.setAttribute('opacity', '0.08');
+            zonesGroup.appendChild(rect);
         });
 
-        const dLine = xy.map((p, i) =>
-            (i === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}` : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-        ).join(' ');
+        // ═══════════ TREND (цвет по направлению) ═══════════
+        const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
+        const trend = totalDelta > 20 ? 'up' : totalDelta < -20 ? 'down' : 'flat';
+        const trendColors = {
+            up:   { main: '#00e08a', glow: 'rgba(0,224,138,0.75)'   },
+            down: { main: '#ff5470', glow: 'rgba(255,84,112,0.75)'  },
+            flat: { main: '#a78bfa', glow: 'rgba(167,139,250,0.7)'  },
+        };
+        const tc = trendColors[trend];
+        card.classList.toggle('js-trend-up',   trend === 'up');
+        card.classList.toggle('js-trend-down', trend === 'down');
 
+        // Градиент заливки
+        const gradId = `eloGradient_${userId}`;
+        const grad = svgEl.querySelector(`#${gradId}`) || card.querySelector(`#${gradId}`);
+        if (grad) {
+            grad.querySelectorAll('stop').forEach((stop, i) => {
+                stop.setAttribute('stop-color', tc.main);
+                stop.setAttribute('stop-opacity', i === 0 ? '0.55' : '0');
+            });
+        }
+
+        // Линия
+        if (lineEl) {
+            lineEl.setAttribute('stroke', tc.main);
+            if (trend === 'flat') {
+                lineEl.style.filter = `drop-shadow(0 0 6px ${tc.glow})`;
+            } else {
+                lineEl.style.filter = ''; // анимация из CSS
+            }
+        }
+        // Точка
+        if (dotEl) dotEl.setAttribute('fill', tc.main);
+
+        // ═══════════ ЛИНИЯ + ОБЛАСТЬ ═══════════
+        const dLine = xy.map((p, i) =>
+            (i === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`
+                     : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+        ).join(' ');
         const dArea = `${dLine} L ${xy[xy.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${xy[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`;
 
         lineEl?.setAttribute('d', dLine);
@@ -49335,25 +49979,76 @@ if (recent.length < 2) {
         dotEl?.setAttribute('cx', last.x.toFixed(1));
         dotEl?.setAttribute('cy', last.y.toFixed(1));
 
+        // ═══════════ Y-ОСЬ ═══════════
         const labels = [yMax, yMax - (yMax - yMin) / 3, yMax - 2 * (yMax - yMin) / 3, yMin];
-        if (yAxisEl) yAxisEl.innerHTML = labels.map(v => `<span>${Math.round(v)}</span>`).join('');
+        if (yAxisEl) {
+            yAxisEl.innerHTML = labels.map(v => {
+                const val = Math.round(v);
+                const lvl = RANK_CONFIG.LEVELS.find(l => val >= l.min && val < l.max)
+                         || RANK_CONFIG.LEVELS[RANK_CONFIG.LEVELS.length - 1];
+                return `<span title="${lvl.name}">${val}</span>`;
+            }).join('');
+        }
 
-        const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
+        // ═══════════ ДЕЛЬТА ═══════════
         if (deltaEl) {
             deltaEl.textContent = (totalDelta >= 0 ? '+' : '') + totalDelta;
             deltaEl.classList.toggle('negative', totalDelta < 0);
         }
 
-        const wins = points.filter(p => p.win).length;
+        // ═══════════ W/L ═══════════
+        const wins   = points.filter(p => p.win).length;
         const losses = points.length - wins;
-        if (winsEl) winsEl.textContent = wins;
+        if (winsEl)   winsEl.textContent   = wins;
         if (lossesEl) lossesEl.textContent = losses;
 
+        // ═══════════ STREAK ═══════════
         if (streakEl) {
             streakEl.innerHTML = points.map(p =>
                 `<span class="sr ${p.win ? 'win' : 'loss'}"></span>`
             ).join('');
         }
+
+        // ═══════════ ИНТЕРАКТИВНЫЕ ТОЧКИ ═══════════
+        pointsGroup.innerHTML = '';
+        xy.forEach((p, i) => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'js-elo-point-group');
+
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', p.x.toFixed(1));
+            circle.setAttribute('cy', p.y.toFixed(1));
+            const baseR = (i === xy.length - 1) ? '3.5' : '2.5';
+            circle.setAttribute('r', baseR);
+            circle.setAttribute('fill', p.win ? '#00e08a' : '#ff5470');
+            circle.setAttribute('stroke', '#fff');
+            circle.setAttribute('stroke-width', '0.8');
+            circle.dataset.baseR = baseR;
+            g.appendChild(circle);
+
+            const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            hit.setAttribute('cx', p.x.toFixed(1));
+            hit.setAttribute('cy', p.y.toFixed(1));
+            hit.setAttribute('r', '14');
+            hit.setAttribute('fill', 'transparent');
+            hit.style.pointerEvents = 'all';
+            g.appendChild(hit);
+
+            g.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showEloPointTooltip(card, p, i, xy.length);
+                circle.setAttribute('r', '6');
+                setTimeout(() => circle.setAttribute('r', baseR), 220);
+            });
+            g.addEventListener('mouseenter', () => circle.setAttribute('r', '5'));
+            g.addEventListener('mouseleave', () => circle.setAttribute('r', baseR));
+
+            pointsGroup.appendChild(g);
+        });
+
+        // Кэш для tooltip
+        card._eloData = xy;
+
     } catch (e) {
         console.warn('renderEloChart:', e);
     }
@@ -62732,13 +63427,18 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     // ────────────────────────────────────────────────────────────
     // 👑 RANK-UP CELEBRATION
     // ────────────────────────────────────────────────────────────
-    function showRankUp(oldLevel, newLevel, newElo) {
-        if (newLevel <= oldLevel) return;
-        const info = RANK_CONFIG.LEVELS[newLevel - 1];
-        const color = info.color || '#00e08a';
-        const emblem = getRankEmblem(newLevel, 140, true);
+function showRankUp(oldLevel, newLevel, newElo) {
+    // 🔥 СНАЧАЛА проверка — если ранга нет, вообще ничего не делаем
+    if (newLevel <= oldLevel) return;
 
-        const overlay = document.createElement('div');
+    // 🔥 Только теперь эффекты
+    window.screenFlash('rgba(0, 224, 138, 0.5)');
+    setTimeout(() => window.screenShake(), 200);
+
+    const info = RANK_CONFIG.LEVELS[newLevel - 1];
+    const color = info.color || '#00e08a';
+    const emblem = getRankEmblem(newLevel, 140, true);
+    const overlay = document.createElement('div');
         overlay.id = 'rankUpOverlay';
         overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at center,' + color + '33 0%,rgba(0,0,0,0.95) 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:rankUpFadeIn 0.5s ease;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);';
         overlay.innerHTML = '<div style="font-size:12px;letter-spacing:6px;font-weight:900;color:' + color + ';text-transform:uppercase;margin-bottom:20px;text-shadow:0 0 20px ' + color + ';animation:rankUpSlide 0.6s cubic-bezier(0.34,1.56,0.64,1);">НОВЫЙ РАНГ</div>' +
@@ -62784,6 +63484,7 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     // ⚔️ MATCH FOUND REVEAL
     // ────────────────────────────────────────────────────────────
     function playMatchFoundReveal(match) {
+	window.screenFlash('rgba(0, 224, 138, 0.3)');
         const overlay = document.createElement('div');
         overlay.id = 'matchFoundOverlay';
         overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at center,#0a1a12 0%,#000 80%);display:flex;align-items:center;justify-content:center;overflow:hidden;';
@@ -62835,7 +63536,14 @@ if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     // 💀 MATCH RESULT SCREEN
     // ────────────────────────────────────────────────────────────
     function showMatchResultScreen(isWin, delta, scoreA, scoreB) {
-        const overlay = document.createElement('div');
+    // 🔥 Кинематографичный флеш
+    if (isWin) {
+        window.screenFlash('rgba(255, 215, 0, 0.4)');
+        setTimeout(() => window.screenShake(), 150);
+    } else {
+        window.screenFlash('rgba(255, 46, 77, 0.3)');
+    }        
+	const overlay = document.createElement('div');
         overlay.id = 'matchResultOverlay';
         const color = isWin ? '#ffd700' : '#ff2e4d';
         const rgb = isWin ? '255,215,0' : '255,46,77';
@@ -65625,6 +66333,372 @@ async function processWd(id, action) {
 window.openWithdrawalsAdmin = openWithdrawalsAdmin;
 window.renderWithdrawalsAdmin = renderWithdrawalsAdmin;
 window.processWd = processWd;
+
+// ═══════════════════════════════════════════════════════════════
+// 🎬 1. FADE-IN ON SCROLL (IntersectionObserver)
+// ═══════════════════════════════════════════════════════════════
+(function initScrollReveal() {
+    if (window._scrollRevealInit) return;
+    window._scrollRevealInit = true;
+    
+    // Не включаем в lite-mode
+    if (localStorage.getItem('appLiteMode') === '1') return;
+    
+    let observer = null;
+    
+    function init() {
+        if (observer) observer.disconnect();
+        
+        observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in-view');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0.12,
+            rootMargin: '0px 0px -40px 0px'
+        });
+        
+        applyReveal();
+    }
+    
+    function applyReveal() {
+        // Автоматически вешаем класс на ключевые элементы
+        const selectors = [
+            '.menu-item',
+            '.stat-card',
+            '.mini-stat',
+            '.leaderboard-item',
+            '.chat-list-item',
+            '.play-room-card',
+            '.shop-item',
+            '.shop-cat-btn',
+            '.club-member-row',
+            '.recent-matches-block',
+            '.achievements-strip',
+            '.ext-stats-card',
+            '.elo-chart-card',
+            '.goals-card',
+            '.heatmap-card',
+            '.quest-card',
+            '.case-card-v2',
+            '.pm2-stat',
+            '.pmr-item'
+        ];
+        
+        document.querySelectorAll(selectors.join(',')).forEach((el, i) => {
+            if (el.classList.contains('scroll-reveal')) return;
+            el.classList.add('scroll-reveal');
+            
+            // Каскадная задержка для первых 5 элементов
+            const siblingIdx = Array.from(el.parentElement?.children || [])
+                .filter(c => c.classList.contains('scroll-reveal'))
+                .indexOf(el);
+            if (siblingIdx >= 0 && siblingIdx < 5) {
+                el.classList.add('delay-' + (siblingIdx + 1));
+            }
+            
+            observer.observe(el);
+        });
+    }
+    
+    // Следим за перерисовками DOM
+    const mo = new MutationObserver(() => {
+        clearTimeout(window._revealDebounce);
+        window._revealDebounce = setTimeout(applyReveal, 120);
+    });
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        mo.observe(document.body, { childList: true, subtree: true });
+    });
+    
+    // Если DOM уже готов
+    if (document.readyState !== 'loading') {
+        init();
+        mo.observe(document.body, { childList: true, subtree: true });
+    }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// 🌊 2. RIPPLE EFFECT — волна при клике
+// ═══════════════════════════════════════════════════════════════
+(function initRipple() {
+    if (window._rippleInit) return;
+    window._rippleInit = true;
+    
+    if (localStorage.getItem('appLiteMode') === '1') return;
+    
+    document.addEventListener('pointerdown', (e) => {
+        const host = e.target.closest(
+            '.menu-item, .leaderboard-item, .play-room-card, ' +
+            '.shop-item, .shop-cat-btn, .chat-list-item, ' +
+            '.profile-action-btn, .nav-item, .mode-card, ' +
+            '.case-card-v2, .quest-card, .rv-icon-btn'
+        );
+        if (!host) return;
+        if (host.disabled) return;
+        
+        host.classList.add('ripple-host');
+        
+        const rect = host.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        ripple.style.cssText = `
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+        `;
+        
+        host.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 750);
+    }, { passive: true });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// 🎴 3. CARD TILT — 3D-наклон (только ПК)
+// ═══════════════════════════════════════════════════════════════
+(function initCardTilt() {
+    if (window._tiltInit) return;
+    window._tiltInit = true;
+    
+    if (localStorage.getItem('appLiteMode') === '1') return;
+    if (window.innerWidth < 1024) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    
+    document.addEventListener('mousemove', (e) => {
+        const card = e.target.closest('.leaderboard-item, .shop-item, .play-room-card');
+        if (!card) {
+            document.querySelectorAll('.tilt-card').forEach(c => {
+                c.classList.remove('tilt-card');
+                c.style.transform = '';
+            });
+            return;
+        }
+        
+        if (card.classList.contains('tilt-card') && card._tiltBusy) return;
+        
+        card.classList.add('tilt-card');
+        card._tiltBusy = true;
+        
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        
+        const rotY = ((x - cx) / cx) * 4;
+        const rotX = ((cy - y) / cy) * 4;
+        
+        card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-2px)`;
+    }, { passive: true });
+    
+    document.addEventListener('mouseleave', () => {
+        document.querySelectorAll('.tilt-card').forEach(c => {
+            c.classList.remove('tilt-card');
+            c.style.transform = '';
+            c._tiltBusy = false;
+        });
+    });
+    
+    document.addEventListener('mouseout', (e) => {
+        const card = e.target.closest('.leaderboard-item, .shop-item, .play-room-card');
+        if (!card) return;
+        if (e.relatedTarget && card.contains(e.relatedTarget)) return;
+        card.classList.remove('tilt-card');
+        card.style.transform = '';
+        card._tiltBusy = false;
+    });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// ⚡ 4. FLASH & SHAKE — кинематографичные эффекты
+// ═══════════════════════════════════════════════════════════════
+window.screenFlash = function(color = 'white') {
+    if (localStorage.getItem('appLiteMode') === '1') return;
+    
+    const old = document.getElementById('screenFlashOverlay');
+    if (old) old.remove();
+    
+    const el = document.createElement('div');
+    el.id = 'screenFlashOverlay';
+    el.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: ${color};
+        z-index: 99998;
+        pointer-events: none;
+        opacity: 0.85;
+        animation: flashAnim 0.35s ease-out forwards;
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 400);
+};
+
+window.screenShake = function() {
+    if (localStorage.getItem('appLiteMode') === '1') return;
+    
+    document.body.classList.add('screen-shake');
+    setTimeout(() => document.body.classList.remove('screen-shake'), 450);
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 📭 5. EMPTY STATE — универсальный рендер
+// ═══════════════════════════════════════════════════════════════
+window.renderEmptyState = function(options) {
+    const {
+        icon = '📭',
+        title = 'Пусто',
+        desc = '',
+        btnText = '',
+        btnAction = '',
+    } = options || {};
+    
+    const btnHTML = btnText && btnAction
+        ? `<button class="empty-state-btn" onclick="${btnAction}">${btnText}</button>`
+        : '';
+    
+    return `
+        <div class="empty-state">
+            <div class="empty-state-icon">${icon}</div>
+            <div class="empty-state-title">${title}</div>
+            ${desc ? `<div class="empty-state-desc">${desc}</div>` : ''}
+            ${btnHTML}
+        </div>
+    `;
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 💀 6. SKELETON v2 — красивые заглушки
+// ═══════════════════════════════════════════════════════════════
+window.skeletonList = function(count = 3) {
+    let html = '<div class="skeleton-list">';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="skeleton-row">
+                <div class="skeleton-circle"></div>
+                <div class="skeleton-lines">
+                    <div class="skeleton-bar" style="width: ${55 + Math.random() * 30}%"></div>
+                    <div class="skeleton-bar" style="width: ${30 + Math.random() * 25}%; height: 10px;"></div>
+                </div>
+            </div>
+        `;
+    }
+    html += '</div>';
+    return html;
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 📊 7. DXP CHART — интерактивные точки с тултипом
+// ═══════════════════════════════════════════════════════════════
+(function initDxpChartInteraction() {
+    if (window._dxpChartInit) return;
+    window._dxpChartInit = true;
+    
+    let tooltip = null;
+    
+    function ensureTooltip() {
+        if (tooltip) return tooltip;
+        tooltip = document.createElement('div');
+        tooltip.className = 'dxp-tooltip';
+        tooltip.id = 'dxpTooltip';
+        document.body.appendChild(tooltip);
+        return tooltip;
+    }
+    
+    function showTooltip(target, data, x, y) {
+        const tt = ensureTooltip();
+        const delta = data.delta || 0;
+        const deltaClass = delta >= 0 ? 'win' : 'loss';
+        const deltaSign = delta >= 0 ? '+' : '';
+        
+        tt.innerHTML = `
+            <div class="dxp-tooltip-title">${escapeHtml(data.date || 'Матч')}</div>
+            <div class="dxp-tooltip-delta ${deltaClass}">
+                ${deltaSign}${delta} DXP
+            </div>
+        `;
+        
+        tt.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+        tt.style.top = Math.max(8, y - 60) + 'px';
+        tt.classList.add('show');
+    }
+    
+    function hideTooltip() {
+        if (tooltip) tooltip.classList.remove('show');
+    }
+    
+    document.addEventListener('pointerdown', (e) => {
+        const point = e.target.closest('.js-elo-dot, .dxp-point');
+        if (!point) { hideTooltip(); return; }
+        
+        const data = {
+            date: point.dataset.date || 'Матч',
+            delta: parseInt(point.dataset.delta || '0', 10),
+        };
+        
+        const rect = point.getBoundingClientRect();
+        showTooltip(point, data, rect.left + rect.width / 2, rect.top);
+        
+        setTimeout(hideTooltip, 2500);
+    }, { passive: true });
+    
+    document.addEventListener('pointermove', (e) => {
+        const point = e.target.closest('.dxp-point');
+        if (!point) return;
+        
+        const data = {
+            date: point.dataset.date || 'Матч',
+            delta: parseInt(point.dataset.delta || '0', 10),
+        };
+        
+        const rect = point.getBoundingClientRect();
+        showTooltip(point, data, rect.left + rect.width / 2, rect.top);
+    }, { passive: true });
+    
+    document.addEventListener('pointerleave', hideTooltip);
+})();
+
+// ============================================================
+// 🎬 SCREEN FLASH / SHAKE
+// ============================================================
+window.screenFlash = function(color) {
+    const flash = document.createElement('div');
+    flash.className = 'screen-flash';
+    flash.style.background = color;
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 600);
+};
+
+window.screenShake = function(intensity, duration) {
+    intensity = intensity || 6;
+    duration  = duration  || 320;
+    const root = document.documentElement;
+    const start = performance.now();
+
+    function shake(now) {
+        const t = (now - start) / duration;
+        if (t >= 1) {
+            root.style.transform = '';
+            return;
+        }
+        const damp = 1 - t;
+        const x = (Math.random() - 0.5) * 2 * intensity * damp;
+        const y = (Math.random() - 0.5) * 2 * intensity * damp;
+        root.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+        requestAnimationFrame(shake);
+    }
+    requestAnimationFrame(shake);
+};
+
+
 
     </script>
 
