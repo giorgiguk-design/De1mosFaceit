@@ -25718,6 +25718,202 @@ html.lite-mode .toast-progress { animation: none !important; }
     0%, 100% { filter: drop-shadow(0 0 4px rgba(255,84,112,0.5)); }
     50%      { filter: drop-shadow(0 0 12px rgba(255,84,112,0.95)); }
 }
+
+/* ============================================================ */
+/* 💧 RIPPLE — волна от точки клика                              */
+/* ============================================================ */
+.ripple-host {
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+.ripple-wave {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--emerald-rgb), 0.45) 0%, rgba(var(--emerald-rgb), 0.05) 70%, transparent 100%);
+    transform: scale(0);
+    pointer-events: none;
+    animation: rippleExpand 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    z-index: 1;
+    mix-blend-mode: screen;
+}
+@keyframes rippleExpand {
+    0%   { transform: scale(0);   opacity: 0.9; }
+    70%  { opacity: 0.5; }
+    100% { transform: scale(1);   opacity: 0; }
+}
+
+/* На светлых кнопках (например зелёных) волна тёмная */
+.ripple-host.ripple-dark .ripple-wave {
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.05) 70%, transparent 100%);
+    mix-blend-mode: multiply;
+}
+
+/* Lite-mode отключает волну */
+html.lite-mode .ripple-wave { display: none !important; }
+
+/* ============================================================ */
+/* ✨ FADE-IN ON SCROLL                                          */
+/* ============================================================ */
+.fade-in-up {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.55s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: opacity, transform;
+}
+.fade-in-up.in-view {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Задержки для каскада */
+.fade-in-up[data-delay="1"] { transition-delay: 0.06s; }
+.fade-in-up[data-delay="2"] { transition-delay: 0.12s; }
+.fade-in-delay-3 { transition-delay: 0.18s; }
+.fade-in-up[data-delay="4"] { transition-delay: 0.24s; }
+.fade-in-up[data-delay="5"] { transition-delay: 0.30s; }
+
+/* Lite-mode — без анимации */
+html.lite-mode .fade-in-up {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+/* ============================================================ */
+/* 📭 EMPTY STATE — красивые заглушки                            */
+/* ============================================================ */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 24px;
+    gap: 6px;
+    animation: emptyStateIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes emptyStateIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.empty-state-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%,
+        rgba(var(--emerald-rgb), 0.15) 0%,
+        rgba(var(--emerald-rgb), 0.03) 60%,
+        transparent 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    position: relative;
+    animation: emptyIconFloat 4s ease-in-out infinite;
+}
+.empty-state-icon::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 1px dashed rgba(var(--emerald-rgb), 0.25);
+    animation: emptyRingSpin 20s linear infinite;
+}
+@keyframes emptyIconFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+}
+@keyframes emptyRingSpin {
+    to { transform: rotate(360deg); }
+}
+
+.empty-state-icon svg {
+    width: 40px;
+    height: 40px;
+    stroke: var(--emerald);
+    stroke-width: 1.6;
+    fill: none;
+    filter: drop-shadow(0 0 10px rgba(var(--emerald-rgb), 0.5));
+    opacity: 0.9;
+}
+
+.empty-state-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: 0.3px;
+    margin-top: 4px;
+}
+.empty-state-sub {
+    font-size: 12.5px;
+    color: var(--hint);
+    font-weight: 600;
+    line-height: 1.5;
+    max-width: 280px;
+}
+.empty-state-action {
+    margin-top: 16px;
+    padding: 12px 26px;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    border: none;
+    border-radius: 12px;
+    color: #04140e;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(var(--emerald-rgb), 0.35);
+    transition: transform 0.18s ease, box-shadow 0.22s ease;
+}
+.empty-state-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(var(--emerald-rgb), 0.5);
+}
+.empty-state-action:active { transform: scale(0.96); }
+
+/* Lite-mode — отключаем анимации */
+html.lite-mode .empty-state-icon,
+html.lite-mode .empty-state-icon::before {
+    animation: none;
+}
+
+/* ============================================================ */
+/* 📊 TOP PROGRESS — умная полоса загрузки                       */
+/* ============================================================ */
+.top-progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 0%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 30%,
+        var(--emerald-3) 50%,
+        var(--emerald) 70%,
+        transparent 100%);
+    box-shadow: 0 0 12px var(--emerald);
+    z-index: 999999;
+    pointer-events: none;
+    opacity: 0;
+    transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+                opacity 0.25s ease;
+}
+.top-progress-bar.active {
+    opacity: 1;
+}
+.top-progress-bar.shine {
+    background-size: 200% 100%;
+    animation: topBarShine 1s linear infinite;
+}
+@keyframes topBarShine {
+    from { background-position: 100% 0; }
+    to   { background-position: -100% 0; }
+}
     
 </style>
 </head>
@@ -66698,7 +66894,366 @@ window.screenShake = function(intensity, duration) {
     requestAnimationFrame(shake);
 };
 
+// ============================================================
+// 💧 RIPPLE EFFECT
+// ============================================================
+(function initRipple() {
+    if (window._rippleInit) return;
+    window._rippleInit = true;
 
+    const SELECTOR = [
+        'button',
+        '[onclick]:not([onclick=""])',
+        '.leaderboard-item',
+        '.menu-item',
+        '.chat-list-item',
+        '.play-room-card',
+        '.shop-item',
+        '.shop-cat-btn',
+        '.stat-card',
+        '.mini-stat',
+        '.mode-card',
+        '.mode-selector .mode-card',
+        '.room-launch-btn',
+        '.play-btn-cyber',
+        '.play-btn-find',
+        '.play-btn-create',
+        '.dash-cases-btn',
+        '.dash-bp-open-full',
+        '.club-play-main',
+        '.club-mini-btn',
+        '.rv-icon-btn',
+        '.veto-map-v3',
+        '.side-card-v2',
+    ].join(',');
+
+    document.addEventListener('pointerdown', (e) => {
+        if (document.documentElement.classList.contains('lite-mode')) return;
+
+        const host = e.target.closest(SELECTOR);
+        if (!host) return;
+        if (host.disabled) return;
+
+        // Пропускаем клики по скроллящимся контейнерам
+        if (host.classList.contains('ripple-no')) return;
+
+        // Делаем хост позиционированным
+        const style = getComputedStyle(host);
+        if (style.position === 'static') {
+            host.style.position = 'relative';
+        }
+        host.classList.add('ripple-host');
+
+        // Светлые фоны → тёмная волна
+        const bg = style.background || '';
+        const isLight = /var\(--emerald/.test(bg)
+                     || /255,\s*215,\s*0/.test(bg)
+                     || /#00e08a/.test(bg)
+                     || /#ffd700/.test(bg);
+        if (isLight) host.classList.add('ripple-dark');
+
+        const rect = host.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const maxDist = Math.max(
+            Math.hypot(x, y),
+            Math.hypot(rect.width - x, y),
+            Math.hypot(x, rect.height - y),
+            Math.hypot(rect.width - x, rect.height - y)
+        );
+        const size = maxDist * 2;
+
+        const wave = document.createElement('span');
+        wave.className = 'ripple-wave';
+        wave.style.width  = size + 'px';
+        wave.style.height = size + 'px';
+        wave.style.left   = (x - size / 2) + 'px';
+        wave.style.top    = (y - size / 2) + 'px';
+
+        host.appendChild(wave);
+        setTimeout(() => wave.remove(), 700);
+    }, { passive: true });
+
+    console.log('💧 Ripple effect установлен');
+})();
+
+// ============================================================
+// ✨ FADE-IN ON SCROLL (IntersectionObserver)
+// ============================================================
+(function initFadeInOnScroll() {
+    if (window._fadeInit) return;
+    window._fadeInit = true;
+
+    if (document.documentElement.classList.contains('lite-mode')) return;
+    if (!('IntersectionObserver' in window)) return;
+
+    // Селекторы элементов, которые должны появляться плавно
+    const SEL = [
+        '.menu-item',
+        '.stat-card',
+        '.leaderboard-item',
+        '.leaderboard-champion',
+        '.chat-list-item',
+        '.play-room-card',
+        '.shop-item',
+        '.shop-cat-btn',
+        '.rv-icon-btn',
+        '.veto-map-v3',
+        '.recent-matches-block',
+        '.achievements-strip',
+        '.ext-stats-card',
+        '.elo-chart-card',
+        '.goals-card',
+        '.heatmap-card',
+        '.mini-stat',
+        '.quest-card',
+        '.case-card-v2',
+        '.dash-bp',
+        '.dash-chart-mini',
+        '.dash-last-match',
+        '.result-team-col',
+        '.result-proof-card',
+        '.result-score-card',
+    ].join(',');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('in-view');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.12,
+        rootMargin: '0px 0px -30px 0px',
+    });
+
+    // Помечаем все подходящие элементы
+    function markElements(scope = document) {
+        const els = scope.querySelectorAll(SEL);
+        let idx = 0;
+        els.forEach(el => {
+            if (el.classList.contains('fade-in-up')) return;
+            if (el.closest('#playerModal') && el.closest('.player-modal')) {
+                // В модалке — без задержек и без observer
+                el.classList.add('fade-in-up');
+                requestAnimationFrame(() => el.classList.add('in-view'));
+                return;
+            }
+            el.classList.add('fade-in-up');
+            // Каскад: 1–5 по кругу
+            const delay = (idx % 5) + 1;
+            el.dataset.delay = delay;
+            idx++;
+            observer.observe(el);
+        });
+    }
+
+    // Первичная разметка
+    markElements();
+
+    // Наблюдаем за динамическими вставками (например, подгрузка лидерборда)
+    const mo = new MutationObserver((muts) => {
+        let needMark = false;
+        muts.forEach(m => {
+            if (m.addedNodes.length) needMark = true;
+        });
+        if (needMark) {
+            clearTimeout(window._fadeMarkTimer);
+            window._fadeMarkTimer = setTimeout(() => markElements(), 80);
+        }
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    console.log('✨ Fade-in on scroll установлен');
+})();
+
+// ============================================================
+// 📭 EMPTY STATES — фабрика заглушек
+// ============================================================
+window.renderEmptyState = function(opts) {
+    opts = opts || {};
+    const icon    = opts.icon    || 'default';
+    const title   = opts.title   || 'Пусто';
+    const sub     = opts.sub     || '';
+    const action  = opts.action  || null;  // { label, onclick }
+
+    const icons = {
+        friends: `<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 20a5 5 0 0 1 6-3.5"/></svg>`,
+        chat:    `<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg>`,
+        matches: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>`,
+        club:    `<svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.5 8 11 4.6-1.5 8-6 8-11V5l-8-3Z"/><path d="M12 8v4M10 10h4"/></svg>`,
+        rooms:   `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>`,
+        shop:    `<svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+        cases:   `<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M3 11h18M12 7v14"/><path d="M7 7V4a5 5 0 0 1 10 0v3"/></svg>`,
+        quests:  `<svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>`,
+        search:  `<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
+        trophy:  `<svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4v2a4 4 0 0 0 4 4M17 5h3v2a4 4 0 0 1-4 4"/><path d="M9 20h6M12 13v7"/></svg>`,
+        default: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9h.01M15 9h.01M9 15.5c1-1.5 5-1.5 6 0"/></svg>`,
+    };
+
+    const svg = icons[icon] || icons.default;
+
+    const actionHTML = action && action.label
+        ? `<button class="empty-state-action" onclick="${action.onclick || ''}">${action.label}</button>`
+        : '';
+
+    return `
+        <div class="empty-state">
+            <div class="empty-state-icon">${svg}</div>
+            <div class="empty-state-title">${escapeHtml(title)}</div>
+            ${sub ? `<div class="empty-state-sub">${escapeHtml(sub)}</div>` : ''}
+            ${actionHTML}
+        </div>
+    `;
+};
+
+// ============================================================
+// 📭 Автозамена существующих .empty на красивые заглушки
+// ============================================================
+function prettifyEmptyStates(scope = document) {
+    const MAP = [
+        { re: /Пока никого нет|Никого не найдено|Нет игроков/i,           icon: 'friends', title: 'Никого нет',         sub: 'Пригласи друзей или найди их через поиск', action: { label: '+ Найти игроков', onclick: "typeof openFriendSearchSheet==='function'&&openFriendSearchSheet()" } },
+        { re: /Друзей нет|Пока нет друзей/i,                              icon: 'friends', title: 'Друзей пока нет',    sub: 'Найди друзей и играйте вместе',            action: { label: '+ Найти друзей',  onclick: "typeof openFriendsPage==='function'&&openFriendsPage()" } },
+        { re: /Кланов не найдено|Кланов нет/i,                            icon: 'club',    title: 'Кланов не найдено',  sub: 'Попробуй изменить запрос или создай свой' },
+        { re: /Транзакций нет|История пуста/i,                            icon: 'shop',    title: 'История пуста',      sub: 'Соверши первую покупку или получи награду' },
+        { re: /Кейс пуст|Нет предметов/i,                                 icon: 'cases',   title: 'Кейс пуст',          sub: 'Админ ещё не наполнил его содержимым' },
+        { re: /Матчей пока нет|Нет завершённых матчей/i,                  icon: 'matches', title: 'Матчей пока нет',    sub: 'Сыграй первую игру, чтобы увидеть статистику', action: { label: '🎮 Играть', onclick: "typeof openPlayScreen==='function'&&openPlayScreen()" } },
+        { re: /Открытых комнат нет|Комнат нет/i,                          icon: 'rooms',   title: 'Открытых комнат нет',sub: 'Создай свою и подожди игроков',            action: { label: '+ Создать комнату', onclick: "typeof createRoomInline==='function'&&createRoomInline()" } },
+        { re: /Уведомлений нет/i,                                         icon: 'default', title: 'Уведомлений нет',    sub: 'Как только появятся — сразу увидишь' },
+        { re: /Ничего не найдено/i,                                       icon: 'search',  title: 'Ничего не найдено',  sub: 'Попробуй изменить запрос' },
+    ];
+
+    scope.querySelectorAll('.empty').forEach(el => {
+        if (el.dataset.prettified === '1') return;
+        if (el.querySelector('.empty-state')) return;
+
+        const text = el.textContent.trim();
+        for (const rule of MAP) {
+            if (rule.re.test(text)) {
+                el.dataset.prettified = '1';
+                el.innerHTML = renderEmptyState(rule);
+                return;
+            }
+        }
+
+        // Универсальный фолбэк
+        if (text.length > 0 && text.length < 60) {
+            el.dataset.prettified = '1';
+            el.innerHTML = renderEmptyState({
+                icon: 'default',
+                title: text,
+                sub: '',
+            });
+        }
+    });
+}
+
+// Наблюдаем за появлением новых .empty
+(function watchEmptyStates() {
+    const run = () => prettifyEmptyStates();
+    run();
+    const mo = new MutationObserver(() => {
+        clearTimeout(window._emptyTimer);
+        window._emptyTimer = setTimeout(run, 100);
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    console.log('📭 Auto-empty-states установлены');
+})();
+
+// ============================================================
+// 📊 TOP PROGRESS — полоса загрузки для всех сетевых запросов
+// ============================================================
+(function initTopProgress() {
+    if (window._topProgInit) return;
+    window._topProgInit = true;
+
+    // Создаём полосу
+    let bar = document.getElementById('topProgressBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'topProgressBar';
+        bar.className = 'top-progress-bar';
+        document.body.appendChild(bar);
+    }
+
+    let activeCount = 0;
+    let tickTimer = null;
+    let fakeProgress = 0;
+
+    const start = () => {
+        activeCount++;
+        if (activeCount === 1) {
+            bar.classList.add('active');
+            bar.classList.add('shine');
+            fakeProgress = 8;
+            bar.style.width = fakeProgress + '%';
+
+            // Плавно «ползём» к 85%, ждём завершения
+            clearInterval(tickTimer);
+            tickTimer = setInterval(() => {
+                if (fakeProgress < 85) {
+                    fakeProgress += (85 - fakeProgress) * 0.08;
+                    bar.style.width = fakeProgress.toFixed(1) + '%';
+                }
+            }, 180);
+        }
+    };
+
+    const finish = () => {
+        activeCount = Math.max(0, activeCount - 1);
+        if (activeCount === 0) {
+            clearInterval(tickTimer);
+            bar.style.width = '100%';
+            setTimeout(() => {
+                bar.classList.remove('active');
+                bar.classList.remove('shine');
+                setTimeout(() => { bar.style.width = '0%'; }, 250);
+            }, 220);
+        }
+    };
+
+    // Оборачиваем supabase-запросы
+    if (window.sb && typeof sb.from === 'function') {
+        const origFrom = sb.from.bind(sb);
+        sb.from = function() {
+            const query = origFrom.apply(null, arguments);
+            // Оборачиваем .then и await (через Promise-like)
+            const origThen = query.then?.bind(query);
+            if (origThen) {
+                query.then = function(onFulfilled, onRejected) {
+                    start();
+                    return origThen(
+                        (v) => { finish(); return onFulfilled ? onFulfilled(v) : v; },
+                        (e) => { finish(); if (onRejected) return onRejected(e); throw e; }
+                    );
+                };
+            }
+            return query;
+        };
+    }
+
+    // Оборачиваем fetch
+    if (window.fetch && !window._fetchWrapped) {
+        window._fetchWrapped = true;
+        const origFetch = window.fetch.bind(window);
+        window.fetch = function() {
+            const url = String(arguments[0] || '');
+            // Игнорируем служебные запросы Telegram
+            if (url.includes('telegram') || url.includes('/storage/')) {
+                return origFetch.apply(null, arguments);
+            }
+            start();
+            return origFetch.apply(null, arguments).finally(finish);
+        };
+    }
+
+    // Ручной API
+    window.topProgress = { start, finish };
+
+    console.log('📊 Top progress bar установлен');
+})();
 
     </script>
 
