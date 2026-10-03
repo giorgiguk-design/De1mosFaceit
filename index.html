@@ -31214,6 +31214,12 @@ function showToast(msg, type = 'info') {
 // Работает с таймаутом — если Telegram-картинка не грузится за 3 сек,
 // показывается буква ника
 // ============================================================
+// ============================================================
+// 🖼️ Рендер аватара с фолбэком на букву
+// Буква рисуется ПОД картинкой, картинка проявляется поверх через opacity.
+// Если картинка не загрузилась или зависла (t.me/i/userpic на ПК) —
+// остаётся только буква. Не требует JS-таймеров и работает везде.
+// ============================================================
 function renderAvatar(user) {
     const custom = user?.custom_avatar;
     const telegram = user?.photo_url;
@@ -31221,51 +31227,14 @@ function renderAvatar(user) {
     const initial = (user?.display_name || user?.username || 'U')[0].toUpperCase();
 
     if (src) {
-        // 🔥 Уникальный ID для отслеживания этого конкретного <img>
-        const uid = '_av_' + Math.random().toString(36).slice(2, 8);
-
         return `
-            <img src="${escapeHtml(src)}" alt=""
-                 data-av-uid="${uid}"
-                 style="width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0;transition:opacity 0.25s ease;"
-                 onload="
-                     this.style.opacity='1';
-                     if (window['_avt_${uid}']) { clearTimeout(window['_avt_${uid}']); delete window['_avt_${uid}']; }
-                 "
-                 onerror="
-                     this.style.display='none';
-                     if (this.parentElement) {
-                         this.parentElement.classList.add('av-fallback');
-                         this.parentElement.innerHTML='<span class=&quot;av-fallback-letter&quot;>${initial}</span>';
-                     }
-                     if (window['_avt_${uid}']) { clearTimeout(window['_avt_${uid}']); delete window['_avt_${uid}']; }
-                 ">
-            <span id="av-fb-${uid}" style="display:none;">
-                <span class="av-fallback-letter">${initial}</span>
-            </span>
-            <script>
-                (function() {
-                    var uid = "${uid}";
-                    window['_avt_' + uid] = setTimeout(function() {
-                        var img = document.querySelector('[data-av-uid="' + uid + '"]');
-                        if (img && !img.complete) {
-                            img.style.display = 'none';
-                            if (img.parentElement) {
-                                img.parentElement.classList.add('av-fallback');
-                                var fb = img.parentElement.querySelector('.av-fallback-letter');
-                                if (!fb) {
-                                    var span = document.createElement('span');
-                                    span.className = 'av-fallback-letter';
-                                    span.textContent = '${initial}';
-                                    img.parentElement.appendChild(span);
-                                }
-                            }
-                        }
-                        delete window['_avt_' + uid];
-                    }, 3000);
-                })();
-            <\/script>
-        `;
+            <span style="position:relative;width:100%;height:100%;display:block;border-radius:inherit;overflow:hidden;">
+                <span class="av-fallback-letter" style="position:absolute;inset:0;width:100%;height:100%;">${initial}</span>
+                <img src="${escapeHtml(src)}" alt=""
+                     style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.25s ease;z-index:1;"
+                     onload="this.style.opacity='1'"
+                     onerror="this.style.display='none'">
+            </span>`;
     }
 
     return `<span class="av-fallback-letter">${initial}</span>`;
@@ -31305,7 +31274,6 @@ async function notify(telegramId, text, type = null, options = {}) {
                 cached = { ts: now, data: u };
                 _notifySettingsCache.set(key, cached);
 
-                // Чистим старые записи раз в минуту
                 if (_notifySettingsCache.size > 500) {
                     const cutoff = now - 5 * 60 * 1000;
                     for (const [k, v] of _notifySettingsCache) {
@@ -31329,8 +31297,18 @@ async function notify(telegramId, text, type = null, options = {}) {
 
     // ============================================================
     // 2. Отправка через edge-функцию
+    // 🔥 Поддерживает inline-кнопки через options.buttons
     // ============================================================
     try {
+        const payload = {
+            telegram_id: telegramId,
+            text,
+        };
+
+        if (Array.isArray(options.buttons) && options.buttons.length) {
+            payload.buttons = options.buttons;
+        }
+
         const res = await fetch(NOTIFY_URL, {
             method: 'POST',
             headers: {
@@ -31338,7 +31316,7 @@ async function notify(telegramId, text, type = null, options = {}) {
                 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
                 'apikey': SUPABASE_ANON_KEY
             },
-            body: JSON.stringify({ telegram_id: telegramId, text })
+            body: JSON.stringify(payload)
         });
 
         if (!res.ok) {
@@ -32528,18 +32506,24 @@ async function handleFriendButtonClick(userId, btn) {
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
     try {
-        await sb.from('friendships').insert({
+        const { data: rel } = await sb.from('friendships').insert({
             requester_id: currentUser.telegram_id,
             addressee_id: userId,
             status: 'pending'
-        });
+        }).select().single();
 
         AppState.friendRelations = AppState.friendRelations || {};
         AppState.friendRelations[userId] = 'pending';
 
         await notify(userId,
             `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`,
-            'friend'
+            'friend',
+            {
+                buttons: [[
+                    { text: '✅ Принять', callback_data: `fr_accept_${rel.id}_${currentUser.telegram_id}` },
+                    { text: '❌ Отклонить', callback_data: `fr_decline_${rel.id}` },
+                ]]
+            }
         );
 
         showToast('✅ Запрос отправлен');
@@ -33674,22 +33658,33 @@ async function loadAllPlayers() {
     }
 }
 
-        async function sendFriendRequest(addresseeId, btnEl) {
-            if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
-            try {
-                const { error } = await sb.from('friendships').insert({
-                    requester_id: currentUser.telegram_id,
-                    addressee_id: addresseeId, status: 'pending'
-                });
-                if (error) throw error;
-                notify(addresseeId, `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`, 'friend');
-                showToast('✅ Запрос отправлен');
-                if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Запрос'; }
-            } catch (e) {
-                showToast(e.message || 'Ошибка');
-                if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Добавить'; }
+async function sendFriendRequest(addresseeId, btnEl) {
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+    try {
+        const { data: rel, error } = await sb.from('friendships').insert({
+            requester_id: currentUser.telegram_id,
+            addressee_id: addresseeId, status: 'pending'
+        }).select().single();
+        if (error) throw error;
+
+        await notify(addresseeId,
+            `👥 <b>${escapeHtml(currentUser.display_name)}</b> хочет добавить тебя в друзья.`,
+            'friend',
+            {
+                buttons: [[
+                    { text: '✅ Принять', callback_data: `fr_accept_${rel.id}_${currentUser.telegram_id}` },
+                    { text: '❌ Отклонить', callback_data: `fr_decline_${rel.id}` },
+                ]]
             }
-        }
+        );
+
+        showToast('✅ Запрос отправлен');
+        if (btnEl) { btnEl.className = 'friend-action pending'; btnEl.textContent = '⏳ Запрос'; }
+    } catch (e) {
+        showToast(e.message || 'Ошибка');
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '+ Добавить'; }
+    }
+}
 
 async function loadFriends() {
     if (!currentUser) return;
@@ -35077,10 +35072,24 @@ async function createClub(name, tag, description) {
         }, { onConflict: 'club_id,telegram_id' });
 
         if (club?.owner_id) {
-            notify(club.owner_id,
-                `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в Клан <b>${escapeHtml(club.name)}</b>.`,
-                'club'
-            );
+            const { data: reqRow } = await sb.from('club_requests')
+                .select('id')
+                .eq('club_id', clubId)
+                .eq('telegram_id', currentUser.telegram_id)
+                .maybeSingle();
+
+            if (reqRow?.id) {
+                notify(club.owner_id,
+                    `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> подал заявку в Клан <b>${escapeHtml(club.name)}</b>.`,
+                    'club',
+                    {
+                        buttons: [[
+                            { text: '✅ Принять', callback_data: `creq_accept_${reqRow.id}_${clubId}` },
+                            { text: '❌ Отклонить', callback_data: `creq_decline_${reqRow.id}` },
+                        ]]
+                    }
+                );
+            }
         }
 
         showToast('✅ Заявка отправлена');
@@ -36075,18 +36084,22 @@ async function sendMessage() {
             payload.reply_to_text = replyTo.text;
         }
 
-        const { error } = await sb.from('messages').insert(payload);
+        const { data: insertedMsg, error } = await sb.from('messages').insert(payload).select().single();
         if (error) throw error;
 
         // ЛС — уведомляем только получателя
         if (chatType === 'dm') {
             await notify(
                 currentChat.id,
-                `💬 <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 120))}`,
-                'message'
+                `💬 <b>${escapeHtml(currentUser.display_name)}</b>:\n${escapeHtml(text.slice(0, 200))}`,
+                'message',
+                {
+                    buttons: [[
+                        { text: '↩️ Ответить', callback_data: `reply_${insertedMsg.id}_${currentUser.telegram_id}` },
+                    ]]
+                }
             );
         }
-
         // Клан — только членам клана
         if (chatType === 'club') {
             try {
@@ -36101,8 +36114,13 @@ async function sendMessage() {
 
                 for (const id of ids) {
                     notify(id,
-                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b>: ${escapeHtml(text.slice(0, 100))}`,
-                        'message'
+                        `🛡️ <b>${escapeHtml(currentUser.display_name)}</b>:\n${escapeHtml(text.slice(0, 200))}`,
+                        'message',
+                        {
+                            buttons: [[
+                                { text: '↩️ Ответить', callback_data: `reply_${insertedMsg.id}_${currentUser.telegram_id}` },
+                            ]]
+                        }
                     ).catch(() => {});
                 }
             } catch (e) {}
@@ -36918,16 +36936,23 @@ async function loadInviteList() {
 async function inviteToParty(userId) {
     if (!myParty) return;
     try {
-        await sb.from('party_invites').upsert({
+        const { data: invRow } = await sb.from('party_invites').upsert({
             party_id: myParty.party.id,
             from_id: currentUser.telegram_id,
             to_id: userId,
             kind: 'party',
             status: 'pending'
-        }, { onConflict: 'party_id,to_id' });
+        }, { onConflict: 'party_id,to_id' }).select().single();
 
         await notify(userId,
-            `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в пати ${myParty.party.mode}. Открой приложение!`, 'party'
+            `🎮 <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в пати ${myParty.party.mode}.`,
+            'party',
+            {
+                buttons: [[
+                    { text: '✅ Вступить', callback_data: `pi_accept_${invRow?.id}_${myParty.party.id}` },
+                    { text: '❌ Отклонить', callback_data: `pi_decline_${invRow?.id}` },
+                ]]
+            }
         );
         showToast('✅ Приглашение отправлено');
     } catch (e) { showToast('Ошибка: ' + e.message); }
@@ -48981,16 +49006,22 @@ async function sendClubInvite(userId, btn) {
             return;
         }
 
-        await sb.from('club_invites').upsert({
+        const { data: invRow } = await sb.from('club_invites').upsert({
             club_id: myClub.club.id,
             from_id: currentUser.telegram_id,
             to_id: userId,
             status: 'pending'
-        }, { onConflict: 'club_id,to_id' });
+        }, { onConflict: 'club_id,to_id' }).select().single();
 
         await notify(userId,
-            `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в Клан <b>${escapeHtml(myClub.club.name)}</b> [${escapeHtml(myClub.club.tag)}]. Открой приложение!`,
-            'club'
+            `🛡️ <b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в Клан <b>${escapeHtml(myClub.club.name)}</b> [${escapeHtml(myClub.club.tag)}].`,
+            'club',
+            {
+                buttons: [[
+                    { text: '✅ Принять', callback_data: `cinv_accept_${invRow?.id}_${myClub.club.id}` },
+                    { text: '❌ Отклонить', callback_data: `cinv_decline_${invRow?.id}` },
+                ]]
+            }
         );
 
         showToast('✅ Приглашение отправлено');
@@ -59555,56 +59586,63 @@ function openBotChat() {
 }
             
 // ============================================================
-// 📸 Отправка карточки профиля через бота (в ЛС)
+// 📸 Отправка карточки профиля в ЛС
+// Кому отправляем: ТОМУ, КТО НАЖАЛ КНОПКУ (currentUser)
+// Чей профиль на карточке: тот, чей профиль открыт (user)
+// ============================================================
+// ============================================================
+// 📸 Отправка карточки в ЛС тому, кто нажал кнопку
 // ============================================================
 async function doShareToTelegram() {
     const blob = AppState.share.blob;
     const user = AppState.share.userData;
     if (!blob || !user) { showToast('Картинка не готова'); return; }
+    if (!currentUser) { showToast('Профиль не загружен'); return; }
 
     const btn = document.querySelector('.share-preview-btn.primary');
     const originalHTML = btn?.innerHTML;
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ ОТПРАВКА...'; }
 
     try {
-        // 1. Загружаем картинку в Storage
-        const path = `profile_cards/${user.telegram_id}_${Date.now()}.png`;
-        const { error: upErr } = await sb.storage.from('matches')
-            .upload(path, blob, { contentType: 'image/png', upsert: false });
-        if (upErr) throw upErr;
-
-        const { data: urlData } = sb.storage.from('matches').getPublicUrl(path);
-
-        // 2. Красивая подпись
+        // Красивый текст (с рефералкой — если свой профиль)
         const caption = (typeof buildProfileCardCaption === 'function')
             ? buildProfileCardCaption(user)
-            : `🎮 <b>Профиль ${escapeHtml(user.display_name || '')}</b>\n\nDXP: <b>${user.elo || 1000}</b>`;
+            : `🎮 <b>Профиль ${escapeHtml(user.display_name || '')}</b>`;
 
-        // 3. Отправляем боту
+        const formData = new FormData();
+        formData.append('userId', String(currentUser.telegram_id));  // 🔥 КОМУ отправляем — кто нажал
+        formData.append('profileOwnerId', String(user.telegram_id)); // 🔥 ЧЬЯ карточка
+        formData.append('text', caption);
+        formData.append('url', 'https://t.me/De1mosFaceit_bot/De1mosFaceit');
+        formData.append('photo', blob, `profile_${user.telegram_id}.png`);
+
         const res = await fetch(
-            `${SUPABASE_URL}/functions/v1/telegram-bot?action=send-profile-card-share`,
+            `${SUPABASE_URL}/functions/v1/save-prepared-message`,
             {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
                     'apikey': SUPABASE_ANON_KEY,
                 },
-                body: JSON.stringify({
-                    userId: user.telegram_id,
-                    imageUrl: urlData.publicUrl,
-                    caption,
-                    username: user.username || '',
-                }),
+                body: formData,
             }
         );
 
         const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data.error || 'Ошибка сервера');
+        console.log('📤 save-prepared-message result:', data);
+
+        if (!res.ok || !data.ok) {
+            throw new Error(data.error || data.details || 'Ошибка сервера');
+        }
+
+        if (!data.sent_to_chat) {
+            throw new Error('Бот не смог написать тебе в ЛС. Открой @De1mosFaceit_bot и нажми /start');
+        }
 
         haptic('medium');
         closeSharePreview();
         showMessageSentHint();
+
     } catch (e) {
         console.error('doShareToTelegram:', e);
         showToast('❌ ' + e.message);
@@ -64383,6 +64421,10 @@ window.buildReferralShareText = buildReferralShareText;
 // ============================================================
 // 📝 Красивая подпись под карточкой профиля (для отправки ботом)
 // ============================================================
+// ============================================================
+// 📝 Красивая подпись под карточкой профиля
+// Если делимся СВОИМ профилем — снизу добавляется реферальная ссылка
+// ============================================================
 function buildProfileCardCaption(user) {
     const lvl = eloToLevel(user.elo || 1000);
     const info = RANK_CONFIG.LEVELS[Math.min(lvl - 1, 9)];
@@ -64416,13 +64458,24 @@ function buildProfileCardCaption(user) {
         t += `\n🆔 <b>Standoff ID:</b> <code>${escapeHtml(user.standoff_id)}</code>`;
     }
 
+    // ============================================================
+    // 🎁 СВОЙ ПРОФИЛЬ → добавляем реферальную ссылку
+    // ============================================================
+    const isOwn = currentUser && Number(user.telegram_id) === Number(currentUser.telegram_id);
+    if (isOwn && currentUser.referral_code) {
+        const refLink = `https://t.me/De1mosFaceit_bot/De1mosFaceit?start=ref_${currentUser.referral_code}`;
+        t += `\n\n━━━━━━━━━━━━━━━━━━━━━\n`;
+        t += `🎁 <b>Забирай бонус +3000 монет!</b>\n`;
+        t += `👇 Жми ссылку ниже:\n`;
+        t += `<code>${refLink}</code>`;
+    }
+
     t += `\n\n━━━━━━━━━━━━━━━━━━━━━\n`;
     t += `🎮 <b>De1mos Faceit</b> — киберспортивная платформа\n`;
     t += `👉 t.me/De1mosFaceit_bot/De1mosFaceit`;
 
     return t;
 }
-
 window.buildProfileCardCaption = buildProfileCardCaption;
 
 // ============================================================
