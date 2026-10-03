@@ -59616,6 +59616,14 @@ async function doShareToTelegram() {
         formData.append('url', 'https://t.me/De1mosFaceit_bot/De1mosFaceit');
         formData.append('photo', blob, `profile_${user.telegram_id}.png`);
 
+        // 🔥 НОВОЕ: если свой профиль — передаём рефералку для кнопки
+        const isOwn = Number(currentUser.telegram_id) === Number(user.telegram_id);
+        if (isOwn && currentUser.referral_code) {
+            formData.append('referralUrl',
+                `https://t.me/De1mosFaceit_bot/De1mosFaceit?start=ref_${currentUser.referral_code}`
+            );
+        }
+
         const res = await fetch(
             `${SUPABASE_URL}/functions/v1/save-prepared-message`,
             {
@@ -64466,8 +64474,8 @@ function buildProfileCardCaption(user) {
         const refLink = `https://t.me/De1mosFaceit_bot/De1mosFaceit?start=ref_${currentUser.referral_code}`;
         t += `\n\n━━━━━━━━━━━━━━━━━━━━━\n`;
         t += `🎁 <b>Забирай бонус +3000 монет!</b>\n`;
-        t += `👇 Жми ссылку ниже:\n`;
-        t += `<code>${refLink}</code>`;
+        t += `👇 Жми на ссылку ниже:\n\n`;
+        t += refLink;
     }
 
     t += `\n\n━━━━━━━━━━━━━━━━━━━━━\n`;
