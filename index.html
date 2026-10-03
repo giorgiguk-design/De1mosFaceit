@@ -63942,9 +63942,8 @@ async function openReferralScreen() {
 
         const botLink = 'https://t.me/De1mosFaceit_bot/De1mosFaceit';
         const shareLink = `${botLink}?start=ref_${code}`;
-
-        const canWithdraw = refCount >= 5 && goldBalance >= 30;
         const hasPending = (withdrawals || []).some(w => w.status === 'pending');
+        const canWithdraw = refCount >= 5;
 
         page.innerHTML = `
             <!-- HERO -->
@@ -64024,65 +64023,33 @@ async function openReferralScreen() {
                 </div>
             </div>
 
-            <!-- Прогресс до вывода -->
-            <div style="
-                padding: 14px;
-                background: linear-gradient(180deg, rgba(var(--emerald-rgb),0.06), rgba(0,0,0,0.4));
-                border: 1px solid ${canWithdraw ? 'rgba(var(--emerald-rgb),0.6)' : 'var(--border)'};
+            <!-- Кнопка вывода -->
+            <button onclick="tryWithdrawGold()" style="
+                width: 100%; padding: 16px;
+                background: ${hasPending 
+                    ? 'rgba(217,171,90,0.15)' 
+                    : (canWithdraw 
+                        ? 'linear-gradient(135deg, #ffd700, #b8860b)' 
+                        : 'rgba(var(--emerald-rgb), 0.10)')};
+                border: ${canWithdraw && !hasPending 
+                    ? 'none' 
+                    : '1px solid var(--border-strong)'};
                 border-radius: 14px;
+                color: ${hasPending 
+                    ? '#ffd700' 
+                    : (canWithdraw ? '#000' : 'var(--emerald)')};
+                font-family: 'Orbitron', sans-serif;
+                font-size: 13px; font-weight: 900;
+                letter-spacing: 1.5px; cursor: pointer;
+                box-shadow: ${canWithdraw && !hasPending 
+                    ? '0 6px 22px rgba(255,215,0,0.4)' 
+                    : 'none'};
                 margin-bottom: 14px;
             ">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 11px; font-weight: 800; color: var(--hint); letter-spacing: 1.5px;">
-                        ПРОГРЕСС ДО ВЫВОДА
-                    </span>
-                    <span style="font-size: 11px; font-weight: 900; color: ${canWithdraw ? 'var(--emerald)' : 'var(--hint)'}; font-family: var(--font-mono);">
-                        ${Math.min(refCount, 5)}/5
-                    </span>
-                </div>
-                <div style="height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
-                    <div style="
-                        height: 100%;
-                        width: ${Math.min(100, (refCount / 5) * 100)}%;
-                        background: ${canWithdraw
-                            ? 'linear-gradient(90deg, var(--emerald-2), var(--emerald), var(--emerald-3))'
-                            : 'linear-gradient(90deg, #6d8a80, #a0b8ae)'};
-                        transition: width 0.8s ease;
-                        box-shadow: ${canWithdraw ? '0 0 12px rgba(var(--emerald-rgb),0.7)' : 'none'};
-                    "></div>
-                </div>
-
-                ${canWithdraw ? `
-                    ${hasPending ? `
-                        <button disabled style="
-                            width: 100%; padding: 14px;
-                            background: rgba(217,171,90,0.15);
-                            border: 1px solid rgba(217,171,90,0.5);
-                            border-radius: 12px;
-                            color: #ffd700;
-                            font-family: inherit; font-size: 13px; font-weight: 900;
-                            letter-spacing: 1px; cursor: not-allowed;
-                        ">⏳ ЗАЯВКА УЖЕ НА РАССМОТРЕНИИ</button>
-                    ` : `
-                        <button onclick="openWithdrawModal()" style="
-                            width: 100%; padding: 16px;
-                            background: linear-gradient(135deg, #ffd700, #b8860b);
-                            border: none; border-radius: 12px;
-                            color: #000; font-family: 'Orbitron', sans-serif;
-                            font-size: 13px; font-weight: 900;
-                            letter-spacing: 1.5px; cursor: pointer;
-                            box-shadow: 0 6px 22px rgba(255,215,0,0.4);
-                        ">💰 ВЫВЕСТИ ${goldBalance} GOLD</button>
-                    `}
-                ` : `
-                    <div style="
-                        font-size: 12px; color: var(--hint); line-height: 1.5;
-                        text-align: center; padding: 4px 0;
-                    ">
-                        Ещё <b style="color: #ffd700;">${5 - refCount}</b> рефералов до вывода
-                    </div>
-                `}
-            </div>
+                ${hasPending 
+                    ? '⏳ ЗАЯВКА НА РАССМОТРЕНИИ' 
+                    : `💰 ВЫВЕСТИ ${goldBalance} GOLD`}
+            </button>
 
             <!-- Кнопки -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
@@ -64216,6 +64183,50 @@ async function openReferralScreen() {
         page.innerHTML = `<div class="empty" style="color:var(--red);">Ошибка: ${escapeHtml(e.message)}</div>`;
     }
 }
+
+// ============================================================
+// 💰 Попытка вывода Gold
+// ============================================================
+async function tryWithdrawGold() {
+    if (!currentUser) return;
+
+    const { data: u } = await sb.from('users')
+        .select('gold_balance, referral_count')
+        .eq('telegram_id', currentUser.telegram_id)
+        .single();
+
+    if (!u) return;
+
+    const refCount = u.referral_count || 0;
+    const goldBalance = u.gold_balance || 0;
+
+    // 🔥 Проверка: минимум 5 рефералов
+    if (refCount < 5) {
+        const need = 5 - refCount;
+        showToast(`⚠️ Нужно ещё ${need} ${pluralRef(need)} до разблокировки вывода. У тебя сейчас ${goldBalance} Gold`);
+        haptic('heavy');
+        return;
+    }
+
+    if (goldBalance < 30) {
+        showToast(`⚠️ Недостаточно Gold (у тебя ${goldBalance})`);
+        return;
+    }
+
+    // Открываем модалку вывода
+    openWithdrawModal();
+}
+
+function pluralRef(n) {
+    const m10 = n % 10;
+    const m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'реферал';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'реферала';
+    return 'рефералов';
+}
+
+window.tryWithdrawGold = tryWithdrawGold;
+window.pluralRef = pluralRef;
 
 function copyReferralLink(link) {
     if (navigator.clipboard && window.isSecureContext) {
