@@ -31425,7 +31425,7 @@ async function saveOnboarding() {
             .update({
                 display_name: nickname,
                 standoff_id: standoffId,
-                custom_avatar: avatarUrl
+                custom_avatar: avatarUrl,
             })
             .eq('telegram_id', currentUser.telegram_id)
             .select().single();
@@ -31436,13 +31436,13 @@ async function saveOnboarding() {
         // 🎁 ПРИМЕНЯЕМ РЕФЕРАЛЬНЫЙ КОД
         try {
             const { data: refResult, error: refErr } = await sb.rpc('apply_referral_on_register', {
-                p_user_id: currentUser.telegram_id
+                p_user_id: currentUser.telegram_id,
             });
 
             if (!refErr && refResult?.ok) {
                 console.log('✅ Реферал применён:', refResult);
 
-                // Уведомляем реферера
+                // Уведомление в приложении
                 await sb.from('user_notifications').insert({
                     telegram_id: refResult.referrer_id,
                     title: '🎁 Новый реферал!',
@@ -31452,39 +31452,65 @@ async function saveOnboarding() {
                     is_read: false,
                 }).catch(() => {});
 
-                // Пробуем уведомить через бота
-                if (typeof notify === 'function') {
-                    notify(refResult.referrer_id,
-                        `🎁 <b>Новый реферал!</b>\n\n<b>${escapeHtml(nickname)}</b> зарегистрировался по твоей ссылке.\nНачислено <b>+30 Gold</b> 💰`,
-                        'party',
-                        { force: true }
-                    ).catch(() => {});
-                }
+                // 🔥 Уведомление через бота (с премиями)
+                await fetch(
+                    `${SUPABASE_URL}/functions/v1/telegram-bot?action=referral-registered`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                            'apikey': SUPABASE_ANON_KEY,
+                        },
+                        body: JSON.stringify({
+                            referrer_id:              refResult.referrer_id,
+                            referred_id:              currentUser.telegram_id,
+                            referred_name:            nickname,
+                            referred_username:        currentUser.username || null,
+                            referrer_name:            refResult.referrer_name || 'Игрок',
+                            referrer_username:        refResult.referrer_username || null,
+                            referrer_referral_count:  refResult.referrer_referral_count,
+                            referrer_referrals_total: refResult.referrer_referrals_total,
+                            referrer_gold_balance:    refResult.referrer_gold_balance,
+                            referrer_gold_earned:     refResult.referrer_gold_earned,
+                            referrer_gold_withdrawn:  refResult.referrer_gold_withdrawn,
+                            bonus_gold:               refResult.bonus_gold || 0,
+                            bonus_title:              refResult.bonus_title || null,
+                        }),
+                    }
+                ).catch(() => {});
             }
         } catch (e) {
             console.warn('apply_referral_on_register:', e);
         }
 
+        // ── ОБНОВЛЯЕМ UI ──
         applyHeaderAvatar(currentUser);
         renderDashboard(currentUser);
         renderProfileView(currentUser);
+        updateCoinsBadge();
+
+        // Закрываем модалку онбординга
         document.getElementById('onboardingModal').classList.remove('active');
         onboardAvatarBlob = null;
+
         showToast('✅ Профиль готов!');
         haptic('medium');
+
     } catch (e) {
+        console.error('saveOnboarding:', e);
         showToast('Ошибка: ' + e.message);
         btn.disabled = false;
         btn.textContent = '✅ НАЧАТЬ ИГРАТЬ';
     }
 }
 
-            function pickOnboardTheme(theme, btn) {
-            applyTheme(theme);
-            document.querySelectorAll('.onboard-theme').forEach(b => b.classList.remove('active'));
-            btn?.classList.add('active');
-            haptic('light');
-        }
+function pickOnboardTheme(theme, btn) {
+    applyTheme(theme);
+    document.querySelectorAll('.onboard-theme').forEach(b => b.classList.remove('active'));
+    btn?.classList.add('active');
+    haptic('light');
+}
 
         // ============================================================
         // AUTO-CLEANUP ROOMS (15 минут неактивности)
