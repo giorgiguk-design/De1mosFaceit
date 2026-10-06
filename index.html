@@ -434,6 +434,9 @@
             background: var(--bg); color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             min-height: 100vh; -webkit-tap-highlight-color: transparent; overflow-x: hidden;
+            /* 🔥 ФИКС #4: отключаем нативный rubber-band WebView */
+            overscroll-behavior-y: contain;
+            overscroll-behavior-x: none;
         }
 body::before {
     content: ''; position: fixed; inset: -50%;
@@ -34772,7 +34775,12 @@ function applyHeaderAvatar(user) {
     }
 }
 
-function switchPage(page) {
+function switchPage(page, options = {}) {
+
+    // ============================================================
+    // 🔥 ФИКС #2: silent-режим для программных переходов
+    // ============================================================
+    const _silent = options.silent === true;
 
     // ============================================================
     // 🔥 ЗАКРЫВАЕМ ЧАТ ПРИ ПЕРЕХОДЕ НА ДРУГУЮ СТРАНИЦУ
@@ -34811,7 +34819,7 @@ function switchPage(page) {
     // 📊 ТОНКАЯ ПОЛОСКА ЗАГРУЗКИ СВЕРХУ
     // ============================================================
     const bar = document.getElementById('pageLoadingBar');
-    if (bar) {
+    if (bar && !_silent) {   // 🔥 ФИКС #2: не мигаем на программных переходах
         bar.classList.add('active');
         setTimeout(() => bar.classList.remove('active'), 600);
     }
@@ -40509,7 +40517,7 @@ function showVetoScreen() {
 
     // 🔥 НЕ трогаем подписки — они управляются снаружи через subscribeMatchRealtime
 
-    switchPage('veto');
+    switchPage('veto', { silent: true });
     renderVeto();
     startVetoCountdown();
 }
@@ -40606,12 +40614,13 @@ function showReadyCheckScreen() {
     if (enterFloat) enterFloat.classList.remove('active');
 
     // 🔥 Синхронизируем серверное время ПЕРЕД показом
-    syncServerTime().finally(() => {
-        window._onReadyCheckScreen = true;
-        switchPageForce('veto');   // ← принудительный переход
-        renderReadyCheck();
-        startReadyCheckCountdown();
+    // 🔥 ФИКС #2: переключаем СРАЗУ, синхронизацию времени делаем в фоне
+    window._onReadyCheckScreen = true;
+    switchPageForce('veto');
+    renderReadyCheck();
+    startReadyCheckCountdown();
 
+    syncServerTime().catch(() => {}).finally(() => {
         // Fallback-рефреш из БД каждые 2 сек
         _readyCheckRefreshTimer = setInterval(async () => {
             if (!currentMatch || currentMatch.status !== 'ready_check') {
@@ -42155,7 +42164,7 @@ function showResultScreen() {
     // 🔥 НЕ разблокируем — ждём пока матч не будет finished или cancelled
     lockNav();
     selectedWinner = null;
-    switchPage('result');
+    switchPage('result', { silent: true });
     renderResultScreen();
 }
 
@@ -43197,12 +43206,17 @@ async function finishMatch(matchId, result) {
 function showFinishedScreen() {
     if (window._matchJustFinished) {
         window._matchJustFinished = false;
-        // ripple у нас и так при клике
     }
+
+    // 🔥 ФИКС: помечаем ДО показа, чтобы после перезагрузки не показывать снова
+    if (currentMatch?.id) {
+        markResultShown(currentMatch.id);
+    }
+
     unlockNav();
     if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
 
-    switchPage('finished');
+    switchPage('finished', { silent: true });
     renderFinishedScreen();
 
     // 🎬 Кинематографичный экран победы/поражения
@@ -43484,6 +43498,7 @@ setTimeout(() => {
 }
 
 function returnToDashboard() {
+    if (currentMatch?.id) markResultShown(currentMatch.id);   // 🔥 страховка
     unlockNav();
     if (_resultUnlockTimer) { clearInterval(_resultUnlockTimer); _resultUnlockTimer = null; }
 
@@ -46424,6 +46439,8 @@ async function checkTeamsReady(roomId, room) {
             document.getElementById('page-play')?.classList.contains('active');
 
         if (onPlayScreen) {
+            // 🔥 ФИКС #5: длинный красивый звук
+            if (typeof SFX !== 'undefined') SFX.play('teamAssembled');
             showToast('✅ Все игроки собрались! Можно запускать матч');
             haptic('heavy');
 
@@ -46924,7 +46941,7 @@ async function showWaitingLinkScreen(roomId, room) {
 
     // Хост — через 5 секунд показываем форму
     if (isLeader) {
-        switchPage('veto');
+        switchPage('veto', { silent: true });
         const content = document.getElementById('vetoContent');
         content.innerHTML = `
             <div class="veto-final-v2">
@@ -46942,7 +46959,7 @@ async function showWaitingLinkScreen(roomId, room) {
     }
 
     // Не-хост — показываем ожидание
-    switchPage('veto');
+    switchPage('veto', { silent: true });
     const content = document.getElementById('vetoContent');
     content.innerHTML = `
         <div class="veto-final-v2">
@@ -47053,7 +47070,7 @@ let inGameChannel = null;
 async function showInGameScreen(roomId, room) {
     stopVetoPolling();
     stopWaitingLinkChannel();
-    switchPage('veto');
+    switchPage('veto', { silent: true });
     const content = document.getElementById('vetoContent');
     if (!content) return;
 
@@ -69060,19 +69077,44 @@ function prettifyEmptyStates(scope = document) {
         }
     };
 
-    // Оборачиваем supabase-запросы
+    // 🔥 ФИКС #3: задержка перед показом + игнор фоновых запросов
+    const SLOW_THRESHOLD = 400;   // мс — показывать только долгие
+    const SILENT_TABLES = [
+        'users', 'bot_messages', 'dxp_history', 'quests_progress',
+        'presence_heartbeat', 'admin_logs'
+    ];
+
     if (window.sb && typeof sb.from === 'function') {
         const origFrom = sb.from.bind(sb);
-        sb.from = function() {
+        sb.from = function(tableName) {
             const query = origFrom.apply(null, arguments);
-            // Оборачиваем .then и await (через Promise-like)
+            const isSilent = SILENT_TABLES.includes(String(tableName || ''));
+
             const origThen = query.then?.bind(query);
             if (origThen) {
                 query.then = function(onFulfilled, onRejected) {
-                    start();
+                    if (isSilent) {
+                        return origThen(onFulfilled, onRejected);
+                    }
+
+                    let fired = false;
+                    const timer = setTimeout(() => {
+                        fired = true;
+                        start();
+                    }, SLOW_THRESHOLD);
+
                     return origThen(
-                        (v) => { finish(); return onFulfilled ? onFulfilled(v) : v; },
-                        (e) => { finish(); if (onRejected) return onRejected(e); throw e; }
+                        (v) => {
+                            clearTimeout(timer);
+                            if (fired) finish();
+                            return onFulfilled ? onFulfilled(v) : v;
+                        },
+                        (e) => {
+                            clearTimeout(timer);
+                            if (fired) finish();
+                            if (onRejected) return onRejected(e);
+                            throw e;
+                        }
                     );
                 };
             }
@@ -69086,12 +69128,25 @@ function prettifyEmptyStates(scope = document) {
         const origFetch = window.fetch.bind(window);
         window.fetch = function() {
             const url = String(arguments[0] || '');
-            // Игнорируем служебные запросы Telegram
-            if (url.includes('telegram') || url.includes('/storage/')) {
+            // 🔥 ФИКС #3: игнорируем также supabase-функции и приватные запросы
+            if (url.includes('telegram')
+                || url.includes('/storage/')
+                || url.includes('/rest/v1/')
+                || url.includes('/functions/v1/notify')
+                || url.includes('/functions/v1/mm-tick')) {
                 return origFetch.apply(null, arguments);
             }
-            start();
-            return origFetch.apply(null, arguments).finally(finish);
+
+            let fired = false;
+            const timer = setTimeout(() => {
+                fired = true;
+                start();
+            }, 400);
+
+            return origFetch.apply(null, arguments).finally(() => {
+                clearTimeout(timer);
+                if (fired) finish();
+            });
         };
     }
 
@@ -69120,8 +69175,11 @@ function prettifyEmptyStates(scope = document) {
     `;
     document.body.appendChild(indicator);
 
-    const THRESHOLD = 78;         // сколько пикселей тянуть для срабатывания
-    const MAX_PULL  = 130;
+    // 🔥 ФИКС #4
+    const THRESHOLD = 90;          // срабатывание
+    const SHOW_AFTER = 30;         // показать индикатор только после стольких px
+    const MAX_PULL  = 140;
+    const SCROLL_TOLERANCE = 20;   // допуск scrollTop
 
     let startY = 0;
     let pulling = false;
@@ -69145,31 +69203,33 @@ function prettifyEmptyStates(scope = document) {
     const onTouchStart = (e) => {
         if (refreshing) return;
         if (e.touches.length !== 1) return;
-        if (getScrollTop() > 5) return;
-        // Игнорируем открытые модалки/шиты
+        if (getScrollTop() > SCROLL_TOLERANCE) return;   // 🔥 ФИКС #4
         if (document.querySelector('.sheet.active, .player-modal.active, .chat-view.active')) return;
 
         startY = e.touches[0].clientY;
         pulling = true;
         pullY = 0;
         ready = false;
-        indicator.classList.add('visible');
+        // 🔥 ФИКС #4: НЕ показываем сразу
     };
 
     const onTouchMove = (e) => {
         if (!pulling || refreshing) return;
-        if (getScrollTop() > 5) { cancelPull(); return; }
+        if (getScrollTop() > SCROLL_TOLERANCE) { cancelPull(); return; }
 
         const delta = e.touches[0].clientY - startY;
-        if (delta < 0) { cancelPull(); return; }
 
-        // Затухание — чем больше тянем, тем медленнее растёт
+        // 🔥 ФИКС #4: отсекаем движение вверх и «микро-сдвиги»
+        if (delta < 8) return;
+
         pullY = Math.min(MAX_PULL, delta * 0.55);
 
-        if (pullY > 4) {
-            indicator.classList.add('pulled');
-            indicator.style.transform = `translate(-50%, ${Math.min(pullY, MAX_PULL)}px)`;
-        }
+        // 🔥 ФИКС #4: показываем только после значительного сдвига
+        if (pullY < SHOW_AFTER) return;
+
+        indicator.classList.add('visible');
+        indicator.classList.add('pulled');
+        indicator.style.transform = `translate(-50%, ${Math.min(pullY, MAX_PULL)}px)`;
 
         if (pullY >= THRESHOLD && !ready) {
             ready = true;
@@ -69180,8 +69240,7 @@ function prettifyEmptyStates(scope = document) {
             indicator.classList.remove('ready');
         }
 
-        // Блокируем скролл страницы во время pull
-        if (pullY > 10 && e.cancelable) e.preventDefault();
+        if (e.cancelable) e.preventDefault();
     };
 
     const onTouchEnd = async () => {
@@ -70065,9 +70124,25 @@ console.log('🎉 Confetti установлен');
             masterGain.gain.value = 1;
             masterGain.connect(audioCtx.destination);
 
+            // 🔥 ФИКС #5: компрессор + warm low-pass = звук не режет уши
+            const compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -18;
+            compressor.knee.value = 22;
+            compressor.ratio.value = 6;
+            compressor.attack.value = 0.005;
+            compressor.release.value = 0.25;
+
+            const warmFilter = audioCtx.createBiquadFilter();
+            warmFilter.type = 'lowpass';
+            warmFilter.frequency.value = 11000;
+            warmFilter.Q.value = 0.6;
+
+            compressor.connect(warmFilter);
+            warmFilter.connect(masterGain);
+
             sfxGain = audioCtx.createGain();
             sfxGain.gain.value = sfxVolume;
-            sfxGain.connect(masterGain);
+            sfxGain.connect(compressor);   // ← через компрессор
 
             return true;
         } catch (e) {
@@ -70534,26 +70609,46 @@ console.log('🎉 Confetti установлен');
             }, 420);
         },
         caseRevealLegendary() {
-            // Самый долгий и эпичный — 3-4 секунды
-            subBass(38, 1.5, 1.0);
-            noise({ duration: 1.8, volume: 0.16, filter: 4000, delay: 0.05 });
+            // 🔥 ФИКС #5: мелодичное арпеджио вместо резкого sawtooth
+            subBass(36, 1.8, 1.0);
+            noise({ duration: 2.0, volume: 0.14, filter: 3500, delay: 0.05 });
 
-            // Нарастающий "восход"
-            [523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) => {
-                tone({ freq: f, type: 'sawtooth', duration: 0.6, volume: 0.4, delay: i * 0.08, release: 0.75 });
-                tone({ freq: f * 2, type: 'sine', duration: 0.5, volume: 0.22, delay: i * 0.08 });
+            // Мягкое арпеджио из 9 нот
+            const melody = [523, 659, 784, 988, 1047, 1319, 1568, 2093, 2637];
+            melody.forEach((f, i) => {
+                tone({
+                    freq: f,
+                    type: 'sine',
+                    duration: 0.9,
+                    volume: 0.34 - i * 0.015,
+                    delay: i * 0.09,
+                    release: 1.2,
+                    attack: 0.02,
+                });
+                tone({
+                    freq: f * 2,
+                    type: 'triangle',
+                    duration: 0.7,
+                    volume: 0.12,
+                    delay: i * 0.09 + 0.04,
+                });
             });
 
-            // Массивный финальный аккорд
+            // Длинный финальный аккорд
             setTimeout(() => {
-                subBass(30, 2.2, 1.0);
+                subBass(28, 2.5, 1.0);
                 [1568, 1976, 2349, 2637, 3136, 3520, 4186].forEach((f, i) => {
-                    tone({ freq: f, type: 'sine', duration: 2.0, volume: 0.45, delay: i * 0.06, release: 2.6 });
-                    tone({ freq: f * 1.5, type: 'triangle', duration: 1.6, volume: 0.22, delay: i * 0.06 });
+                    tone({
+                        freq: f, type: 'sine', duration: 2.4,
+                        volume: 0.4, delay: i * 0.06, release: 3.0, attack: 0.03
+                    });
                 });
-                metalTail(2800, 10, 1.2, 0.2);
-                reverbTone({ freq: 2637, type: 'sine', duration: 3.0, volume: 0.45, delay: 0.2 }, [0.32, 0.65, 1.1, 1.6]);
-            }, 700);
+                metalTail(2800, 10, 1.2, 0.18);
+                reverbTone(
+                    { freq: 2637, type: 'sine', duration: 3.5, volume: 0.5, delay: 0.2 },
+                    [0.35, 0.7, 1.15, 1.7, 2.3]
+                );
+            }, 900);
         },
 
         // ═══════════ Особые ═══════════
@@ -70570,6 +70665,29 @@ console.log('🎉 Confetti установлен');
                 );
                 reverbTone({ freq: 1976, type: 'sine', duration: 2.0, volume: 0.4, delay: 0.2 });
             }, 550);
+        },
+
+        // 🔥 ФИКС #5: НОВЫЙ звук — все игроки собрались
+        teamAssembled() {
+            subBass(55, 0.9, 0.9);
+
+            [523, 659, 784, 1047].forEach((f, i) => {
+                tone({ freq: f, type: 'triangle', duration: 0.4, volume: 0.35, delay: i * 0.12, release: 0.5 });
+            });
+
+            setTimeout(() => {
+                subBass(44, 1.6, 0.95);
+                [1319, 1568, 1976, 2637].forEach((f, i) => {
+                    tone({
+                        freq: f, type: 'sine', duration: 1.4,
+                        volume: 0.4, delay: i * 0.07, release: 1.8, attack: 0.03
+                    });
+                });
+                reverbTone(
+                    { freq: 1568, type: 'sine', duration: 2.5, volume: 0.4, delay: 0.15 },
+                    [0.25, 0.5, 0.9, 1.4]
+                );
+            }, 500);
         },
     };
 
