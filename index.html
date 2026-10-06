@@ -3,6 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <script>
+
+// ═══════════════════════════════════════════════════════════════
+// 🚀 BOOT SCREEN MANAGER
+// ═══════════════════════════════════════════════════════════════
+(function() {
+    'use strict';
+
+    const BootScreen = {
+        _progress: 0,
+        _targetProgress: 0,
+        _rafId: null,
+        _clockTimer: null,
+        _hexTimer: null,
+        _onlineTimer: null,
+        _minDuration: 1800,
+        _startTime: Date.now(),
+        _ready: false,
+        _exitStarted: false,
+
+        STATUSES: [
+            { at: 0,   text: 'Инициализация ядра...' },
+            { at: 8,   text: 'Устанавливаю соединение...' },
+            { at: 18,  text: 'Авторизация через Telegram...' },
+            { at: 30,  text: 'Загружаю профиль игрока...' },
+            { at: 42,  text: 'Синхронизация лидерборда...' },
+            { at: 54,  text: 'Подключаю realtime каналы...' },
+            { at: 66,  text: 'Загружаю магазин и кейсы...' },
+            { at: 76,  text: 'Восстанавливаю активные сессии...' },
+            { at: 86,  text: 'Оптимизация интерфейса...' },
+            { at: 94,  text: 'Почти готово...' },
+            { at: 100, text: 'Система готова' },
+        ],
+
+        init() {
+            this._startTime = Date.now();
+
+            this._spawnParticles();
+
+            // HUD: сессия
+            const sessionEl = document.getElementById('bsHudSession');
+            if (sessionEl) {
+                sessionEl.textContent = 'SESSION: ' +
+                    Math.random().toString(36).slice(2, 8).toUpperCase();
+            }
+
+            // HUD: пинг
+            const pingEl = document.getElementById('bsHudPing');
+            if (pingEl) {
+                let ping = 18 + Math.floor(Math.random() * 20);
+                pingEl.textContent = `PING: ${ping} ms`;
+                setInterval(() => {
+                    ping = 18 + Math.floor(Math.random() * 30);
+                    pingEl.textContent = `PING: ${ping} ms`;
+                }, 1200);
+            }
+
+            // HUD: часы
+            const timeEl = document.getElementById('bsHudTime');
+            if (timeEl) {
+                const updateClock = () => {
+                    const d = new Date();
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    const ss = String(d.getSeconds()).padStart(2, '0');
+                    timeEl.textContent = `${hh}:${mm}:${ss}`;
+                };
+                updateClock();
+                this._clockTimer = setInterval(updateClock, 1000);
+            }
+
+            // 🔥 HUD: онлайн — живое обновление каждые 2.5 сек
+            this._startOnlinePolling();
+
+            // Плавный рост прогресса
+            this._animateProgress();
+
+            // Hex-ячейки
+            this._animateHex();
+
+            console.log('🚀 Boot screen initialized');
+        },
+
+        // ─── Глитч-частицы ────────────────────────────────────
+        _spawnParticles() {
+            const container = document.getElementById('bsParticles');
+            if (!container) return;
+            if (document.documentElement.classList.contains('lite-mode')) return;
+
+            const COUNT = 30;
+            for (let i = 0; i < COUNT; i++) {
+                const p = document.createElement('div');
+                p.className = 'bs-particle';
+                const left = Math.random() * 100;
+                const bottom = Math.random() * 30;
+                const size = 1 + Math.random() * 2.5;
+                const dur = 4 + Math.random() * 6;
+                const delay = Math.random() * 5;
+                const dx = (Math.random() - 0.5) * 120;
+
+                p.style.left = left + '%';
+                p.style.bottom = bottom + '%';
+                p.style.width = size + 'px';
+                p.style.height = size + 'px';
+                p.style.animationDuration = dur + 's';
+                p.style.animationDelay = delay + 's';
+                p.style.setProperty('--bs-dx', dx + 'px');
+                p.style.opacity = 0;
+
+                container.appendChild(p);
+            }
+        },
+
+        // ─── Онлайн-счётчик ───────────────────────────────────
+        _startOnlinePolling() {
+            const fetchOnline = async () => {
+                if (this._exitStarted) return;
+                try {
+                    if (typeof sb === 'undefined' || !sb) return;
+                    const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+                    const { count } = await sb
+                        .from('users')
+                        .select('telegram_id', { count: 'exact', head: true })
+                        .gte('last_seen', cutoff);
+                    this.setOnline(count || 0);
+                } catch (e) {
+                    console.warn('boot online:', e);
+                }
+            };
+
+            // Сразу
+            fetchOnline();
+
+            // Каждые 2.5 сек пока виден boot screen
+            this._onlineTimer = setInterval(() => {
+                if (this._exitStarted) {
+                    clearInterval(this._onlineTimer);
+                    this._onlineTimer = null;
+                    return;
+                }
+                fetchOnline();
+            }, 2500);
+        },
+
+        setOnline(count) {
+            const el = document.getElementById('bsHudOnline');
+            if (!el) return;
+
+            const prev = el.dataset.count ? Number(el.dataset.count) : 0;
+            el.dataset.count = count;
+
+            // Плавная анимация если изменение небольшое
+            if (prev && Math.abs(count - prev) < 50) {
+                const start = prev;
+                const end = count;
+                const duration = 600;
+                const startTime = performance.now();
+
+                const tick = (now) => {
+                    const t = Math.min((now - startTime) / duration, 1);
+                    const eased = 1 - Math.pow(1 - t, 3);
+                    const val = Math.round(start + (end - start) * eased);
+                    el.textContent = `ONLINE: ${val.toLocaleString('ru-RU')}`;
+                    if (t < 1) requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+            } else {
+                el.textContent = `ONLINE: ${count.toLocaleString('ru-RU')}`;
+            }
+        },
+
+        // ─── Прогресс ─────────────────────────────────────────
+        _animateProgress() {
+            const step = () => {
+                if (this._targetProgress < 85 && !this._ready) {
+                    this._progress += (85 - this._progress) * 0.06;
+                }
+                if (this._ready && this._progress < 100) {
+                    this._targetProgress = 100;
+                    this._progress += (100 - this._progress) * 0.14;
+                } else {
+                    this._targetProgress = Math.max(this._targetProgress, this._progress);
+                }
+
+                this._updateUI();
+
+                if (this._progress >= 99.7 && this._ready) {
+                    this._progress = 100;
+                    this._updateUI();
+                    if (this._rafId) cancelAnimationFrame(this._rafId);
+                    this._rafId = null;
+                    setTimeout(() => this._tryExit(), 220);
+                    return;
+                }
+
+                this._rafId = requestAnimationFrame(step);
+            };
+            step();
+        },
+
+        _updateUI() {
+            const fill = document.getElementById('bsProgressFill');
+            const glow = document.getElementById('bsProgressGlow');
+            const percent = document.getElementById('bsPercent');
+            const status = document.getElementById('bsStatus');
+
+            const val = Math.min(100, Math.round(this._progress));
+
+            if (fill) fill.style.width = val + '%';
+            if (glow) glow.style.left = val + '%';
+            if (percent) percent.textContent = val + '%';
+
+            if (status) {
+                let current = this.STATUSES[0].text;
+                for (const s of this.STATUSES) {
+                    if (val >= s.at) current = s.text;
+                }
+                if (status.textContent !== current) {
+                    status.style.opacity = '0';
+                    setTimeout(() => {
+                        status.textContent = current;
+                        status.style.opacity = '1';
+                    }, 120);
+                }
+            }
+        },
+
+        _animateHex() {
+            const hexes = document.querySelectorAll('.bs-hex');
+            if (!hexes.length) return;
+            let idx = 0;
+            this._hexTimer = setInterval(() => {
+                hexes.forEach((h, i) => {
+                    h.classList.toggle('bs-hex-on', i === idx % hexes.length);
+                });
+                idx++;
+            }, 180);
+        },
+
+        // ─── Публичный API ────────────────────────────────────
+        setProgress(value) {
+            if (this._ready) return;
+            this._progress = Math.max(this._progress, Math.min(value, 100));
+            this._targetProgress = this._progress;
+            this._updateUI();
+        },
+
+        setStatus(text) {
+            const el = document.getElementById('bsStatus');
+            if (!el) return;
+            el.style.opacity = '0';
+            setTimeout(() => {
+                el.textContent = text;
+                el.style.opacity = '1';
+            }, 120);
+        },
+
+        markReady() {
+            if (this._ready) return;
+            this._ready = true;
+
+            const elapsed = Date.now() - this._startTime;
+            const wait = Math.max(0, this._minDuration - elapsed);
+
+            console.log(`🚀 Boot: ready, ждём ещё ${wait}ms`);
+
+            setTimeout(() => this._tryExit(), wait);
+        },
+
+        _tryExit() {
+            if (this._exitStarted) return;
+            this._exitStarted = true;
+
+            // Останавливаем все таймеры
+            if (this._clockTimer)  { clearInterval(this._clockTimer);  this._clockTimer = null; }
+            if (this._hexTimer)    { clearInterval(this._hexTimer);    this._hexTimer = null; }
+            if (this._onlineTimer) { clearInterval(this._onlineTimer); this._onlineTimer = null; }
+            if (this._rafId)       { cancelAnimationFrame(this._rafId); this._rafId = null; }
+
+            const screen = document.getElementById('bootScreen');
+            if (!screen) return;
+
+            screen.classList.add('bs-exit');
+            console.log('🚀 Boot: exit');
+
+            setTimeout(() => {
+                screen.classList.add('bs-hidden');
+                setTimeout(() => screen.remove(), 100);
+            }, 800);
+        },
+    };
+
+    // Экспорт в window
+    window.BootScreen = BootScreen;
+
+    // Запуск
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => BootScreen.init());
+    } else {
+        BootScreen.init();
+    }
+})();
+
 (function() {
     try {
         var saved = localStorage.getItem('appLiteMode');
@@ -26632,10 +26934,640 @@ html.lite-mode .av-level-badge.lvl-10 {
         padding: 0 5px !important;
     }
 }
+
+/* ══════════════════════════════════════════════════════════════ */
+/* 🚀 BOOT SCREEN                                                 */
+/* ══════════════════════════════════════════════════════════════ */
+#bootScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background:
+        radial-gradient(ellipse 60% 80% at 50% 40%, rgba(var(--emerald-rgb), 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 60% at 20% 80%, rgba(var(--emerald-rgb), 0.05) 0%, transparent 60%),
+        linear-gradient(180deg, #030605 0%, #050807 50%, #000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    font-family: 'Rajdhani', -apple-system, sans-serif;
+    color: var(--text, #e6f5ee);
+    -webkit-user-select: none;
+    user-select: none;
+}
+#bootScreen.bs-exit {
+    opacity: 0;
+    pointer-events: none;
+}
+#bootScreen.bs-hidden {
+    display: none !important;
+}
+
+/* ── Слой 1: сетка ── */
+.bs-grid {
+    position: absolute;
+    inset: -10%;
+    background-image:
+        linear-gradient(rgba(var(--emerald-rgb, 0,224,138), 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--emerald-rgb, 0,224,138), 0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(circle at 50% 50%, #000 20%, transparent 70%);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 20%, transparent 70%);
+    animation: bsGridDrift 30s linear infinite;
+    pointer-events: none;
+}
+@keyframes bsGridDrift {
+    0%   { background-position: 0 0, 0 0; }
+    100% { background-position: 60px 60px, 60px 60px; }
+}
+
+/* ── Слой 1.5: сканлайны ── */
+.bs-scanlines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.18) 2px,
+        rgba(0, 0, 0, 0.18) 4px
+    );
+    pointer-events: none;
+    opacity: 0.4;
+    z-index: 2;
+    animation: bsScanShift 8s linear infinite;
+}
+@keyframes bsScanShift {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(8px); }
+}
+
+/* ── Слой 2: вращающиеся кольца ── */
+.bs-rings {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 720px;
+    height: 720px;
+    pointer-events: none;
+}
+.bs-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    border: 1px solid rgba(var(--emerald-rgb, 0,224,138), 0.15);
+    transform-origin: center;
+}
+.bs-ring-1 {
+    width: 720px;
+    height: 720px;
+    border-style: dashed;
+    border-color: rgba(var(--emerald-rgb, 0,224,138), 0.10);
+    animation: bsRotate 40s linear infinite;
+}
+.bs-ring-2 {
+    width: 520px;
+    height: 520px;
+    border-color: rgba(var(--emerald-rgb, 0,224,138), 0.20);
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+    animation: bsRotate 24s linear infinite reverse;
+}
+.bs-ring-3 {
+    width: 340px;
+    height: 340px;
+    border-color: rgba(var(--emerald-rgb, 0,224,138), 0.35);
+    border-left-color: transparent;
+    border-right-color: transparent;
+    animation: bsRotate 15s linear infinite;
+    box-shadow:
+        0 0 30px rgba(var(--emerald-rgb, 0,224,138), 0.15),
+        inset 0 0 30px rgba(var(--emerald-rgb, 0,224,138), 0.10);
+}
+.bs-ring-4 {
+    width: 180px;
+    height: 180px;
+    border-color: rgba(var(--emerald-rgb, 0,224,138), 0.5);
+    border-top-color: transparent;
+    animation: bsRotate 8s linear infinite reverse;
+}
+@keyframes bsRotate {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.bs-ring { transform: translate(-50%, -50%); }
+
+/* ── Слой 3: световые орбы ── */
+.bs-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    opacity: 0.6;
+}
+.bs-orb-1 {
+    width: 300px;
+    height: 300px;
+    background: rgba(var(--emerald-rgb, 0,224,138), 0.4);
+    top: 15%;
+    left: 15%;
+    animation: bsOrbFloat1 12s ease-in-out infinite;
+}
+.bs-orb-2 {
+    width: 240px;
+    height: 240px;
+    background: rgba(var(--emerald-light-rgb, 34,232,164), 0.35);
+    bottom: 15%;
+    right: 15%;
+    animation: bsOrbFloat2 14s ease-in-out infinite;
+}
+.bs-orb-3 {
+    width: 180px;
+    height: 180px;
+    background: rgba(var(--emerald-dark-rgb, 0,184,116), 0.5);
+    top: 55%;
+    left: 5%;
+    animation: bsOrbFloat3 16s ease-in-out infinite;
+}
+@keyframes bsOrbFloat1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(60px, 40px) scale(1.15); }
+}
+@keyframes bsOrbFloat2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(-50px, -60px) scale(1.2); }
+}
+@keyframes bsOrbFloat3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(40px, -30px) scale(0.9); }
+}
+
+/* ── Слой 4: глитч-частицы ── */
+.bs-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+.bs-particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(var(--emerald-rgb, 0,224,138), 0.9);
+    border-radius: 50%;
+    box-shadow: 0 0 6px currentColor;
+    color: rgb(var(--emerald-rgb, 0,224,138));
+    animation: bsParticleFloat 6s linear infinite;
+}
+@keyframes bsParticleFloat {
+    0%   { transform: translate(0, 0) scale(1);   opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translate(var(--bs-dx, 40px), -100vh) scale(0.4); opacity: 0; }
+}
+
+/* ── Центральный контент ── */
+.bs-center {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 34px;
+    padding: 20px;
+    max-width: 520px;
+    width: 100%;
+    animation: bsCenterIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes bsCenterIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Верхняя строка */
+.bs-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    color: rgba(var(--emerald-rgb, 0,224,138), 0.75);
+    text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(var(--emerald-rgb, 0,224,138), 0.6);
+}
+.bs-eyebrow-line {
+    display: inline-block;
+    width: 30px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(var(--emerald-rgb, 0,224,138), 0.9), transparent);
+    animation: bsLinePulse 2s ease-in-out infinite;
+}
+@keyframes bsLinePulse {
+    0%, 100% { opacity: 0.3; transform: scaleX(0.7); }
+    50%      { opacity: 1;   transform: scaleX(1); }
+}
+
+/* ── Логотип ── */
+.bs-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.bs-logo-glitch {
+    position: relative;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 68px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: #fff;
+    text-shadow:
+        0 0 15px rgba(var(--emerald-rgb, 0,224,138), 0.9),
+        0 0 40px rgba(var(--emerald-rgb, 0,224,138), 0.5),
+        0 4px 8px rgba(0, 0, 0, 0.9);
+    animation: bsLogoIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.bs-logo-glitch::before,
+.bs-logo-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.85;
+    pointer-events: none;
+}
+.bs-logo-glitch::before {
+    color: #00ffe0;
+    animation: bsGlitchA 3.5s infinite linear alternate-reverse;
+    z-index: -1;
+}
+.bs-logo-glitch::after {
+    color: #ff006e;
+    animation: bsGlitchB 2.8s infinite linear alternate-reverse;
+    z-index: -2;
+}
+@keyframes bsGlitchA {
+    0%, 92%, 100% { transform: translate(0, 0); }
+    93%           { transform: translate(-3px, 2px); }
+    95%           { transform: translate(-2px, -1px); }
+    97%           { transform: translate(3px, 1px); }
+}
+@keyframes bsGlitchB {
+    0%, 94%, 100% { transform: translate(0, 0); }
+    95%           { transform: translate(3px, -2px); }
+    97%           { transform: translate(2px, 1px); }
+    99%           { transform: translate(-3px, -1px); }
+}
+@keyframes bsLogoIn {
+    0%   { opacity: 0; transform: scale(0.7) rotate(-3deg); filter: blur(8px); }
+    60%  { opacity: 1; transform: scale(1.08) rotate(1deg); filter: blur(0); }
+    100% { opacity: 1; transform: scale(1) rotate(0); filter: blur(0); }
+}
+
+.bs-logo-faceit {
+    display: flex;
+    gap: 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: rgba(var(--emerald-rgb, 0,224,138), 0.95);
+    text-shadow: 0 0 14px rgba(var(--emerald-rgb, 0,224,138), 0.7);
+}
+.bs-logo-faceit span {
+    display: inline-block;
+    animation: bsLetterWave 2s ease-in-out infinite;
+}
+.bs-logo-faceit span:nth-child(1) { animation-delay: 0.00s; }
+.bs-logo-faceit span:nth-child(2) { animation-delay: 0.10s; }
+.bs-logo-faceit span:nth-child(3) { animation-delay: 0.20s; }
+.bs-logo-faceit span:nth-child(4) { animation-delay: 0.30s; }
+.bs-logo-faceit span:nth-child(5) { animation-delay: 0.40s; }
+.bs-logo-faceit span:nth-child(6) { animation-delay: 0.50s; }
+@keyframes bsLetterWave {
+    0%, 100% { transform: translateY(0);    color: rgba(var(--emerald-rgb, 0,224,138), 0.95); }
+    50%      { transform: translateY(-4px); color: rgba(var(--emerald-light-rgb, 34,232,164), 1); }
+}
+
+/* ── Полоса загрузки ── */
+.bs-loading-wrap {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bs-loading-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+.bs-loading-status {
+    color: rgba(var(--emerald-rgb, 0,224,138), 0.85);
+    transition: opacity 0.3s ease;
+}
+.bs-loading-percent {
+    color: #fff;
+    font-weight: 900;
+    text-shadow: 0 0 8px rgba(var(--emerald-rgb, 0,224,138), 0.7);
+    font-variant-numeric: tabular-nums;
+    min-width: 44px;
+    text-align: right;
+}
+
+.bs-progress {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    background: rgba(var(--emerald-rgb, 0,224,138), 0.08);
+    border: 1px solid rgba(var(--emerald-rgb, 0,224,138), 0.20);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.bs-progress-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0%;
+    background: linear-gradient(90deg,
+        var(--emerald-2, #00b874) 0%,
+        var(--emerald, #00e08a) 50%,
+        var(--emerald-3, #22e8a4) 100%);
+    border-radius: 3px;
+    box-shadow:
+        0 0 12px rgba(var(--emerald-rgb, 0,224,138), 0.8),
+        0 0 24px rgba(var(--emerald-rgb, 0,224,138), 0.4);
+    transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+.bs-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.6) 50%,
+        transparent 100%);
+    animation: bsProgressShine 1.6s linear infinite;
+}
+@keyframes bsProgressShine {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+.bs-progress-glow {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 30px;
+    height: 30px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%);
+    filter: blur(6px);
+    pointer-events: none;
+    transition: left 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity: 0.8;
+}
+
+.bs-loading-hex {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+.bs-hex {
+    width: 6px;
+    height: 6px;
+    background: rgba(var(--emerald-rgb, 0,224,138), 0.25);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    transition: background 0.25s ease, transform 0.25s ease;
+}
+.bs-hex.bs-hex-on {
+    background: var(--emerald-3, #22e8a4);
+    box-shadow: 0 0 8px rgba(var(--emerald-rgb, 0,224,138), 0.9);
+    transform: scale(1.15);
+}
+
+/* ── Нижняя полоса ── */
+.bs-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.4);
+}
+.bs-footer-tag { color: rgba(var(--emerald-rgb, 0,224,138), 0.6); }
+.bs-footer-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(var(--emerald-rgb, 0,224,138), 0.8);
+    box-shadow: 0 0 6px rgba(var(--emerald-rgb, 0,224,138), 0.9);
+    animation: bsDotPulse 1.6s ease-in-out infinite;
+}
+@keyframes bsDotPulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; transform: scale(1.4); }
+}
+.bs-footer-version { color: rgba(255, 255, 255, 0.4); }
+
+/* ── Угловые скобки HUD ── */
+.bs-bracket {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-color: rgba(var(--emerald-rgb, 0,224,138), 0.55);
+    border-style: solid;
+    border-width: 0;
+    pointer-events: none;
+    z-index: 6;
+    filter: drop-shadow(0 0 4px rgba(var(--emerald-rgb, 0,224,138), 0.7));
+    animation: bsBracketPulse 3s ease-in-out infinite;
+}
+.bs-bracket-tl { top: 20px;    left: 20px;    border-top-width: 2px;    border-left-width: 2px; }
+.bs-bracket-tr { top: 20px;    right: 20px;   border-top-width: 2px;    border-right-width: 2px; }
+.bs-bracket-bl { bottom: 20px; left: 20px;    border-bottom-width: 2px; border-left-width: 2px; }
+.bs-bracket-br { bottom: 20px; right: 20px;   border-bottom-width: 2px; border-right-width: 2px; }
+@keyframes bsBracketPulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+}
+
+/* ── Угловые HUD-тексты ── */
+.bs-hud {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: rgba(var(--emerald-rgb, 0,224,138), 0.55);
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 6;
+}
+.bs-hud-tl { top: 30px;    left: 60px;  }
+.bs-hud-tr { top: 30px;    right: 60px; text-align: right; }
+.bs-hud-bl { bottom: 30px; left: 60px;  }
+.bs-hud-br { bottom: 30px; right: 60px; text-align: right; }
+
+/* ── Адаптив ── */
+@media (max-width: 600px) {
+    .bs-logo-glitch { font-size: 44px; letter-spacing: 1px; }
+    .bs-logo-faceit { font-size: 16px; letter-spacing: 3px; }
+    .bs-rings { width: 480px; height: 480px; }
+    .bs-ring-1 { width: 480px; height: 480px; }
+    .bs-ring-2 { width: 340px; height: 340px; }
+    .bs-ring-3 { width: 220px; height: 220px; }
+    .bs-ring-4 { width: 120px; height: 120px; }
+    .bs-eyebrow { font-size: 8px; letter-spacing: 3px; }
+    .bs-eyebrow-line { width: 20px; }
+    .bs-hud { font-size: 8px; }
+    .bs-hud-tl { top: 20px; left: 46px; }
+    .bs-hud-tr { top: 20px; right: 46px; }
+    .bs-hud-bl { bottom: 20px; left: 46px; }
+    .bs-hud-br { bottom: 20px; right: 46px; }
+    .bs-bracket { width: 22px; height: 22px; }
+    .bs-bracket-tl { top: 12px; left: 12px; }
+    .bs-bracket-tr { top: 12px; right: 12px; }
+    .bs-bracket-bl { bottom: 12px; left: 12px; }
+    .bs-bracket-br { bottom: 12px; right: 12px; }
+    .bs-footer { font-size: 9px; letter-spacing: 1px; }
+}
+
+/* Lite-mode — убираем тяжёлое */
+html.lite-mode .bs-orb,
+html.lite-mode .bs-grid,
+html.lite-mode .bs-scanlines,
+html.lite-mode .bs-particles {
+    animation: none !important;
+}
+html.lite-mode .bs-ring {
+    animation: none !important;
+    transform: translate(-50%, -50%) !important;
+}
+html.lite-mode .bs-logo-glitch::before,
+html.lite-mode .bs-logo-glitch::after {
+    display: none;
+}
     
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- 🚀 BOOT SCREEN — киберспортивная загрузка                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="bootScreen">
+    <!-- Слой 1: сетка + сканлайны -->
+    <div class="bs-grid"></div>
+    <div class="bs-scanlines"></div>
+
+    <!-- Слой 2: вращающиеся кольца за логотипом -->
+    <div class="bs-rings">
+        <div class="bs-ring bs-ring-1"></div>
+        <div class="bs-ring bs-ring-2"></div>
+        <div class="bs-ring bs-ring-3"></div>
+        <div class="bs-ring bs-ring-4"></div>
+    </div>
+
+    <!-- Слой 3: световые орбы -->
+    <div class="bs-orb bs-orb-1"></div>
+    <div class="bs-orb bs-orb-2"></div>
+    <div class="bs-orb bs-orb-3"></div>
+
+    <!-- Слой 4: глитч-частицы -->
+    <div class="bs-particles" id="bsParticles"></div>
+
+    <!-- Центральный контент -->
+    <div class="bs-center">
+        <!-- Верхняя надпись -->
+        <div class="bs-eyebrow">
+            <span class="bs-eyebrow-line"></span>
+            <span>INITIALIZING</span>
+            <span class="bs-eyebrow-line"></span>
+        </div>
+
+        <!-- Логотип -->
+        <div class="bs-logo">
+            <div class="bs-logo-glitch" data-text="De1mos">De1mos</div>
+            <div class="bs-logo-faceit">
+                <span>F</span><span>A</span><span>C</span><span>E</span><span>I</span><span>T</span>
+            </div>
+        </div>
+
+        <!-- Полоса загрузки -->
+        <div class="bs-loading-wrap">
+            <div class="bs-loading-info">
+                <span class="bs-loading-status" id="bsStatus">Устанавливаю соединение...</span>
+                <span class="bs-loading-percent" id="bsPercent">0%</span>
+            </div>
+            <div class="bs-progress">
+                <div class="bs-progress-fill" id="bsProgressFill"></div>
+                <div class="bs-progress-glow" id="bsProgressGlow"></div>
+            </div>
+            <div class="bs-loading-hex">
+                <span class="bs-hex"></span><span class="bs-hex"></span><span class="bs-hex"></span>
+                <span class="bs-hex"></span><span class="bs-hex"></span><span class="bs-hex"></span>
+                <span class="bs-hex"></span><span class="bs-hex"></span><span class="bs-hex"></span>
+                <span class="bs-hex"></span><span class="bs-hex"></span><span class="bs-hex"></span>
+            </div>
+        </div>
+
+        <!-- Нижняя полоса -->
+        <div class="bs-footer">
+            <span class="bs-footer-tag" id="bsFooterTag">STANDOFF 2 · CYBERSPORT PLATFORM</span>
+            <span class="bs-footer-dot"></span>
+            <span class="bs-footer-version">v2.3</span>
+        </div>
+    </div>
+
+    <!-- Угловые скобки HUD -->
+    <span class="bs-bracket bs-bracket-tl"></span>
+    <span class="bs-bracket bs-bracket-tr"></span>
+    <span class="bs-bracket bs-bracket-bl"></span>
+    <span class="bs-bracket bs-bracket-br"></span>
+
+    <!-- Угловые HUD-тексты -->
+    <div class="bs-hud bs-hud-tl">
+        <span>▸ SECURE CONNECTION</span>
+        <span id="bsHudSession">SESSION: ----</span>
+        <span id="bsHudOnline" style="color: rgba(var(--emerald-rgb), 0.9); font-weight: 800; text-shadow: 0 0 8px rgba(var(--emerald-rgb), 0.6);">ONLINE: —</span>
+    </div>
+    <div class="bs-hud bs-hud-tr">
+        <span>◂ SERVER: EU-WEST</span>
+        <span id="bsHudPing">PING: -- ms</span>
+    </div>
+    <div class="bs-hud bs-hud-bl">
+        <span>▸ BUILD 2.3.0</span>
+        <span>▸ STABLE</span>
+    </div>
+    <div class="bs-hud bs-hud-br">
+        <span id="bsHudTime">00:00:00</span>
+        <span>◂ UTC+03</span>
+    </div>
+</div>
+
     <div class="bg-particles"></div>
     <div class="bg-rays"></div>
 
@@ -33308,98 +34240,111 @@ function showFatalErrorScreen(title = 'Ошибка', html = '') {
     document.getElementById('pageLoadingBar')?.remove();
 }
 
-        // ============================================================
-        // INIT
-        // ============================================================
+// ============================================================
+// INIT
+// ============================================================
 async function init() {
     // Защита от повторного вызова
     if (window._initDone) return;
     window._initDone = true;
 
+    // 🔥 BOOT SCREEN: шаг 1 — начало
+    if (window.BootScreen) window.BootScreen.setProgress(5);
+
     // 🔥 ЖЁСТКАЯ ПРОВЕРКА: без sb дальше нет смысла
     if (!sb || typeof sb.from !== 'function') {
         console.error('❌ init(): sb не готов! Откладываем запуск...');
-        window._initDone = false;   // сбросим флаг — попробуем позже
+        window._initDone = false;
         return;
     }
 
-// ============================================================
-// 🔐 Безопасное получение пользователя
-// ============================================================
-// ============================================================
-// 🔐 ВАЛИДАЦИЯ initData С РЕТРАЯМИ
-// ============================================================
-let user = null;
-
-if (tg?.initData && tg.initData.length > 20) {
-    const MAX_ATTEMPTS = 4;
-    const DELAYS = [0, 800, 2000, 4000];  // мс
-
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        if (attempt > 0) {
-            console.log(`⏳ Повторная попытка валидации (${attempt + 1}/${MAX_ATTEMPTS})...`);
-            await new Promise(r => setTimeout(r, DELAYS[attempt]));
-        }
-
+    // 🔥 BOOT SCREEN: параллельно тянем онлайна для HUD (не блокирует)
+    (async () => {
         try {
-            const res = await sb.rpc('validate_init_data', {
-                p_init_data: tg.initData
-            });
+            const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+            const { count } = await sb
+                .from('users')
+                .select('telegram_id', { count: 'exact', head: true })
+                .gte('last_seen', cutoff);
 
-            if (res.error) {
-                console.warn(`⚠️ RPC error (попытка ${attempt + 1}):`, res.error.message);
-                continue;   // пробуем ещё
-            }
-
-            if (!res.data?.ok) {
-                // Это НЕ сетевая ошибка — значит initData подделан или токен неверный
-                // Ретраить бессмысленно
-                console.error('❌ initData не валиден:', res.data?.error);
-                if (res.data?.debug) {
-                    console.error('   debug:', res.data.debug);
-                }
-                break;
-            }
-
-            user = res.data.user;
-            console.log('✅ initData валидирован, user.id =', user.id);
-            break;   // успех, выходим из цикла
-
+            const onlineCount = count || 0;
+            if (window.BootScreen) window.BootScreen.setOnline(onlineCount);
         } catch (e) {
-            console.warn(`⚠️ Exception (попытка ${attempt + 1}):`, e.message);
-            // продолжаем — возможно следующая попытка пройдёт
+            console.warn('online pre-count:', e);
+        }
+    })();
+
+    // ============================================================
+    // 🔐 Безопасное получение пользователя
+    // ============================================================
+    let user = null;
+
+    if (tg?.initData && tg.initData.length > 20) {
+        const MAX_ATTEMPTS = 4;
+        const DELAYS = [0, 800, 2000, 4000];
+
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            if (attempt > 0) {
+                console.log(`⏳ Повторная попытка валидации (${attempt + 1}/${MAX_ATTEMPTS})...`);
+                await new Promise(r => setTimeout(r, DELAYS[attempt]));
+            }
+
+            try {
+                const res = await sb.rpc('validate_init_data', {
+                    p_init_data: tg.initData
+                });
+
+                if (res.error) {
+                    console.warn(`⚠️ RPC error (попытка ${attempt + 1}):`, res.error.message);
+                    continue;
+                }
+
+                if (!res.data?.ok) {
+                    console.error('❌ initData не валиден:', res.data?.error);
+                    if (res.data?.debug) console.error('   debug:', res.data.debug);
+                    break;
+                }
+
+                user = res.data.user;
+                console.log('✅ initData валидирован, user.id =', user.id);
+                break;
+            } catch (e) {
+                console.warn(`⚠️ Exception (попытка ${attempt + 1}):`, e.message);
+            }
+        }
+
+        if (!user) {
+            console.error('❌ Все попытки валидации исчерпаны');
         }
     }
 
-    if (!user) {
-        console.error('❌ Все попытки валидации исчерпаны');
+    // 🔥 BOOT SCREEN: шаг 2 — валидация
+    if (window.BootScreen) window.BootScreen.setProgress(20);
+
+    // 2) Dev-режим — ТОЛЬКО для localhost
+    if (!user && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        const params = new URLSearchParams(location.search);
+        const devId = Number(params.get('id')) || 999999999;
+        const devName = params.get('name') || ('DevUser' + devId);
+        user = {
+            id: devId,
+            first_name: devName,
+            username: 'dev' + devId,
+            photo_url: null,
+        };
+        console.warn('⚠️ DEV MODE:', user);
     }
-}
 
-// 2) Dev-режим — ТОЛЬКО для localhost
-if (!user && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-    const params = new URLSearchParams(location.search);
-    const devId = Number(params.get('id')) || 999999999;
-    const devName = params.get('name') || ('DevUser' + devId);
-    user = {
-        id: devId,
-        first_name: devName,
-        username: 'dev' + devId,
-        photo_url: null,
-    };
-    console.warn('⚠️ DEV MODE:', user);
-}
-
-// 3) Если ничего не сработало — блокирующий экран
-if (!user) {
-    console.error('❌ Не удалось получить пользователя');
-    showFatalErrorScreen(
-        'Не удалось авторизоваться',
-        'Сервер не отвечает или initData невалиден.<br>Проверь интернет и попробуй снова.'
-    );
-    return;
-}
-
+    // 3) Если ничего не сработало — блокирующий экран
+    if (!user) {
+        console.error('❌ Не удалось получить пользователя');
+        showFatalErrorScreen(
+            'Не удалось авторизоваться',
+            'Сервер не отвечает или initData невалиден.<br>Проверь интернет и попробуй снова.'
+        );
+        if (window.BootScreen) window.BootScreen.markReady();
+        return;
+    }
 
     // ============================================================
     // 🚫 ПРОВЕРКА: не удалял ли игрок аккаунт за последние 24 часа
@@ -33427,9 +34372,9 @@ if (!user) {
                          Если это ошибка — обратись в поддержку @Mark1zell
                      </span>`
                 );
+                if (window.BootScreen) window.BootScreen.markReady();
                 return;
             } else {
-                // 24 часа прошло — чистим запись, разрешаем ре-регистрацию
                 try {
                     await sb.from('deleted_accounts').delete().eq('telegram_id', user.id);
                     console.log('✅ Кулдаун удаления истёк, можно регистрироваться заново');
@@ -33440,53 +34385,53 @@ if (!user) {
         console.warn('deleted_accounts check:', e);
     }
 
- // ============================================================
-// 📱 TELEGRAM BACK BUTTON — регистрация обработчика
-// ============================================================
-if (tg?.BackButton) {
-    tg.BackButton.onClick(() => {
-        // Приоритет: модалки → sheets → playScreen → страницы
-        if (document.getElementById('chatView')?.classList.contains('active')) {
-            closeChatView();
-            return;
-        }
-        if (document.getElementById('playerModal')?.classList.contains('active')) {
-            closePlayerModal();
-            return;
-        }
-        if (document.querySelector('.sheet.active')) {
-            closeAllSheets();
-            return;
-        }
-        if (document.getElementById('playScreen')?.classList.contains('active')) {
-            closePlayScreen();
-            return;
-        }
-        const currentPage = document.querySelector('.page.active')?.id?.replace('page-', '');
-        if (currentPage && currentPage !== 'dashboard') {
-            switchPage('dashboard');
-        }
-    });
-}
+    // ============================================================
+    // 📱 TELEGRAM BACK BUTTON
+    // ============================================================
+    if (tg?.BackButton) {
+        tg.BackButton.onClick(() => {
+            if (document.getElementById('chatView')?.classList.contains('active')) {
+                closeChatView();
+                return;
+            }
+            if (document.getElementById('playerModal')?.classList.contains('active')) {
+                closePlayerModal();
+                return;
+            }
+            if (document.querySelector('.sheet.active')) {
+                closeAllSheets();
+                return;
+            }
+            if (document.getElementById('playScreen')?.classList.contains('active')) {
+                closePlayScreen();
+                return;
+            }
+            const currentPage = document.querySelector('.page.active')?.id?.replace('page-', '');
+            if (currentPage && currentPage !== 'dashboard') {
+                switchPage('dashboard');
+            }
+        });
+    }
 
     console.log('✅ init() запущен с user:', user);
 
     try {
         if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
 
+        // 🔥 BOOT SCREEN: шаг 3 — подключение к БД
+        if (window.BootScreen) window.BootScreen.setProgress(28);
+
         // ============================================================
-        // 🔥 Загрузка пользователя с ретраями и экспоненциальной задержкой
-        // Первый запрос на Supabase free tier может "будить" БД 10-20 сек
+        // 🔥 Загрузка пользователя с ретраями
         // ============================================================
         let existing = null;
         const MAX_ATTEMPTS = 3;
-        const TIMEOUTS = [15000, 20000, 30000];  // 15с, 20с, 30с
+        const TIMEOUTS = [15000, 20000, 30000];
 
         for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             const timeoutMs = TIMEOUTS[attempt];
 
             try {
-                // Показываем статус на 2-й+ попытке
                 if (attempt > 0) {
                     showToast(`⏳ Попытка ${attempt + 1}/${MAX_ATTEMPTS}...`);
                 }
@@ -33501,27 +34446,23 @@ if (tg?.BackButton) {
                     )
                 ]);
 
-                // Успех — выходим из цикла
                 if (result.error) {
                     console.warn(`⚠️ Попытка ${attempt + 1}: ошибка БД`, result.error);
                 } else {
                     existing = result.data;
-                    if (attempt > 0) {
-                        console.log(`✅ Успех с попытки ${attempt + 1}`);
-                    }
+                    if (attempt > 0) console.log(`✅ Успех с попытки ${attempt + 1}`);
                     break;
                 }
             } catch (e) {
                 console.warn(`⚠️ Попытка ${attempt + 1}/${MAX_ATTEMPTS} не удалась:`, e.message);
 
-                // Если это последняя попытка — показываем ошибку
                 if (attempt === MAX_ATTEMPTS - 1) {
                     console.error('❌ Все попытки исчерпаны');
                     showInitErrorScreen();
+                    if (window.BootScreen) window.BootScreen.markReady();
                     return;
                 }
 
-                // Задержка перед следующей попыткой (1с, 2с)
                 await new Promise(r => setTimeout(r, (attempt + 1) * 1000));
             }
         }
@@ -33532,7 +34473,7 @@ if (tg?.BackButton) {
             const upd = {
                 username: user.username || existing.username,
                 photo_url: user.photo_url || existing.photo_url || null,
-                last_seen: new Date().toISOString()   // 🟢 сразу обновляем
+                last_seen: new Date().toISOString()
             };
             ({ data, error } = await sb.from('users')
                 .update(upd).eq('telegram_id', user.id).select().single());
@@ -33543,21 +34484,24 @@ if (tg?.BackButton) {
                     username: user.username || null,
                     display_name: user.first_name || user.username || 'Игрок',
                     photo_url: user.photo_url || null,
-                    last_seen: new Date().toISOString()   // 🟢
+                    last_seen: new Date().toISOString()
                 }).select().single());
         }
         if (error) throw error;
 
         currentUser = data;
-	syncServerTime();
+        syncServerTime();
         applyHeaderAvatar(currentUser);
         renderDashboard(currentUser);
         loadProfile(currentUser);
         loadLeaderboard();
-	startOnlineHeartbeat();
-	initOnlineRealtime();
+        startOnlineHeartbeat();
+        initOnlineRealtime();
         updateQuestsBadge();
         updateCasesBadge();
+
+        // 🔥 BOOT SCREEN: шаг 4 — профиль загружен
+        if (window.BootScreen) window.BootScreen.setProgress(50);
 
         // Гасим UI комнаты
         activeRoomId = null;
@@ -33585,9 +34529,15 @@ if (tg?.BackButton) {
             }
         } catch (e) { console.warn('init cleanup:', e); }
 
+        // 🔥 BOOT SCREEN: шаг 5 — восстановление сессий
+        if (window.BootScreen) window.BootScreen.setProgress(62);
+
         // Восстанавливаем состояние
         checkActiveMatch();
         checkActiveRoom();
+
+        // 🔥 BOOT SCREEN: шаг 6 — подписки
+        if (window.BootScreen) window.BootScreen.setProgress(72);
 
         // Подписки
         updateNotifBadge();
@@ -33613,6 +34563,9 @@ if (tg?.BackButton) {
         if (typeof subscribePartyInvitesRealtime === 'function') subscribePartyInvitesRealtime();
         if (typeof subscribeClubInvitesRealtime === 'function') subscribeClubInvitesRealtime();
 
+        // 🔥 BOOT SCREEN: шаг 7 — финальные задачи
+        if (window.BootScreen) window.BootScreen.setProgress(85);
+
         // Онбординг
         if (needsOnboarding(currentUser)) {
             openOnboarding();
@@ -33620,7 +34573,6 @@ if (tg?.BackButton) {
 
         // Автоочистка
         cleanupStaleRooms();
-        // Периодические задачи — через единый тикер (см. registerTicker)
 
         // Кнопка модератора
         if (isModerator(currentUser) && !currentUser.is_admin) {
@@ -33631,13 +34583,23 @@ if (tg?.BackButton) {
         // 🔥 Запускаем единый тикер
         startGlobalTicker();
 
-        // 🎁 Проверяем ежедневную награду (через 2 секунды)
+        // 🎁 Проверяем ежедневную награду
         setTimeout(checkDailyStreak, 2000);
+
+        // 🔥 BOOT SCREEN: обновляем онлайн реальным значением
+        (async () => {
+            try {
+                const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+                const { count } = await sb
+                    .from('users')
+                    .select('telegram_id', { count: 'exact', head: true })
+                    .gte('last_seen', cutoff);
+                if (window.BootScreen) window.BootScreen.setOnline(count || 0);
+            } catch (e) {}
+        })();
 
         // ============================================================
         // 📸 Триггер из бота: ?action=share-profile
-        //   auto=1 → автоматически генерируем и отправляем в ЛС
-        //   без auto → открываем превью
         // ============================================================
         try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -33662,11 +34624,18 @@ if (tg?.BackButton) {
             console.warn('share-profile trigger:', e);
         }
 
+        // ✅ ВСЁ ГОТОВО — убираем boot screen
+        if (window.BootScreen) window.BootScreen.setProgress(100);
+        if (window.BootScreen) window.BootScreen.markReady();
+
     } catch (e) {
         console.error('❌ Ошибка init:', e);
         showInitErrorScreen();
+        // Даже при ошибке убираем boot screen — игрок увидит экран ошибки
+        if (window.BootScreen) window.BootScreen.markReady();
     }
-}   
+}
+   
 function applyHeaderAvatar(user) {
     const src = user.custom_avatar || user.photo_url;
     const initial = (user.display_name || 'U')[0].toUpperCase();
