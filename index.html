@@ -2,6 +2,7 @@
 <html lang="ru" data-theme="green">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <script>
 
 // ═══════════════════════════════════════════════════════════════
@@ -32744,17 +32745,28 @@ async function renderModeratorPanel() {
     // ============================================================
     // 1. ЗАГРУЗКА ДАННЫХ
     // ============================================================
-    const [disputedRes, reportsRes, modsRes, adminsRes, bansRes] = await Promise.all([
-        sb.from('game_matches').select('*').eq('result_status', 'disputed'),
-        sb.from('match_reports').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(50),
-        sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until')
-            .eq('is_mod', true).eq('is_admin', false).order('display_name'),
-        sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until')
-            .eq('is_admin', true).eq('is_owner', false).order('display_name'),
-        sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url, match_ban_until, match_ban_reason')
-            .not('match_ban_until', 'is', null)
-            .gt('match_ban_until', new Date().toISOString())
-    ]);
+// 🔥 Хелпер с ретраями для нестабильных запросов
+async function sbFetchWithRetry(builderFn, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await builderFn();
+            if (!res.error) return res;
+            if (i < retries - 1) await new Promise(r => setTimeout(r, 500 * (i + 1)));
+        } catch (e) {
+            if (i === retries - 1) throw e;
+            await new Promise(r => setTimeout(r, 500 * (i + 1)));
+        }
+    }
+    return { data: [], error: { message: 'all retries failed' } };
+}
+
+const [disputedRes, reportsRes, modsRes, adminsRes, bansRes] = await Promise.all([
+    sbFetchWithRetry(() => sb.from('game_matches').select('*').eq('result_status', 'disputed')),
+    sbFetchWithRetry(() => sb.from('match_reports').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(50)),
+    sbFetchWithRetry(() => sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until').eq('is_mod', true).eq('is_admin', false).order('display_name')),
+    sbFetchWithRetry(() => sb.from('users').select('telegram_id, display_name, username, custom_avatar, photo_url, elo, match_ban_until').eq('is_admin', true).eq('is_owner', false).order('display_name')),
+    sbFetchWithRetry(() => sb.from('users').select('telegram_id, display_name, custom_avatar, photo_url, match_ban_until, match_ban_reason').not('match_ban_until', 'is', null).gt('match_ban_until', new Date().toISOString())),
+]);
 
     const disputed = disputedRes.data || [];
     const reports = reportsRes.data || [];
