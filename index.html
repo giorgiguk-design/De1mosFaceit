@@ -25978,22 +25978,32 @@ body {
 .elo-card::before {
     content: '';
     position: absolute;
-    inset: -50%;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 200%;
+    transform: translate(-50%, -50%) rotate(0deg);
+    transform-origin: center;
     background: conic-gradient(from 0deg,
         transparent 0deg,
-        rgba(var(--emerald-rgb), 0.08) 60deg,
+        rgba(var(--emerald-rgb), 0.10) 60deg,
         transparent 120deg,
-        rgba(var(--cy-purple-rgb), 0.08) 180deg,
+        rgba(167, 139, 250, 0.10) 180deg,
         transparent 240deg,
-        rgba(var(--cy-blood-rgb), 0.06) 300deg,
+        rgba(255, 46, 77, 0.08) 300deg,
         transparent 360deg);
+    border-radius: 50%;              /* 🔥 главный фикс — круг вместо квадрата */
     animation: eloRays 24s linear infinite;
     pointer-events: none;
     z-index: 0;
-}
-.elo-card > * { position: relative; z-index: 1; }
+    filter: blur(20px);              /* 🔥 размывает стыки конуса */
+    opacity: 0.9;
+}.elo-card > * { position: relative; z-index: 1; }
 
-@keyframes eloRays { to { transform: rotate(360deg); } }
+@keyframes eloRays {
+    0%   { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
 
 .elo-value {
     background: linear-gradient(180deg,
