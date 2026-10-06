@@ -434,42 +434,79 @@
             background: var(--bg); color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             min-height: 100vh; -webkit-tap-highlight-color: transparent; overflow-x: hidden;
-            /* 🔥 ФИКС #4: отключаем нативный rubber-band WebView */
-            overscroll-behavior-y: contain;
-            overscroll-behavior-x: none;
         }
-body::before {
-    content: ''; position: fixed; inset: -50%;
-    background:
-        radial-gradient(circle at 20% 20%, var(--glow-1), transparent 45%),
-        radial-gradient(circle at 80% 60%, var(--glow-2), transparent 50%),
-        radial-gradient(circle at 50% 100%, var(--glow-3), transparent 55%);
-    animation: bgFloat 24s ease-in-out infinite alternate;
-    z-index: -2;
-    /* 🔥 Blur заменён на will-change + transform — GPU-friendly */
-    will-change: transform;
-    transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    /* filter: blur(30px) убран — радиальный градиент и так мягкий */
-    transition: background 0.5s ease;
-    contain: strict;
-}
-body::after {
-    content: ''; position: fixed; inset: 0;
-    background-image:
-        linear-gradient(var(--grid-line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 40px 40px;
-    mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 70%);
-    -webkit-mask-image: radial-gradient(circle at 50% 30%, #000 15%, transparent 70%);
-    z-index: -1; pointer-events: none;
-    transition: background-image 0.5s ease;
-    /* 🔥 Принудительное GPU-ускорение, без постоянного repaint */
-    will-change: auto;
-    contain: strict;
-    transform: translateZ(0);
-}
+
+        /* 🔥 ФИКС: overscroll только для touch-устройств (на ПК ломает скролл) */
+        @media (hover: none) and (pointer: coarse) {
+            html, body {
+                overscroll-behavior-y: contain;
+                overscroll-behavior-x: none;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════ */
+        /* 🔥 АВРОРА-ФОН: фиолет + изумруд + кровь                */
+        /* ═══════════════════════════════════════════════════════ */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: -30%;
+            background:
+                radial-gradient(ellipse 55% 45% at 18% 22%,
+                    rgba(167, 139, 250, 0.42) 0%,
+                    rgba(167, 139, 250, 0.10) 35%,
+                    transparent 65%),
+                radial-gradient(ellipse 50% 55% at 82% 30%,
+                    rgba(0, 224, 138, 0.35) 0%,
+                    rgba(0, 224, 138, 0.08) 40%,
+                    transparent 70%),
+                radial-gradient(ellipse 60% 50% at 50% 100%,
+                    rgba(255, 46, 77, 0.30) 0%,
+                    rgba(255, 46, 77, 0.06) 40%,
+                    transparent 70%);
+            animation: auroraDrift 32s ease-in-out infinite alternate;
+            z-index: -2;
+            will-change: transform, opacity;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            filter: blur(60px) saturate(1.15);
+            transition: opacity 0.6s ease;
+            contain: strict;
+            pointer-events: none;
+        }
+
+        @keyframes auroraDrift {
+            0%   { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); opacity: 0.85; }
+            50%  { transform: translate3d(-2%, 1%, 0) scale(1.08) rotate(1deg); opacity: 1; }
+            100% { transform: translate3d(2%, -2%, 0) scale(1.03) rotate(-1deg); opacity: 0.9; }
+        }
+
+        /* Lite-mode — вырубаем аврору, чтобы не жрала GPU */
+        html.lite-mode body::before {
+            animation: none;
+            filter: blur(40px);
+            opacity: 0.55;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(167, 139, 250, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 224, 138, 0.045) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%);
+            z-index: -1;
+            pointer-events: none;
+            transition: background-image 0.5s ease;
+            will-change: auto;
+            contain: strict;
+            transform: translateZ(0);
+        }
+
         @keyframes bgFloat { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(2%,-2%,0) scale(1.06); } }
         .header {
     position: sticky; top: 0; z-index: 100;
@@ -5466,16 +5503,18 @@ html.lite-mode .pbc-scan {
     align-items: center;
     justify-content: center;
     text-align: center;
+    /* 🔥 Двухцветный градиент: фиолет сверху → изумруд к низу */
     background: linear-gradient(180deg,
-        rgba(var(--emerald-rgb), 0.07) 0%,
-        rgba(var(--emerald-rgb), 0.015) 50%,
-        rgba(0, 0, 0, 0.4) 100%);
+        rgba(167, 139, 250, 0.10) 0%,
+        rgba(0, 224, 138, 0.05) 45%,
+        rgba(0, 0, 0, 0.55) 100%);
     border: 1px solid var(--border-strong);
     border-radius: 0;
     clip-path: polygon(
         8px 0, 100% 0, 100% calc(100% - 8px),
         calc(100% - 8px) 100%, 0 100%, 0 8px
     );
+    transition: transform 0.22s ease, border-color 0.25s ease, box-shadow 0.25s ease;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.04),
         0 4px 14px rgba(0, 0, 0, 0.35);
@@ -25612,6 +25651,95 @@ html.lite-mode .scroll-reveal {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* 🔥 РЕДИЗАЙН v1: доп. свечения и стекло                          */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Стеклянные карточки (только если пользователь не в lite) */
+html:not(.lite-mode) .stat-card,
+html:not(.lite-mode) .mini-stat,
+html:not(.lite-mode) .menu-item,
+html:not(.lite-mode) .play-room-card,
+html:not(.lite-mode) .leaderboard-item,
+html:not(.lite-mode) .chat-list-item {
+    backdrop-filter: blur(14px) saturate(1.15);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+
+/* Hover — приподнимаем с цветной тенью */
+@media (hover: hover) and (pointer: fine) {
+    html:not(.lite-mode) .stat-card:hover,
+    html:not(.lite-mode) .mini-stat:hover {
+        transform: translateY(-3px);
+        border-color: var(--emerald);
+        box-shadow:
+            0 12px 32px rgba(167, 139, 250, 0.18),
+            0 0 0 1px rgba(var(--emerald-rgb), 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+    html:not(.lite-mode) .menu-item:hover,
+    html:not(.lite-mode) .play-room-card:hover {
+        box-shadow:
+            0 14px 36px rgba(167, 139, 250, 0.20),
+            0 0 0 1px rgba(var(--emerald-rgb), 0.4);
+    }
+}
+
+/* Заголовки с усиленным свечением */
+html:not(.lite-mode) .elo-value {
+    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.7))
+            drop-shadow(0 0 24px rgba(167, 139, 250, 0.45))
+            drop-shadow(0 0 48px rgba(var(--emerald-rgb), 0.35));
+}
+
+html:not(.lite-mode) .section-title {
+    color: transparent;
+    background: linear-gradient(90deg,
+        var(--emerald) 0%,
+        #a78bfa 50%,
+        var(--emerald-3) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% auto;
+    animation: sectionTitleShift 6s ease-in-out infinite;
+}
+
+@keyframes sectionTitleShift {
+    0%, 100% { background-position: 0% center; }
+    50%      { background-position: 100% center; }
+}
+
+/* Нижняя навигация на мобилке — стекло */
+html:not(.lite-mode) .bottom-nav {
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    background: linear-gradient(180deg,
+        rgba(5, 8, 7, 0.65) 0%,
+        rgba(5, 8, 7, 0.95) 100%) !important;
+}
+
+/* Хедер — стекло */
+html:not(.lite-mode) .header {
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    background: linear-gradient(180deg,
+        rgba(5, 8, 7, 0.72) 0%,
+        rgba(5, 8, 7, 0.95) 100%) !important;
+}
+
+/* Кнопка Играть — красный блик в углу (мультиколор) */
+html:not(.lite-mode) .play-btn-cyber::before {
+    background: linear-gradient(120deg,
+        var(--emerald) 0%,
+        var(--emerald-3) 20%,
+        #a78bfa 50%,
+        #ff2e4d 70%,
+        var(--emerald) 100%);
+    background-size: 400% 100%;
+    animation: playAuraRotate 8s linear infinite;
 }
 
 /* ============================================================ */
@@ -70178,11 +70306,21 @@ console.log('🎉 Confetti установлен');
     // ============================================================
     function tone(opt) {
         if (!audioCtx || !sfxEnabled) return;
-        const {
+        let {
             freq = 440, type = 'sine', duration = 0.15,
             volume = 0.5, attack = 0.005, release = null,
             delay = 0, slideTo = null, curve = 'exp'
         } = opt;
+
+        // 🔥 ФИКС: страховка от NaN / Infinity во ВСЕХ параметрах
+        if (!isFinite(freq)    || freq <= 0)     freq = 440;
+        if (!isFinite(volume)  || volume <= 0)   volume = 0.0001;
+        if (volume > 1) volume = 1;
+        if (!isFinite(duration)|| duration <= 0) duration = 0.15;
+        if (!isFinite(delay)   || delay < 0)     delay = 0;
+        if (!isFinite(attack)  || attack <= 0)   attack = 0.005;
+        if (release != null && (!isFinite(release) || release <= 0)) release = duration;
+        if (slideTo != null && (!isFinite(slideTo) || slideTo <= 0)) slideTo = null;
 
         const t0 = audioCtx.currentTime + delay;
         const osc = audioCtx.createOscillator();
@@ -70244,9 +70382,17 @@ console.log('🎉 Confetti установлен');
     // Псевдо-реверб: несколько копий тона с задержкой
     function reverbTone(opt, delays) {
         const list = delays || [0.08, 0.16, 0.26, 0.4];
-        const vols = [0.42, 0.28, 0.16, 0.08];
+        const vols = [0.42, 0.28, 0.16, 0.08, 0.05, 0.03, 0.02];
         list.forEach((d, i) => {
-            tone({ ...opt, volume: (opt.volume || 0.5) * vols[i], delay: (opt.delay || 0) + d });
+            // 🔥 ФИКС: если индекс вышел за массив — считаем затухание сами
+            const v = (vols[i] !== undefined)
+                ? vols[i]
+                : Math.max(0.015, 0.08 - (i - vols.length + 1) * 0.02);
+
+            const vol = (opt.volume || 0.5) * v;
+            if (!isFinite(vol) || vol <= 0) return;   // защита от NaN
+
+            tone({ ...opt, volume: vol, delay: (opt.delay || 0) + d });
         });
     }
 
@@ -70609,46 +70755,83 @@ console.log('🎉 Confetti установлен');
             }, 420);
         },
         caseRevealLegendary() {
-            // 🔥 ФИКС #5: мелодичное арпеджио вместо резкого sawtooth
-            subBass(36, 1.8, 1.0);
-            noise({ duration: 2.0, volume: 0.14, filter: 3500, delay: 0.05 });
+            // ═══════════════════════════════════════════════════════
+            // 🔥 ЛЕГЕНДАРКА: 5-фазный эпик на ~5 секунд
+            // ═══════════════════════════════════════════════════════
 
-            // Мягкое арпеджио из 9 нот
-            const melody = [523, 659, 784, 988, 1047, 1319, 1568, 2093, 2637];
-            melody.forEach((f, i) => {
+            // ─── ФАЗА 1 (0.0с): тёмный провал + саб-дроп ───────────
+            subBass(28, 2.2, 1.0);
+            noise({ duration: 2.4, volume: 0.10, filter: 2200, delay: 0.02 });
+            tone({
+                freq: 130, type: 'sine', duration: 1.4,
+                volume: 0.4, delay: 0, release: 1.8, attack: 0.08
+            });
+
+            // ─── ФАЗА 2 (0.4с): восходящее арпеджио До-мажор ──────
+            const rise = [262, 330, 392, 523, 659, 784, 1047];
+            rise.forEach((f, i) => {
+                const d = 0.4 + i * 0.14;
                 tone({
-                    freq: f,
-                    type: 'sine',
-                    duration: 0.9,
-                    volume: 0.34 - i * 0.015,
-                    delay: i * 0.09,
-                    release: 1.2,
-                    attack: 0.02,
+                    freq: f, type: 'triangle', duration: 0.8,
+                    volume: 0.30, delay: d, release: 1.0, attack: 0.015
                 });
                 tone({
-                    freq: f * 2,
-                    type: 'triangle',
-                    duration: 0.7,
-                    volume: 0.12,
-                    delay: i * 0.09 + 0.04,
+                    freq: f * 2, type: 'sine', duration: 0.6,
+                    volume: 0.10, delay: d + 0.03
                 });
             });
 
-            // Длинный финальный аккорд
+            // ─── ФАЗА 3 (1.5с): мощный мажорный аккорд ────────────
             setTimeout(() => {
-                subBass(28, 2.5, 1.0);
-                [1568, 1976, 2349, 2637, 3136, 3520, 4186].forEach((f, i) => {
+                subBass(42, 2.0, 1.0);
+
+                // C-E-G-C-E-G (до-мажор, 6 голосов)
+                [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
                     tone({
                         freq: f, type: 'sine', duration: 2.4,
-                        volume: 0.4, delay: i * 0.06, release: 3.0, attack: 0.03
+                        volume: 0.42, delay: i * 0.035,
+                        release: 3.2, attack: 0.04
+                    });
+                    tone({
+                        freq: f * 1.5, type: 'triangle', duration: 1.8,
+                        volume: 0.16, delay: i * 0.035 + 0.02
                     });
                 });
-                metalTail(2800, 10, 1.2, 0.18);
+
+                // Длинный хвост реверба (5 слоёв — теперь безопасно с фиксом)
                 reverbTone(
-                    { freq: 2637, type: 'sine', duration: 3.5, volume: 0.5, delay: 0.2 },
-                    [0.35, 0.7, 1.15, 1.7, 2.3]
+                    { freq: 1568, type: 'sine', duration: 3.2, volume: 0.55, delay: 0.15, attack: 0.05 },
+                    [0.30, 0.6, 1.0, 1.5, 2.1, 2.8]
                 );
-            }, 900);
+            }, 1500);
+
+            // ─── ФАЗА 4 (2.6с): сверкающие ноты сверху ────────────
+            setTimeout(() => {
+                [2093, 2637, 3136, 3520, 4186, 4699].forEach((f, i) => {
+                    tone({
+                        freq: f, type: 'sine', duration: 1.6,
+                        volume: 0.28 - i * 0.03,
+                        delay: i * 0.09, release: 2.0, attack: 0.02
+                    });
+                });
+                metalTail(2400, 8, 0.6, 0.14);
+            }, 2600);
+
+            // ─── ФАЗА 5 (3.5с): финальный «удар в тишине» ────────
+            setTimeout(() => {
+                subBass(24, 2.8, 1.0);
+                [1319, 1568, 1976, 2637].forEach((f, i) => {
+                    tone({
+                        freq: f, type: 'sine', duration: 2.4,
+                        volume: 0.36, delay: i * 0.05,
+                        release: 3.4, attack: 0.05
+                    });
+                });
+                reverbTone(
+                    { freq: 1976, type: 'sine', duration: 4.0, volume: 0.5, delay: 0.1, attack: 0.06 },
+                    [0.4, 0.8, 1.4, 2.1, 3.0, 4.0]
+                );
+            }, 3500);
         },
 
         // ═══════════ Особые ═══════════
