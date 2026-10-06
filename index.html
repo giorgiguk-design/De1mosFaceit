@@ -16363,25 +16363,91 @@ html.lite-mode .list-frame-overlay svg * {
     isolation: isolate;
 }
 
-/* 🔥 ФИКС: все внутренние слои аватара — идеальные круги */
-.lb-avatar > span,
-.club-member-avatar > span,
-.chat-list-avatar > span,
-.ig-player-avatar > span,
-.result-mini-avatar > span,
-.ig-mini-avatar > span,
-.tz-avatar > span,
-.cp-avatar > span,
-.veto-cap-avatar > span,
-.veto-player-mini-avatar > span,
-.notif-avatar > span,
-.menu-drawer-avatar > span,
-.mb-avatar > span {
+/* 🔥 ФИКС: все внутренние слои аватара — идеальные круги
+   ВАЖНО: НЕ трогаем .av-level-badge, .online-dot и SVG-рамки */
+.lb-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.club-member-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.chat-list-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.ig-player-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.result-mini-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.ig-mini-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.tz-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.cp-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.veto-cap-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.veto-player-mini-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.notif-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.menu-drawer-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.mb-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]) {
     border-radius: 50% !important;
     overflow: hidden !important;
     display: block !important;
     width: 100% !important;
     height: 100% !important;
+}
+
+/* 🎯 Бейдж уровня — маленький, в углу, НЕ растягивается */
+.lb-avatar > .av-level-badge,
+.club-member-avatar > .av-level-badge,
+.chat-list-avatar > .av-level-badge,
+.tz-avatar > .av-level-badge,
+.ig-mini-avatar > .av-level-badge,
+.ig-player-avatar > .av-level-badge,
+.result-mini-avatar > .av-level-badge,
+.notif-avatar > .av-level-badge,
+.menu-drawer-avatar > .av-level-badge,
+.mb-avatar > .av-level-badge {
+    width: auto !important;
+    height: auto !important;
+    min-width: 14px !important;
+    min-height: 14px !important;
+    max-width: 28px !important;
+    max-height: 16px !important;
+    border-radius: 8px !important;
+    overflow: visible !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: absolute !important;
+    bottom: -2px !important;
+    right: -2px !important;
+    top: auto !important;
+    left: auto !important;
+    padding: 0 4px !important;
+    font-size: 8px !important;
+    line-height: 1 !important;
+    z-index: 999 !important;
+    pointer-events: none !important;
+}
+
+/* 🟢 Online-точка — тоже НЕ растягивается */
+.lb-avatar > .online-dot,
+.club-member-avatar > .online-dot,
+.chat-list-avatar > .online-dot,
+.tz-avatar > .online-dot,
+.ig-mini-avatar > .online-dot {
+    width: 10px !important;
+    height: 10px !important;
+    min-width: 10px !important;
+    min-height: 10px !important;
+    max-width: 10px !important;
+    max-height: 10px !important;
+    border-radius: 50% !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: 998 !important;
+}
+
+/* 🎨 SVG-рамки — не растягиваем через этот блок */
+.lb-avatar > [class*="frame-overlay"],
+.club-member-avatar > [class*="frame-overlay"],
+.chat-list-avatar > [class*="frame-overlay"] {
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
 }
 
 /* 🔥 ФИКС: фолбэк-буква всегда внутри круга */
