@@ -74405,6 +74405,110 @@ window.SFX = {
 
     console.log('🔊 Sound System v4 готов (киберспорт, master=' + MASTER_VOLUME + ')');
 })();
+
+// ═══════════════════════════════════════════════════════════
+// 🔔 АВТО-ЗВУК НА КЛИКИ (кнопки, навигация, меню)
+// ═══════════════════════════════════════════════════════════
+(function autoClickSounds() {
+    if (window._clickSoundsInit) return;
+    window._clickSoundsInit = true;
+
+    // Селекторы — что считается "кликабельным для звука"
+    const CLICKABLE = [
+        'button:not(:disabled)',
+        '.nav-item',
+        '.menu-item',
+        '.menu-drawer-btn',
+        '.play-room-card',
+        '.mode-card',
+        '.mode-selector .mode-card',
+        '.shop-cat-btn',
+        '.shop-item',
+        '.leaderboard-item',
+        '.chat-list-item',
+        '.club-mini-btn',
+        '.rv-icon-btn',
+        '.dash-cases-btn',
+        '.dash-bp-open-full',
+        '.theme-option',
+        '.sheet-option',
+        '.prc-action',
+        '.tz-plus',
+        '.friend-action',
+        '.play-btn-find',
+        '.play-btn-create',
+        '.play-btn-cyber',
+        '.phc-icon-btn',
+        '.phc-action-compact',
+        '.phc-rank-pill',
+        '.vp-card',
+        '.achievement-card',
+        '.profile-action-btn',
+        '.result-mini-btn',
+        '.result-upload-btn',
+        '.shop-btn',
+        '.case-card-v2',
+        '.case-detail-item',
+        '.quest-btn',
+        '[onclick]:not([onclick=""])',
+    ].join(',');
+
+    // Звук выбираем по контексту
+    function pickSound(el) {
+        if (el.classList.contains('nav-item')) return 'tap';
+        if (el.classList.contains('menu-item')) return 'tap';
+        if (el.classList.contains('menu-drawer-btn')) return 'tap';
+        if (el.classList.contains('play-room-card')) return 'open';
+        if (el.classList.contains('mode-card')) return 'tap';
+        if (el.classList.contains('shop-cat-btn')) return 'open';
+        if (el.classList.contains('case-card-v2')) return 'open';
+        if (el.classList.contains('dash-cases-btn')) return 'open';
+        if (el.classList.contains('dash-bp-open-full')) return 'open';
+        if (el.classList.contains('sheet-option')) return 'tap';
+        if (el.classList.contains('theme-option')) return 'tap';
+        if (el.classList.contains('friend-action')) return 'tap';
+        if (el.classList.contains('play-btn-cyber')) return 'open';
+        if (el.classList.contains('play-btn-find') || el.classList.contains('play-btn-create')) return 'open';
+        if (el.classList.contains('prc-action')) return 'tap';
+        if (el.classList.contains('tz-plus')) return 'tap';
+        if (el.classList.contains('profile-action-btn')) {
+            // Кнопка "Найти матч" — важный звук
+            if (el.textContent.includes('НАЙТИ') || el.textContent.includes('ЗАПУСТИТЬ')) return 'open';
+            return 'tap';
+        }
+        if (el.classList.contains('result-upload-btn') || el.classList.contains('result-submit-btn')) return 'send';
+        if (el.classList.contains('shop-btn')) return 'tap';
+        return 'tap';
+    }
+
+    // Слушаем pointerdown — самый ранний жест (сработает до click)
+    document.addEventListener('pointerdown', (e) => {
+        const el = e.target.closest(CLICKABLE);
+        if (!el) return;
+        if (el.disabled) return;
+
+        // Разблокируем аудио при первом же клике
+        if (typeof SFX !== 'undefined' && SFX.unlock) {
+            SFX.unlock();
+        }
+
+        // Играем звук
+        if (typeof SFX !== 'undefined' && SFX.play) {
+            const sound = pickSound(el);
+            SFX.play(sound);
+        }
+    }, { passive: true, capture: true });
+
+    // Для клавиатуры / touch также ловим click (страховка)
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest(CLICKABLE);
+        if (!el) return;
+        if (typeof SFX !== 'undefined' && SFX.unlock) SFX.unlock();
+    }, { passive: true, capture: true });
+
+    console.log('🔔 Авто-звуки на клики установлены');
+})();
+
 </script>
 
     <!-- ============================================================ -->
