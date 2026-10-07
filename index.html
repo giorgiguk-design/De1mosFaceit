@@ -29019,6 +29019,638 @@ html.lite-mode .dash-cases-btn::before { animation: none !important; opacity: 0.
     font-weight: 700;
 }
 
+/* ═══════════════════════════════════════════════════════════════ */
+/* ⚔️ КЛАНОВЫЕ ВОЙНЫ                                              */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.club-war-screen {
+    position: relative;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1.5px solid rgba(167, 139, 250, 0.45);
+    background: #05060a;
+    isolation: isolate;
+    min-height: 560px;
+}
+
+.club-war-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.35) saturate(1.2) blur(2px);
+    transform: scale(1.06);
+    z-index: 0;
+    animation: clubWarBgFloat 20s ease-in-out infinite;
+}
+@keyframes clubWarBgFloat {
+    0%, 100% { transform: scale(1.06) translate(0, 0); }
+    50%      { transform: scale(1.10) translate(-8px, 4px); }
+}
+
+.club-war-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 90% 60% at 50% 0%,
+            rgba(167, 139, 250, 0.25) 0%, transparent 60%),
+        linear-gradient(180deg,
+            rgba(0, 0, 0, 0.30) 0%,
+            rgba(0, 0, 0, 0.72) 55%,
+            rgba(0, 0, 0, 0.96) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.club-war-scanlines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 3px,
+        rgba(167, 139, 250, 0.04) 3px,
+        rgba(167, 139, 250, 0.04) 4px
+    );
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.club-war-content {
+    position: relative;
+    z-index: 3;
+    padding: 24px 22px 26px;
+}
+
+/* ─── HERO: два клана на фоне ─── */
+.club-war-hero {
+    text-align: center;
+    padding: 10px 0 28px;
+    animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.club-war-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(167, 139, 250, 0.12);
+    border: 1px solid rgba(167, 139, 250, 0.5);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #c4b5fd;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+}
+.club-war-eyebrow svg {
+    width: 14px; height: 14px;
+    stroke: currentColor;
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+.club-war-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    line-height: 1;
+    background: linear-gradient(90deg, #ffffff 0%, #c4b5fd 50%, #ffffff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: cyberShine 4s linear infinite;
+    margin-bottom: 8px;
+    text-shadow: none;
+}
+
+.club-war-subtitle {
+    font-size: 12px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+/* ─── VS КАРТОЧКИ ─── */
+.club-war-vs-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+    animation: slideUp 0.6s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.club-war-team {
+    position: relative;
+    padding: 16px 14px;
+    border-radius: 16px;
+    background: linear-gradient(160deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(0, 0, 0, 0.5) 100%);
+    border: 1.5px solid rgba(var(--emerald-rgb), 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
+.club-war-team.enemy {
+    border-color: rgba(255, 84, 112, 0.5);
+    background: linear-gradient(160deg,
+        rgba(255, 84, 112, 0.08) 0%,
+        rgba(0, 0, 0, 0.5) 100%);
+}
+.club-war-team::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.85;
+}
+.club-war-team.enemy::before {
+    background: linear-gradient(90deg, transparent, #ff5470, transparent);
+}
+
+.club-war-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: rgba(var(--emerald-rgb), 0.15);
+    border: 1.5px solid rgba(var(--emerald-rgb), 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--emerald-3);
+    box-shadow: 0 0 16px rgba(var(--emerald-rgb), 0.3);
+}
+.club-war-team.enemy .club-war-logo {
+    background: rgba(255, 84, 112, 0.15);
+    border-color: rgba(255, 84, 112, 0.5);
+    color: #ff8a9d;
+    box-shadow: 0 0 16px rgba(255, 84, 112, 0.3);
+}
+.club-war-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+.club-war-team-info {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+}
+.club-war-team-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.club-war-team-tag {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--emerald-3);
+    margin-top: 2px;
+}
+.club-war-team.enemy .club-war-team-tag { color: #ff8a9d; }
+.club-war-team-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--hint);
+    margin-top: 4px;
+}
+
+.club-war-vs-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: #ff5470;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(255, 84, 112, 0.7),
+                 0 0 40px rgba(255, 84, 112, 0.4);
+    animation: vsPulse 1.8s ease-in-out infinite;
+}
+@keyframes vsPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.12); opacity: 0.85; }
+}
+
+/* ─── СОСТАВ ─── */
+.club-war-roster {
+    padding: 16px;
+    border-radius: 16px;
+    background: linear-gradient(160deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(0, 0, 0, 0.55) 100%);
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    margin-bottom: 18px;
+    animation: slideUp 0.6s 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.club-war-roster-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #c4b5fd;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+.club-war-roster-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--hint);
+    letter-spacing: 0;
+}
+.club-war-roster-count b { color: var(--emerald); }
+
+.club-war-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 6px;
+    transition: all 0.2s ease;
+}
+.club-war-player:hover {
+    background: rgba(167, 139, 250, 0.08);
+    border-color: rgba(167, 139, 250, 0.3);
+}
+.club-war-player-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    color: #04140e;
+    font-size: 14px;
+    position: relative;
+    box-shadow: 0 0 0 1.5px rgba(var(--emerald-rgb), 0.4),
+                0 0 12px rgba(var(--emerald-rgb), 0.25);
+}
+.club-war-player-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.club-war-player-info { flex: 1; min-width: 0; }
+.club-war-player-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.club-war-player-meta {
+    font-size: 10.5px;
+    color: var(--hint);
+    font-weight: 700;
+    margin-top: 2px;
+}
+
+.club-war-player.online .club-war-player-avatar::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 6px #22c55e;
+}
+.club-war-player.offline { opacity: 0.55; }
+
+.club-war-player-remove {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: rgba(255, 84, 112, 0.12);
+    border: 1px solid rgba(255, 84, 112, 0.35);
+    color: var(--red);
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-family: inherit;
+    transition: transform 0.15s ease, background 0.2s ease;
+}
+.club-war-player-remove:active { transform: scale(0.88); }
+.club-war-player-remove:hover { background: rgba(255, 84, 112, 0.25); }
+
+.club-war-empty-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 11.5px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+/* ─── ЖИВАЯ СТАТИСТИКА ─── */
+.club-war-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+    animation: slideUp 0.6s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.club-war-stat {
+    position: relative;
+    overflow: hidden;
+    padding: 14px 12px;
+    border-radius: 14px;
+    background: linear-gradient(160deg,
+        rgba(167, 139, 250, 0.10) 0%,
+        rgba(0, 0, 0, 0.55) 100%);
+    border: 1px solid rgba(167, 139, 250, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.club-war-stat::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #a78bfa, transparent);
+    opacity: 0.8;
+}
+.club-war-stat-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: rgba(167, 139, 250, 0.15);
+    border: 1px solid rgba(167, 139, 250, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(167, 139, 250, 0.3);
+}
+.club-war-stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 12px rgba(167, 139, 250, 0.5);
+}
+.club-war-stat-lbl {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-top: 3px;
+}
+
+/* ─── КНОПКИ ─── */
+.club-war-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: slideUp 0.6s 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.club-war-find-btn {
+    position: relative;
+    overflow: hidden;
+    padding: 18px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 55%, #c4b5fd 100%);
+    background-size: 200% auto;
+    color: #0a0514;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow:
+        0 10px 32px rgba(167, 139, 250, 0.45),
+        0 0 40px rgba(167, 139, 250, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.25s ease;
+    isolation: isolate;
+}
+.club-war-find-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: clubWarShine 3s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes clubWarShine {
+    0%   { left: -100%; }
+    50%  { left: 100%; }
+    100% { left: 100%; }
+}
+.club-war-find-btn:not(:disabled):hover {
+    transform: translateY(-2px);
+    background-position: 100% 50%;
+    box-shadow:
+        0 14px 40px rgba(167, 139, 250, 0.6),
+        0 0 60px rgba(167, 139, 250, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.club-war-find-btn:active { transform: scale(0.97); }
+.club-war-find-btn:disabled {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--hint);
+    cursor: not-allowed;
+    box-shadow: none;
+}
+.club-war-find-btn svg {
+    width: 20px; height: 20px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.club-war-cancel-btn {
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255, 84, 112, 0.1);
+    border: 1.5px solid rgba(255, 84, 112, 0.4);
+    color: var(--red);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s ease, background 0.2s ease;
+}
+.club-war-cancel-btn:hover { background: rgba(255, 84, 112, 0.2); }
+.club-war-cancel-btn:active { transform: scale(0.97); }
+
+.club-war-back-btn {
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--hint);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.club-war-back-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+}
+.club-war-back-btn:active { transform: scale(0.97); }
+
+/* ─── ЭКРАН ПОИСКА ─── */
+.club-war-searching {
+    text-align: center;
+    padding: 40px 20px;
+    animation: fadeInScale 0.5s ease;
+}
+.club-war-radar {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.club-war-radar-ring {
+    position: absolute;
+    border: 2px solid rgba(167, 139, 250, 0.4);
+    border-radius: 50%;
+    animation: clubWarRadar 2.4s ease-out infinite;
+}
+.club-war-radar-ring:nth-child(1) { width: 40px;  height: 40px;  animation-delay: 0s; }
+.club-war-radar-ring:nth-child(2) { width: 80px;  height: 80px;  animation-delay: 0.6s; }
+.club-war-radar-ring:nth-child(3) { width: 120px; height: 120px; animation-delay: 1.2s; }
+@keyframes clubWarRadar {
+    0%   { transform: scale(0.5); opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+.club-war-radar-core {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #a78bfa;
+    box-shadow: 0 0 24px #a78bfa, 0 0 48px rgba(167, 139, 250, 0.5);
+    animation: clubWarCorePulse 1.4s ease-in-out infinite;
+}
+@keyframes clubWarCorePulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.25); }
+}
+
+.club-war-timer {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 44px;
+    font-weight: 900;
+    color: #c4b5fd;
+    letter-spacing: 3px;
+    line-height: 1;
+    margin-bottom: 6px;
+    text-shadow: 0 0 24px rgba(167, 139, 250, 0.6);
+    font-variant-numeric: tabular-nums;
+}
+.club-war-timer-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--hint);
+    margin-bottom: 24px;
+}
+
+.club-war-queue-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.club-war-log {
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(167, 139, 250, 0.2);
+    max-height: 140px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--hint);
+    line-height: 1.7;
+}
+.club-war-log-line { display: block; }
+.club-war-log-line b { color: #c4b5fd; }
+.club-war-log-line.ok { color: var(--emerald-3); }
+
+/* ─── АДАПТИВ ─── */
+@media (min-width: 1024px) {
+    .club-war-content { padding: 32px 36px 36px; }
+    .club-war-title { font-size: 42px; letter-spacing: 6px; }
+    .club-war-screen { min-height: 640px; }
+    .club-war-stats { grid-template-columns: repeat(4, 1fr); }
+    .club-war-actions { flex-direction: row; }
+    .club-war-actions > * { flex: 1; }
+    .club-war-find-btn { padding: 20px; font-size: 16px; }
+}
+
 </style>
 </head>
 <body>
@@ -29375,6 +30007,12 @@ html.lite-mode .dash-cases-btn::before { animation: none !important; opacity: 0.
     </div>
 
     <!-- ============ PLAY (выбор режима и пати) ============ -->
+	<!-- ============================================================ -->
+	<!-- ⚔️ КЛАНОВЫЕ ВОЙНЫ                                              -->
+	<!-- ============================================================ -->
+	<div class="container page" id="page-club-war">
+   	 <div id="clubWarContent"></div>
+	</div>
     <div class="container page" id="page-play">
         <div class="section-title" style="margin-top: 0;">Выбор режима</div>
         <div class="mode-grid" style="grid-template-columns: 1fr 1fr 1fr;">
@@ -38426,13 +39064,13 @@ function renderMyClub(container) {
         `;
     }
 
-    const playBtn = (isOwner || isElder) ? `
-        <button class="club-play-main" onclick="startClubParty()">
-            <span class="cpm-icon">🎮</span>
-            <span class="cpm-text">НАЧАТЬ ИГРУ</span>
-            <span class="cpm-sub">Собрать клановый матч</span>
-        </button>
-    ` : '';
+const playBtn = (isOwner || isElder) ? `
+    <button class="club-play-main" onclick="openClubWarScreen()">
+        <span class="cpm-icon">⚔️</span>
+        <span class="cpm-text">КЛАНОВАЯ ВОЙНА</span>
+        <span class="cpm-sub">5×5 · Найти врага</span>
+    </button>
+` : '';
 
     container.innerHTML = `
         <div class="club-hero">
@@ -71573,7 +72211,563 @@ window.fireConfetti = function(opts) {
 
 console.log('🎉 Confetti установлен');
 
+// ============================================================
+// ⚔️ КЛАНОВЫЕ ВОЙНЫ
+// ============================================================
+let _clubWarState = {
+    active: false,
+    timer: null,
+    seconds: 0,
+    queueId: null,
+    pollTimer: null,
+};
 
+async function openClubWarScreen() {
+    if (!myClub?.club) {
+        showToast('🛡️ Ты не в Клане');
+        return;
+    }
+
+    switchPage('club-war');
+    await renderClubWarScreen();
+}
+
+async function renderClubWarScreen() {
+    const el = document.getElementById('clubWarContent');
+    if (!el) return;
+
+    // Проверяем права
+    const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+    const canStart = myRole === 'owner' || myRole === 'elder'
+                  || myClub.club.owner_id === currentUser.telegram_id;
+
+    if (!canStart) {
+        el.innerHTML = `
+            <div class="club-war-screen">
+                <div class="club-war-overlay"></div>
+                <div class="club-war-content">
+                    <div class="club-war-hero">
+                        <div class="club-war-title">ТОЛЬКО OWNER / ELDER</div>
+                        <div class="club-war-subtitle">Начать войну может глава или заместитель клана</div>
+                    </div>
+                    <button class="club-war-back-btn" onclick="switchPage('dashboard')" style="width: 100%;">◀ НАЗАД</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // Фон: карта или дефолтный
+    const bgUrl = mapBgUrl('Sandstone') || '';
+    const logoHTML = myClub.club.logo_url
+        ? `<img src="${myClub.club.logo_url}" alt="">`
+        : myClub.club.tag.slice(0, 2).toUpperCase();
+
+    // Топ-5 состава клана (по ELO)
+    const sortedMembers = [...myClub.members].sort((a, b) => {
+        const eA = a.user?.elo ?? 1000;
+        const eB = b.user?.elo ?? 1000;
+        return eB - eA;
+    });
+    const lineup = sortedMembers.slice(0, 5);
+    const isOnline = (u) => {
+        const ls = u?.last_seen ? new Date(u.last_seen).getTime() : 0;
+        return Date.now() - ls < 2 * 60 * 1000;
+    };
+    const onlineCount = sortedMembers.filter(m => isOnline(m.user)).length;
+    const readyCount = lineup.length;
+    const emptySlots = Math.max(0, 5 - readyCount);
+
+    // Живая статистика
+    const stats = await getClubWarQueueStats();
+
+    el.innerHTML = `
+        <div class="club-war-screen">
+            <div class="club-war-bg" style="background-image: url('${bgUrl}')"></div>
+            <div class="club-war-overlay"></div>
+            <div class="club-war-scanlines"></div>
+
+            <div class="club-war-content">
+                <!-- HERO -->
+                <div class="club-war-hero">
+                    <div class="club-war-eyebrow">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.5 17.5 3 6V3h3l11.5 11.5"/>
+                            <path d="m13 19 6-6M16 16l4 4"/>
+                        </svg>
+                        КЛАНОВЫЕ ВОЙНЫ · 5×5
+                    </div>
+                    <div class="club-war-title">БИТВА КЛАНОВ</div>
+                    <div class="club-war-subtitle">Собери состав · Найди врага · Забери победу</div>
+                </div>
+
+                <!-- VS -->
+                <div class="club-war-vs-row">
+                    <div class="club-war-team">
+                        <div class="club-war-logo">${logoHTML}</div>
+                        <div class="club-war-team-info">
+                            <div class="club-war-team-name">${escapeHtml(myClub.club.name)}</div>
+                            <div class="club-war-team-tag">[${escapeHtml(myClub.club.tag)}]</div>
+                            <div class="club-war-team-count">${readyCount}/5 игроков</div>
+                        </div>
+                    </div>
+                    <div class="club-war-vs-badge">VS</div>
+                    <div class="club-war-team enemy">
+                        <div class="club-war-logo">?</div>
+                        <div class="club-war-team-info">
+                            <div class="club-war-team-name">ПРОТИВНИК</div>
+                            <div class="club-war-team-tag">НЕИЗВЕСТЕН</div>
+                            <div class="club-war-team-count">Поиск врага...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- СОСТАВ -->
+                <div class="club-war-roster">
+                    <div class="club-war-roster-title">
+                        <span>⚔️ БОЕВОЙ СОСТАВ</span>
+                        <span class="club-war-roster-count"><b>${readyCount}</b>/5 · онлайн: ${onlineCount}</span>
+                    </div>
+
+                    ${lineup.map(m => {
+                        const u = m.user || {};
+                        const av = renderAvatar(u);
+                        const isOn = isOnline(u);
+                        const isMe = Number(m.telegram_id) === Number(currentUser.telegram_id);
+                        const roleIcon = m.role === 'owner' ? '👑' : m.role === 'elder' ? '⭐' : '';
+                        return `
+                            <div class="club-war-player ${isOn ? 'online' : 'offline'}"
+                                 data-user-id="${m.telegram_id}"
+                                 onclick="openPlayerProfile(${m.telegram_id})">
+                                <div class="club-war-player-avatar">${av}</div>
+                                <div class="club-war-player-info">
+                                    <div class="club-war-player-name">
+                                        ${escapeHtml(u.display_name || 'Игрок')}
+                                        ${roleIcon}
+                                        ${isMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
+                                    </div>
+                                    <div class="club-war-player-meta">
+                                        ⚡ ${u.elo ?? 1000} DXP · ${isOn ? 'в сети' : 'офлайн'}
+                                    </div>
+                                </div>
+                                ${(!isMe && canStart) ? `
+                                    <button class="club-war-player-remove"
+                                            onclick="event.stopPropagation(); removeFromClubWarLineup(${m.telegram_id})">×</button>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+
+                    ${Array(emptySlots).fill(`
+                        <div class="club-war-empty-slot">
+                            <span style="font-size: 16px;">+</span>
+                            Свободный слот
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- ЖИВАЯ СТАТИСТИКА -->
+                <div class="club-war-stats">
+                    <div class="club-war-stat">
+                        <div class="club-war-stat-icon">🛡️</div>
+                        <div>
+                            <div class="club-war-stat-val">${stats.onlineClansMembers}</div>
+                            <div class="club-war-stat-lbl">Сокланов онлайн</div>
+                        </div>
+                    </div>
+                    <div class="club-war-stat">
+                        <div class="club-war-stat-icon">⚔️</div>
+                        <div>
+                            <div class="club-war-stat-val">${stats.clansSearching}</div>
+                            <div class="club-war-stat-lbl">Кланов в поиске</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ДЕЙСТВИЯ -->
+                <div class="club-war-actions">
+                    <button class="club-war-find-btn"
+                            onclick="startClubWarSearch()"
+                            ${readyCount < 5 ? 'disabled' : ''}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="7"/>
+                            <path d="m20 20-3.5-3.5"/>
+                        </svg>
+                        ${readyCount < 5 ? `НУЖНО ЕЩЁ ${5 - readyCount}` : 'НАЙТИ МАТЧ'}
+                    </button>
+                    <button class="club-war-back-btn" onclick="switchPage('club')">◀ НАЗАД</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================
+// 📊 СТАТИСТИКА ОЧЕРЕДИ
+// ============================================================
+async function getClubWarQueueStats() {
+    const stats = { onlineClansMembers: 0, clansSearching: 0 };
+
+    try {
+        // 1. Сокланы онлайн
+        if (myClub?.members?.length) {
+            const ids = myClub.members.map(m => m.telegram_id);
+            const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+            const { count } = await sb.from('users')
+                .select('telegram_id', { count: 'exact', head: true })
+                .in('telegram_id', ids)
+                .gte('last_seen', cutoff);
+            stats.onlineClansMembers = count || 0;
+        }
+
+        // 2. Кланы, которые ищут войну
+        const { data: queue } = await sb.from('club_war_queue')
+            .select('club_id')
+            .gte('joined_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
+        stats.clansSearching = (queue || []).length;
+
+    } catch (e) {
+        console.warn('getClubWarQueueStats:', e);
+    }
+
+    return stats;
+}
+
+// ============================================================
+// 🚀 СТАРТ ПОИСКА
+// ============================================================
+async function startClubWarSearch() {
+    if (!myClub?.club) return;
+
+    haptic('heavy');
+
+    // Собираем состав
+    const sortedMembers = [...myClub.members].sort((a, b) => {
+        const eA = a.user?.elo ?? 1000;
+        const eB = b.user?.elo ?? 1000;
+        return eB - eA;
+    });
+    const lineup = sortedMembers.slice(0, 5);
+
+    if (lineup.length < 5) {
+        showToast('⚠️ В Клане должно быть минимум 5 игроков');
+        return;
+    }
+
+    // Регистрируемся в очереди
+    try {
+        const { data: existing } = await sb.from('club_war_queue')
+            .select('id').eq('club_id', myClub.club.id).maybeSingle();
+
+        if (!existing) {
+            const { data: q, error } = await sb.from('club_war_queue').insert({
+                club_id: myClub.club.id,
+                club_tag: myClub.club.tag,
+                club_name: myClub.club.name,
+                club_logo: myClub.club.logo_url,
+                leader_id: currentUser.telegram_id,
+                lineup: lineup.map(m => ({
+                    telegram_id: m.telegram_id,
+                    display_name: m.user?.display_name,
+                    custom_avatar: m.user?.custom_avatar,
+                    photo_url: m.user?.photo_url,
+                    elo: m.user?.elo ?? 1000,
+                })),
+                avg_elo: Math.round(lineup.reduce((s, m) => s + (m.user?.elo ?? 1000), 0) / 5),
+                joined_at: new Date().toISOString(),
+            }).select().single();
+
+            if (error) throw error;
+            _clubWarState.queueId = q.id;
+        } else {
+            _clubWarState.queueId = existing.id;
+        }
+
+        _clubWarState.active = true;
+        _clubWarState.seconds = 0;
+        _clubWarState.clansSeen = new Set();
+
+        renderClubWarSearching();
+        startClubWarTimer();
+        startClubWarPolling();
+
+    } catch (e) {
+        console.error('startClubWarSearch:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+// ============================================================
+// 🔍 ЭКРАН ПОИСКА
+// ============================================================
+function renderClubWarSearching() {
+    const el = document.getElementById('clubWarContent');
+    if (!el) return;
+
+    el.innerHTML = `
+        <div class="club-war-screen">
+            <div class="club-war-overlay"></div>
+            <div class="club-war-scanlines"></div>
+
+            <div class="club-war-content">
+                <div class="club-war-searching">
+                    <div class="club-war-radar">
+                        <span class="club-war-radar-ring"></span>
+                        <span class="club-war-radar-ring"></span>
+                        <span class="club-war-radar-ring"></span>
+                        <span class="club-war-radar-core"></span>
+                    </div>
+
+                    <div class="club-war-timer" id="clubWarTimer">00:00</div>
+                    <div class="club-war-timer-label">ПОИСК ПРОТИВНИКА</div>
+
+                    <div class="club-war-queue-stats">
+                        <div class="club-war-stat">
+                            <div class="club-war-stat-icon">⚔️</div>
+                            <div>
+                                <div class="club-war-stat-val" id="clubWarSearching">0</div>
+                                <div class="club-war-stat-lbl">Кланов в поиске</div>
+                            </div>
+                        </div>
+                        <div class="club-war-stat">
+                            <div class="club-war-stat-icon">👥</div>
+                            <div>
+                                <div class="club-war-stat-val" id="clubWarPlayers">0</div>
+                                <div class="club-war-stat-lbl">Игроков онлайн</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="club-war-log" id="clubWarLog">
+                        <span class="club-war-log-line">▸ <b>СИСТЕМА:</b> ты в очереди</span>
+                    </div>
+
+                    <div class="club-war-actions">
+                        <button class="club-war-cancel-btn" onclick="cancelClubWarSearch()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 6l12 12M18 6 6 18"/>
+                            </svg>
+                            ОТМЕНИТЬ ПОИСК
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function startClubWarTimer() {
+    if (_clubWarState.timer) clearInterval(_clubWarState.timer);
+    const el = document.getElementById('clubWarTimer');
+
+    _clubWarState.timer = setInterval(() => {
+        _clubWarState.seconds++;
+        const m = String(Math.floor(_clubWarState.seconds / 60)).padStart(2, '0');
+        const s = String(_clubWarState.seconds % 60).padStart(2, '0');
+        const target = document.getElementById('clubWarTimer');
+        if (target) target.textContent = `${m}:${s}`;
+    }, 1000);
+}
+
+function startClubWarPolling() {
+    if (_clubWarState.pollTimer) clearInterval(_clubWarState.pollTimer);
+
+    const poll = async () => {
+        if (!_clubWarState.active) return;
+
+        try {
+            // Обновляем статистику
+            const stats = await getClubWarQueueStats();
+            const searchingEl = document.getElementById('clubWarSearching');
+            if (searchingEl) searchingEl.textContent = stats.clansSearching;
+
+            // Проверяем, нашлась ли пара
+            const { data: myQueue } = await sb.from('club_war_queue')
+                .select('*').eq('id', _clubWarState.queueId).maybeSingle();
+
+	// Запускаем подбор (любой клиент может триггерить)
+	try { await sb.rpc('match_club_wars'); } catch (e) {}
+
+            if (myQueue?.matched_with) {
+                // Матч найден!
+                onClubWarMatchFound(myQueue);
+                return;
+            }
+
+            // Если увидели новые кланы — пишем в лог
+            const { data: allQueue } = await sb.from('club_war_queue')
+                .select('club_id, club_name, club_tag, avg_elo')
+                .gte('joined_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
+
+            const log = document.getElementById('clubWarLog');
+            if (log && allQueue) {
+                const otherClans = allQueue.filter(q => q.club_id !== myClub.club.id);
+                if (otherClans.length && !_clubWarState.clansSeen) {
+                    _clubWarState.clansSeen = new Set();
+                }
+                otherClans.forEach(c => {
+                    if (!_clubWarState.clansSeen.has(c.club_id)) {
+                        _clubWarState.clansSeen.add(c.club_id);
+                        const line = document.createElement('span');
+                        line.className = 'club-war-log-line';
+                        line.innerHTML = `▸ Найден: <b>[${escapeHtml(c.club_tag)}]</b> ${escapeHtml(c.club_name)} · ELO ${c.avg_elo}`;
+                        log.appendChild(line);
+                        log.scrollTop = log.scrollHeight;
+                    }
+                });
+            }
+
+        } catch (e) {
+            console.warn('club war poll:', e);
+        }
+    };
+
+    poll();
+    _clubWarState.pollTimer = setInterval(poll, 3000);
+}
+
+// ============================================================
+// 🎯 МАТЧ НАЙДЕН
+// ============================================================
+async function onClubWarMatchFound(queue) {
+    if (!_clubWarState.active) return;
+    _clubWarState.active = false;
+
+    if (_clubWarState.timer)     clearInterval(_clubWarState.timer);
+    if (_clubWarState.pollTimer) clearInterval(_clubWarState.pollTimer);
+
+    haptic('heavy');
+    if (typeof SFX !== 'undefined') SFX.play('matchFound');
+
+    // Получаем данные второго клана
+    const { data: enemy } = await sb.from('club_war_queue')
+        .select('*').eq('id', queue.matched_with).maybeSingle();
+
+    showToast(`⚔️ Матч найден: [${enemy?.club_tag || '???'}]`);
+    setTimeout(() => renderClubWarMatched(queue, enemy), 600);
+}
+
+function renderClubWarMatched(myQ, enemyQ) {
+    const el = document.getElementById('clubWarContent');
+    if (!el) return;
+
+    el.innerHTML = `
+        <div class="club-war-screen">
+            <div class="club-war-bg" style="background-image: url('${mapBgUrl('Sandstorm')}')"></div>
+            <div class="club-war-overlay"></div>
+            <div class="club-war-scanlines"></div>
+
+            <div class="club-war-content">
+                <div class="club-war-hero">
+                    <div class="club-war-eyebrow" style="background: rgba(255,84,112,0.12); border-color: rgba(255,84,112,0.5); color: #ff8a9d;">
+                        ⚔️ МАТЧ НАЙДЕН
+                    </div>
+                    <div class="club-war-title" style="background: linear-gradient(90deg, #ff5470, #fff, #ff5470); background-size: 200% auto; -webkit-background-clip: text; background-clip: text;">
+                        ГЛАДИАТОРЫ СОШЛИСЬ
+                    </div>
+                    <div class="club-war-subtitle">Приготовься к бою</div>
+                </div>
+
+                <div class="club-war-vs-row">
+                    <div class="club-war-team">
+                        <div class="club-war-logo">${myQ.club_logo ? `<img src="${myQ.club_logo}">` : escapeHtml(myQ.club_tag.slice(0, 2))}</div>
+                        <div class="club-war-team-info">
+                            <div class="club-war-team-name">${escapeHtml(myQ.club_name)}</div>
+                            <div class="club-war-team-tag">[${escapeHtml(myQ.club_tag)}]</div>
+                            <div class="club-war-team-count">ELO ${myQ.avg_elo}</div>
+                        </div>
+                    </div>
+                    <div class="club-war-vs-badge">VS</div>
+                    <div class="club-war-team enemy">
+                        <div class="club-war-logo">${enemyQ?.club_logo ? `<img src="${enemyQ.club_logo}">` : escapeHtml((enemyQ?.club_tag || '??').slice(0, 2))}</div>
+                        <div class="club-war-team-info">
+                            <div class="club-war-team-name">${escapeHtml(enemyQ?.club_name || 'Соперник')}</div>
+                            <div class="club-war-team-tag">[${escapeHtml(enemyQ?.club_tag || '???')}]</div>
+                            <div class="club-war-team-count">ELO ${enemyQ?.avg_elo || '?'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="club-war-find-btn" onclick="enterClubWarRoom('${myQ.id}', '${myQ.matched_with}')">
+                    ▶ ВОЙТИ В КОМНАТУ
+                </button>
+                <button class="club-war-back-btn" style="width: 100%; margin-top: 10px;" onclick="switchPage('club')">◀ НАЗАД</button>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================
+// 🚪 ВХОД В КОМНАТУ
+// ============================================================
+async function enterClubWarRoom(myQueueId, enemyQueueId) {
+    showToast('🎮 Создаём комнату...');
+
+    try {
+        const { data, error } = await sb.rpc('create_club_war_room', {
+            p_club_a_queue: myQueueId,
+            p_club_b_queue: enemyQueueId,
+        });
+
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Ошибка создания комнаты');
+
+        // Перекидываем в комнату
+        showToast('✅ Комната создана!');
+        openRoomView(data.room_id);
+
+    } catch (e) {
+        console.error('enterClubWarRoom:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+// ============================================================
+// 🛑 ОТМЕНА ПОИСКА
+// ============================================================
+async function cancelClubWarSearch() {
+    if (!_clubWarState.active) return;
+
+    _clubWarState.active = false;
+    if (_clubWarState.timer)     clearInterval(_clubWarState.timer);
+    if (_clubWarState.pollTimer) clearInterval(_clubWarState.pollTimer);
+
+    try {
+        if (_clubWarState.queueId) {
+            await sb.from('club_war_queue').delete().eq('id', _clubWarState.queueId);
+        }
+    } catch (e) {}
+
+    _clubWarState.queueId = null;
+    showToast('Поиск отменён');
+    haptic('light');
+    renderClubWarScreen();
+}
+
+// ============================================================
+// ❌ УБРАТЬ ИГРОКА ИЗ СОСТАВА (только визуально)
+// ============================================================
+const _clubWarExcluded = new Set();
+
+function removeFromClubWarLineup(userId) {
+    _clubWarExcluded.add(userId);
+    showToast('Игрок убран из состава');
+    haptic('light');
+    // Перерисовываем с учётом исключений
+    renderClubWarScreenWithExcluded();
+}
+
+async function renderClubWarScreenWithExcluded() {
+    // Просто перерисовываем — состав пересобирается
+    await renderClubWarScreen();
+}
+
+// Экспорт
+window.openClubWarScreen = openClubWarScreen;
+window.startClubWarSearch = startClubWarSearch;
+window.cancelClubWarSearch = cancelClubWarSearch;
+window.enterClubWarRoom = enterClubWarRoom;
+window.removeFromClubWarLineup = removeClubWarLineup;
 
     </script>
 
