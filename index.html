@@ -34870,14 +34870,42 @@ function initSupabaseClient() {
     if (sb) return true;
     if (!window.supabase?.createClient) return false;
     try {
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            global: {
+                fetch: function(url, options) {
+                    // 🔥 Ретраи для сетевых ошибок (ERR_CONNECTION_RESET)
+                    const MAX_RETRIES = 3;
+                    const RETRY_DELAYS = [400, 900, 1800];
 
-        // 🔥 ФИКС: sb.rpc() возвращает PostgrestBuilder без .catch()
-        // Оборачиваем в настоящий Promise — теперь .catch() работает везде
+                    async function attempt(n) {
+                        try {
+                            const res = await window.fetch(url, options);
+                            return res;
+                        } catch (e) {
+                            const msg = String(e?.message || e);
+                            const isNetwork =
+                                msg.includes('Failed to fetch') ||
+                                msg.includes('ERR_CONNECTION_RESET') ||
+                                msg.includes('NetworkError') ||
+                                msg.includes('Load failed');
+
+                            if (isNetwork && n < MAX_RETRIES) {
+                                console.warn(`🔁 Fetch retry ${n + 1}/${MAX_RETRIES}: ${url.slice(0, 80)}`);
+                                await new Promise(r => setTimeout(r, RETRY_DELAYS[n]));
+                                return attempt(n + 1);
+                            }
+                            throw e;
+                        }
+                    }
+
+                    return attempt(0);
+                }
+            }
+        });
+
         const _origRpc = sb.rpc.bind(sb);
         sb.rpc = (name, params) => Promise.resolve(_origRpc(name, params));
-
-        console.log('✅ Supabase client создан');
+        console.log('✅ Supabase client создан (с ретраями)');
         return true;
     } catch (e) {
         console.error('❌ Ошибка создания Supabase client:', e);
@@ -71819,32 +71847,33 @@ function prettifyEmptyStates(scope = document) {
     }
 
     // Оборачиваем fetch
-    if (window.fetch && !window._fetchWrapped) {
-        window._fetchWrapped = true;
-        const origFetch = window.fetch.bind(window);
-        window.fetch = function() {
-            const url = String(arguments[0] || '');
-            // 🔥 ФИКС #3: игнорируем также supabase-функции и приватные запросы
-            if (url.includes('telegram')
-                || url.includes('/storage/')
-                || url.includes('/rest/v1/')
-                || url.includes('/functions/v1/notify')
-                || url.includes('/functions/v1/mm-tick')) {
-                return origFetch.apply(null, arguments);
-            }
+if (window.fetch && !window._fetchWrapped) {
+    window._fetchWrapped = true;
+    const origFetch = window.fetch;
 
-            let fired = false;
-            const timer = setTimeout(() => {
-                fired = true;
-                start();
-            }, 400);
+    window.fetch = function(input, init) {
+        const url = typeof input === 'string'
+            ? input
+            : (input && input.url) || String(input || '');
 
-            return origFetch.apply(null, arguments).finally(() => {
-                clearTimeout(timer);
-                if (fired) finish();
-            });
-        };
-    }
+        // Пропускаем всё, что связано с Supabase, Telegram и внешними API
+        if (url.includes('supabase.co')
+            || url.includes('telegram')
+            || url.includes('/storage/')
+            || url.includes('/rest/v1/')
+            || url.includes('/functions/v1/')) {
+            return origFetch.call(this, input, init);
+        }
+
+        let fired = false;
+        const timer = setTimeout(() => { fired = true; start(); }, 400);
+
+        return origFetch.call(this, input, init).finally(() => {
+            clearTimeout(timer);
+            if (fired) finish();
+        });
+    };
+}
 
     // Ручной API
     window.topProgress = { start, finish };
@@ -73844,6 +73873,37 @@ window.cancelClubWarSearch    = cancelClubWarSearch;
 window.cancelClubWarLobby     = cancelClubWarLobby;
 window.confirmClubWarMatch    = confirmClubWarMatch;
 window.voteCancelClubWar      = voteCancelClubWar;
+
+// 🔓 Разблокировка аудио по первому жесту
+(function unlockAudio() {
+    let unlocked = false;
+    function unlock() {
+        if (unlocked) return;
+        unlocked = true;
+        try {
+            if (window.SoundSystem && typeof window.SoundSystem.unlock === 'function') {
+                window.SoundSystem.unlock();
+            }
+            // Общий трюк: создаём контекст и проигрываем "тишину"
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) {
+                const c = new AC();
+                if (c.state === 'suspended') c.resume();
+                const buf = c.createBuffer(1, 1, 22050);
+                const src = c.createBufferSource();
+                src.buffer = buf;
+                src.connect(c.destination);
+                src.start(0);
+            }
+        } catch (e) {}
+        ['pointerdown','touchstart','keydown'].forEach(ev =>
+            document.removeEventListener(ev, unlock)
+        );
+    }
+    ['pointerdown','touchstart','keydown'].forEach(ev =>
+        document.addEventListener(ev, unlock, { once: false, passive: true })
+    );
+})();
 
     </script>
 
