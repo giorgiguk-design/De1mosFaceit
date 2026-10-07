@@ -74540,8 +74540,13 @@ window.openSoundMusicSheet = function() {
     const musicOn = localStorage.getItem('musicEnabled') !== '0';
     const musicVol = parseFloat(localStorage.getItem('musicVolume') || '0.25');
 
-    sheet.innerHTML = `
-        <div class="sheet-title">🎵 Музыка и звуки</div>
+sheet.innerHTML = `
+    <div class="sheet-title">🎵 Музыка и звуки</div>
+
+    <button class="sheet-option" id="snmLibraryBtn" style="background: linear-gradient(135deg, rgba(217,171,90,0.15), rgba(167,139,250,0.08)); border: 1px solid rgba(217,171,90,0.4);">
+        <span style="font-size: 18px;">🎧</span>
+        <span style="color: #ffd700; font-weight: 800;">Музыкальная библиотека</span>
+    </button>
 
         <!-- СЕКЦИЯ: ЗВУКИ -->
         <div style="font-size: 10px; color: var(--hint); font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 4px; margin-top: 4px;">
@@ -75543,20 +75548,35 @@ console.log('🎵 Шит Музыка и звуки зарегистрирова
     // ============================================================
     // БИБЛИОТЕКА
     // ============================================================
-    async function openMusicLibrary() {
-        if (!currentUser) return;
-        if (!document.getElementById('page-music')) {
-            const p = document.createElement('div');
-            p.className = 'container page';
-            p.id = 'page-music';
-            p.innerHTML = '<div id="musicContent"></div>';
-            const dash = document.getElementById('page-dashboard');
-            dash?.parentNode?.insertBefore(p, dash.nextSibling);
-        }
-        switchPage('music');
-        await loadTracks();
-        await renderLibrary();
+async function openMusicLibrary() {
+    if (!currentUser) return;
+
+    let page = document.getElementById('page-music');
+    if (!page) {
+        page = document.createElement('div');
+        page.className = 'container page';
+        page.id = 'page-music';
+        page.innerHTML = '<div id="musicContent"></div>';
+        const dash = document.getElementById('page-dashboard');
+        if (dash && dash.parentNode) dash.parentNode.insertBefore(page, dash.nextSibling);
+        else document.body.appendChild(page);
     }
+
+    let activated = false;
+    if (typeof window.switchPage === 'function') {
+        try { window.switchPage('music'); activated = page.classList.contains('active'); } catch (e) {}
+    }
+    if (!activated) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        page.classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset?.page === 'music'));
+    }
+
+    await loadTracks();
+    await renderLibrary();
+    page.scrollTop = 0;
+    if (window.scrollTo) window.scrollTo(0, 0);
+}
 
     async function loadTracks() {
         try {
@@ -76019,6 +76039,123 @@ document.addEventListener('change', async (e) => {
 }, true);
 
 console.log('✅ OCR handler зарегистрирован');
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 🎧 УНИВЕРСАЛЬНЫЙ ПАТЧ: кнопка "Музыкальная библиотека"
+//    в любой шит "Музыка и звуки", кто бы его ни рисовал
+// ═══════════════════════════════════════════════════════════════
+(function() {
+    if (window._musicLibUniversalPatch) return;
+    window._musicLibUniversalPatch = true;
+
+    // ─── 1. Починенная openMusicLibrary ──────────────────────────
+    window.openMusicLibrary = async function() {
+        if (!window.currentUser) {
+            if (typeof showToast === 'function') showToast('⚠️ Профиль не загружен');
+            return;
+        }
+        let page = document.getElementById('page-music');
+        if (!page) {
+            page = document.createElement('div');
+            page.className = 'container page';
+            page.id = 'page-music';
+            page.innerHTML = '<div id="musicContent"></div>';
+            const dash = document.getElementById('page-dashboard');
+            if (dash && dash.parentNode) dash.parentNode.insertBefore(page, dash.nextSibling);
+            else document.body.appendChild(page);
+        }
+        let activated = false;
+        if (typeof window.switchPage === 'function') {
+            try { window.switchPage('music'); activated = page.classList.contains('active'); } catch (e) {}
+        }
+        if (!activated) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            page.classList.add('active');
+        }
+        // Загружаем и рендерим через API плеера, если он доступен
+        try {
+            if (typeof window.loadTracks === 'function') await window.loadTracks();
+            else if (typeof sb !== 'undefined') {
+                // если loadTracks закрыт в замыкании — дергаем через глобальную
+                // переменную плеера, которую легко выцепить из его замыкания
+            }
+        } catch (e) { console.warn(e); }
+        if (typeof window.renderLibrary === 'function') await window.renderLibrary();
+        page.scrollTop = 0;
+        if (window.scrollTo) window.scrollTo(0, 0);
+    };
+
+    // ─── 2. Инжект кнопки в любой шит с заголовком "Музыка и звуки"
+    function inject() {
+        // Ищем ЛЮБОЙ элемент, в котором есть текст "МУЗЫКА И ЗВУКИ" (в верхнем регистре на скрине)
+        const candidates = document.querySelectorAll(
+            '.sheet, .sheet.active, .modal, .dialog, [class*="sheet"], [class*="Sheet"]'
+        );
+        let sheetEl = null;
+        for (const el of candidates) {
+            if (!el.offsetParent && el.style.display === 'none') continue;
+            const txt = (el.textContent || '').trim();
+            if (/музыка\s*и\s*звуки/i.test(txt) && el.querySelector('button, .sheet-option, [class*="row"], [class*="toggle"]')) {
+                // Убеждаемся, что это верхнеуровневый контейнер шита
+                if (txt.length < 800) { sheetEl = el; break; }
+            }
+        }
+        if (!sheetEl) return;
+        if (sheetEl.querySelector('#musicLibUniversalBtn')) return;
+
+        const count = (window.getMusicTracksCount && window.getMusicTracksCount()) || 0;
+
+        const btn = document.createElement('button');
+        btn.id = 'musicLibUniversalBtn';
+        btn.type = 'button';
+        btn.style.cssText = `
+            display:flex;align-items:center;gap:10px;width:100%;
+            padding:14px 16px;margin:14px 0 0;
+            background:linear-gradient(135deg, rgba(217,171,90,0.18), rgba(167,139,250,0.10));
+            border:1px solid rgba(217,171,90,0.45);
+            border-radius:12px;color:#ffd700;font-family:inherit;
+            font-size:13px;font-weight:800;cursor:pointer;text-align:left;
+        `;
+        btn.innerHTML = `
+            <span style="font-size:18px;">🎧</span>
+            <span>Музыкальная библиотека</span>
+            <span style="margin-left:auto;font-size:11px;color:#ffd700;font-weight:800;">${count} трек${count === 1 ? '' : (count >= 2 && count <= 4 ? 'а' : 'ов')}</span>
+        `;
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+
+            // Закрываем шит — ищем кнопку "ЗАКРЫТЬ" внутри и кликаем по ней
+            const closeBtn = Array.from(sheetEl.querySelectorAll('button'))
+                .find(b => /закрыть|отмена|свернуть/i.test(b.textContent));
+            if (closeBtn) closeBtn.click();
+            else {
+                sheetEl.style.display = 'none';
+                document.querySelectorAll('.sheet-overlay.active, .overlay.active')
+                    .forEach(o => o.classList.remove('active'));
+            }
+
+            setTimeout(() => window.openMusicLibrary(), 260);
+        });
+
+        // Вставляем ПЕРЕД кнопкой "ЗАКРЫТЬ", либо в конец
+        const closeBtn = Array.from(sheetEl.querySelectorAll('button'))
+            .find(b => /закрыть/i.test(b.textContent));
+        if (closeBtn && closeBtn.parentNode) closeBtn.parentNode.insertBefore(btn, closeBtn);
+        else sheetEl.appendChild(btn);
+
+        console.log('🎧 Music library button injected into sheet');
+    }
+
+    // Наблюдение за DOM
+    const mo = new MutationObserver(() => inject());
+    mo.observe(document.body, { childList: true, subtree: true });
+    setInterval(inject, 800);
+
+    console.log('🎧 Music library universal patch installed');
+})();
 </script>
 
 
