@@ -28845,6 +28845,53 @@ html.lite-mode .dash-cases-btn::before { animation: none !important; opacity: 0.
 .avatar { background: none !important; }
 /* ТЕСТ: отключаем blur у карточек */
 .leaderboard-item, .chat-list-item, .club-member-row { backdrop-filter: none !important; }
+
+/* 🔥 ФИКС: график DXP — линия не деформируется, точка круглая */
+.elo-chart-card .ech-svg {
+    display: block;
+    width: 100%;
+    height: 180px !important;   /* фиксированная высота — без растяжения */
+    overflow: visible;
+}
+
+/* 🔥 Линия графика — чёткая, не растягивается по толщине */
+.elo-chart-card .js-elo-line {
+    vector-effect: non-scaling-stroke;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+/* 🔥 Точки — всегда круглые, не эллипсы */
+.elo-chart-card .js-elo-dot,
+.elo-chart-card .js-elo-points circle {
+    vector-effect: non-scaling-stroke;
+}
+
+/* 🔥 Сетка — тонкая, спокойная */
+.elo-chart-card .ech-svg-wrap {
+    background-image:
+        linear-gradient(rgba(var(--emerald-rgb), 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--emerald-rgb), 0.05) 1px, transparent 1px);
+    background-size: 100% 33.33%, 40px 100%;
+    border-left: 1px solid rgba(var(--emerald-rgb), 0.08);
+    border-bottom: 1px solid rgba(var(--emerald-rgb), 0.08);
+}
+
+/* 🔥 Убираем CSS-анимацию dash на линии — она ломает короткие графики */
+.elo-chart-card .js-elo-line {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+}
+
+/* 🔥 Y-ось — компактные подписи */
+.elo-chart-card .js-elo-yaxis {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--hint);
+    font-weight: 700;
+}
     
 </style>
 </head>
@@ -37105,7 +37152,7 @@ async function renderProfileView(user, options = {}) {
                     <span>—</span><span>—</span><span>—</span><span>—</span>
                 </div>
                 <div class="ech-svg-wrap">
-                    <svg class="ech-svg" viewBox="0 0 320 140" preserveAspectRatio="none">
+                    <svg class="ech-svg" viewBox="0 0 320 140" preserveAspectRatio="xMidYMid meet">
                         <defs>
                             <linearGradient id="eloGradient_${user.telegram_id}" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%"  stop-color="#a78bfa" stop-opacity="0.55"/>
@@ -53232,24 +53279,28 @@ async function renderEloChart(userId, cardEl = null) {
             y: yFor(p.elo),
         }));
 
-        // ═══════════ ZONES (полосы рангов) ═══════════
-        zonesGroup.innerHTML = '';
-        RANK_CONFIG.LEVELS.forEach(level => {
-            const top    = level.max === Infinity ? yMax : Math.min(level.max, yMax);
-            const bottom = Math.max(level.min, yMin);
-            if (top <= bottom) return;
+// ═══════════ ZONES — убраны, оставляем только тонкие линии ═══════════
+zonesGroup.innerHTML = '';
+RANK_CONFIG.LEVELS.forEach(level => {
+    const top    = level.max === Infinity ? yMax : Math.min(level.max, yMax);
+    const bottom = Math.max(level.min, yMin);
+    if (top <= bottom) return;
+    if (top - bottom < 20) return;   // 🔥 пропускаем слишком узкие диапазоны
 
-            const y1 = yFor(top);
-            const y2 = yFor(bottom);
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', padL);
-            rect.setAttribute('y', y1.toFixed(1));
-            rect.setAttribute('width', innerW);
-            rect.setAttribute('height', (y2 - y1).toFixed(1));
-            rect.setAttribute('fill', level.color);
-            rect.setAttribute('opacity', '0.08');
-            zonesGroup.appendChild(rect);
-        });
+    const y1 = yFor(top);
+    const y2 = yFor(bottom);
+    // Только тонкая линия по верхней границе зоны, без заливки
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', padL);
+    line.setAttribute('x2', padL + innerW);
+    line.setAttribute('y1', y1.toFixed(1));
+    line.setAttribute('y2', y1.toFixed(1));
+    line.setAttribute('stroke', level.color);
+    line.setAttribute('stroke-width', '0.5');
+    line.setAttribute('stroke-dasharray', '2 4');
+    line.setAttribute('opacity', '0.35');
+    zonesGroup.appendChild(line);
+});
 
         // ═══════════ TREND (цвет по направлению) ═══════════
         const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
