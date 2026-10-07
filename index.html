@@ -2375,9 +2375,53 @@
 .play-hero-compact {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 4px 0 16px;
+    gap: 14px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    border-radius: 0;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px);
+    background: linear-gradient(160deg,
+        rgba(var(--emerald-rgb), 0.08) 0%,
+        rgba(0, 0, 0, 0.55) 100%);
+    border: 1.5px solid rgba(var(--emerald-rgb), 0.35);
+    position: relative;
+    overflow: hidden;
     animation: playHeroIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.play-hero-compact::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--emerald), transparent);
+    opacity: 0.85;
+}
+.play-hero-compact .phc-icon {
+    font-size: 38px;
+    filter: drop-shadow(0 0 12px rgba(var(--emerald-rgb), 0.6));
+    position: relative;
+    z-index: 1;
+}
+.play-hero-compact .phc-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #fff 0%, var(--emerald-3) 50%, #fff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: cyberShine 5s linear infinite;
+}
+.play-hero-compact .phc-sub {
+    font-size: 11px;
+    color: var(--hint);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 3px;
+    text-transform: uppercase;
 }
 .play-hero-compact .phc-icon {
     font-size: 34px;
@@ -2530,19 +2574,80 @@
     gap: 10px;
     padding-bottom: 20px;
 }
+/* ═══════════════════════════════════════════════════════════ */
+/* 🎮 КОМНАТЫ — КИБЕРСПОРТИВНЫЙ ДИЗАЙН                        */
+/* ═══════════════════════════════════════════════════════════ */
+.play-rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 20px;
+}
+
 .play-room-card {
     position: relative;
     overflow: hidden;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 14px;
-    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
-                border-color 0.22s ease,
-                box-shadow 0.22s ease;
-    animation: slideUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    padding: 16px 18px;
+    background: linear-gradient(160deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(0, 0, 0, 0.55) 100%);
+    border: 1.5px solid rgba(var(--emerald-rgb), 0.25);
+    border-radius: 0;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px),
+        calc(100% - 14px) 100%, 0 100%, 0 14px);
     cursor: pointer;
+    isolation: isolate;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    animation: slideUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+
+/* Верхняя неоновая полоса */
+.play-room-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--emerald) 30%,
+        var(--emerald-3) 50%,
+        var(--emerald) 70%,
+        transparent 100%);
+    background-size: 200% 100%;
+    animation: barFlow 4s linear infinite;
+    opacity: 0.85;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* Свечение в углу */
+.play-room-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, rgba(var(--emerald-rgb), 0.18), transparent 65%);
+    filter: blur(30px);
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.3s ease;
+    opacity: 0.7;
+}
+
+.play-room-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(var(--emerald-rgb), 0.55);
+    box-shadow:
+        0 14px 40px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(var(--emerald-rgb), 0.4),
+        0 0 32px rgba(var(--emerald-rgb), 0.2);
+}
+.play-room-card:hover::after { opacity: 1; }
+.play-room-card:active { transform: scale(0.99); }
 .play-room-card button,
 .play-room-card a,
 .play-room-card .prc-action { pointer-events: auto; }
@@ -2569,14 +2674,19 @@
     margin-bottom: 10px;
 }
 .prc-avatar {
-    width: 44px; height: 44px;
-    border-radius: 14px;
+    width: 46px; height: 46px;
+    border-radius: 12px;
     background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
     display: flex; align-items: center; justify-content: center;
     font-weight: 900; font-size: 16px; color: #04140e;
     overflow: hidden; flex-shrink: 0;
-    box-shadow: 0 0 0 2px rgba(var(--emerald-rgb), 0.2);
+    box-shadow:
+        0 0 0 2px rgba(var(--emerald-rgb), 0.25),
+        0 0 16px rgba(var(--emerald-rgb), 0.3);
+    position: relative;
+    z-index: 2;
 }
+.prc-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .prc-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .prc-info { flex: 1; min-width: 0; }
 .prc-name {
@@ -2645,18 +2755,41 @@
 }
 
 .prc-action {
+    position: relative;
+    overflow: hidden;
     width: 100%;
-    padding: 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    font-family: inherit;
+    padding: 12px;
     border: none;
-    background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+    border-radius: 0;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px),
+        calc(100% - 8px) 100%, 0 100%, 0 8px);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--emerald), var(--emerald-2) 55%, var(--emerald-3));
+    background-size: 200% auto;
     color: #04140e;
-    transition: transform 0.18s;
+    transition: transform 0.18s ease, box-shadow 0.22s ease;
+    box-shadow: 0 4px 14px rgba(var(--emerald-rgb), 0.35);
+}
+.prc-action:not(:disabled):hover {
+    background-position: 100% 50%;
+    box-shadow: 0 8px 22px rgba(var(--emerald-rgb), 0.5);
+}
+.prc-action:active { transform: scale(0.97); }
+.prc-action.open {
+    background: rgba(var(--emerald-rgb), 0.12);
+    color: var(--emerald);
+    border: 1.5px solid var(--emerald);
+    box-shadow: none;
+}
+.prc-action:disabled {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--hint);
+    cursor: not-allowed;
+    box-shadow: none;
 }
 .prc-action:active { transform: scale(0.97); }
 .prc-action.open {
@@ -72212,83 +72345,108 @@ window.fireConfetti = function(opts) {
 console.log('🎉 Confetti установлен');
 
 // ============================================================
-// ⚔️ КЛАНОВЫЕ ВОЙНЫ
+// ⚔️ КЛАНОВЫЕ ВОЙНЫ v2 — с подтверждениями и отменой
 // ============================================================
-let _clubWarState = {
-    active: false,
-    timer: null,
-    seconds: 0,
-    queueId: null,
+const CW = {
+    realtime: null,
     pollTimer: null,
+    timerTimer: null,
+    lobby: null,        // моя лобби-запись
+    enemy: null,        // лобби соперника (если matched)
+    seconds: 0,
+    matchSeconds: 0,    // 5-минутный таймер подтверждения матча
+    picks: new Set(),   // выбранные игроки (для пикера)
+    initialized: false,
 };
 
+// ────────────────────────────────────────────────────────────
+// 🚪 ВХОД
+// ────────────────────────────────────────────────────────────
 async function openClubWarScreen() {
-    if (!myClub?.club) {
-        showToast('🛡️ Ты не в Клане');
-        return;
+    if (!myClub?.club) { showToast('🛡️ Ты не в Клане'); return; }
+    switchPage('club-war');
+
+    await loadClubWarLobby();
+    await renderClubWarScreen();
+
+    if (!CW.initialized) {
+        CW.initialized = true;
+        subscribeClubWarRealtime();
+        CW.pollTimer = setInterval(clubWarPoll, 2500);
     }
 
-    switchPage('club-war');
-    await renderClubWarScreen();
+    // Запускаем матчмейкинг — от любого клиента
+    sb.rpc('match_club_wars').catch(() => {});
 }
 
+// ────────────────────────────────────────────────────────────
+// 📡 ЗАГРУЗКА ЛОББИ
+// ────────────────────────────────────────────────────────────
+async function loadClubWarLobby() {
+    try {
+        const { data } = await sb.from('club_war_queue')
+            .select('*')
+            .eq('club_id', myClub.club.id)
+            .maybeSingle();
+
+        CW.lobby = data || null;
+
+        // Если matched — загружаем врага
+        if (CW.lobby?.matched_with) {
+            const { data: enemy } = await sb.from('club_war_queue')
+                .select('*')
+                .eq('id', CW.lobby.matched_with)
+                .maybeSingle();
+            CW.enemy = enemy || null;
+        } else {
+            CW.enemy = null;
+        }
+    } catch (e) {
+        console.warn('loadClubWarLobby:', e);
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// 🎯 ДИСПЕТЧЕР РЕНДЕРА
+// ────────────────────────────────────────────────────────────
 async function renderClubWarScreen() {
     const el = document.getElementById('clubWarContent');
     if (!el) return;
 
-    // Проверяем права
-    const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
-    const canStart = myRole === 'owner' || myRole === 'elder'
-                  || myClub.club.owner_id === currentUser.telegram_id;
+    const L = CW.lobby;
 
-    if (!canStart) {
-        el.innerHTML = `
-            <div class="club-war-screen">
-                <div class="club-war-overlay"></div>
-                <div class="club-war-content">
-                    <div class="club-war-hero">
-                        <div class="club-war-title">ТОЛЬКО OWNER / ELDER</div>
-                        <div class="club-war-subtitle">Начать войну может глава или заместитель клана</div>
-                    </div>
-                    <button class="club-war-back-btn" onclick="switchPage('dashboard')" style="width: 100%;">◀ НАЗАД</button>
-                </div>
-            </div>
-        `;
-        return;
+    // Нет лобби — стартовый экран
+    if (!L || L.status === 'cancelled') {
+        return renderClubWarNoLobby(el);
     }
 
-    // Фон: карта или дефолтный
-    const bgUrl = mapBgUrl('Sandstone') || '';
-    const logoHTML = myClub.club.logo_url
-        ? `<img src="${myClub.club.logo_url}" alt="">`
-        : myClub.club.tag.slice(0, 2).toUpperCase();
+    // Есть лобби
+    switch (L.status) {
+        case 'inviting':  return renderClubWarInviting(el, L);
+        case 'ready':     return renderClubWarReady(el, L);
+        case 'searching': return renderClubWarSearching(el, L);
+        case 'matched':   return renderClubWarMatched(el, L, CW.enemy);
+        default:          return renderClubWarNoLobby(el);
+    }
+}
 
-    // Топ-5 состава клана (по ELO)
-    const sortedMembers = [...myClub.members].sort((a, b) => {
-        const eA = a.user?.elo ?? 1000;
-        const eB = b.user?.elo ?? 1000;
-        return eB - eA;
-    });
-    const lineup = sortedMembers.slice(0, 5);
-    const isOnline = (u) => {
-        const ls = u?.last_seen ? new Date(u.last_seen).getTime() : 0;
-        return Date.now() - ls < 2 * 60 * 1000;
-    };
-    const onlineCount = sortedMembers.filter(m => isOnline(m.user)).length;
-    const readyCount = lineup.length;
-    const emptySlots = Math.max(0, 5 - readyCount);
+// ────────────────────────────────────────────────────────────
+// 🅰️ ЭКРАН 1 — НЕТ ЛОББИ
+// ────────────────────────────────────────────────────────────
+async function renderClubWarNoLobby(el) {
+    const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+    const canLead = myRole === 'owner' || myRole === 'elder'
+                 || myClub.club.owner_id === currentUser.telegram_id;
 
-    // Живая статистика
     const stats = await getClubWarQueueStats();
 
     el.innerHTML = `
         <div class="club-war-screen">
-            <div class="club-war-bg" style="background-image: url('${bgUrl}')"></div>
+            <div class="club-war-bg" style="background-image: url('${mapBgUrl('Sandstone')}')"></div>
             <div class="club-war-overlay"></div>
             <div class="club-war-scanlines"></div>
 
             <div class="club-war-content">
-                <!-- HERO -->
                 <div class="club-war-hero">
                     <div class="club-war-eyebrow">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -72301,72 +72459,6 @@ async function renderClubWarScreen() {
                     <div class="club-war-subtitle">Собери состав · Найди врага · Забери победу</div>
                 </div>
 
-                <!-- VS -->
-                <div class="club-war-vs-row">
-                    <div class="club-war-team">
-                        <div class="club-war-logo">${logoHTML}</div>
-                        <div class="club-war-team-info">
-                            <div class="club-war-team-name">${escapeHtml(myClub.club.name)}</div>
-                            <div class="club-war-team-tag">[${escapeHtml(myClub.club.tag)}]</div>
-                            <div class="club-war-team-count">${readyCount}/5 игроков</div>
-                        </div>
-                    </div>
-                    <div class="club-war-vs-badge">VS</div>
-                    <div class="club-war-team enemy">
-                        <div class="club-war-logo">?</div>
-                        <div class="club-war-team-info">
-                            <div class="club-war-team-name">ПРОТИВНИК</div>
-                            <div class="club-war-team-tag">НЕИЗВЕСТЕН</div>
-                            <div class="club-war-team-count">Поиск врага...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- СОСТАВ -->
-                <div class="club-war-roster">
-                    <div class="club-war-roster-title">
-                        <span>⚔️ БОЕВОЙ СОСТАВ</span>
-                        <span class="club-war-roster-count"><b>${readyCount}</b>/5 · онлайн: ${onlineCount}</span>
-                    </div>
-
-                    ${lineup.map(m => {
-                        const u = m.user || {};
-                        const av = renderAvatar(u);
-                        const isOn = isOnline(u);
-                        const isMe = Number(m.telegram_id) === Number(currentUser.telegram_id);
-                        const roleIcon = m.role === 'owner' ? '👑' : m.role === 'elder' ? '⭐' : '';
-                        return `
-                            <div class="club-war-player ${isOn ? 'online' : 'offline'}"
-                                 data-user-id="${m.telegram_id}"
-                                 onclick="openPlayerProfile(${m.telegram_id})">
-                                <div class="club-war-player-avatar">${av}</div>
-                                <div class="club-war-player-info">
-                                    <div class="club-war-player-name">
-                                        ${escapeHtml(u.display_name || 'Игрок')}
-                                        ${roleIcon}
-                                        ${isMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
-                                    </div>
-                                    <div class="club-war-player-meta">
-                                        ⚡ ${u.elo ?? 1000} DXP · ${isOn ? 'в сети' : 'офлайн'}
-                                    </div>
-                                </div>
-                                ${(!isMe && canStart) ? `
-                                    <button class="club-war-player-remove"
-                                            onclick="event.stopPropagation(); removeFromClubWarLineup(${m.telegram_id})">×</button>
-                                ` : ''}
-                            </div>
-                        `;
-                    }).join('')}
-
-                    ${Array(emptySlots).fill(`
-                        <div class="club-war-empty-slot">
-                            <span style="font-size: 16px;">+</span>
-                            Свободный слот
-                        </div>
-                    `).join('')}
-                </div>
-
-                <!-- ЖИВАЯ СТАТИСТИКА -->
                 <div class="club-war-stats">
                     <div class="club-war-stat">
                         <div class="club-war-stat-icon">🛡️</div>
@@ -72384,17 +72476,19 @@ async function renderClubWarScreen() {
                     </div>
                 </div>
 
-                <!-- ДЕЙСТВИЯ -->
                 <div class="club-war-actions">
-                    <button class="club-war-find-btn"
-                            onclick="startClubWarSearch()"
-                            ${readyCount < 5 ? 'disabled' : ''}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="7"/>
-                            <path d="m20 20-3.5-3.5"/>
-                        </svg>
-                        ${readyCount < 5 ? `НУЖНО ЕЩЁ ${5 - readyCount}` : 'НАЙТИ МАТЧ'}
-                    </button>
+                    ${canLead ? `
+                        <button class="club-war-find-btn" onclick="openClubWarPicker()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            СОБРАТЬ СОСТАВ
+                        </button>
+                    ` : `
+                        <button class="club-war-find-btn" disabled>
+                            ⏳ ОЖИДАЙ ЛИДЕРА
+                        </button>
+                    `}
                     <button class="club-war-back-btn" onclick="switchPage('club')">◀ НАЗАД</button>
                 </div>
             </div>
@@ -72402,107 +72496,174 @@ async function renderClubWarScreen() {
     `;
 }
 
-// ============================================================
-// 📊 СТАТИСТИКА ОЧЕРЕДИ
-// ============================================================
-async function getClubWarQueueStats() {
-    const stats = { onlineClansMembers: 0, clansSearching: 0 };
+// ────────────────────────────────────────────────────────────
+// 🅱️ ЭКРАН 2 — ИДЁТ ПРИГЛАШЕНИЕ
+// ────────────────────────────────────────────────────────────
+async function renderClubWarInviting(el, L) {
+    const confirmed = L.confirmed || [];
+    const lineup = L.lineup || [];
+    const amInvited = lineup.some(p => Number(p.telegram_id) === Number(currentUser.telegram_id));
+    const amConfirmed = confirmed.includes(Number(currentUser.telegram_id));
+    const amLeader = Number(L.leader_id) === Number(currentUser.telegram_id);
+    const amDeclined = (L.declined || []).includes(Number(currentUser.telegram_id));
 
-    try {
-        // 1. Сокланы онлайн
-        if (myClub?.members?.length) {
-            const ids = myClub.members.map(m => m.telegram_id);
-            const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-            const { count } = await sb.from('users')
-                .select('telegram_id', { count: 'exact', head: true })
-                .in('telegram_id', ids)
-                .gte('last_seen', cutoff);
-            stats.onlineClansMembers = count || 0;
-        }
+    const rows = lineup.map(p => {
+        const u = myClub.members.find(m => Number(m.telegram_id) === Number(p.telegram_id))?.user || {};
+        const av = renderAvatar(u);
+        const isConfirmed = confirmed.includes(Number(p.telegram_id));
+        const isDeclined = (L.declined || []).includes(Number(p.telegram_id));
+        const isMe = Number(p.telegram_id) === Number(currentUser.telegram_id);
 
-        // 2. Кланы, которые ищут войну
-        const { data: queue } = await sb.from('club_war_queue')
-            .select('club_id')
-            .gte('joined_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
-        stats.clansSearching = (queue || []).length;
+        let statusHTML = '';
+        if (isConfirmed) statusHTML = '<span style="color: var(--emerald); font-weight: 900; font-size: 11px;">✅ ГОТОВ</span>';
+        else if (isDeclined) statusHTML = '<span style="color: var(--red); font-weight: 900; font-size: 11px;">❌ ОТКАЗ</span>';
+        else statusHTML = '<span style="color: var(--hint); font-weight: 800; font-size: 11px;">⏳ ОЖИДАНИЕ</span>';
 
-    } catch (e) {
-        console.warn('getClubWarQueueStats:', e);
+        return `
+            <div class="club-war-player ${isConfirmed ? 'online' : (isDeclined ? 'offline' : '')}">
+                <div class="club-war-player-avatar">${av}</div>
+                <div class="club-war-player-info">
+                    <div class="club-war-player-name">
+                        ${escapeHtml(u.display_name || 'Игрок')}
+                        ${isMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
+                    </div>
+                    <div class="club-war-player-meta">⚡ ${u.elo ?? 1000} DXP</div>
+                </div>
+                ${statusHTML}
+            </div>
+        `;
+    }).join('');
+
+    // Кнопки для приглашённого
+    let actionBlock = '';
+    if (amInvited && !amConfirmed && !amDeclined) {
+        actionBlock = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <button class="club-war-find-btn" style="background: linear-gradient(135deg, #22c55e, #16a34a);" onclick="acceptClubWarInvite()">
+                    ✅ Я ИГРАЮ
+                </button>
+                <button class="club-war-cancel-btn" onclick="declineClubWarInvite()">
+                    ❌ ОТКАЗАТЬСЯ
+                </button>
+            </div>
+        `;
+    } else if (amConfirmed) {
+        actionBlock = `
+            <div class="club-war-stat" style="margin-bottom: 10px;">
+                <div class="club-war-stat-icon">✅</div>
+                <div>
+                    <div class="club-war-stat-val" style="font-size: 14px;">ТЫ ПОДТВЕРДИЛ</div>
+                    <div class="club-war-stat-lbl">Ожидаем остальных</div>
+                </div>
+            </div>
+        `;
+    } else if (!amInvited && !amLeader) {
+        actionBlock = `
+            <div class="club-war-stat" style="margin-bottom: 10px;">
+                <div class="club-war-stat-icon">👀</div>
+                <div>
+                    <div class="club-war-stat-val" style="font-size: 14px;">НАБЛЮДАТЕЛЬ</div>
+                    <div class="club-war-stat-lbl">Лидер собирает состав</div>
+                </div>
+            </div>
+        `;
     }
 
-    return stats;
+    // Лидеру — отмена
+    let leaderBlock = '';
+    if (amLeader) {
+        leaderBlock = `
+            <button class="club-war-cancel-btn" style="width: 100%; margin-top: 10px;" onclick="cancelClubWarLobby()">
+                ОТМЕНИТЬ СБОР
+            </button>
+        `;
+    }
+
+    el.innerHTML = `
+        <div class="club-war-screen">
+            <div class="club-war-bg" style="background-image: url('${mapBgUrl('Sandstone')}')"></div>
+            <div class="club-war-overlay"></div>
+            <div class="club-war-scanlines"></div>
+
+            <div class="club-war-content">
+                <div class="club-war-hero">
+                    <div class="club-war-eyebrow" style="background: rgba(217,171,90,0.15); border-color: rgba(217,171,90,0.5); color: #ffd700;">
+                        ⏳ СБОР СОСТАВА
+                    </div>
+                    <div class="club-war-title" style="font-size: 24px; letter-spacing: 2px;">ПОДТВЕРЖДЕНИЕ</div>
+                    <div class="club-war-subtitle">
+                        ${amInvited && !amConfirmed ? 'Тебя пригласили в боевой состав' : 'Ждём подтверждения от игроков'}
+                    </div>
+                </div>
+
+                <div class="club-war-roster">
+                    <div class="club-war-roster-title">
+                        <span>⚔️ БОЕВОЙ СОСТАВ</span>
+                        <span class="club-war-roster-count"><b>${confirmed.length}</b>/${lineup.length}</span>
+                    </div>
+                    ${rows}
+                </div>
+
+                ${actionBlock}
+                ${leaderBlock}
+
+                <button class="club-war-back-btn" style="width: 100%; margin-top: 10px;" onclick="switchPage('club')">◀ НАЗАД</button>
+            </div>
+        </div>
+    `;
 }
 
-// ============================================================
-// 🚀 СТАРТ ПОИСКА
-// ============================================================
-async function startClubWarSearch() {
-    if (!myClub?.club) return;
+// ────────────────────────────────────────────────────────────
+// 🅲 ЭКРАН 3 — ВСЕ ГОТОВЫ, ЖДЁМ СТАРТА
+// ────────────────────────────────────────────────────────────
+async function renderClubWarReady(el, L) {
+    const amLeader = Number(L.leader_id) === Number(currentUser.telegram_id);
 
-    haptic('heavy');
+    el.innerHTML = `
+        <div class="club-war-screen">
+            <div class="club-war-bg" style="background-image: url('${mapBgUrl('Sandstone')}')"></div>
+            <div class="club-war-overlay"></div>
+            <div class="club-war-scanlines"></div>
 
-    // Собираем состав
-    const sortedMembers = [...myClub.members].sort((a, b) => {
-        const eA = a.user?.elo ?? 1000;
-        const eB = b.user?.elo ?? 1000;
-        return eB - eA;
-    });
-    const lineup = sortedMembers.slice(0, 5);
+            <div class="club-war-content">
+                <div class="club-war-hero">
+                    <div class="club-war-eyebrow" style="background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.5); color: #22c55e;">
+                        ✅ СОСТАВ ГОТОВ
+                    </div>
+                    <div class="club-war-title" style="font-size: 26px; letter-spacing: 2px;">ВСЕ НА МЕСТЕ</div>
+                    <div class="club-war-subtitle">
+                        ${amLeader ? 'Запусти поиск противника' : 'Лидер запускает поиск'}
+                    </div>
+                </div>
 
-    if (lineup.length < 5) {
-        showToast('⚠️ В Клане должно быть минимум 5 игроков');
-        return;
-    }
+                <div class="club-war-actions">
+                    ${amLeader ? `
+                        <button class="club-war-find-btn" onclick="startClubWarSearch()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="7"/>
+                                <path d="m20 20-3.5-3.5"/>
+                            </svg>
+                            НАЧАТЬ ПОИСК
+                        </button>
+                    ` : `
+                        <button class="club-war-find-btn" disabled>⏳ ОЖИДАНИЕ ЛИДЕРА</button>
+                    `}
+                    ${amLeader ? `
+                        <button class="club-war-cancel-btn" onclick="cancelClubWarLobby()">ОТМЕНИТЬ</button>
+                    ` : ''}
+                </div>
 
-    // Регистрируемся в очереди
-    try {
-        const { data: existing } = await sb.from('club_war_queue')
-            .select('id').eq('club_id', myClub.club.id).maybeSingle();
-
-        if (!existing) {
-            const { data: q, error } = await sb.from('club_war_queue').insert({
-                club_id: myClub.club.id,
-                club_tag: myClub.club.tag,
-                club_name: myClub.club.name,
-                club_logo: myClub.club.logo_url,
-                leader_id: currentUser.telegram_id,
-                lineup: lineup.map(m => ({
-                    telegram_id: m.telegram_id,
-                    display_name: m.user?.display_name,
-                    custom_avatar: m.user?.custom_avatar,
-                    photo_url: m.user?.photo_url,
-                    elo: m.user?.elo ?? 1000,
-                })),
-                avg_elo: Math.round(lineup.reduce((s, m) => s + (m.user?.elo ?? 1000), 0) / 5),
-                joined_at: new Date().toISOString(),
-            }).select().single();
-
-            if (error) throw error;
-            _clubWarState.queueId = q.id;
-        } else {
-            _clubWarState.queueId = existing.id;
-        }
-
-        _clubWarState.active = true;
-        _clubWarState.seconds = 0;
-        _clubWarState.clansSeen = new Set();
-
-        renderClubWarSearching();
-        startClubWarTimer();
-        startClubWarPolling();
-
-    } catch (e) {
-        console.error('startClubWarSearch:', e);
-        showToast('❌ ' + e.message);
-    }
+                <button class="club-war-back-btn" style="width: 100%; margin-top: 10px;" onclick="switchPage('club')">◀ НАЗАД</button>
+            </div>
+        </div>
+    `;
 }
 
-// ============================================================
-// 🔍 ЭКРАН ПОИСКА
-// ============================================================
-function renderClubWarSearching() {
-    const el = document.getElementById('clubWarContent');
-    if (!el) return;
+// ────────────────────────────────────────────────────────────
+// 🅳 ЭКРАН 4 — ПОИСК
+// ────────────────────────────────────────────────────────────
+async function renderClubWarSearching(el, L) {
+    const stats = await getClubWarQueueStats();
 
     el.innerHTML = `
         <div class="club-war-screen">
@@ -72525,249 +72686,728 @@ function renderClubWarSearching() {
                         <div class="club-war-stat">
                             <div class="club-war-stat-icon">⚔️</div>
                             <div>
-                                <div class="club-war-stat-val" id="clubWarSearching">0</div>
+                                <div class="club-war-stat-val" id="cwSearchingClans">${stats.clansSearching}</div>
                                 <div class="club-war-stat-lbl">Кланов в поиске</div>
                             </div>
                         </div>
                         <div class="club-war-stat">
                             <div class="club-war-stat-icon">👥</div>
                             <div>
-                                <div class="club-war-stat-val" id="clubWarPlayers">0</div>
-                                <div class="club-war-stat-lbl">Игроков онлайн</div>
+                                <div class="club-war-stat-val">${stats.onlineClansMembers}</div>
+                                <div class="club-war-stat-lbl">Сокланов онлайн</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="club-war-log" id="clubWarLog">
-                        <span class="club-war-log-line">▸ <b>СИСТЕМА:</b> ты в очереди</span>
+                    <div class="club-war-log">
+                        <span class="club-war-log-line">▸ <b>СИСТЕМА:</b> ты в очереди поиска</span>
                     </div>
 
-                    <div class="club-war-actions">
-                        <button class="club-war-cancel-btn" onclick="cancelClubWarSearch()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M6 6l12 12M18 6 6 18"/>
-                            </svg>
-                            ОТМЕНИТЬ ПОИСК
-                        </button>
-                    </div>
+                    <button class="club-war-cancel-btn" style="width: 100%;" onclick="cancelClubWarSearch()">
+                        ОТМЕНИТЬ ПОИСК
+                    </button>
                 </div>
             </div>
         </div>
     `;
-}
 
-function startClubWarTimer() {
-    if (_clubWarState.timer) clearInterval(_clubWarState.timer);
-    const el = document.getElementById('clubWarTimer');
-
-    _clubWarState.timer = setInterval(() => {
-        _clubWarState.seconds++;
-        const m = String(Math.floor(_clubWarState.seconds / 60)).padStart(2, '0');
-        const s = String(_clubWarState.seconds % 60).padStart(2, '0');
-        const target = document.getElementById('clubWarTimer');
-        if (target) target.textContent = `${m}:${s}`;
+    // Таймер
+    if (CW.timerTimer) clearInterval(CW.timerTimer);
+    CW.seconds = Math.floor((Date.now() - new Date(L.joined_at).getTime()) / 1000);
+    CW.timerTimer = setInterval(() => {
+        CW.seconds++;
+        const m = String(Math.floor(CW.seconds / 60)).padStart(2, '0');
+        const s = String(CW.seconds % 60).padStart(2, '0');
+        const t = document.getElementById('clubWarTimer');
+        if (t) t.textContent = `${m}:${s}`;
     }, 1000);
 }
 
-function startClubWarPolling() {
-    if (_clubWarState.pollTimer) clearInterval(_clubWarState.pollTimer);
+// ────────────────────────────────────────────────────────────
+// 🅴 ЭКРАН 5 — МАТЧ НАЙДЕН (5 минут на подтверждение)
+// ────────────────────────────────────────────────────────────
+async function renderClubWarMatched(el, L, E) {
+    if (!E) {
+        el.innerHTML = `<div class="empty">Загрузка соперника...</div>`;
+        return;
+    }
 
-    const poll = async () => {
-        if (!_clubWarState.active) return;
+    const myLineup = L.lineup || [];
+    const enemyLineup = E.lineup || [];
+    const matchReady = L.match_ready || [];
+    const amReady = matchReady.includes(Number(currentUser.telegram_id));
+    const totalReady = (L.match_ready || []).length + (E.match_ready || []).length;
+    const totalPlayers = myLineup.length + enemyLineup.length;
 
-        try {
-            // Обновляем статистику
-            const stats = await getClubWarQueueStats();
-            const searchingEl = document.getElementById('clubWarSearching');
-            if (searchingEl) searchingEl.textContent = stats.clansSearching;
+    const cancelVotes = (L.cancel_votes || []).length + (E.cancel_votes || []).length;
+    const neededVotes = 6;
+    const amVoted = (L.cancel_votes || []).includes(Number(currentUser.telegram_id));
 
-            // Проверяем, нашлась ли пара
-            const { data: myQueue } = await sb.from('club_war_queue')
-                .select('*').eq('id', _clubWarState.queueId).maybeSingle();
+    // Таймер 5 минут
+    const matchedAt = new Date(L.matched_at).getTime();
+    const deadline = matchedAt + 5 * 60 * 1000;
+    const left = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+    const tm = String(Math.floor(left / 60)).padStart(2, '0');
+    const ts = String(left % 60).padStart(2, '0');
 
-	// Запускаем подбор (любой клиент может триггерить)
-	try { await sb.rpc('match_club_wars'); } catch (e) {}
+    const myLogo = L.club_logo ? `<img src="${L.club_logo}">` : escapeHtml((L.club_tag || '??').slice(0, 2));
+    const enemyLogo = E.club_logo ? `<img src="${E.club_logo}">` : escapeHtml((E.club_tag || '??').slice(0, 2));
 
-            if (myQueue?.matched_with) {
-                // Матч найден!
-                onClubWarMatchFound(myQueue);
-                return;
-            }
-
-            // Если увидели новые кланы — пишем в лог
-            const { data: allQueue } = await sb.from('club_war_queue')
-                .select('club_id, club_name, club_tag, avg_elo')
-                .gte('joined_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
-
-            const log = document.getElementById('clubWarLog');
-            if (log && allQueue) {
-                const otherClans = allQueue.filter(q => q.club_id !== myClub.club.id);
-                if (otherClans.length && !_clubWarState.clansSeen) {
-                    _clubWarState.clansSeen = new Set();
-                }
-                otherClans.forEach(c => {
-                    if (!_clubWarState.clansSeen.has(c.club_id)) {
-                        _clubWarState.clansSeen.add(c.club_id);
-                        const line = document.createElement('span');
-                        line.className = 'club-war-log-line';
-                        line.innerHTML = `▸ Найден: <b>[${escapeHtml(c.club_tag)}]</b> ${escapeHtml(c.club_name)} · ELO ${c.avg_elo}`;
-                        log.appendChild(line);
-                        log.scrollTop = log.scrollHeight;
-                    }
-                });
-            }
-
-        } catch (e) {
-            console.warn('club war poll:', e);
-        }
-    };
-
-    poll();
-    _clubWarState.pollTimer = setInterval(poll, 3000);
-}
-
-// ============================================================
-// 🎯 МАТЧ НАЙДЕН
-// ============================================================
-async function onClubWarMatchFound(queue) {
-    if (!_clubWarState.active) return;
-    _clubWarState.active = false;
-
-    if (_clubWarState.timer)     clearInterval(_clubWarState.timer);
-    if (_clubWarState.pollTimer) clearInterval(_clubWarState.pollTimer);
-
-    haptic('heavy');
-    if (typeof SFX !== 'undefined') SFX.play('matchFound');
-
-    // Получаем данные второго клана
-    const { data: enemy } = await sb.from('club_war_queue')
-        .select('*').eq('id', queue.matched_with).maybeSingle();
-
-    showToast(`⚔️ Матч найден: [${enemy?.club_tag || '???'}]`);
-    setTimeout(() => renderClubWarMatched(queue, enemy), 600);
-}
-
-function renderClubWarMatched(myQ, enemyQ) {
-    const el = document.getElementById('clubWarContent');
-    if (!el) return;
+    // Проверяем, все ли подтвердили
+    const allReady = matchReady.length >= myLineup.length
+                  && (E.match_ready || []).length >= enemyLineup.length;
 
     el.innerHTML = `
         <div class="club-war-screen">
-            <div class="club-war-bg" style="background-image: url('${mapBgUrl('Sandstorm')}')"></div>
+            <div class="club-war-bg" style="background-image: url('${mapBgUrl('Sandstone')}')"></div>
             <div class="club-war-overlay"></div>
             <div class="club-war-scanlines"></div>
 
             <div class="club-war-content">
                 <div class="club-war-hero">
-                    <div class="club-war-eyebrow" style="background: rgba(255,84,112,0.12); border-color: rgba(255,84,112,0.5); color: #ff8a9d;">
+                    <div class="club-war-eyebrow" style="background: rgba(255,84,112,0.15); border-color: rgba(255,84,112,0.5); color: #ff8a9d;">
                         ⚔️ МАТЧ НАЙДЕН
                     </div>
-                    <div class="club-war-title" style="background: linear-gradient(90deg, #ff5470, #fff, #ff5470); background-size: 200% auto; -webkit-background-clip: text; background-clip: text;">
-                        ГЛАДИАТОРЫ СОШЛИСЬ
+                    <div class="club-war-title" style="background: linear-gradient(90deg, #ff5470, #fff, #ff5470); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                        ПРОТИВНИК НАЙДЕН
                     </div>
-                    <div class="club-war-subtitle">Приготовься к бою</div>
+                    <div class="club-war-subtitle">Подтвердите участие</div>
                 </div>
 
+                <!-- Таймер -->
+                <div class="club-war-searching" style="padding: 16px 0 24px;">
+                    <div class="club-war-timer" id="cwMatchTimer" style="font-size: 36px;">${tm}:${ts}</div>
+                    <div class="club-war-timer-label">ДО АВТООТМЕНЫ</div>
+                </div>
+
+                <!-- VS -->
                 <div class="club-war-vs-row">
                     <div class="club-war-team">
-                        <div class="club-war-logo">${myQ.club_logo ? `<img src="${myQ.club_logo}">` : escapeHtml(myQ.club_tag.slice(0, 2))}</div>
+                        <div class="club-war-logo">${myLogo}</div>
                         <div class="club-war-team-info">
-                            <div class="club-war-team-name">${escapeHtml(myQ.club_name)}</div>
-                            <div class="club-war-team-tag">[${escapeHtml(myQ.club_tag)}]</div>
-                            <div class="club-war-team-count">ELO ${myQ.avg_elo}</div>
+                            <div class="club-war-team-name">${escapeHtml(L.club_name)}</div>
+                            <div class="club-war-team-tag">[${escapeHtml(L.club_tag)}]</div>
+                            <div class="club-war-team-count">${L.match_ready?.length || 0}/${myLineup.length} готовы</div>
                         </div>
                     </div>
                     <div class="club-war-vs-badge">VS</div>
                     <div class="club-war-team enemy">
-                        <div class="club-war-logo">${enemyQ?.club_logo ? `<img src="${enemyQ.club_logo}">` : escapeHtml((enemyQ?.club_tag || '??').slice(0, 2))}</div>
+                        <div class="club-war-logo">${enemyLogo}</div>
                         <div class="club-war-team-info">
-                            <div class="club-war-team-name">${escapeHtml(enemyQ?.club_name || 'Соперник')}</div>
-                            <div class="club-war-team-tag">[${escapeHtml(enemyQ?.club_tag || '???')}]</div>
-                            <div class="club-war-team-count">ELO ${enemyQ?.avg_elo || '?'}</div>
+                            <div class="club-war-team-name">${escapeHtml(E.club_name)}</div>
+                            <div class="club-war-team-tag">[${escapeHtml(E.club_tag)}]</div>
+                            <div class="club-war-team-count">${E.match_ready?.length || 0}/${enemyLineup.length} готовы</div>
                         </div>
                     </div>
                 </div>
 
-                <button class="club-war-find-btn" onclick="enterClubWarRoom('${myQ.id}', '${myQ.matched_with}')">
-                    ▶ ВОЙТИ В КОМНАТУ
-                </button>
-                <button class="club-war-back-btn" style="width: 100%; margin-top: 10px;" onclick="switchPage('club')">◀ НАЗАД</button>
+                <!-- Готовность -->
+                <div class="club-war-stat" style="margin-bottom: 14px;">
+                    <div class="club-war-stat-icon">${allReady ? '✅' : '⏳'}</div>
+                    <div>
+                        <div class="club-war-stat-val" style="font-size: 18px;">${totalReady} / ${totalPlayers}</div>
+                        <div class="club-war-stat-lbl">Игроков подтвердили</div>
+                    </div>
+                </div>
+
+                <!-- Действия -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="club-war-find-btn"
+                            style="${amReady ? 'background: rgba(34,197,94,0.15); color: #22c55e; box-shadow: none;' : ''}"
+                            ${amReady ? 'disabled' : ''}
+                            onclick="confirmClubWarMatch()">
+                        ${amReady ? '✅ ГОТОВ' : '✅ ПРИНЯТЬ МАТЧ'}
+                    </button>
+                    <button class="club-war-cancel-btn"
+                            style="${amVoted ? 'opacity: 0.5;' : ''}"
+                            ${amVoted ? 'disabled' : ''}
+                            onclick="voteCancelClubWar()">
+                        ${amVoted ? `ОТМЕНА ${cancelVotes}/${neededVotes}` : `✕ ОТМЕНА (${cancelVotes}/${neededVotes})`}
+                    </button>
+                </div>
+
+                <div style="font-size: 10.5px; color: var(--hint); text-align: center; margin-top: 12px; line-height: 1.5;">
+                    Когда все ${totalPlayers} игроков нажмут «Принять» — комната создастся автоматически.<br>
+                    Если ${neededVotes} игроков нажмут «Отмена» — матч отменится и всех выбросит на главную.
+                </div>
             </div>
         </div>
     `;
+
+    // Обновляем таймер каждую секунду
+    if (CW.timerTimer) clearInterval(CW.timerTimer);
+    CW.timerTimer = setInterval(() => {
+        const elT = document.getElementById('cwMatchTimer');
+        if (!elT) return;
+        const leftNow = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+        const m = String(Math.floor(leftNow / 60)).padStart(2, '0');
+        const s = String(leftNow % 60).padStart(2, '0');
+        elT.textContent = `${m}:${s}`;
+        if (leftNow <= 0) {
+            clearInterval(CW.timerTimer);
+            autoCancelClubWarMatch('timeout');
+        }
+    }, 1000);
 }
 
-// ============================================================
-// 🚪 ВХОД В КОМНАТУ
-// ============================================================
-async function enterClubWarRoom(myQueueId, enemyQueueId) {
-    showToast('🎮 Создаём комнату...');
+// ────────────────────────────────────────────────────────────
+// 📊 СТАТИСТИКА ОЧЕРЕДИ
+// ────────────────────────────────────────────────────────────
+async function getClubWarQueueStats() {
+    const stats = { onlineClansMembers: 0, clansSearching: 0 };
+    try {
+        if (myClub?.members?.length) {
+            const ids = myClub.members.map(m => m.telegram_id);
+            const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+            const { count } = await sb.from('users')
+                .select('telegram_id', { count: 'exact', head: true })
+                .in('telegram_id', ids)
+                .gte('last_seen', cutoff);
+            stats.onlineClansMembers = count || 0;
+        }
+
+        const { count } = await sb.from('club_war_queue')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'searching');
+        stats.clansSearching = count || 0;
+    } catch (e) {}
+    return stats;
+}
+
+// ────────────────────────────────────────────────────────────
+// 🎯 ПИКЕР 5 ИГРОКОВ
+// ────────────────────────────────────────────────────────────
+function openClubWarPicker() {
+    CW.picks = new Set();
+
+    const myRole = myClub.members.find(m => m.telegram_id === currentUser.telegram_id)?.role;
+    const canLead = myRole === 'owner' || myRole === 'elder'
+                 || myClub.club.owner_id === currentUser.telegram_id;
+    if (!canLead) { showToast('Только лидер'); return; }
+
+    // Сортируем по ELO
+    const sorted = [...myClub.members].sort((a, b) => {
+        return (b.user?.elo ?? 1000) - (a.user?.elo ?? 1000);
+    });
+
+    document.getElementById('cwPickerOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'player-modal active';
+    overlay.id = 'cwPickerOverlay';
+    overlay.style.zIndex = '9999';
+
+    overlay.innerHTML = `
+        <div class="player-modal-inner" style="max-width: 520px;">
+            <button class="player-modal-close" onclick="closeClubWarPicker()">✕</button>
+
+            <h3 style="margin: 0 0 6px; font-size: 17px;">⚔️ Выбор состава · 5×5</h3>
+            <div style="font-size: 11px; color: var(--hint); margin-bottom: 14px;">
+                Выбери ровно 5 игроков. Им придёт приглашение.
+            </div>
+
+            <div style="
+                font-family: 'Orbitron', sans-serif;
+                font-size: 13px; font-weight: 900;
+                color: #a78bfa; margin-bottom: 12px;
+                text-align: center;
+                padding: 8px;
+                background: rgba(167,139,250,0.08);
+                border: 1px solid rgba(167,139,250,0.3);
+                border-radius: 10px;
+            ">
+                Выбрано: <b id="cwPickCount">0</b> / 5
+            </div>
+
+            <div style="max-height: 50vh; overflow-y: auto; margin-bottom: 14px;">
+                ${sorted.map(m => {
+                    const u = m.user || {};
+                    const av = renderAvatar(u);
+                    const isMe = Number(m.telegram_id) === Number(currentUser.telegram_id);
+                    const roleIcon = m.role === 'owner' ? '👑' : m.role === 'elder' ? '⭐' : '';
+                    const lastSeen = u.last_seen ? new Date(u.last_seen).getTime() : 0;
+                    const isOnline = Date.now() - lastSeen < 2 * 60 * 1000;
+
+                    return `
+                        <label class="cw-picker-row" data-uid="${m.telegram_id}"
+                               style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 6px;
+                                      background: rgba(0,0,0,0.35); border: 1.5px solid rgba(255,255,255,0.06);
+                                      border-radius: 12px; cursor: pointer; user-select: none; transition: all 0.2s;">
+                            <input type="checkbox" data-uid="${m.telegram_id}"
+                                   ${isMe ? 'checked disabled' : ''}
+                                   onchange="toggleClubWarPick(${m.telegram_id}, this)"
+                                   style="width: 20px; height: 20px; accent-color: #a78bfa; flex-shrink: 0;">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+                                        background: linear-gradient(135deg, var(--emerald), var(--emerald-2));
+                                        display: flex; align-items: center; justify-content: center;
+                                        font-weight: 900; color: #04140e; font-size: 14px; position: relative;">
+                                ${av}
+                                ${isOnline ? '<span style="position:absolute; bottom:0; right:0; width:10px; height:10px; border-radius:50%; background:#22c55e; border:2px solid #050807;"></span>' : ''}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 13px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${escapeHtml(u.display_name || 'Игрок')} ${roleIcon}
+                                    ${isMe ? '<span style="color: var(--emerald); font-size: 10px;">· ТЫ</span>' : ''}
+                                </div>
+                                <div style="font-size: 10.5px; color: var(--hint); margin-top: 2px;">
+                                    ⚡ ${u.elo ?? 1000} DXP · ${isOnline ? 'в сети' : 'офлайн'}
+                                </div>
+                            </div>
+                        </label>
+                    `;
+                }).join('')}
+            </div>
+
+            <button class="club-war-find-btn" style="width: 100%;" id="cwPickerConfirmBtn" onclick="createClubWarLobby()">
+                ⚔️ ОТПРАВИТЬ ПРИГЛАШЕНИЯ
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Автовыбор себя
+    CW.picks.add(Number(currentUser.telegram_id));
+    updateClubWarPickCount();
+}
+
+function closeClubWarPicker() {
+    document.getElementById('cwPickerOverlay')?.remove();
+}
+
+function toggleClubWarPick(uid, checkbox) {
+    if (checkbox.checked) {
+        if (CW.picks.size >= 5) {
+            checkbox.checked = false;
+            showToast('Максимум 5 игроков');
+            return;
+        }
+        CW.picks.add(uid);
+    } else {
+        CW.picks.delete(uid);
+    }
+
+    // Подсветка строки
+    const row = document.querySelector(`.cw-picker-row[data-uid="${uid}"]`);
+    if (row) {
+        row.style.borderColor = checkbox.checked ? 'rgba(167,139,250,0.6)' : 'rgba(255,255,255,0.06)';
+        row.style.background = checkbox.checked ? 'rgba(167,139,250,0.12)' : 'rgba(0,0,0,0.35)';
+    }
+
+    updateClubWarPickCount();
+}
+
+function updateClubWarPickCount() {
+    const c = document.getElementById('cwPickCount');
+    if (c) c.textContent = CW.picks.size;
+
+    const btn = document.getElementById('cwPickerConfirmBtn');
+    if (btn) {
+        btn.disabled = CW.picks.size !== 5;
+        btn.textContent = CW.picks.size === 5
+            ? '⚔️ ОТПРАВИТЬ ПРИГЛАШЕНИЯ'
+            : `НУЖНО ЕЩЁ ${5 - CW.picks.size}`;
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// 🎬 СОЗДАНИЕ ЛОББИ + ПРИГЛАШЕНИЯ
+// ────────────────────────────────────────────────────────────
+async function createClubWarLobby() {
+    if (CW.picks.size !== 5) return;
+
+    // Удаляем старое лобби если есть
+    await sb.from('club_war_queue').delete().eq('club_id', myClub.club.id);
+
+    const lineup = [...CW.picks].map(uid => {
+        const m = myClub.members.find(x => Number(x.telegram_id) === Number(uid));
+        const u = m?.user || {};
+        return {
+            telegram_id: Number(uid),
+            display_name: u.display_name || 'Игрок',
+            custom_avatar: u.custom_avatar || null,
+            photo_url: u.photo_url || null,
+            elo: u.elo ?? 1000,
+        };
+    });
+
+    const avgElo = Math.round(lineup.reduce((s, p) => s + p.elo, 0) / lineup.length);
 
     try {
-        const { data, error } = await sb.rpc('create_club_war_room', {
-            p_club_a_queue: myQueueId,
-            p_club_b_queue: enemyQueueId,
-        });
+        const { data: lobby, error } = await sb.from('club_war_queue').insert({
+            club_id: myClub.club.id,
+            club_tag: myClub.club.tag,
+            club_name: myClub.club.name,
+            club_logo: myClub.club.logo_url,
+            leader_id: currentUser.telegram_id,
+            lineup: lineup,
+            confirmed: [Number(currentUser.telegram_id)],
+            avg_elo: avgElo,
+            status: 'inviting',
+        }).select().single();
 
         if (error) throw error;
-        if (!data?.ok) throw new Error(data?.error || 'Ошибка создания комнаты');
 
-        // Перекидываем в комнату
-        showToast('✅ Комната создана!');
-        openRoomView(data.room_id);
+        CW.lobby = lobby;
+        closeClubWarPicker();
+        haptic('medium');
+
+        // Уведомления приглашённым (кроме себя)
+        const toNotify = lineup
+            .filter(p => Number(p.telegram_id) !== Number(currentUser.telegram_id))
+            .map(p => p.telegram_id);
+
+        for (const id of toNotify) {
+            notify(id,
+                `⚔️ <b>Клановая война 5×5</b>\n\n` +
+                `<b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в боевой состав клана <b>[${escapeHtml(myClub.club.tag)}]</b>.\n\n` +
+                `👉 Открой приложение → Клан → Клановые войны и подтверди участие.`,
+                'party',
+                { force: true }
+            ).catch(() => {});
+        }
+
+        // Регистрируем уведомления в приложении
+        for (const id of toNotify) {
+            sb.from('user_notifications').insert({
+                telegram_id: id,
+                title: '⚔️ Клановая война',
+                text: `<b>${escapeHtml(currentUser.display_name)}</b> приглашает тебя в боевой состав. Открой Клан → Клановые войны.`,
+                type: 'club_war_invite',
+                amount: 0,
+                is_read: false,
+            }).catch(() => {});
+        }
+
+        showToast('✅ Приглашения отправлены');
+        renderClubWarScreen();
 
     } catch (e) {
-        console.error('enterClubWarRoom:', e);
+        console.error('createClubWarLobby:', e);
         showToast('❌ ' + e.message);
     }
 }
 
-// ============================================================
-// 🛑 ОТМЕНА ПОИСКА
-// ============================================================
-async function cancelClubWarSearch() {
-    if (!_clubWarState.active) return;
+// ────────────────────────────────────────────────────────────
+// ✅ ПРИНЯТЬ / ❌ ОТКАЗАТЬ
+// ────────────────────────────────────────────────────────────
+async function acceptClubWarInvite() {
+    if (!CW.lobby) return;
 
-    _clubWarState.active = false;
-    if (_clubWarState.timer)     clearInterval(_clubWarState.timer);
-    if (_clubWarState.pollTimer) clearInterval(_clubWarState.pollTimer);
+    const confirmed = new Set(CW.lobby.confirmed || []);
+    confirmed.add(Number(currentUser.telegram_id));
 
     try {
-        if (_clubWarState.queueId) {
-            await sb.from('club_war_queue').delete().eq('id', _clubWarState.queueId);
-        }
-    } catch (e) {}
+        await sb.from('club_war_queue')
+            .update({ confirmed: [...confirmed] })
+            .eq('id', CW.lobby.id);
 
-    _clubWarState.queueId = null;
-    showToast('Поиск отменён');
-    haptic('light');
+        haptic('heavy');
+        showToast('✅ Ты в составе');
+
+        // Если все подтвердили — переводим в ready и уведомляем лидера
+        if (confirmed.size >= (CW.lobby.lineup || []).length) {
+            await sb.from('club_war_queue')
+                .update({ status: 'ready' })
+                .eq('id', CW.lobby.id);
+
+            notify(CW.lobby.leader_id,
+                `⚔️ <b>Все 5 игроков готовы!</b>\n\n` +
+                `Открой приложение → Клан → Клановые войны и запусти поиск противника.`,
+                'party',
+                { force: true }
+            ).catch(() => {});
+        }
+
+        await loadClubWarLobby();
+        renderClubWarScreen();
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+async function declineClubWarInvite() {
+    if (!CW.lobby) return;
+
+    const declined = new Set(CW.lobby.declined || []);
+    declined.add(Number(currentUser.telegram_id));
+
+    // Убираем из confirmed, если был
+    const confirmed = (CW.lobby.confirmed || []).filter(id => Number(id) !== Number(currentUser.telegram_id));
+
+    try {
+        await sb.from('club_war_queue')
+            .update({ confirmed, declined: [...declined] })
+            .eq('id', CW.lobby.id);
+
+        // Если отказов стало ≥2 — отменяем лобби
+        if (declined.size >= 2) {
+            await cancelClubWarLobby(true);
+        } else {
+            // Уведомляем лидера
+            notify(CW.lobby.leader_id,
+                `❌ <b>${escapeHtml(currentUser.display_name)}</b> отказался от участия в клановой войне.`,
+                'party'
+            ).catch(() => {});
+
+            showToast('Ты отказался');
+            await loadClubWarLobby();
+            renderClubWarScreen();
+        }
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// 🚀 ЗАПУСК ПОИСКА
+// ────────────────────────────────────────────────────────────
+async function startClubWarSearch() {
+    if (!CW.lobby) return;
+    if (Number(CW.lobby.leader_id) !== Number(currentUser.telegram_id)) return;
+
+    haptic('heavy');
+
+    try {
+        await sb.from('club_war_queue')
+            .update({
+                status: 'searching',
+                joined_at: new Date().toISOString(),
+                matched_with: null,
+                matched_at: null,
+            })
+            .eq('id', CW.lobby.id);
+
+        await loadClubWarLobby();
+        renderClubWarScreen();
+        showToast('🔍 Поиск запущен');
+
+    } catch (e) {
+        showToast('❌ ' + e.message);
+    }
+}
+
+async function cancelClubWarSearch() {
+    if (!CW.lobby) return;
+    try {
+        await sb.from('club_war_queue')
+            .update({ status: 'ready' })
+            .eq('id', CW.lobby.id);
+        await loadClubWarLobby();
+        renderClubWarScreen();
+    } catch (e) {}
+}
+
+async function cancelClubWarLobby(silent) {
+    if (!CW.lobby) return;
+    try {
+        await sb.from('club_war_queue').delete().eq('id', CW.lobby.id);
+        CW.lobby = null;
+        CW.enemy = null;
+        if (!silent) showToast('Лобби отменено');
+        renderClubWarScreen();
+    } catch (e) {}
+}
+
+// ────────────────────────────────────────────────────────────
+// ✅ ПОДТВЕРЖДЕНИЕ МАТЧА
+// ────────────────────────────────────────────────────────────
+async function confirmClubWarMatch() {
+    if (!CW.lobby) return;
+
+    const ready = new Set(CW.lobby.match_ready || []);
+    ready.add(Number(currentUser.telegram_id));
+
+    try {
+        await sb.from('club_war_queue')
+            .update({ match_ready: [...ready] })
+            .eq('id', CW.lobby.id);
+
+        haptic('heavy');
+        await loadClubWarLobby();
+
+        // Проверяем, все ли готовы
+        const myReady = (CW.lobby.match_ready || []).length;
+        const myTotal = (CW.lobby.lineup || []).length;
+        const enemyReady = (CW.enemy?.match_ready || []).length;
+        const enemyTotal = (CW.enemy?.lineup || []).length;
+
+        if (myReady >= myTotal && enemyReady >= enemyTotal) {
+            // Финальный RPC создания комнаты
+            const { data } = await sb.rpc('finalize_club_war', { p_queue_id: CW.lobby.id });
+            if (data?.ok && data.room_id) {
+                // Уведомляем всех
+                const allIds = [
+                    ...(CW.lobby.lineup || []).map(p => p.telegram_id),
+                    ...(CW.enemy?.lineup || []).map(p => p.telegram_id),
+                ];
+                for (const id of allIds) {
+                    notify(id,
+                        `⚔️ <b>Матч начинается!</b>\n\nВсе игроки подтвердили участие. Комната создана.`,
+                        'party',
+                        { force: true }
+                    ).catch(() => {});
+                }
+                showToast('🎮 Комната создана!');
+                openRoomView(data.room_id);
+                return;
+            }
+        }
+
+        renderClubWarScreen();
+    } catch (e) {
+        console.error('confirmClubWarMatch:', e);
+        showToast('❌ ' + e.message);
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// ✕ ОТМЕНА МАТЧА (голосование)
+// ────────────────────────────────────────────────────────────
+async function voteCancelClubWar() {
+    if (!CW.lobby) return;
+
+    const votes = new Set(CW.lobby.cancel_votes || []);
+    votes.add(Number(currentUser.telegram_id));
+
+    try {
+        await sb.from('club_war_queue')
+            .update({ cancel_votes: [...votes] })
+            .eq('id', CW.lobby.id);
+
+        haptic('medium');
+        await loadClubWarLobby();
+
+        const myVotes = (CW.lobby.cancel_votes || []).length;
+        const enemyVotes = (CW.enemy?.cancel_votes || []).length;
+        const total = myVotes + enemyVotes;
+
+        if (total >= 6) {
+            await autoCancelClubWarMatch('voted');
+            return;
+        }
+
+        renderClubWarScreen();
+    } catch (e) {}
+}
+
+async function autoCancelClubWarMatch(reason) {
+    if (!CW.lobby) return;
+
+    const myLineupIds = (CW.lobby.lineup || []).map(p => p.telegram_id);
+    const enemyLineupIds = (CW.enemy?.lineup || []).map(p => p.telegram_id);
+    const allIds = [...myLineupIds, ...enemyLineupIds];
+
+    try {
+        // Удаляем оба лобби
+        await sb.from('club_war_queue').delete().in('id', [
+            CW.lobby.id,
+            CW.lobby.matched_with,
+        ].filter(Boolean));
+
+        // Уведомляем всех
+        for (const id of allIds) {
+            notify(id,
+                reason === 'timeout'
+                    ? `⏰ <b>Матч отменён</b>\n\nНе все игроки подтвердили участие за 5 минут.`
+                    : `🚫 <b>Матч отменён</b>\n\n6 игроков проголосовали за отмену.`,
+                'party',
+                { force: true }
+            ).catch(() => {});
+        }
+
+        CW.lobby = null;
+        CW.enemy = null;
+
+        if (CW.timerTimer) clearInterval(CW.timerTimer);
+
+        showToast('🚫 Матч отменён');
+        haptic('heavy');
+
+        setTimeout(() => {
+            switchPage('dashboard');
+            checkActiveRoom();
+        }, 800);
+
+    } catch (e) {
+        console.error('autoCancelClubWarMatch:', e);
+    }
+}
+
+// ────────────────────────────────────────────────────────────
+// 🔄 REAL-TIME + POLLING
+// ────────────────────────────────────────────────────────────
+function subscribeClubWarRealtime() {
+    if (CW.realtime) { try { sb.removeChannel(CW.realtime); } catch (e) {} }
+
+    CW.realtime = sb.channel('club_war_rt_' + myClub.club.id)
+        .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'club_war_queue',
+        }, async (payload) => {
+            // Фильтруем только свои события
+            const row = payload.new || payload.old;
+            if (!row) return;
+
+            const isMine = Number(row.club_id) === Number(myClub.club.id);
+            const isEnemy = CW.lobby && Number(row.id) === Number(CW.lobby.matched_with);
+
+            if (!isMine && !isEnemy) return;
+
+            await loadClubWarLobby();
+
+            // Мгновенно переключаем экраны
+            const activePage = document.querySelector('.page.active')?.id;
+            if (activePage === 'page-club-war') {
+                renderClubWarScreen();
+            }
+
+            // Если менять статус на searching/matched — озвучка
+            if (payload.eventType === 'UPDATE' && payload.new.status === 'matched'
+                && payload.old?.status === 'searching') {
+                if (typeof SFX !== 'undefined') SFX.play('matchFound');
+                haptic('heavy');
+            }
+        })
+        .subscribe();
+}
+
+async function clubWarPoll() {
+    if (!myClub?.club) return;
+    const activePage = document.querySelector('.page.active')?.id;
+    if (activePage !== 'page-club-war') return;
+
+    // Запускаем матчмейкинг — если лобби в searching
+    if (CW.lobby?.status === 'searching') {
+        try { await sb.rpc('match_club_wars'); } catch (e) {}
+    }
+
+    // Перезагружаем состояние
+    await loadClubWarLobby();
+
+    // Обновляем статистику если мы на экране поиска
+    if (CW.lobby?.status === 'searching') {
+        const stats = await getClubWarQueueStats();
+        const el = document.getElementById('cwSearchingClans');
+        if (el) el.textContent = stats.clansSearching;
+    }
+
+    // Мгновенно проверяем, не сменился ли статус
     renderClubWarScreen();
 }
 
-// ============================================================
-// ❌ УБРАТЬ ИГРОКА ИЗ СОСТАВА (только визуально)
-// ============================================================
-const _clubWarExcluded = new Set();
-
-function removeFromClubWarLineup(userId) {
-    _clubWarExcluded.add(userId);
-    showToast('Игрок убран из состава');
-    haptic('light');
-    // Перерисовываем с учётом исключений
-    renderClubWarScreenWithExcluded();
-}
-
-async function renderClubWarScreenWithExcluded() {
-    // Просто перерисовываем — состав пересобирается
-    await renderClubWarScreen();
-}
-
 // Экспорт
-window.openClubWarScreen = openClubWarScreen;
-window.startClubWarSearch = startClubWarSearch;
-window.cancelClubWarSearch = cancelClubWarSearch;
-window.enterClubWarRoom = enterClubWarRoom;
-window.removeFromClubWarLineup = removeClubWarLineup;
+window.openClubWarScreen      = openClubWarScreen;
+window.openClubWarPicker      = openClubWarPicker;
+window.closeClubWarPicker     = closeClubWarPicker;
+window.toggleClubWarPick      = toggleClubWarPick;
+window.createClubWarLobby     = createClubWarLobby;
+window.acceptClubWarInvite    = acceptClubWarInvite;
+window.declineClubWarInvite   = declineClubWarInvite;
+window.startClubWarSearch     = startClubWarSearch;
+window.cancelClubWarSearch    = cancelClubWarSearch;
+window.cancelClubWarLobby     = cancelClubWarLobby;
+window.confirmClubWarMatch    = confirmClubWarMatch;
+window.voteCancelClubWar      = voteCancelClubWar;
 
     </script>
 
