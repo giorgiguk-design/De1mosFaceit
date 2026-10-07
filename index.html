@@ -8656,61 +8656,6 @@ body.match-locked::after {
     min-height: 130px;
     display: flex;
     flex-direction: column;
-    isolation: isolate;
-}
-/* 🔥 Свечение линии + плавная заливка */
-.dash-chart-mini .dcm-svg-wrap {
-    position: relative;
-    flex: 1;
-    min-height: 60px;
-    margin-bottom: 6px;
-}
-
-.dash-chart-mini .dcm-svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    min-height: 60px;
-    overflow: visible;
-}
-
-/* Линия — с плавным свечением и не растягивается */
-.dash-chart-mini #dcmLinePath {
-    filter:
-        drop-shadow(0 0 4px rgba(167, 139, 250, 0.9))
-        drop-shadow(0 0 12px rgba(167, 139, 250, 0.5));
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
-}
-
-/* Точка на конце — пульсирует */
-.dash-chart-mini #dcmLastDot {
-    filter: drop-shadow(0 0 8px #c4b5fd);
-    animation: dcmDotPulse 2s ease-in-out infinite;
-}
-@keyframes dcmDotPulse {
-    0%, 100% { r: 3;   opacity: 1; }
-    50%      { r: 4.5; opacity: 0.75; }
-}
-
-/* Дельта-бейдж (+200) */
-.dash-chart-mini .dcm-delta {
-    font-family: var(--font-mono);
-    font-weight: 900;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 10px rgba(167, 139, 250, 0.35);
-}
-
-/* Footer — W/L/WR чуть аккуратнее */
-.dash-chart-mini .dcm-footer {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-}
-.dash-chart-mini .dcm-footer b {
-    font-weight: 900;
-    letter-spacing: 0.3px;
 }
 .dash-chart-mini::before {
     content: '';
@@ -16418,25 +16363,91 @@ html.lite-mode .list-frame-overlay svg * {
     isolation: isolate;
 }
 
-/* 🔥 ФИКС: все внутренние слои аватара — идеальные круги */
-.lb-avatar > span,
-.club-member-avatar > span,
-.chat-list-avatar > span,
-.ig-player-avatar > span,
-.result-mini-avatar > span,
-.ig-mini-avatar > span,
-.tz-avatar > span,
-.cp-avatar > span,
-.veto-cap-avatar > span,
-.veto-player-mini-avatar > span,
-.notif-avatar > span,
-.menu-drawer-avatar > span,
-.mb-avatar > span {
+/* 🔥 ФИКС: все внутренние слои аватара — идеальные круги
+   ВАЖНО: НЕ трогаем .av-level-badge, .online-dot и SVG-рамки */
+.lb-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.club-member-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.chat-list-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.ig-player-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.result-mini-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.ig-mini-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.tz-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.cp-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.veto-cap-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.veto-player-mini-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.notif-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.menu-drawer-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]),
+.mb-avatar > span:not(.av-level-badge):not(.online-dot):not([class*="frame"]) {
     border-radius: 50% !important;
     overflow: hidden !important;
     display: block !important;
     width: 100% !important;
     height: 100% !important;
+}
+
+/* 🎯 Бейдж уровня — маленький, в углу, НЕ растягивается */
+.lb-avatar > .av-level-badge,
+.club-member-avatar > .av-level-badge,
+.chat-list-avatar > .av-level-badge,
+.tz-avatar > .av-level-badge,
+.ig-mini-avatar > .av-level-badge,
+.ig-player-avatar > .av-level-badge,
+.result-mini-avatar > .av-level-badge,
+.notif-avatar > .av-level-badge,
+.menu-drawer-avatar > .av-level-badge,
+.mb-avatar > .av-level-badge {
+    width: auto !important;
+    height: auto !important;
+    min-width: 14px !important;
+    min-height: 14px !important;
+    max-width: 28px !important;
+    max-height: 16px !important;
+    border-radius: 8px !important;
+    overflow: visible !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: absolute !important;
+    bottom: -2px !important;
+    right: -2px !important;
+    top: auto !important;
+    left: auto !important;
+    padding: 0 4px !important;
+    font-size: 8px !important;
+    line-height: 1 !important;
+    z-index: 999 !important;
+    pointer-events: none !important;
+}
+
+/* 🟢 Online-точка — тоже НЕ растягивается */
+.lb-avatar > .online-dot,
+.club-member-avatar > .online-dot,
+.chat-list-avatar > .online-dot,
+.tz-avatar > .online-dot,
+.ig-mini-avatar > .online-dot {
+    width: 10px !important;
+    height: 10px !important;
+    min-width: 10px !important;
+    min-height: 10px !important;
+    max-width: 10px !important;
+    max-height: 10px !important;
+    border-radius: 50% !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: 998 !important;
+}
+
+/* 🎨 SVG-рамки — не растягиваем через этот блок */
+.lb-avatar > [class*="frame-overlay"],
+.club-member-avatar > [class*="frame-overlay"],
+.chat-list-avatar > [class*="frame-overlay"] {
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
 }
 
 /* 🔥 ФИКС: фолбэк-буква всегда внутри круга */
@@ -25840,14 +25851,14 @@ body {
 }
 
 /* Аватар в хедере — pulse */
-.avatar {
-    background: linear-gradient(135deg,
-        var(--emerald-3),
-        var(--cy-purple),
-        var(--cy-blood)) !important;
+/* Было: .avatar { ... } */
+/* Стало: */
+#headerAvatar.avatar,
+.header .avatar {
+    background: linear-gradient(135deg, #22e8a4, #a78bfa, #ff2e4d) !important;
     background-size: 200% 200% !important;
     animation: avatarFlow 6s ease-in-out infinite !important;
-    box-shadow: 0 0 0 2px rgba(var(--cy-purple-rgb), 0.35),
+    box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35),
                 0 0 24px rgba(var(--emerald-rgb), 0.4) !important;
 }
 @keyframes avatarFlow {
@@ -25967,22 +25978,32 @@ body {
 .elo-card::before {
     content: '';
     position: absolute;
-    inset: -50%;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 200%;
+    transform: translate(-50%, -50%) rotate(0deg);
+    transform-origin: center;
     background: conic-gradient(from 0deg,
         transparent 0deg,
-        rgba(var(--emerald-rgb), 0.08) 60deg,
+        rgba(var(--emerald-rgb), 0.10) 60deg,
         transparent 120deg,
-        rgba(var(--cy-purple-rgb), 0.08) 180deg,
+        rgba(167, 139, 250, 0.10) 180deg,
         transparent 240deg,
-        rgba(var(--cy-blood-rgb), 0.06) 300deg,
+        rgba(255, 46, 77, 0.08) 300deg,
         transparent 360deg);
+    border-radius: 50%;              /* 🔥 главный фикс — круг вместо квадрата */
     animation: eloRays 24s linear infinite;
     pointer-events: none;
     z-index: 0;
-}
-.elo-card > * { position: relative; z-index: 1; }
+    filter: blur(20px);              /* 🔥 размывает стыки конуса */
+    opacity: 0.9;
+}.elo-card > * { position: relative; z-index: 1; }
 
-@keyframes eloRays { to { transform: rotate(360deg); } }
+@keyframes eloRays {
+    0%   { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
 
 .elo-value {
     background: linear-gradient(180deg,
@@ -26513,11 +26534,7 @@ html:not(.lite-mode) .stat-card,
 html:not(.lite-mode) .mini-stat,
 html:not(.lite-mode) .menu-item,
 html:not(.lite-mode) .play-room-card,
-html:not(.lite-mode) .leaderboard-item,
-html:not(.lite-mode) .chat-list-item {
-    backdrop-filter: blur(14px) saturate(1.15);
-    -webkit-backdrop-filter: blur(14px) saturate(1.15);
-}
+
 
 /* Hover — приподнимаем с цветной тенью */
 @media (hover: hover) and (pointer: fine) {
@@ -28804,224 +28821,30 @@ html.lite-mode .dash-cases-btn::before { animation: none !important; opacity: 0.
     border-color: rgba(var(--emerald-rgb), 0.35) !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════ */
-/* 🔥 HARD FIX v4 — убиваем круги на аватарах и вращающийся фон    */
-/* ═══════════════════════════════════════════════════════════════ */
-
-/* ─── 1. УБИРАЕМ ВСЕ SVG-РАМКИ ИЗ СПИСКОВ ───────────────────── */
-.lb-frame-overlay,
-.list-frame-overlay,
-.leaderboard-item .special-frame-overlay,
-.leaderboard-item .lb-frame-overlay,
-.club-member-row .special-frame-overlay,
-.club-member-row .lb-frame-overlay,
-.chat-list-item .special-frame-overlay,
-.chat-list-item .lb-frame-overlay,
-.tz-player .special-frame-overlay,
-.ig-mini-player .special-frame-overlay,
-.ig-player-row .special-frame-overlay,
-.result-mini-player .special-frame-overlay,
-.online-player-row .special-frame-overlay,
-.notif-item .special-frame-overlay,
-.veto-cap-card .special-frame-overlay,
-.veto-player-mini .special-frame-overlay,
-.search-result-item .special-frame-overlay,
-.leaderboard-champion .lb-frame-overlay,
-.leaderboard-champion .special-frame-overlay,
-.pm2-avatar-wrap .special-frame-overlay,
-.menu-drawer-avatar .special-frame-overlay {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    width: 0 !important;
-    height: 0 !important;
-    pointer-events: none !important;
-}
-
-/* ─── 2. УБИРАЕМ box-shadow КОЛЬЦА СО ВСЕХ МИНИ-АВАТАРОК ────── */
-.leaderboard-item .lb-avatar,
-.leaderboard-item .lb-avatar *,
-.club-member-row .club-member-avatar,
-.club-member-row .club-member-avatar *,
-.chat-list-item .chat-list-avatar,
-.chat-list-item .chat-list-avatar *,
-.tz-player .tz-avatar,
-.tz-player .tz-avatar *,
-.ig-mini-player .ig-mini-avatar,
-.ig-mini-player .ig-mini-avatar *,
-.ig-player-row .ig-player-avatar,
-.ig-player-row .ig-player-avatar *,
-.result-mini-player .result-mini-avatar,
-.result-mini-player .result-mini-avatar *,
-.online-player-row .online-player-avatar,
-.online-player-row .online-player-avatar *,
-.notif-item .notif-avatar,
-.notif-item .notif-avatar *,
-.confirm-player .cp-avatar,
-.confirm-player .cp-avatar *,
-.veto-cap-card .veto-cap-avatar,
-.veto-cap-card .veto-cap-avatar *,
-.veto-player-mini .veto-player-mini-avatar,
-.veto-player-mini .veto-player-mini-avatar *,
-.dispute-mini-player .dispute-mini-avatar,
-.dispute-mini-player .dispute-mini-avatar *,
-.report-card-player .report-card-av,
-.report-card-player .report-card-av *,
-.report-player-btn .report-player-av,
-.report-player-btn .report-player-av *,
-.pm2-avatar-wrap .pm2-avatar,
-.pm2-avatar-wrap .pm2-avatar *,
-.notif-avatar *,
-.online-player-avatar * {
-    box-shadow: none !important;
-    filter: none !important;
-    outline: none !important;
-}
-
-/* Лёгкий контур оставляем — только 1px */
-.leaderboard-item .lb-avatar,
-.club-member-row .club-member-avatar,
-.chat-list-item .chat-list-avatar,
-.tz-player .tz-avatar,
-.ig-mini-player .ig-mini-avatar,
-.ig-player-row .ig-player-avatar,
-.result-mini-player .result-mini-avatar,
-.online-player-row .online-player-avatar,
-.notif-item .notif-avatar,
-.pm2-avatar-wrap .pm2-avatar {
-    border: 1px solid rgba(255, 255, 255, 0.10) !important;
-    background-clip: padding-box !important;
-}
-
-/* Псевдоэлементы с кругом-подсветкой тоже гасим */
-.leaderboard-champion .champ-avatar::before,
-.leaderboard-champion .champ-avatar::after,
-.lb-avatar::before,
-.lb-avatar::after,
-.club-member-avatar::before,
-.club-member-avatar::after {
+/* 🔥 Убираем ТОЛЬКО центральную заливку из SVG-рамок.
+   Рамка (кольца, орбы, лучи) остаётся — она снаружи. */
+.special-frame-overlay .fr-glow,
+.special-frame-overlay .fr-poi-aura,
+.special-frame-overlay .fr-gal-core,
+.special-frame-overlay .fr-core,
+.special-frame-overlay .fr-bl-core,
+.lb-frame-overlay .fr-glow,
+.lb-frame-overlay .fr-poi-aura,
+.lb-frame-overlay .fr-gal-core,
+.lb-frame-overlay .fr-core,
+.lb-frame-overlay .fr-bl-core {
     display: none !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════ */
-/* ─── 3. УБИРАЕМ ВРАЩАЮЩИЙСЯ CONIC-ГРАДИЕНТ В ELO-КАРТОЧКЕ ───── */
-/* ═══════════════════════════════════════════════════════════════ */
-
-/* Убираем вращающийся луч (conic gradient) полностью */
-.elo-card::before {
-    content: none !important;
-    display: none !important;
-    background: none !important;
-    animation: none !important;
+/* Бейдж уровня — гарантированно виден поверх рамки */
+.av-level-badge {
+    z-index: 1000 !important;
 }
 
-/* И даём чистый статичный фон без углов */
-.elo-card {
-    background:
-        radial-gradient(ellipse 90% 100% at 12% 0%,
-            rgba(var(--emerald-rgb), 0.12) 0%,
-            transparent 55%),
-        radial-gradient(ellipse 70% 100% at 100% 100%,
-            rgba(var(--emerald-rgb), 0.08) 0%,
-            transparent 55%),
-        linear-gradient(180deg,
-            rgba(10, 16, 26, 0.95) 0%,
-            rgba(4, 6, 10, 0.99) 100%) !important;
-    overflow: hidden !important;
-}
-
-/* Внутренний «прямоугольник» — только мягкая подсветка сверху */
-.elo-card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 10%; right: 10%;
-    height: 1px;
-    background: linear-gradient(90deg,
-        transparent,
-        var(--emerald-3),
-        transparent);
-    opacity: 0.55;
-    pointer-events: none;
-    z-index: 2;
-    animation: none !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════ */
-/* ─── 4. УБИРАЕМ ВРАЩАЮЩИЙСЯ ФОН ГРАФИКА DXP ─────────────────── */
-/* ═══════════════════════════════════════════════════════════════ */
-
-.elo-chart-card::before,
-.elo-chart-card::after {
-    content: none !important;
-    display: none !important;
-    background: none !important;
-    animation: none !important;
-}
-
-.elo-chart-card {
-    position: relative;
-    background: #03060a !important;
-    background-image: linear-gradient(180deg,
-        rgba(var(--emerald-rgb), 0.05) 0%,
-        rgba(0, 0, 0, 0.88) 55%,
-        #000000 100%) !important;
-    overflow: hidden !important;
-}
-
-/* Верхняя тонкая светящаяся линия — вместо анимаций */
-.elo-chart-card > .ech-glowline {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg,
-        transparent,
-        var(--emerald-3) 50%,
-        transparent);
-    opacity: 0.55;
-    pointer-events: none;
-    z-index: 3;
-}
-
-/* Плашка "PREMIUM INSIGHT" — читаемый цвет */
-.ech-eyebrow {
-    color: var(--emerald-light-rgb) !important;
-    opacity: 0.7;
-}
-
-/* График — линия контрастнее */
-.elo-chart-card .js-elo-line {
-    stroke: var(--emerald-3) !important;
-    filter: drop-shadow(0 0 6px rgba(var(--emerald-rgb), 0.7)) !important;
-}
-.elo-chart-card .js-elo-dot {
-    fill: var(--emerald-3) !important;
-    filter: drop-shadow(0 0 8px rgba(var(--emerald-rgb), 0.9)) !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════ */
-/* ─── 5. ДРУГИЕ ВРАЩАЮЩИЕСЯ ГРАДИЕНТЫ — СТОП ─────────────────── */
-/* ═══════════════════════════════════════════════════════════════ */
-
-/* Магазин-категории и прочие conic-gradient — на радиальный */
-.play-btn-cyber::before,
-.profile-action-btn.save::before,
-.dash-cases-btn::before {
-    background: radial-gradient(circle at 50% 50%,
-        rgba(var(--emerald-rgb), 0.35) 0%,
-        transparent 65%) !important;
-    animation: none !important;
-}
-
-/* Проверка безопасности — если где-то остались углы */
-.dash-bp::after,
-.dash-chart-mini::before,
-.dash-last-match::before {
-    background: linear-gradient(90deg,
-        transparent,
-        var(--emerald-3) 50%,
-        transparent) !important;
-    animation: none !important;
-}
+/* ТЕСТ: отключаем градиент у .avatar */
+.avatar { background: none !important; }
+/* ТЕСТ: отключаем blur у карточек */
+.leaderboard-item, .chat-list-item, .club-member-row { backdrop-filter: none !important; }
     
 </style>
 </head>
@@ -54534,130 +54357,79 @@ async function renderDashMiniChart(userId) {
             .limit(20);
 
         const ordered = (history || []).slice().reverse();
-        const recent  = ordered.slice(-14);
+        const recent = ordered.slice(-14);
 
-        // ============================================================
-        // ❌ Мало данных — сброс
-        // ============================================================
         if (recent.length < 2) {
             lineEl.setAttribute('d', '');
             areaEl.setAttribute('d', '');
             dotEl.setAttribute('cx', '-10');
             dotEl.setAttribute('cy', '-10');
             if (deltaEl) { deltaEl.textContent = '—'; deltaEl.classList.remove('negative'); }
-            if (winsEl)   winsEl.textContent   = '0';
+            if (winsEl) winsEl.textContent = '0';
             if (lossesEl) lossesEl.textContent = '0';
-            if (wrEl)     wrEl.textContent     = '0%';
+            if (wrEl) wrEl.textContent = '0%';
             return;
         }
 
         const points = recent.map(h => ({
-            elo:   h.elo_after ?? h.elo_before ?? 1000,
-            win:   h.won === true,
-            delta: h.delta ?? 0,
+            elo: h.elo_after ?? h.elo_before ?? 1000,
+            win: h.won === true,
+            delta: h.delta ?? 0
         }));
 
-        const elos  = points.map(p => p.elo);
-        const min   = Math.min(...elos);
-        const max   = Math.max(...elos);
-        const range = Math.max(40, max - min);   // 🔥 минимум 40, чтобы линия не была плоской
-        const pad   = Math.round(range * 0.18);
-        const yMin  = min - pad;
-        const yMax  = max + pad;
+        const elos = points.map(p => p.elo);
+        const min = Math.min(...elos);
+        const max = Math.max(...elos);
+        const range = Math.max(30, max - min);
+        const pad = Math.round(range * 0.15);
+        const yMin = min - pad;
+        const yMax = max + pad;
 
-        // ============================================================
-        // 🔥 SVG 300×70 + рамки. Y-инверсия для красивой линии
-        // ============================================================
         const W = 300, H = 70;
-        const padL = 6, padR = 10, padT = 10, padB = 8;
+        const padL = 4, padR = 4, padT = 6, padB = 6;
         const innerW = W - padL - padR;
         const innerH = H - padT - padB;
-        const stepX  = points.length > 1 ? innerW / (points.length - 1) : 0;
+        const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
 
-        const xy = points.map((p, i) => ({
-            ...p,
-            x: padL + i * stepX,
-            y: padT + innerH - ((p.elo - yMin) / (yMax - yMin)) * innerH,
-        }));
+        const xy = points.map((p, i) => {
+            const x = padL + i * stepX;
+            const y = padT + innerH - ((p.elo - yMin) / (yMax - yMin)) * innerH;
+            return { ...p, x, y };
+        });
 
-        // ============================================================
-        // 🎨 ПЛАВНАЯ КРИВАЯ (Catmull-Rom → Bezier)
-        // ============================================================
-        const dLine = catmullRomPath(xy);
+        const dLine = xy.map((p, i) =>
+            (i === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`
+                     : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+        ).join(' ');
 
-        // Замкнутая область — та же кривая + линии к низу
-        const last = xy[xy.length - 1];
-        const first = xy[0];
-        const dArea =
-            `${dLine} ` +
-            `L ${last.x.toFixed(2)} ${(H - padB).toFixed(2)} ` +
-            `L ${first.x.toFixed(2)} ${(H - padB).toFixed(2)} Z`;
+        const dArea = `${dLine} L ${xy[xy.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${xy[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`;
 
         lineEl.setAttribute('d', dLine);
         areaEl.setAttribute('d', dArea);
 
-        // ============================================================
-        // 📍 Точка на конце
-        // ============================================================
-        dotEl.setAttribute('cx', last.x.toFixed(2));
-        dotEl.setAttribute('cy', last.y.toFixed(2));
-        dotEl.setAttribute('r', 3);
-        dotEl.setAttribute('fill', '#c4b5fd');
-        dotEl.setAttribute('stroke', '#0a0a0a');
-        dotEl.setAttribute('stroke-width', '1.5');
+        const last = xy[xy.length - 1];
+        dotEl.setAttribute('cx', last.x.toFixed(1));
+        dotEl.setAttribute('cy', last.y.toFixed(1));
 
-        // ============================================================
-        // 📊 Дельта
-        // ============================================================
+        // Суммарная дельта
         const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
         if (deltaEl) {
             deltaEl.textContent = (totalDelta >= 0 ? '+' : '') + totalDelta;
             deltaEl.classList.toggle('negative', totalDelta < 0);
         }
 
-        // ============================================================
-        // 🏆 W/L/WR
-        // ============================================================
-        const wins   = points.filter(p => p.win).length;
+        // W/L/WR
+        const wins = points.filter(p => p.win).length;
         const losses = points.length - wins;
-        const wr     = Math.round((wins / points.length) * 100);
+        const wr = Math.round((wins / points.length) * 100);
 
-        if (winsEl)   winsEl.textContent   = wins;
+        if (winsEl) winsEl.textContent = wins;
         if (lossesEl) lossesEl.textContent = losses;
-        if (wrEl)     wrEl.textContent     = wr + '%';
+        if (wrEl) wrEl.textContent = wr + '%';
 
     } catch (e) {
         console.warn('renderDashMiniChart:', e);
     }
-}
-
-// ============================================================
-// 🎨 Catmull-Rom → гладкая кривая без резких углов
-// ============================================================
-function catmullRomPath(points) {
-    if (!points.length) return '';
-    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-
-    const line = (a, b) => `L ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
-    let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-
-    for (let i = 0; i < points.length - 1; i++) {
-        const p0 = points[i - 1] || points[i];
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        const p3 = points[i + 2] || p2;
-
-        // Контрольные точки Catmull-Rom (tension = 6 — стандарт)
-        const cp1x = p1.x + (p2.x - p0.x) / 6;
-        const cp1y = p1.y + (p2.y - p0.y) / 6;
-        const cp2x = p2.x - (p3.x - p1.x) / 6;
-        const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-        d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ` +
-             `${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ` +
-             `${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-    }
-    return d;
 }
 
 /**
@@ -71573,189 +71345,7 @@ window.fireConfetti = function(opts) {
 
 console.log('🎉 Confetti установлен');
 
-/* ═══════════════════════════════════════════════════════════════ */
-/* 🔧 ФИКС: рейтинг без countup — просто чистое появление          */
-/* ═══════════════════════════════════════════════════════════════ */
-(function patchAnimateNumber() {
-    if (window._numPatchDone) return;
-    window._numPatchDone = true;
 
-    window.animateNumber = function(el, to, duration) {
-        if (!el) return;
-        // Если старое значение — прочерк или 0, не считаем от 0
-        const cur = String(el.textContent || '').trim();
-        const from = parseInt(cur, 10);
-        const isPlaceholder = isNaN(from) || from === 0 || cur === '—' || cur === '...';
-
-        if (isPlaceholder || from === to) {
-            el.textContent = to;
-        } else {
-            // Плавный countup от близкого значения
-            const start = performance.now();
-            const step = (now) => {
-                const t = Math.min((now - start) / (duration || 800), 1);
-                const eased = 1 - Math.pow(1 - t, 3);
-                el.textContent = Math.round(from + (to - from) * eased);
-                if (t < 1) requestAnimationFrame(step);
-                else el.textContent = to;
-            };
-            requestAnimationFrame(step);
-        }
-
-        // Красивое появление поверх
-        el.style.animation = 'none';
-        void el.offsetWidth;
-        el.style.animation = 'eloNumberIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    };
-
-    console.log('🔢 animateNumber — фикс установлен');
-})();
-
-/* ═══════════════════════════════════════════════════════════════ */
-/* 🔧 ФИКС: НЕ навешивать аватар-рамки в списках                  */
-/* (кольца-«круги» вокруг мелких аватарок убираем)                 */
-/* ═══════════════════════════════════════════════════════════════ */
-(function patchListFrame() {
-    if (window._listFramePatched) return;
-    if (typeof window.applyListCustomization !== 'function') {
-        setTimeout(patchListFrame, 200);
-        return;
-    }
-    window._listFramePatched = true;
-
-    const orig = window.applyListCustomization;
-    window.applyListCustomization = function(scopeEl, user) {
-        // Временно «глушим» avatar_frame — рамку навесим только в профиле
-        const eq = user?.equipped_items || {};
-        const savedFrame = eq.avatar_frame;
-        if (savedFrame) {
-            user = { ...user, equipped_items: { ...eq, avatar_frame: undefined } };
-        }
-        orig.call(this, scopeEl, user);
-        // Не восстанавливаем — просто снимаем box-shadow на всякий случай
-        scopeEl.querySelectorAll('.lb-avatar, .club-member-avatar, .chat-list-avatar, .tz-avatar, .ig-mini-avatar, .result-mini-avatar').forEach(el => {
-            if (!el.style) return;
-            const bs = el.style.boxShadow || '';
-            if (bs.includes('0 0 0 3px') || bs.includes('0 0 20px')) {
-                el.style.boxShadow = '';
-            }
-        });
-    };
-
-    console.log('🖼️ List frames — фикс установлен');
-})();
-
-/* ═══════════════════════════════════════════════════════════════ */
-/* 🔧 ФИКС: игровые рамки-артефакты на мини-аватарах               */
-/* убираем залитые SVG-«круги» поверх буквы                        */
-/* ═══════════════════════════════════════════════════════════════ */
-(function patchSmallFrames() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .lb-frame-overlay,
-        .list-frame-overlay { display: none !important; }
-    `;
-    document.head.appendChild(style);
-    console.log('🖼️ Mini frames — отключены');
-})();
-
-/* ═══════════════════════════════════════════════════════════════ */
-/* 🔥 HARD FIX v4 — не даём renderLbItem нарисовать рамку          */
-/* ═══════════════════════════════════════════════════════════════ */
-(function killListFramesJS() {
-    if (window._killFramesDone) return;
-    window._killFramesDone = true;
-
-    // Патчим renderLbItem — там напрямую вставляется SVG-рамка
-    const _origRenderLbItem = window.renderLbItem;
-    if (typeof _origRenderLbItem === 'function') {
-        window.renderLbItem = function(user, rank, isMe) {
-            // Клонируем юзера без avatar_frame — тогда frameHTML будет пустой
-            const cleanUser = user && typeof user === 'object'
-                ? { ...user, equipped_items: { ...(user.equipped_items || {}), avatar_frame: undefined } }
-                : user;
-            return _origRenderLbItem.call(this, cleanUser, rank, isMe);
-        };
-        console.log('✅ renderLbItem — рамки отключены');
-    }
-
-    // Периодически сносим оверлеи из DOM (если что-то просочилось)
-    const killFrames = () => {
-        document.querySelectorAll(
-            '.lb-frame-overlay, .list-frame-overlay, ' +
-            '.leaderboard-item .special-frame-overlay, ' +
-            '.club-member-row .special-frame-overlay, ' +
-            '.chat-list-item .special-frame-overlay, ' +
-            '.tz-player .special-frame-overlay, ' +
-            '.ig-mini-player .special-frame-overlay, ' +
-            '.result-mini-player .special-frame-overlay, ' +
-            '.pm2-avatar-wrap .special-frame-overlay'
-        ).forEach(el => el.remove());
-
-        // Снимаем box-shadow кольца со всех мини-аватаров
-        document.querySelectorAll(
-            '.lb-avatar, .club-member-avatar, .chat-list-avatar, ' +
-            '.tz-avatar, .ig-mini-avatar, .result-mini-avatar, ' +
-            '.ig-player-avatar, .online-player-avatar, .notif-avatar, ' +
-            '.cp-avatar, .veto-cap-avatar, .veto-player-mini-avatar'
-        ).forEach(el => {
-            const bs = el.style.boxShadow || '';
-            if (bs.includes(' 0 0 0 ') || bs.includes(' 0 0 20px') || bs.includes(' 0 0 18px')) {
-                el.style.boxShadow = '';
-            }
-        });
-    };
-
-    // Первый прогон
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', killFrames);
-    } else {
-        killFrames();
-    }
-
-    // MutationObserver — убиваем сразу после появления
-    const mo = new MutationObserver((muts) => {
-        let needClean = false;
-        for (const m of muts) {
-            if (m.addedNodes.length) {
-                for (const n of m.addedNodes) {
-                    if (n.nodeType !== 1) continue;
-                    if (n.classList?.contains('lb-frame-overlay') ||
-                        n.classList?.contains('list-frame-overlay') ||
-                        n.classList?.contains('special-frame-overlay') ||
-                        n.querySelector?.('.lb-frame-overlay, .list-frame-overlay')) {
-                        needClean = true;
-                        break;
-                    }
-                }
-            }
-            if (needClean) break;
-        }
-        if (needClean) requestAnimationFrame(killFrames);
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
-
-    console.log('🔥 KillListFrames v4 — установлен');
-})();
-
-/* ═══════════════════════════════════════════════════════════════ */
-/* 🔥 HARD FIX v4 — статичная подсветка в elo-chart-card          */
-/* ═══════════════════════════════════════════════════════════════ */
-(function addEchGlowLine() {
-    const inject = () => {
-        document.querySelectorAll('.elo-chart-card').forEach(card => {
-            if (card.querySelector('.ech-glowline')) return;
-            const line = document.createElement('span');
-            line.className = 'ech-glowline';
-            card.appendChild(line);
-        });
-    };
-    inject();
-    const mo = new MutationObserver(inject);
-    mo.observe(document.body, { childList: true, subtree: true });
-})();
-
-console.log('🔥 HARD FIX v4 загружен');
 
     </script>
 
