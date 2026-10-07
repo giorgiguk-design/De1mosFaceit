@@ -50036,6 +50036,7 @@ function formatMMSS(ms) {
 window._matchLockActive = false;
 
 function lockNav() {
+    if (window._matchLockActive) return;   // 🔥 не спамим
     window._matchLockActive = true;
     const nav = document.querySelector('.bottom-nav');
     if (nav) nav.classList.add('nav-locked');
@@ -50044,11 +50045,17 @@ function lockNav() {
 }
 
 function unlockNav() {
+    const wasLocked = window._matchLockActive === true;
+
     window._matchLockActive = false;
     const nav = document.querySelector('.bottom-nav');
     if (nav) nav.classList.remove('nav-locked');
     document.body.classList.remove('match-locked');
-    console.log('🔓 Навигация разблокирована');
+
+    // 🔥 Логируем ТОЛЬКО когда реально что-то разблокировали
+    if (wasLocked) {
+        console.log('🔓 Навигация разблокирована');
+    }
 }
 
 // 🔥 Перехват switchPage — блокируем переходы
@@ -74508,6 +74515,146 @@ window.SFX = {
 
     console.log('🔔 Авто-звуки на клики установлены');
 })();
+
+// ═══════════════════════════════════════════════════════════════
+// 🎵 ШИТ "МУЗЫКА И ЗВУКИ"
+// ═══════════════════════════════════════════════════════════════
+window.openSoundMusicSheet = function() {
+    closeMenuDrawer();
+    document.getElementById('sheetOverlay')?.classList.add('active');
+
+    // Убираем старый
+    let sheet = document.getElementById('snmSheet');
+    if (sheet) sheet.remove();
+
+    sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.id = 'snmSheet';
+    sheet.style.maxHeight = '88vh';
+
+    // Текущие значения
+    const currentVolume = (typeof SFX !== 'undefined' && SFX.getVolume) ? SFX.getVolume() : 0.32;
+    const isMuted = (typeof SFX !== 'undefined' && SFX.isMuted) ? SFX.isMuted() : false;
+
+    // Музыка (Music Player v3)
+    const musicOn = localStorage.getItem('musicEnabled') !== '0';
+    const musicVol = parseFloat(localStorage.getItem('musicVolume') || '0.25');
+
+    sheet.innerHTML = `
+        <div class="sheet-title">🎵 Музыка и звуки</div>
+
+        <!-- СЕКЦИЯ: ЗВУКИ -->
+        <div style="font-size: 10px; color: var(--hint); font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 4px; margin-top: 4px;">
+            🔊 Звуковые эффекты
+        </div>
+
+        <div class="privacy-row">
+            <div>
+                <div class="privacy-row-label">🔊 Звуки интерфейса</div>
+                <div class="privacy-row-desc">Клики, уведомления, матчи</div>
+            </div>
+            <button class="toggle-switch ${!isMuted ? 'on' : ''}"
+                    onclick="toggleSfxMuted(this)"></button>
+        </div>
+
+        <div style="padding: 4px 4px 12px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:11px;color:var(--hint);font-weight:800;letter-spacing:1px;">
+                <span>ГРОМКОСТЬ ЭФФЕКТОВ</span>
+                <span id="sfxVolLabel" style="color:var(--emerald);">${Math.round(currentVolume * 100)}%</span>
+            </div>
+            <input type="range" id="sfxVolumeSlider"
+                   min="0" max="100" value="${Math.round(currentVolume * 100)}"
+                   oninput="onSfxVolumeChange(this.value)"
+                   style="width:100%;accent-color:var(--emerald);">
+        </div>
+
+        <!-- СЕКЦИЯ: МУЗЫКА -->
+        <div style="font-size: 10px; color: var(--hint); font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 4px; border-top: 1px solid var(--border); margin-top: 4px;">
+            🎧 Фоновая музыка
+        </div>
+
+        <div class="privacy-row">
+            <div>
+                <div class="privacy-row-label">🎧 Музыка в приложении</div>
+                <div class="privacy-row-desc">Играет в фоне во время навигации</div>
+            </div>
+            <button class="toggle-switch ${musicOn ? 'on' : ''}"
+                    onclick="toggleMusicEnabled(this)"></button>
+        </div>
+
+        <div style="padding: 4px 4px 12px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:11px;color:var(--hint);font-weight:800;letter-spacing:1px;">
+                <span>ГРОМКОСТЬ МУЗЫКИ</span>
+                <span id="musicVolLabel" style="color:var(--emerald);">${Math.round(musicVol * 100)}%</span>
+            </div>
+            <input type="range" id="musicVolumeSlider"
+                   min="0" max="100" value="${Math.round(musicVol * 100)}"
+                   oninput="onMusicVolumeChange(this.value)"
+                   style="width:100%;accent-color:var(--emerald);">
+        </div>
+
+        <button class="sheet-cancel" onclick="closeAllSheets()">ЗАКРЫТЬ</button>
+    `;
+
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => sheet.classList.add('active'));
+    if (typeof haptic === 'function') haptic('medium');
+};
+
+// ─── Обработчики ───────────────────────────────────────────
+window.toggleSfxMuted = function(btn) {
+    if (typeof SFX === 'undefined') return;
+    const newMuted = !SFX.isMuted();
+    SFX.setMuted(newMuted);
+    btn.classList.toggle('on', !newMuted);
+    if (typeof showToast === 'function') {
+        showToast(newMuted ? '🔇 Звуки выключены' : '🔊 Звуки включены');
+    }
+    if (typeof haptic === 'function') haptic('light');
+};
+
+window.onSfxVolumeChange = function(value) {
+    if (typeof SFX === 'undefined') return;
+    const vol = parseInt(value, 10) / 100;
+    SFX.setVolume(vol);
+    const label = document.getElementById('sfxVolLabel');
+    if (label) label.textContent = value + '%';
+    // Тестовый звук, чтобы услышать результат
+    if (typeof SFX.play === 'function') SFX.play('tap');
+};
+
+window.toggleMusicEnabled = function(btn) {
+    const current = localStorage.getItem('musicEnabled') !== '0';
+    const newState = !current;
+    localStorage.setItem('musicEnabled', newState ? '1' : '0');
+    btn.classList.toggle('on', newState);
+
+    // Связь с Music Player v3
+    if (window.MusicPlayer) {
+        try {
+            if (newState && MusicPlayer.play) MusicPlayer.play();
+            if (!newState && MusicPlayer.pause) MusicPlayer.pause();
+        } catch (e) {}
+    }
+
+    if (typeof showToast === 'function') {
+        showToast(newState ? '🎧 Музыка включена' : '🔇 Музыка выключена');
+    }
+    if (typeof haptic === 'function') haptic('light');
+};
+
+window.onMusicVolumeChange = function(value) {
+    const vol = parseInt(value, 10) / 100;
+    localStorage.setItem('musicVolume', String(vol));
+    const label = document.getElementById('musicVolLabel');
+    if (label) label.textContent = value + '%';
+
+    if (window.MusicPlayer && MusicPlayer.setVolume) {
+        try { MusicPlayer.setVolume(vol); } catch (e) {}
+    }
+};
+
+console.log('🎵 Шит Музыка и звуки зарегистрирован');
 
 </script>
 
