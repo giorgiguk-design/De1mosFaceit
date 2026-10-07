@@ -8656,6 +8656,61 @@ body.match-locked::after {
     min-height: 130px;
     display: flex;
     flex-direction: column;
+    isolation: isolate;
+}
+/* 🔥 Свечение линии + плавная заливка */
+.dash-chart-mini .dcm-svg-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 60px;
+    margin-bottom: 6px;
+}
+
+.dash-chart-mini .dcm-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 60px;
+    overflow: visible;
+}
+
+/* Линия — с плавным свечением и не растягивается */
+.dash-chart-mini #dcmLinePath {
+    filter:
+        drop-shadow(0 0 4px rgba(167, 139, 250, 0.9))
+        drop-shadow(0 0 12px rgba(167, 139, 250, 0.5));
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+}
+
+/* Точка на конце — пульсирует */
+.dash-chart-mini #dcmLastDot {
+    filter: drop-shadow(0 0 8px #c4b5fd);
+    animation: dcmDotPulse 2s ease-in-out infinite;
+}
+@keyframes dcmDotPulse {
+    0%, 100% { r: 3;   opacity: 1; }
+    50%      { r: 4.5; opacity: 0.75; }
+}
+
+/* Дельта-бейдж (+200) */
+.dash-chart-mini .dcm-delta {
+    font-family: var(--font-mono);
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(167, 139, 250, 0.35);
+}
+
+/* Footer — W/L/WR чуть аккуратнее */
+.dash-chart-mini .dcm-footer {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+.dash-chart-mini .dcm-footer b {
+    font-weight: 900;
+    letter-spacing: 0.3px;
 }
 .dash-chart-mini::before {
     content: '';
@@ -28846,6 +28901,53 @@ html.lite-mode .dash-cases-btn::before { animation: none !important; opacity: 0.
 /* ТЕСТ: отключаем blur у карточек */
 .leaderboard-item, .chat-list-item, .club-member-row { backdrop-filter: none !important; }
     
+/* 🔥 ФИКС: график DXP — линия не деформируется, точка круглая */
+.elo-chart-card .ech-svg {
+    display: block;
+    width: 100%;
+    height: 180px !important;   /* фиксированная высота — без растяжения */
+    overflow: visible;
+}
+
+/* 🔥 Линия графика — чёткая, не растягивается по толщине */
+.elo-chart-card .js-elo-line {
+    vector-effect: non-scaling-stroke;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+/* 🔥 Точки — всегда круглые, не эллипсы */
+.elo-chart-card .js-elo-dot,
+.elo-chart-card .js-elo-points circle {
+    vector-effect: non-scaling-stroke;
+}
+
+/* 🔥 Сетка — тонкая, спокойная */
+.elo-chart-card .ech-svg-wrap {
+    background-image:
+        linear-gradient(rgba(var(--emerald-rgb), 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--emerald-rgb), 0.05) 1px, transparent 1px);
+    background-size: 100% 33.33%, 40px 100%;
+    border-left: 1px solid rgba(var(--emerald-rgb), 0.08);
+    border-bottom: 1px solid rgba(var(--emerald-rgb), 0.08);
+}
+
+/* 🔥 Убираем CSS-анимацию dash на линии — она ломает короткие графики */
+.elo-chart-card .js-elo-line {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+}
+
+/* 🔥 Y-ось — компактные подписи */
+.elo-chart-card .js-elo-yaxis {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--hint);
+    font-weight: 700;
+}
+
 </style>
 </head>
 <body>
@@ -37105,7 +37207,7 @@ async function renderProfileView(user, options = {}) {
                     <span>—</span><span>—</span><span>—</span><span>—</span>
                 </div>
                 <div class="ech-svg-wrap">
-                    <svg class="ech-svg" viewBox="0 0 320 140" preserveAspectRatio="none">
+                    <svg class="ech-svg" viewBox="0 0 320 140" preserveAspectRatio="xMidYMid meet">
                         <defs>
                             <linearGradient id="eloGradient_${user.telegram_id}" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%"  stop-color="#a78bfa" stop-opacity="0.55"/>
@@ -53232,24 +53334,28 @@ async function renderEloChart(userId, cardEl = null) {
             y: yFor(p.elo),
         }));
 
-        // ═══════════ ZONES (полосы рангов) ═══════════
-        zonesGroup.innerHTML = '';
-        RANK_CONFIG.LEVELS.forEach(level => {
-            const top    = level.max === Infinity ? yMax : Math.min(level.max, yMax);
-            const bottom = Math.max(level.min, yMin);
-            if (top <= bottom) return;
+// ═══════════ ZONES — убраны, оставляем только тонкие линии ═══════════
+zonesGroup.innerHTML = '';
+RANK_CONFIG.LEVELS.forEach(level => {
+    const top    = level.max === Infinity ? yMax : Math.min(level.max, yMax);
+    const bottom = Math.max(level.min, yMin);
+    if (top <= bottom) return;
+    if (top - bottom < 20) return;   // 🔥 пропускаем слишком узкие диапазоны
 
-            const y1 = yFor(top);
-            const y2 = yFor(bottom);
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', padL);
-            rect.setAttribute('y', y1.toFixed(1));
-            rect.setAttribute('width', innerW);
-            rect.setAttribute('height', (y2 - y1).toFixed(1));
-            rect.setAttribute('fill', level.color);
-            rect.setAttribute('opacity', '0.08');
-            zonesGroup.appendChild(rect);
-        });
+    const y1 = yFor(top);
+    const y2 = yFor(bottom);
+    // Только тонкая линия по верхней границе зоны, без заливки
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', padL);
+    line.setAttribute('x2', padL + innerW);
+    line.setAttribute('y1', y1.toFixed(1));
+    line.setAttribute('y2', y1.toFixed(1));
+    line.setAttribute('stroke', level.color);
+    line.setAttribute('stroke-width', '0.5');
+    line.setAttribute('stroke-dasharray', '2 4');
+    line.setAttribute('opacity', '0.35');
+    zonesGroup.appendChild(line);
+});
 
         // ═══════════ TREND (цвет по направлению) ═══════════
         const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
@@ -54357,79 +54463,130 @@ async function renderDashMiniChart(userId) {
             .limit(20);
 
         const ordered = (history || []).slice().reverse();
-        const recent = ordered.slice(-14);
+        const recent  = ordered.slice(-14);
 
+        // ============================================================
+        // ❌ Мало данных — сброс
+        // ============================================================
         if (recent.length < 2) {
             lineEl.setAttribute('d', '');
             areaEl.setAttribute('d', '');
             dotEl.setAttribute('cx', '-10');
             dotEl.setAttribute('cy', '-10');
             if (deltaEl) { deltaEl.textContent = '—'; deltaEl.classList.remove('negative'); }
-            if (winsEl) winsEl.textContent = '0';
+            if (winsEl)   winsEl.textContent   = '0';
             if (lossesEl) lossesEl.textContent = '0';
-            if (wrEl) wrEl.textContent = '0%';
+            if (wrEl)     wrEl.textContent     = '0%';
             return;
         }
 
         const points = recent.map(h => ({
-            elo: h.elo_after ?? h.elo_before ?? 1000,
-            win: h.won === true,
-            delta: h.delta ?? 0
+            elo:   h.elo_after ?? h.elo_before ?? 1000,
+            win:   h.won === true,
+            delta: h.delta ?? 0,
         }));
 
-        const elos = points.map(p => p.elo);
-        const min = Math.min(...elos);
-        const max = Math.max(...elos);
-        const range = Math.max(30, max - min);
-        const pad = Math.round(range * 0.15);
-        const yMin = min - pad;
-        const yMax = max + pad;
+        const elos  = points.map(p => p.elo);
+        const min   = Math.min(...elos);
+        const max   = Math.max(...elos);
+        const range = Math.max(40, max - min);   // 🔥 минимум 40, чтобы линия не была плоской
+        const pad   = Math.round(range * 0.18);
+        const yMin  = min - pad;
+        const yMax  = max + pad;
 
+        // ============================================================
+        // 🔥 SVG 300×70 + рамки. Y-инверсия для красивой линии
+        // ============================================================
         const W = 300, H = 70;
-        const padL = 4, padR = 4, padT = 6, padB = 6;
+        const padL = 6, padR = 10, padT = 10, padB = 8;
         const innerW = W - padL - padR;
         const innerH = H - padT - padB;
-        const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
+        const stepX  = points.length > 1 ? innerW / (points.length - 1) : 0;
 
-        const xy = points.map((p, i) => {
-            const x = padL + i * stepX;
-            const y = padT + innerH - ((p.elo - yMin) / (yMax - yMin)) * innerH;
-            return { ...p, x, y };
-        });
+        const xy = points.map((p, i) => ({
+            ...p,
+            x: padL + i * stepX,
+            y: padT + innerH - ((p.elo - yMin) / (yMax - yMin)) * innerH,
+        }));
 
-        const dLine = xy.map((p, i) =>
-            (i === 0 ? `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`
-                     : `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-        ).join(' ');
+        // ============================================================
+        // 🎨 ПЛАВНАЯ КРИВАЯ (Catmull-Rom → Bezier)
+        // ============================================================
+        const dLine = catmullRomPath(xy);
 
-        const dArea = `${dLine} L ${xy[xy.length - 1].x.toFixed(1)} ${(H - padB).toFixed(1)} L ${xy[0].x.toFixed(1)} ${(H - padB).toFixed(1)} Z`;
+        // Замкнутая область — та же кривая + линии к низу
+        const last = xy[xy.length - 1];
+        const first = xy[0];
+        const dArea =
+            `${dLine} ` +
+            `L ${last.x.toFixed(2)} ${(H - padB).toFixed(2)} ` +
+            `L ${first.x.toFixed(2)} ${(H - padB).toFixed(2)} Z`;
 
         lineEl.setAttribute('d', dLine);
         areaEl.setAttribute('d', dArea);
 
-        const last = xy[xy.length - 1];
-        dotEl.setAttribute('cx', last.x.toFixed(1));
-        dotEl.setAttribute('cy', last.y.toFixed(1));
+        // ============================================================
+        // 📍 Точка на конце
+        // ============================================================
+        dotEl.setAttribute('cx', last.x.toFixed(2));
+        dotEl.setAttribute('cy', last.y.toFixed(2));
+        dotEl.setAttribute('r', 3);
+        dotEl.setAttribute('fill', '#c4b5fd');
+        dotEl.setAttribute('stroke', '#0a0a0a');
+        dotEl.setAttribute('stroke-width', '1.5');
 
-        // Суммарная дельта
+        // ============================================================
+        // 📊 Дельта
+        // ============================================================
         const totalDelta = points.reduce((s, p) => s + (p.delta || 0), 0);
         if (deltaEl) {
             deltaEl.textContent = (totalDelta >= 0 ? '+' : '') + totalDelta;
             deltaEl.classList.toggle('negative', totalDelta < 0);
         }
 
-        // W/L/WR
-        const wins = points.filter(p => p.win).length;
+        // ============================================================
+        // 🏆 W/L/WR
+        // ============================================================
+        const wins   = points.filter(p => p.win).length;
         const losses = points.length - wins;
-        const wr = Math.round((wins / points.length) * 100);
+        const wr     = Math.round((wins / points.length) * 100);
 
-        if (winsEl) winsEl.textContent = wins;
+        if (winsEl)   winsEl.textContent   = wins;
         if (lossesEl) lossesEl.textContent = losses;
-        if (wrEl) wrEl.textContent = wr + '%';
+        if (wrEl)     wrEl.textContent     = wr + '%';
 
     } catch (e) {
         console.warn('renderDashMiniChart:', e);
     }
+}
+
+// ============================================================
+// 🎨 Catmull-Rom → гладкая кривая без резких углов
+// ============================================================
+function catmullRomPath(points) {
+    if (!points.length) return '';
+    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+    const line = (a, b) => `L ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
+    let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i - 1] || points[i];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[i + 2] || p2;
+
+        // Контрольные точки Catmull-Rom (tension = 6 — стандарт)
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+        d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ` +
+             `${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ` +
+             `${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+    }
+    return d;
 }
 
 /**
