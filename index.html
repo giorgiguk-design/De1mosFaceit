@@ -74368,78 +74368,99 @@ window.voteCancelClubWar      = voteCancelClubWar;
     // ────────────────────────────────────────────────────────────
     // 💫 ПОКУПКА ПАКЕТА ЗВЁЗД ЧЕРЕЗ TELEGRAM STARS
     // ────────────────────────────────────────────────────────────
-    async function buyStarPack(packId) {
-        if (!window.currentUser) return;
-
-        const pack = (window._starPacks || DEFAULT_PACKS).find(p => p.id === packId);
-        if (!pack) { showToast('❌ Пакет не найден'); return; }
-
-        if (typeof haptic === 'function') haptic('medium');
-
-        // Создаём ссылку на инвойс через бота
-        showToast('⏳ Готовлю платёж...');
-
-        try {
-            const res = await fetch(
-                `${SUPABASE_URL}/functions/v1/create-star-invoice`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                        'apikey': SUPABASE_ANON_KEY,
-                    },
-                    body: JSON.stringify({
-                        userId: currentUser.telegram_id,
-                        packId: pack.id,
-                        starsAmount: pack.stars_amount,
-                        priceXtr: pack.price_xtr,
-                        title: `De1mos Faceit · ${pack.name}`,
-                        description: `+${pack.stars_amount} звёзд на баланс`,
-                    }),
-                }
-            );
-
-            const data = await res.json();
-            if (!res.ok || !data.invoiceLink) {
-                throw new Error(data.error || 'Не удалось создать счёт');
-            }
-
-            // Открываем кассу Telegram
-            if (tg?.openInvoice) {
-                tg.openInvoice(data.invoiceLink, async (status) => {
-                    console.log('💳 Invoice status:', status);
-
-                    if (status === 'paid') {
-                        showToast('✅ Оплата успешна!');
-                        if (typeof haptic === 'function') haptic('heavy');
-                        if (typeof SFX !== 'undefined') SFX.play('reward');
-
-                        // Ждём, пока бот зачислит звёзды
-                        await new Promise(r => setTimeout(r, 1500));
-                        await loadStarsBalance();
-
-                        // Красивый тост
-                        showStarToast(pack.stars_amount);
-
-                        // Обновляем экран
-                        setTimeout(() => openStarsWallet(), 500);
-                    } else if (status === 'failed') {
-                        showToast('❌ Оплата не прошла');
-                    } else if (status === 'cancelled') {
-                        showToast('🚫 Оплата отменена');
-                    }
-                });
-            } else {
-                // Фолбэк — открываем в браузере
-                window.open(data.invoiceLink, '_blank');
-            }
-        } catch (e) {
-            console.error('buyStarPack:', e);
-            showToast('❌ ' + (e.message || 'Ошибка платежа'));
-        }
+async function buyStarPack(packId) {
+    if (!currentUser) {
+        showToast('⚠️ Профиль не загружен');
+        return;
     }
-    window.buyStarPack = buyStarPack;
+
+    const pack = (window._starPacks || DEFAULT_PACKS).find(p => p.id === packId);
+    if (!pack) {
+        showToast('❌ Пакет не найден');
+        return;
+    }
+
+    if (typeof haptic === 'function') haptic('medium');
+    showToast('⭐ Открываю кассу...');
+
+    // ============================================================
+    // 1️⃣ ПОПЫТКА: Edge Function → invoiceLink
+    // ============================================================
+    try {
+        const res = await fetch(
+            `${SUPABASE_URL}/functions/v1/create-star-invoice`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                    'apikey': SUPABASE_ANON_KEY,
+                },
+                body: JSON.stringify({
+                    userId: currentUser.telegram_id,
+                    packId: pack.id,
+                    starsAmount: pack.stars_amount,
+                    priceXtr: pack.price_xtr,
+                }),
+            }
+        );
+
+        if (res.ok) {
+            const data = await res.json();
+
+            if (data.invoiceLink) {
+                // Открываем кассу Telegram
+                if (tg?.openInvoice) {
+                    tg.openInvoice(data.invoiceLink, (status) => {
+                        console.log('💳 Invoice status:', status);
+                        if (status === 'paid') {
+                            showToast('✅ Оплата успешна!');
+                            if (typeof haptic === 'function') haptic('heavy');
+                            if (typeof SFX !== 'undefined') SFX.play('reward');
+
+                            setTimeout(async () => {
+                                await loadStarsBalance();
+                                showStarToast(pack.stars_amount);
+                                openStarsWallet();
+                            }, 1500);
+                        } else if (status === 'failed') {
+                            showToast('❌ Оплата не прошла');
+                        } else if (status === 'cancelled') {
+                            showToast('🚫 Оплата отменена');
+                        }
+                    });
+                    return;
+                }
+
+                // Фолбэк — открываем в браузере
+                if (tg?.openLink) tg.openLink(data.invoiceLink);
+                else window.open(data.invoiceLink, '_blank');
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('Edge function недоступна:', e.message);
+    }
+
+    // ============================================================
+    // 2️⃣ ФОЛБЭК: открываем бота с параметром
+    //    Бот сам пришлёт инвойс по deep-link
+    // ============================================================
+    console.log('🔁 Fallback: открываю бота напрямую');
+
+    const botUrl = `https://t.me/De1mosFaceit_bot?start=stars_${pack.id}`;
+
+    try {
+        if (tg?.openTelegramLink) tg.openTelegramLink(botUrl);
+        else if (tg?.openLink) tg.openLink(botUrl);
+        else window.open(botUrl, '_blank');
+    } catch (e) {
+        window.open(botUrl, '_blank');
+    }
+
+    showToast('⭐ Открыл бота — жми /start там');
+}
+window.buyStarPack = buyStarPack;
 
     // ────────────────────────────────────────────────────────────
     // 🎉 КРАСИВЫЙ ТОСТ О ЗАЧИСЛЕНИИ ЗВЁЗД
@@ -74937,50 +74958,110 @@ window.voteCancelClubWar      = voteCancelClubWar;
         window._goldPreviewPatched = true;
     }
 
-    // ────────────────────────────────────────────────────────────
-    // 🪝 ПАТЧ: открытие кейса → звёзды выдаём на баланс, gold — на gold_balance
-    // ────────────────────────────────────────────────────────────
-    if (typeof window.finishCaseReel === 'function' && !window._goldRewardPatched) {
-        const _origFinish = window.finishCaseReel;
-        window.finishCaseReel = async function(item, ...args) {
-            // 🔥 Если выпал Gold Standoff 2 — добавляем на баланс
-            if (item && (item.category === 'gold_standoff' || item.category === 'gold')) {
-                const amount = item.value?.amount || 0;
-                if (amount > 0 && window.currentUser) {
-                    try {
-                        await sb.rpc('add_standoff_gold', {
+// ═══════════════════════════════════════════════════════════════
+// 🪝 ПАТЧ: показать и начислить награду при открытии кейса
+// ═══════════════════════════════════════════════════════════════
+(function patchCaseRewards() {
+    let attempts = 0;
+    const MAX = 60;
+
+    function tryPatch() {
+        attempts++;
+
+        // Патчим showCaseOpening — начисляем сразу как только предмет выбран
+        if (typeof window.showCaseOpening === 'function' && !window._goldRewardPatched) {
+            const _orig = window.showCaseOpening;
+
+            window.showCaseOpening = function(item, rarity, isDuplicate, refund, caseId, pool, opts) {
+                console.log('🎁 showCaseOpening triggered:', {
+                    name: item?.name,
+                    category: item?.category,
+                    value: item?.value,
+                    isDuplicate,
+                });
+
+                // 🔥 GOLD STANDOFF 2
+                if (item && (item.category === 'gold_standoff' || item.category === 'gold')) {
+                    const amount = item.value?.amount || 0;
+
+                    if (amount > 0 && currentUser && !isDuplicate) {
+                        console.log(`💰 Начисляю ${amount} Gold Standoff 2...`);
+
+                        // Показываем тост СРАЗУ
+                        showToast(`💰 +${amount} Gold Standoff 2!`);
+                        if (typeof haptic === 'function') haptic('heavy');
+                        if (typeof SFX !== 'undefined') SFX.play('reward');
+
+                        // Начисляем в фоне
+                        sb.rpc('add_standoff_gold', {
                             p_user_id: currentUser.telegram_id,
                             p_amount: amount,
                             p_reason: 'case_win',
-                            p_meta: { item_id: item.id }
-                        });
-                        currentUser.standoff_gold_balance =
-                            (currentUser.standoff_gold_balance || 0) + amount;
-                    } catch (e) { console.warn('gold add:', e); }
-                }
-            }
+                            p_meta: { item_id: item.id, case_id: caseId }
+                        }).then(({ data, error }) => {
+                            if (error) {
+                                console.error('❌ Gold RPC error:', error);
+                                showToast('⚠️ Ошибка начисления Gold');
+                                return;
+                            }
+                            console.log('✅ Gold начислен:', data);
+                            currentUser.standoff_gold_balance =
+                                (currentUser.standoff_gold_balance || 0) + amount;
 
-            // 🔥 Если выпали звёзды — добавляем на stars_balance
-            if (item && item.category === 'stars') {
-                const amount = item.value?.amount || 0;
-                if (amount > 0 && window.currentUser) {
-                    try {
-                        await sb.rpc('add_stars', {
+                            // Обновляем карточку в профиле, если она есть
+                            const goldCard = document.querySelector('.gold-withdraw-card');
+                            if (goldCard) {
+                                const numEl = goldCard.querySelector('.gold-balance-num');
+                                if (numEl) numEl.textContent = currentUser.standoff_gold_balance;
+                            }
+                        }).catch(e => {
+                            console.error('❌ Gold RPC exception:', e);
+                            showToast('⚠️ Ошибка: ' + e.message);
+                        });
+                    } else if (isDuplicate) {
+                        console.log('ℹ️ Gold duplicate — не начисляю');
+                    }
+                }
+
+                // 🔥 STARS
+                if (item && item.category === 'stars') {
+                    const amount = item.value?.amount || 0;
+
+                    if (amount > 0 && currentUser && !isDuplicate) {
+                        showToast(`⭐ +${amount} звёзд!`);
+
+                        sb.rpc('add_stars', {
                             p_user_id: currentUser.telegram_id,
                             p_amount: amount,
                             p_reason: 'case_win',
-                            p_meta: { item_id: item.id }
+                            p_meta: { item_id: item.id, case_id: caseId }
+                        }).then(({ data, error }) => {
+                            if (error) {
+                                console.error('Stars RPC error:', error);
+                                return;
+                            }
+                            window._starsBalance = (window._starsBalance || 0) + amount;
+                            currentUser.stars_balance = window._starsBalance;
+                            if (typeof updateStarsBadge === 'function') updateStarsBadge();
                         });
-                        window._starsBalance = (window._starsBalance || 0) + amount;
-                        updateStarsBadge();
-                    } catch (e) { console.warn('stars add:', e); }
+                    }
                 }
-            }
 
-            return _origFinish.apply(this, arguments);
-        };
-        window._goldRewardPatched = true;
+                // Вызываем оригинал
+                return _orig.apply(this, arguments);
+            };
+
+            window._goldRewardPatched = true;
+            console.log('✅ Case rewards патч установлен');
+        }
+
+        if (!window._goldRewardPatched && attempts < MAX) {
+            setTimeout(tryPatch, 300);
+        }
     }
+
+    tryPatch();
+})();
 
     // ────────────────────────────────────────────────────────────
     // 🪝 ПАТЧ: обновление шапки — добавляем звёзды
