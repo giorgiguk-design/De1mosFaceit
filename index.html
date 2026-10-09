@@ -30452,9 +30452,11 @@ html.lite-mode .dash-cases-btn::before { animation: none !important; opacity: 0.
         <span class="header-coins-value" id="headerCoinsValue">0</span>
     </button>
 
-<button class="header-stars" id="headerStars" onclick="openStarsWallet()" title="Кошелёк звёзд">
-    <span style="font-size: 14px;">⭐</span>
-    <span class="header-stars-value" id="headerStarsValue">0</span>
+<button class="header-stars" id="headerStars" onclick="openStarsWallet()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/>
+    </svg>
+    <span id="headerStarsValue">0</span>
 </button>
 
     <div class="header-room-indicator" id="headerRoomIndicator" onclick="reopenActiveRoom()" style="display: none;">
@@ -37554,6 +37556,9 @@ if (tg?.initData && tg.initData.length > 20) {
         currentUser = data;
         syncServerTime();
         applyHeaderAvatar(currentUser);
+// 🔥 Загружаем звёзды и Gold при старте
+if (typeof loadStarsBalance === 'function') loadStarsBalance();
+if (typeof loadGoldBalance === 'function') loadGoldBalance();
         renderDashboard(currentUser);
         loadProfile(currentUser);
         loadLeaderboard();
@@ -74279,7 +74284,7 @@ window.voteCancelClubWar      = voteCancelClubWar;
     // 🛒 ОТКРЫТИЕ ЭКРАНА КОШЕЛЬКА ЗВЁЗД
     // ────────────────────────────────────────────────────────────
     async function openStarsWallet() {
-        if (!window.currentUser) {
+        if (!currentUser) {
             showToast('⚠️ Профиль ещё не загружен');
             return;
         }
@@ -75125,23 +75130,22 @@ window.voteCancelClubWar      = voteCancelClubWar;
     // ────────────────────────────────────────────────────────────
     // 🚀 ИНИЦИАЛИЗАЦИЯ
     // ────────────────────────────────────────────────────────────
-    async function initStarsSystem() {
-        if (!window.currentUser) {
-            // Ждём загрузки
-            setTimeout(initStarsSystem, 1500);
-            return;
-        }
-
-        await loadStarPacks();
-        await loadStarsBalance();
-        await loadGoldBalance();
-        subscribeStarsRealtime();
-
-        console.log('⭐ Stars system initialized');
+async function initStarsSystem() {
+    if (!currentUser) {
+        setTimeout(initStarsSystem, 500);   // ← было 1500
+        return;
     }
 
+    await loadStarPacks();
+    await loadStarsBalance();
+    await loadGoldBalance();
+    subscribeStarsRealtime();
+
+    console.log('⭐ Stars system initialized for user', currentUser.telegram_id);
+}
+
     // Запускаем после загрузки юзера
-    setTimeout(initStarsSystem, 3000);
+    setTimeout(initStarsSystem, 800);
 
     // Экспорт
     window.loadStarPacks = loadStarPacks;
