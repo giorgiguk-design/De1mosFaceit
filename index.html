@@ -74246,29 +74246,6 @@ window.voteCancelClubWar      = voteCancelClubWar;
     }
 
     // ────────────────────────────────────────────────────────────
-    // 💰 ЗАГРУЗКА БАЛАНСА ЗВЁЗД
-    // ────────────────────────────────────────────────────────────
-    async function loadStarsBalance() {
-        if (!window.currentUser) return 0;
-        try {
-            const { data } = await sb.from('users')
-                .select('stars_balance')
-                .eq('telegram_id', currentUser.telegram_id)
-                .maybeSingle();
-
-            const balance = data?.stars_balance || 0;
-            window._starsBalance = balance;
-            currentUser.stars_balance = balance;
-            updateStarsBadge();
-            return balance;
-        } catch (e) {
-            console.warn('loadStarsBalance:', e);
-            return 0;
-        }
-    }
-    window.loadStarsBalance = loadStarsBalance;
-
-    // ────────────────────────────────────────────────────────────
     // 🔄 ОБНОВИТЬ БЕЙДЖ ЗВЁЗД В ШАПКЕ
     // ────────────────────────────────────────────────────────────
     function updateStarsBadge() {
@@ -74332,7 +74309,7 @@ window.voteCancelClubWar      = voteCancelClubWar;
             ${packs.map((p, i) => {
                 const isHit = p.bonus_percent >= 25;
                 return `
-                    <div class="star-pack" onclick="buyStarPack('${p.id}')">
+                    <div class="star-pack" onclick="buyStarPack('${p.id}', ${p.stars_amount}, ${p.price_xtr})">
                         ${isHit ? '<span class="star-pack-hit">🔥 ХИТ</span>' : ''}
                         <div class="star-pack-icon">⭐</div>
                         <div class="star-pack-info">
@@ -74368,99 +74345,113 @@ window.voteCancelClubWar      = voteCancelClubWar;
     // ────────────────────────────────────────────────────────────
     // 💫 ПОКУПКА ПАКЕТА ЗВЁЗД ЧЕРЕЗ TELEGRAM STARS
     // ────────────────────────────────────────────────────────────
-async function buyStarPack(packId) {
+// ============================================================
+// ⭐ Покупка звёзд через Telegram Stars
+// ============================================================
+async function buyStarPack(packId, starsAmount, priceXtr) {
     if (!currentUser) {
         showToast('⚠️ Профиль не загружен');
         return;
     }
 
-    const pack = (window._starPacks || DEFAULT_PACKS).find(p => p.id === packId);
-    if (!pack) {
-        showToast('❌ Пакет не найден');
+    if (!tg || typeof tg.openInvoice !== 'function') {
+        showToast('❌ Оплата доступна только внутри Telegram');
+        haptic('heavy');
         return;
     }
 
-    if (typeof haptic === 'function') haptic('medium');
-    showToast('⭐ Открываю кассу...');
+    showToast('⏳ Создаю счёт...');
+    haptic('medium');
 
-    // ============================================================
-    // 1️⃣ ПОПЫТКА: Edge Function → invoiceLink
-    // ============================================================
     try {
         const res = await fetch(
-            `${SUPABASE_URL}/functions/v1/create-star-invoice`,
+            `${SUPABASE_URL}/functions/v1/create-stars-invoice`,
             {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type':  'application/json',
                     'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-                    'apikey': SUPABASE_ANON_KEY,
+                    'apikey':        SUPABASE_ANON_KEY,
                 },
                 body: JSON.stringify({
-                    userId: currentUser.telegram_id,
-                    packId: pack.id,
-                    starsAmount: pack.stars_amount,
-                    priceXtr: pack.price_xtr,
+                    telegram_id: currentUser.telegram_id,
+                    pack_id:     packId,
+                    stars:       starsAmount,
+                    price_xtr:   priceXtr,
                 }),
             }
         );
 
-        if (res.ok) {
-            const data = await res.json();
+        const data = await res.json();
+        console.log('📡 create-stars-invoice:', data);
 
-            if (data.invoiceLink) {
-                // Открываем кассу Telegram
-                if (tg?.openInvoice) {
-                    tg.openInvoice(data.invoiceLink, (status) => {
-                        console.log('💳 Invoice status:', status);
-                        if (status === 'paid') {
-                            showToast('✅ Оплата успешна!');
-                            if (typeof haptic === 'function') haptic('heavy');
-                            if (typeof SFX !== 'undefined') SFX.play('reward');
+        if (!res.ok || !data.ok || !data.invoice_link) {
+            throw new Error(data.error || 'Не удалось создать счёт');
+        }
 
-                            setTimeout(async () => {
-                                await loadStarsBalance();
-                                showStarToast(pack.stars_amount);
-                                openStarsWallet();
-                            }, 1500);
-                        } else if (status === 'failed') {
-                            showToast('❌ Оплата не прошла');
-                        } else if (status === 'cancelled') {
-                            showToast('🚫 Оплата отменена');
-                        }
-                    });
-                    return;
-                }
+        // 🔥 Нативная шторка Telegram Stars
+        tg.openInvoice(data.invoice_link, (status) => {
+            console.log('💳 Invoice status:', status);
 
-                // Фолбэк — открываем в браузере
-                if (tg?.openLink) tg.openLink(data.invoiceLink);
-                else window.open(data.invoiceLink, '_blank');
-                return;
+if (status === 'paid') {
+    haptic('heavy');
+    if (typeof SFX !== 'undefined') SFX.play('success');
+    showToast('✅ Звёзды зачислены!');
+
+    // webhook придёт с задержкой 1–3 сек → делаем 4 попытки обновления
+    let tries = 0;
+    const refresh = () => {
+        loadStarsBalance();
+        tries++;
+        if (tries < 4) setTimeout(refresh, 1200);
+    };
+    refresh();
+} else if (status === 'cancelled') {
+                showToast('❌ Оплата отменена');
+            } else if (status === 'failed') {
+                showToast('❌ Ошибка оплаты');
+                haptic('heavy');
+            } else if (status === 'pending') {
+                showToast('⏳ Ожидание оплаты...');
             }
+        });
+
+    } catch (e) {
+        console.error('buyStarPack:', e);
+        showToast('❌ ' + e.message);
+        haptic('heavy');
+    }
+}
+
+window.buyStarPack = buyStarPack;
+
+// ============================================================
+// Загрузка баланса звёзд (у тебя может быть уже — замени)
+// ============================================================
+async function loadStarsBalance() {
+    if (!currentUser) return;
+    try {
+        const { data } = await sb.from('users')
+            .select('stars_balance')
+            .eq('telegram_id', currentUser.telegram_id)
+            .single();
+
+        if (data) {
+            currentUser.stars_balance = data.stars_balance || 0;
+            window._starsBalance = currentUser.stars_balance;    // ← добавили
+
+            const el = document.getElementById('headerStarsValue');
+            if (el) el.textContent = currentUser.stars_balance;
+
+            // 🔥 Обновляем также баланс в открытом окне кошелька
+            const walletEl = document.getElementById('starsWalletBalance');
+            if (walletEl) walletEl.textContent = currentUser.stars_balance;
         }
     } catch (e) {
-        console.warn('Edge function недоступна:', e.message);
+        console.warn('loadStarsBalance:', e);
     }
-
-    // ============================================================
-    // 2️⃣ ФОЛБЭК: открываем бота с параметром
-    //    Бот сам пришлёт инвойс по deep-link
-    // ============================================================
-    console.log('🔁 Fallback: открываю бота напрямую');
-
-    const botUrl = `https://t.me/De1mosFaceit_bot?start=stars_${pack.id}`;
-
-    try {
-        if (tg?.openTelegramLink) tg.openTelegramLink(botUrl);
-        else if (tg?.openLink) tg.openLink(botUrl);
-        else window.open(botUrl, '_blank');
-    } catch (e) {
-        window.open(botUrl, '_blank');
-    }
-
-    showToast('⭐ Открыл бота — жми /start там');
 }
-window.buyStarPack = buyStarPack;
+window.loadStarsBalance = loadStarsBalance;
 
     // ────────────────────────────────────────────────────────────
     // 🎉 КРАСИВЫЙ ТОСТ О ЗАЧИСЛЕНИИ ЗВЁЗД
